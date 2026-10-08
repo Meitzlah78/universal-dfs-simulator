@@ -52,14 +52,13 @@ players_df = pd.DataFrame([
     ["Kameron Johnson", "WR", "TB", 600, 0.4],
     ["Payne Durham", "TE", "TB", 200, 0.2],
     ["Brandon Aubrey", "K", "DAL", 5400, 8.0],
-    ["Chase McLaughlin", "K", "TB", 5000, 7.0, "DAL"],
+    ["Chase McLaughlin", "K", "TB", 5000, 7.0],
 ], columns=[
     "Name",
     "Position",
     "Team",
     "Salary",
-    "Projection",
-    "Opponent"
+    "Projection"
 ])
 
 players_df["Opponent"] = players_df["Team"].map({
