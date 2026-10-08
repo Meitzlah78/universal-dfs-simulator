@@ -220,4 +220,174 @@ if st.button(
     type="primary",
     use_container_width=True
 ):
-    st.success("Lineup builder is ready.")
+    import itertools
+
+    lineup_count = 20
+
+    salary_map = dict(zip(players_df["Name"], players_df["Salary"]))
+    captain_salary_map = dict(
+        zip(players_df["Name"], players_df["CaptainSalary"])
+    )
+
+    # Build simulation-based player values
+    player_sim = {}
+
+    for player in players_df["Name"]:
+        values = simulation_df[player]
+
+        player_sim[player] = {
+            "Mean": values.mean(),
+            "P95": values.quantile(0.95),
+            "P99": values.quantile(0.99)
+        }
+
+    # Read player controls
+    control_map = edited_controls.set_index("Name").to_dict("index")
+
+    candidates = []
+
+    for captain in players_df["Name"]:
+
+        # Captain fade
+        if control_map[captain]["Fade"]:
+            continue
+
+        captain_control = control_map[captain]
+
+        # Captain exposure max of 0 means unavailable
+        if captain_control["Captain Max %"] <= 0:
+            continue
+
+        flex_pool = [
+            p for p in players_df["Name"]
+            if p != captain
+            and not control_map[p]["Fade"]
+        ]
+
+        for flex_players in itertools.combinations(flex_pool, 5):
+
+            lineup_players = [captain] + list(flex_players)
+
+            # Check locks
+            locked_players = [
+                p for p in players_df["Name"]
+                if control_map[p]["Lock"]
+            ]
+
+            if not all(p in lineup_players for p in locked_players):
+                continue
+
+            # Salary
+            total_salary = (
+                captain_salary_map[captain]
+                + sum(salary_map[p] for p in flex_players)
+            )
+
+            if total_salary > SALARY_CAP:
+                continue
+
+            # Simulation score
+            total_mean = (
+                player_sim[captain]["Mean"] * 1.5
+                + sum(player_sim[p]["Mean"] for p in flex_players)
+            )
+
+            total_p95 = (
+                player_sim[captain]["P95"] * 1.5
+                + sum(player_sim[p]["P95"] for p in flex_players)
+            )
+
+            total_p99 = (
+                player_sim[captain]["P99"] * 1.5
+                + sum(player_sim[p]["P99"] for p in flex_players)
+            )
+
+            score = (
+                total_p95 * 0.50
+                + total_p99 * 0.25
+                + total_mean * 0.25
+            )
+
+            candidates.append({
+                "Captain": captain,
+                "Flex1": flex_players[0],
+                "Flex2": flex_players[1],
+                "Flex3": flex_players[2],
+                "Flex4": flex_players[3],
+                "Flex5": flex_players[4],
+                "Salary": total_salary,
+                "SimMean": total_mean,
+                "SimP95": total_p95,
+                "SimP99": total_p99,
+                "Score": score
+            })
+
+    candidates_df = pd.DataFrame(candidates)
+
+    if candidates_df.empty:
+        st.error("No valid lineups found.")
+    else:
+        candidates_df = candidates_df.sort_values(
+            "Score",
+            ascending=False
+        ).reset_index(drop=True)
+
+        # Select diverse lineups
+        selected = []
+        used_sets = []
+
+        for _, row in candidates_df.iterrows():
+
+            lineup_set = {
+                row["Captain"],
+                row["Flex1"],
+                row["Flex2"],
+                row["Flex3"],
+                row["Flex4"],
+                row["Flex5"]
+            }
+
+            too_similar = False
+
+            for previous_set in used_sets:
+                overlap = len(lineup_set & previous_set)
+
+                if overlap >= 5:
+                    too_similar = True
+                    break
+
+            if too_similar:
+                continue
+
+            selected.append(row)
+            used_sets.append(lineup_set)
+
+            if len(selected) >= lineup_count:
+                break
+
+        final_lineups = pd.DataFrame(selected)
+
+        st.success(
+            f"Built {len(final_lineups)} valid lineups."
+        )
+
+        st.write("### Lineups")
+
+        st.dataframe(
+            final_lineups[
+                [
+                    "Captain",
+                    "Flex1",
+                    "Flex2",
+                    "Flex3",
+                    "Flex4",
+                    "Flex5",
+                    "Salary",
+                    "SimMean",
+                    "SimP95",
+                    "SimP99"
+                ]
+            ],
+            use_container_width=True,
+            hide_index=True
+        )
