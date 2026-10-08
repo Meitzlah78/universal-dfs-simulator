@@ -224,12 +224,17 @@ if st.button(
 
     lineup_count = 20
 
-    salary_map = dict(zip(players_df["Name"], players_df["Salary"]))
-    captain_salary_map = dict(
-        zip(players_df["Name"], players_df["CaptainSalary"])
-    )
+    salary_map = dict(zip(
+        players_df["Name"],
+        players_df["Salary"]
+    ))
 
-    # Build simulation-based player values
+    captain_salary_map = dict(zip(
+        players_df["Name"],
+        players_df["CaptainSalary"]
+    ))
+
+    # Simulation values
     player_sim = {}
 
     for player in players_df["Name"]:
@@ -241,65 +246,99 @@ if st.button(
             "P99": values.quantile(0.99)
         }
 
-    # Read player controls
-    control_map = edited_controls.set_index("Name").to_dict("index")
+    # Player controls
+    control_map = edited_controls.set_index(
+        "Name"
+    ).to_dict("index")
+
+    available_players = [
+        p for p in players_df["Name"]
+        if not control_map[p]["Fade"]
+    ]
+
+    locked_players = [
+        p for p in available_players
+        if control_map[p]["Lock"]
+    ]
+
+    # Rank players by simulation score
+    player_rank = sorted(
+        available_players,
+        key=lambda p: (
+            player_sim[p]["P95"] * 0.50
+            + player_sim[p]["P99"] * 0.25
+            + player_sim[p]["Mean"] * 0.25
+        ),
+        reverse=True
+    )
+
+    # Only use the strongest players for the initial search.
+    # This keeps Streamlit fast.
+    search_pool = player_rank[:18]
 
     candidates = []
 
-    for captain in players_df["Name"]:
+    for captain in search_pool:
 
-        # Captain fade
-        if control_map[captain]["Fade"]:
-            continue
-
-        captain_control = control_map[captain]
-
-        # Captain exposure max of 0 means unavailable
-        if captain_control["Captain Max %"] <= 0:
+        if control_map[captain]["Captain Max %"] <= 0:
             continue
 
         flex_pool = [
-            p for p in players_df["Name"]
+            p for p in search_pool
             if p != captain
-            and not control_map[p]["Fade"]
         ]
 
-        for flex_players in itertools.combinations(flex_pool, 5):
+        for flex_players in itertools.combinations(
+            flex_pool,
+            5
+        ):
 
-            lineup_players = [captain] + list(flex_players)
+            lineup_players = [
+                captain
+            ] + list(flex_players)
 
-            # Check locks
-            locked_players = [
-                p for p in players_df["Name"]
-                if control_map[p]["Lock"]
-            ]
-
-            if not all(p in lineup_players for p in locked_players):
+            # Lock check
+            if not all(
+                p in lineup_players
+                for p in locked_players
+            ):
                 continue
 
             # Salary
             total_salary = (
                 captain_salary_map[captain]
-                + sum(salary_map[p] for p in flex_players)
+                + sum(
+                    salary_map[p]
+                    for p in flex_players
+                )
             )
 
             if total_salary > SALARY_CAP:
                 continue
 
-            # Simulation score
+            # Simulation scoring
             total_mean = (
                 player_sim[captain]["Mean"] * 1.5
-                + sum(player_sim[p]["Mean"] for p in flex_players)
+                + sum(
+                    player_sim[p]["Mean"]
+                    for p in flex_players
+                )
             )
 
             total_p95 = (
                 player_sim[captain]["P95"] * 1.5
-                + sum(player_sim[p]["P95"] for p in flex_players)
+                + sum(
+                    player_sim[p]["P95"]
+                    for p in flex_players
+                )
             )
 
             total_p99 = (
                 player_sim[captain]["P99"] * 1.5
-                + sum(player_sim[p]["P99"] for p in flex_players)
+                + sum(
+                    player_sim[p]["P99"]
+                    for p in flex_players
+                )
             )
 
             score = (
@@ -325,8 +364,11 @@ if st.button(
     candidates_df = pd.DataFrame(candidates)
 
     if candidates_df.empty:
+
         st.error("No valid lineups found.")
+
     else:
+
         candidates_df = candidates_df.sort_values(
             "Score",
             ascending=False
@@ -350,7 +392,10 @@ if st.button(
             too_similar = False
 
             for previous_set in used_sets:
-                overlap = len(lineup_set & previous_set)
+
+                overlap = len(
+                    lineup_set & previous_set
+                )
 
                 if overlap >= 5:
                     too_similar = True
@@ -371,7 +416,7 @@ if st.button(
             f"Built {len(final_lineups)} valid lineups."
         )
 
-        st.write("### Lineups")
+        st.write("### 20-Lineup Portfolio")
 
         st.dataframe(
             final_lineups[
@@ -390,4 +435,22 @@ if st.button(
             ],
             use_container_width=True,
             hide_index=True
+        )
+
+        st.write("### Portfolio Summary")
+
+        st.write(
+            f"Lineups: {len(final_lineups)}"
+        )
+
+        st.write(
+            f"Salary range: "
+            f"${final_lineups['Salary'].min():,.0f}"
+            f" - "
+            f"${final_lineups['Salary'].max():,.0f}"
+        )
+
+        st.write(
+            f"Average salary: "
+            f"${final_lineups['Salary'].mean():,.0f}"
         )
