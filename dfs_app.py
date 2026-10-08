@@ -17,7 +17,7 @@ st.subheader("DraftKings Showdown")
 # SETTINGS
 # ================================
 
-SIMULATIONS = 50000
+SIMULATIONS = 10000
 DISPERSION = 8.0
 SALARY_CAP = 50000
 
@@ -75,32 +75,33 @@ players_df["CaptainSalary"] = (
 # SIMULATION
 # ================================
 
-rng = np.random.default_rng(42)
+def run_game_simulations(players_df):
+    rng = np.random.default_rng(42)
 
-means = np.maximum(
-    players_df["Projection"].to_numpy(dtype=float),
-    0.01
-)
+    means = np.maximum(
+        players_df["Projection"].to_numpy(dtype=float),
+        0.01
+    )
 
-n = float(DISPERSION)
-p = n / (n + means)
+    n = float(DISPERSION)
+    p = n / (n + means)
 
-sims = rng.negative_binomial(
-    n=n,
-    p=p,
-    size=(SIMULATIONS, len(players_df))
-).astype(float)
+    sims = rng.negative_binomial(
+        n=n,
+        p=p,
+        size=(SIMULATIONS, len(players_df))
+    ).astype(float)
 
-sim_means = sims.mean(axis=0)
+    sim_means = sims.mean(axis=0)
 
-for i in range(len(means)):
-    if sim_means[i] > 0:
-        sims[:, i] *= means[i] / sim_means[i]
+    for i in range(len(means)):
+        if sim_means[i] > 0:
+            sims[:, i] *= means[i] / sim_means[i]
 
-simulation_df = pd.DataFrame(
-    sims,
-    columns=players_df["Name"].tolist()
-)
+    return pd.DataFrame(
+        sims,
+        columns=players_df["Name"].tolist()
+    )
 
 # ================================
 # PLAYER DISPLAY
@@ -111,14 +112,29 @@ st.write("### Player Pool")
 
 player_display = players_df.copy()
 
-player_display["SimMean"] = simulation_df.mean(axis=0).values
-player_display["SimP10"] = simulation_df.quantile(0.10, axis=0).values
-player_display["SimP25"] = simulation_df.quantile(0.25, axis=0).values
-player_display["SimP50"] = simulation_df.quantile(0.50, axis=0).values
-player_display["SimP75"] = simulation_df.quantile(0.75, axis=0).values
-player_display["SimP90"] = simulation_df.quantile(0.90, axis=0).values
-player_display["SimP95"] = simulation_df.quantile(0.95, axis=0).values
-player_display["SimP99"] = simulation_df.quantile(0.99, axis=0).values
+if "simulation_df" in st.session_state:
+    simulation_df = st.session_state["simulation_df"]
+
+    player_display["SimMean"] = simulation_df.mean(axis=0).values
+    player_display["SimP10"] = simulation_df.quantile(0.10, axis=0).values
+    player_display["SimP25"] = simulation_df.quantile(0.25, axis=0).values
+    player_display["SimP50"] = simulation_df.quantile(0.50, axis=0).values
+    player_display["SimP75"] = simulation_df.quantile(0.75, axis=0).values
+    player_display["SimP90"] = simulation_df.quantile(0.90, axis=0).values
+    player_display["SimP95"] = simulation_df.quantile(0.95, axis=0).values
+    player_display["SimP99"] = simulation_df.quantile(0.99, axis=0).values
+else:
+    for column in [
+        "SimMean",
+        "SimP10",
+        "SimP25",
+        "SimP50",
+        "SimP75",
+        "SimP90",
+        "SimP95",
+        "SimP99"
+    ]:
+        player_display[column] = np.nan
 
 player_display = player_display[
     [
@@ -282,14 +298,130 @@ captain_salary_map = dict(zip(
 
 player_sim = {}
 
-for player in players_df["Name"]:
-    values = simulation_df[player]
+if "simulation_df" in st.session_state:
+    simulation_df = st.session_state["simulation_df"]
 
-    player_sim[player] = {
-        "Mean": values.mean(),
-        "P95": values.quantile(0.95),
-        "P99": values.quantile(0.99)
-    }
+    for player in players_df["Name"]:
+        values = simulation_df[player]
+
+        player_sim[player] = {
+            "Mean": values.mean(),
+            "P95": values.quantile(0.95),
+            "P99": values.quantile(0.99)
+        }
+
+# ============================================
+# BUILD LINEUPS
+# ============================================
+
+simulate_clicked = st.button(
+    "SIM",
+    type="primary",
+    use_container_width=False
+)
+
+if simulate_clicked:
+    with st.spinner("Running 10,000 game simulations..."):
+        simulation_df = run_game_simulations(players_df)
+
+    st.session_state["simulation_df"] = simulation_df
+    st.session_state["simulations_ready"] = True
+
+    st.success("10,000 game simulations completed.")
+
+build_clicked = st.button(
+    "BUILD",
+    type="primary",
+    use_container_width=False
+)
+
+contest_sim_clicked = st.button(
+    "CONTEST SIM",
+    type="primary",
+    use_container_width=False
+)
+
+if contest_sim_clicked:
+    contest_field = []
+
+    available_players = [
+        p for p in players_df["Name"]
+        if not control_map[p]["Fade"]
+    ]
+
+    rng = np.random.default_rng(123)
+
+    if "simulation_df" in st.session_state:
+        simulation_df = st.session_state["simulation_df"]
+
+        player_weights = simulation_df.mean(axis=0).reindex(
+            available_players
+        ).clip(lower=0.01)
+
+        player_weights = player_weights / player_weights.sum()
+
+        attempts = 0
+
+        while len(contest_field) < 10000 and attempts < 200000:
+            attempts += 1
+
+            selected = rng.choice(
+                available_players,
+                size=6,
+                replace=False,
+                p=player_weights.to_numpy()
+            )
+
+            captain = selected[
+                np.argmax([
+                    simulation_df[p].mean()
+                    for p in selected
+                ])
+            ]
+
+            flex = [p for p in selected if p != captain]
+
+            total_salary = (
+                captain_salary_map[captain]
+                + sum(salary_map[p] for p in flex)
+            )
+
+            if total_salary > SALARY_CAP:
+                continue
+
+            lineup_teams = set(
+                players_df.loc[
+                    players_df["Name"].isin(selected),
+                    "Team"
+                ]
+            )
+
+            if len(lineup_teams) < 2:
+                continue
+
+            contest_field.append({
+                "Captain": captain,
+                "Flex1": flex[0],
+                "Flex2": flex[1],
+                "Flex3": flex[2],
+                "Flex4": flex[3],
+                "Flex5": flex[4],
+                "Salary": total_salary
+            })
+
+        contest_field_df = pd.DataFrame(contest_field)
+
+        st.session_state["contest_field_df"] = contest_field_df
+        st.session_state["contest_field_count"] = len(contest_field_df)
+        st.session_state["contest_field_ready"] = (
+            len(contest_field_df) == 10000
+        )
+
+        st.success(
+            f"Contest field created: {len(contest_field_df):,} lineups."
+        )
+    else:
+        st.warning("Run SIM or BUILD first.")
 
 # ============================================
 # PLAYER CONTROLS
@@ -299,10 +431,17 @@ control_map = edited_controls.set_index(
     "Name"
 ).to_dict("index")
 
-available_players = [
-    p for p in players_df["Name"]
-    if not control_map[p]["Fade"]
-]
+if build_clicked:
+    with st.spinner("Running 10,000 game simulations..."):
+        simulation_df = run_game_simulations(players_df)
+
+    st.session_state["simulation_df"] = simulation_df
+    st.session_state["simulations_ready"] = True
+
+    available_players = [
+        p for p in players_df["Name"]
+        if not control_map[p]["Fade"]
+    ]
 
 locked_players = [
     p for p in available_players
@@ -334,7 +473,7 @@ search_pool = list(dict.fromkeys(
 # ============================================
 
 LINEUP_COUNT = 20
-CANDIDATE_COUNT = 10000
+CANDIDATE_COUNT = 5000
 
 # BUILD CANDIDATES
 # ============================================
@@ -448,302 +587,468 @@ for captain in search_pool:
 
 candidates_df = pd.DataFrame(candidates)
 
+st.session_state["candidates_df"] = candidates_df
+st.session_state["candidates_ready"] = True
+
 st.write(
     f"Candidate lineups tested: {len(candidates_df):,}"
 )
 
+
 # ============================================
-# SELECT BEST 20
+# CONTEST SCORING
 # ============================================
 
-if candidates_df.empty:
+if (
+    "contest_field_df" in st.session_state
+    and "candidates_df" in st.session_state
+    and "simulation_df" in st.session_state
+):
 
-    st.error("No valid lineups found.")
+    contest_field_df = st.session_state["contest_field_df"]
+    candidates_df = st.session_state["candidates_df"]
+    simulation_df = st.session_state["simulation_df"]
 
-else:
+    lineup_cols = [
+        "Captain",
+        "Flex1",
+        "Flex2",
+        "Flex3",
+        "Flex4",
+        "Flex5"
+    ]
 
-    candidates_df = candidates_df.sort_values(
-        "Score",
-        ascending=False
-    ).reset_index(drop=True)
+    player_index = {
+        player: i
+        for i, player in enumerate(simulation_df.columns)
+    }
 
-    selected = []
-    used_sets = []
-    player_counts = {}
-    captain_counts = {}
+    candidate_idx = np.array([
+        [player_index[row[col]] for col in lineup_cols]
+        for _, row in candidates_df.iterrows()
+    ], dtype=np.int16)
 
-    for _, row in candidates_df.iterrows():
+    contest_idx = np.array([
+        [player_index[row[col]] for col in lineup_cols]
+        for _, row in contest_field_df.iterrows()
+    ], dtype=np.int16)
 
-        lineup_set = {
-            row["Captain"],
-            row["Flex1"],
-            row["Flex2"],
-            row["Flex3"],
-            row["Flex4"],
-            row["Flex5"]
-        }
+    n_candidates = len(candidate_idx)
+    n_sims = len(simulation_df)
+    total_field = len(contest_idx)
 
-        too_similar = False
+    win_rates = np.zeros(n_candidates)
+    top1_rates = np.zeros(n_candidates)
+    top5_rates = np.zeros(n_candidates)
+    top10_rates = np.zeros(n_candidates)
+    cash_rates = np.zeros(n_candidates)
+    avg_percentiles = np.zeros(n_candidates)
 
-        for previous_set in used_sets:
+    progress = st.progress(0)
 
-            overlap = len(
-                lineup_set & previous_set
-            )
+    for sim_idx in range(n_sims):
 
-            if overlap >= 5:
-                too_similar = True
-                break
-
-        if too_similar:
-            continue
-
-        # Check player maximum exposure
-        exposure_ok = True
-
-        for player in lineup_set:
-
-            max_exposure = float(
-                control_map[player]["Max Exposure %"]
-            )
-
-            current_count = player_counts.get(
-                player,
-                0
-            )
-
-            if current_count >= (
-                LINEUP_COUNT
-                * max_exposure
-                / 100
-            ):
-                exposure_ok = False
-                break
-
-        if not exposure_ok:
-            continue
-
-        # Check captain maximum exposure
-        captain = row["Captain"]
-
-        captain_max = float(
-            control_map[captain]["Captain Max %"]
+        values = simulation_df.iloc[sim_idx].to_numpy(
+            dtype=np.float32
         )
 
-        current_captain_count = captain_counts.get(
-            captain,
-            0
+        cand_scores = (
+            values[candidate_idx[:, 0]] * 1.5
+            + values[candidate_idx[:, 1:]].sum(axis=1)
         )
 
-        if current_captain_count >= (
-            LINEUP_COUNT
-            * captain_max
-            / 100
-        ):
-            continue
+        field_scores = (
+            values[contest_idx[:, 0]] * 1.5
+            + values[contest_idx[:, 1:]].sum(axis=1)
+        )
 
-        selected.append(row)
-        used_sets.append(lineup_set)
+        sorted_field = np.sort(field_scores)
 
-        # Update player exposure counts
-        for player in lineup_set:
-            player_counts[player] = (
-                player_counts.get(player, 0) + 1
+        count_greater = (
+            total_field
+            - np.searchsorted(
+                sorted_field,
+                cand_scores,
+                side="right"
+            )
+        )
+
+        percentile = 1.0 - (
+            count_greater / total_field
+        )
+
+        win_rates += (count_greater == 0)
+        top1_rates += (percentile >= 0.99)
+        top5_rates += (percentile >= 0.95)
+        top10_rates += (percentile >= 0.90)
+        cash_rates += (percentile >= 0.50)
+        avg_percentiles += percentile
+
+        if (sim_idx + 1) % 500 == 0:
+            progress.progress(
+                (sim_idx + 1) / n_sims
             )
 
-        # Update captain exposure count
-        captain_counts[captain] = (
-            captain_counts.get(captain, 0) + 1
-        )
+    progress.empty()
 
-        if len(selected) >= LINEUP_COUNT:
-            break
+    results_df = candidates_df.copy()
 
-    final_lineups = pd.DataFrame(selected)
-    st.session_state["final_lineups"] = final_lineups
+    results_df["WinRate"] = win_rates / n_sims
+    results_df["Top1"] = top1_rates / n_sims
+    results_df["Top5"] = top5_rates / n_sims
+    results_df["Top10"] = top10_rates / n_sims
+    results_df["CashRate"] = cash_rates / n_sims
+    results_df["AvgPercentile"] = avg_percentiles / n_sims
 
-    st.success(
-        f"Built {len(final_lineups)} valid lineups."
+    results_df["ContestScore"] = (
+        results_df["Top1"] * 0.40
+        + results_df["Top5"] * 0.25
+        + results_df["Top10"] * 0.20
+        + results_df["CashRate"] * 0.10
+        + results_df["WinRate"] * 0.05
     )
 
-    st.write("### 20-Lineup Portfolio")
+    results_df = (
+        results_df
+        .sort_values("ContestScore", ascending=False)
+        .reset_index(drop=True)
+    )
 
-    st.dataframe(
-        final_lineups[
+    st.session_state["contest_results_df"] = results_df
+
+# ============================================
+
+# ============================================
+# PORTFOLIO FUNCTIONS
+# ============================================
+
+PORTFOLIO_METRICS = {
+    "Contest Score": "ContestScore",
+    "Win %": "WinRate",
+    "Top 1%": "Top1",
+    "Top 5%": "Top5",
+    "Top 10%": "Top10",
+    "Cash %": "CashRate",
+    "Average Percentile": "AvgPercentile"
+}
+
+
+def build_portfolio(results_df, lineup_count, metric):
+    """Build a portfolio using the selected ranking metric."""
+
+    if lineup_count < 1:
+        raise ValueError("Lineup count must be at least 1.")
+
+    if lineup_count > len(results_df):
+        raise ValueError(
+            f"Only {len(results_df)} lineups are available."
+        )
+
+    if metric not in results_df.columns:
+        raise ValueError(
+            f"Ranking metric not found: {metric}"
+        )
+
+    portfolio = (
+        results_df
+        .sort_values(metric, ascending=False)
+        .head(lineup_count)
+        .copy()
+        .reset_index(drop=True)
+    )
+
+    portfolio["Locked"] = False
+
+    return portfolio
+
+
+def lock_portfolio_lineup(portfolio_df, lineup_index):
+    """Lock one lineup so it cannot be replaced."""
+
+    portfolio_df = portfolio_df.copy()
+
+    if 0 <= lineup_index < len(portfolio_df):
+        portfolio_df.loc[lineup_index, "Locked"] = True
+
+    return portfolio_df
+
+
+def delete_and_replace_portfolio_lineup(
+    portfolio_df,
+    results_df,
+    lineup_index,
+    metric
+):
+    """Delete one unlocked lineup and replace it with the next ranked lineup."""
+
+    portfolio_df = portfolio_df.copy()
+
+    if not 0 <= lineup_index < len(portfolio_df):
+        return portfolio_df
+
+    if bool(portfolio_df.loc[lineup_index, "Locked"]):
+        return portfolio_df
+
+    lineup_columns = [
+        "Captain",
+        "Flex1",
+        "Flex2",
+        "Flex3",
+        "Flex4",
+        "Flex5"
+    ]
+
+    deleted_key = tuple(
+        portfolio_df.loc[
+            lineup_index,
+            lineup_columns
+        ]
+    )
+
+    remaining = portfolio_df.drop(
+        portfolio_df.index[lineup_index]
+    ).copy()
+
+    used_keys = set(
+        tuple(row)
+        for row in remaining[lineup_columns].to_numpy()
+    )
+
+    ranked = results_df.sort_values(
+        metric,
+        ascending=False
+    )
+
+    replacement = None
+
+    for _, row in ranked.iterrows():
+
+        key = tuple(
+            row[lineup_columns]
+        )
+
+        if key not in used_keys and key != deleted_key:
+            replacement = row.copy()
+            break
+
+    if replacement is not None:
+        replacement["Locked"] = False
+
+        remaining = pd.concat(
             [
+                remaining,
+                replacement.to_frame().T
+            ],
+            ignore_index=True
+        )
+
+    return remaining.reset_index(drop=True)
+
+
+# ============================================
+# ============================================
+# PORTFOLIO
+# ============================================
+
+st.divider()
+st.write("## Portfolio")
+
+if "contest_results_df" in st.session_state:
+
+    results_df = st.session_state["contest_results_df"]
+
+    portfolio_count = st.number_input(
+        "Number of lineups",
+        min_value=1,
+        max_value=min(150, len(results_df)),
+        value=20,
+        step=1,
+        key="portfolio_count"
+    )
+
+    portfolio_metric_label = st.selectbox(
+        "Rank lineups by",
+        list(PORTFOLIO_METRICS.keys()),
+        key="portfolio_metric"
+    )
+
+    portfolio_metric = PORTFOLIO_METRICS[
+        portfolio_metric_label
+    ]
+
+    if (
+        "portfolio_df" not in st.session_state
+        or st.session_state.get("portfolio_count_used") != portfolio_count
+        or st.session_state.get("portfolio_metric_used") != portfolio_metric
+    ):
+
+        old_portfolio = st.session_state.get("portfolio_df")
+
+        if old_portfolio is not None and "Locked" in old_portfolio.columns:
+            locked_df = old_portfolio[
+                old_portfolio["Locked"] == True
+            ].copy()
+
+            available_count = max(
+                0,
+                int(portfolio_count) - len(locked_df)
+            )
+
+            ranked_df = (
+                results_df
+                .sort_values(
+                    portfolio_metric,
+                    ascending=False
+                )
+                .copy()
+            )
+
+            lineup_columns = [
                 "Captain",
                 "Flex1",
                 "Flex2",
                 "Flex3",
                 "Flex4",
-                "Flex5",
-                "Salary",
-                "SimMean",
-                "SimP95",
-                "SimP99"
+                "Flex5"
             ]
-        ],
+
+            locked_keys = set(
+                tuple(row)
+                for row in locked_df[lineup_columns].to_numpy()
+            )
+
+            selected_rows = []
+
+            for _, row in ranked_df.iterrows():
+
+                key = tuple(
+                    row[lineup_columns]
+                )
+
+                if key not in locked_keys:
+                    selected_rows.append(row)
+
+                if len(selected_rows) >= available_count:
+                    break
+
+            new_rows = pd.DataFrame(
+                selected_rows
+            )
+
+            if len(new_rows) > 0:
+                new_rows["Locked"] = False
+
+            portfolio_df = pd.concat(
+                [
+                    locked_df,
+                    new_rows
+                ],
+                ignore_index=True
+            ).head(int(portfolio_count))
+
+        else:
+
+            portfolio_df = build_portfolio(
+                results_df,
+                int(portfolio_count),
+                portfolio_metric
+            )
+
+        st.session_state["portfolio_df"] = portfolio_df
+        st.session_state["portfolio_count_used"] = portfolio_count
+        st.session_state["portfolio_metric_used"] = portfolio_metric
+
+    portfolio_df = st.session_state["portfolio_df"].copy()
+
+    st.write(
+        f"Portfolio: {len(portfolio_df)} lineups"
+    )
+
+    display_columns = [
+        "Captain",
+        "Flex1",
+        "Flex2",
+        "Flex3",
+        "Flex4",
+        "Flex5",
+        "ContestScore",
+        "WinRate",
+        "Top1",
+        "Top5",
+        "Top10",
+        "CashRate",
+        "Locked"
+    ]
+
+    display_df = portfolio_df[
+        [c for c in display_columns if c in portfolio_df.columns]
+    ].copy()
+
+    for col in [
+        "ContestScore",
+        "WinRate",
+        "Top1",
+        "Top5",
+        "Top10",
+        "CashRate"
+    ]:
+        if col in display_df.columns:
+            display_df[col] = display_df[col] * 100
+
+    st.dataframe(
+        display_df,
         use_container_width=True,
         hide_index=True
     )
 
+    st.write("### Portfolio Controls")
 
-    st.write("### Portfolio Summary")
+    for idx in portfolio_df.index:
 
-    st.write(
-        f"Lineups: {len(final_lineups)}"
-    )
+        cols = st.columns([0.7, 1.0, 1.0])
 
-    st.write(
-        f"Salary range: "
-        f"${final_lineups['Salary'].min():,.0f}"
-        f" - "
-        f"${final_lineups['Salary'].max():,.0f}"
-    )
+        cols[0].write(f"Lineup {idx + 1}")
 
-    st.write(
-        f"Average salary: "
-        f"${final_lineups['Salary'].mean():,.0f}"
-    )
-
-
-# ============================================
-# ============================================
-# DRAFTKINGS CONTEST TEMPLATE
-# ============================================
-
-st.write("### DraftKings Contest Template")
-
-dk_template = st.file_uploader(
-    "Upload DraftKings CSV template",
-    type=["csv"],
-    help="Upload the CSV template downloaded from DraftKings."
-)
-
-template_df = None
-
-if dk_template is not None:
-
-    try:
-
-        template_df = pd.read_csv(
-            dk_template,
-            engine="python",
-            on_bad_lines="skip",
-            header=None
-        )
-
-        st.success("DraftKings template loaded.")
-
-    except Exception as e:
-
-        st.error("Could not read the DraftKings template.")
-        st.code(str(e))
-        template_df = None
-
-
-# ============================================
-# DRAFTKINGS ID PARSER
-# ============================================
-
-import csv
-import io
-
-if dk_template is not None:
-
-    try:
-
-        raw_text = dk_template.getvalue().decode(
-            "utf-8-sig",
-            errors="replace"
-        )
-
-        rows = list(
-            csv.reader(
-                io.StringIO(raw_text)
-            )
-        )
-
-        header_index = None
-
-        for i, row in enumerate(rows):
-
-            if (
-                "ID" in row
-                and "Name" in row
-                and "Roster Position" in row
-            ):
-                header_index = i
-                break
-
-        if header_index is None:
-
-            st.error(
-                "Could not find DraftKings player IDs."
-            )
-
+        if bool(portfolio_df.loc[idx, "Locked"]):
+            cols[1].success("LOCKED")
         else:
+            if cols[1].button(
+                "LOCK",
+                key=f"portfolio_lock_{idx}"
+            ):
+                portfolio_df = lock_portfolio_lineup(
+                    portfolio_df,
+                    idx
+                )
 
-            header = rows[header_index]
+                st.session_state["portfolio_df"] = portfolio_df
+                st.rerun()
 
-            name_index = header.index("Name")
-            id_index = header.index("ID")
-            roster_index = header.index("Roster Position")
+        if bool(portfolio_df.loc[idx, "Locked"]):
+            cols[2].write("Protected")
+        else:
+            if cols[2].button(
+                "DELETE",
+                key=f"portfolio_delete_{idx}"
+            ):
+                portfolio_df = delete_and_replace_portfolio_lineup(
+                    portfolio_df,
+                    results_df,
+                    idx,
+                    portfolio_metric
+                )
 
-            dk_player_ids = {}
+                st.session_state["portfolio_df"] = portfolio_df
+                st.rerun()
 
-            for row in rows[header_index + 1:]:
+else:
 
-                if len(row) <= max(
-                    name_index,
-                    id_index,
-                    roster_index
-                ):
-                    continue
-
-                name = row[name_index].strip()
-                player_id = row[id_index].strip()
-                roster_position = row[roster_index].strip()
-
-                if (
-                    name
-                    and player_id
-                    and roster_position in ["CPT", "FLEX"]
-                ):
-
-                    if name not in dk_player_ids:
-                        dk_player_ids[name] = {}
-
-                    dk_player_ids[name][roster_position] = player_id
-
-            st.session_state["dk_player_ids"] = dk_player_ids
-
-            cpt_count = sum(
-                1
-                for ids in dk_player_ids.values()
-                if "CPT" in ids
-            )
-
-            flex_count = sum(
-                1
-                for ids in dk_player_ids.values()
-                if "FLEX" in ids
-            )
-
-            st.success("DraftKings player IDs loaded.")
-
-            st.write(f"CPT IDs loaded: {cpt_count}")
-            st.write(f"FLEX IDs loaded: {flex_count}")
-
-    except Exception as e:
-
-        st.error(
-            "Could not read DraftKings player IDs."
-        )
-
-        st.code(str(e))
+    st.info(
+        "Run CONTEST SIM before building a portfolio."
+    )
 
 
+# ============================================
 # ============================================
 # DRAFTKINGS EXPORT BUTTONS
 # ============================================
