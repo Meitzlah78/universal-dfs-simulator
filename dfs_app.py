@@ -16,7 +16,7 @@ def normalize_simulation_cache_name(name):
     """Normalize player names for session-only simulated projection matching."""
     import re
     value = str(name).casefold().strip()
-    value = re.sub(r"\\s+(jr|sr|ii|iii|iv|v)\\.?$", "", value)
+    value = re.sub(r"\s+(jr|sr|ii|iii|iv|v)\.?$", "", value)
     return re.sub(r"[^a-z0-9]", "", value)
 
 
