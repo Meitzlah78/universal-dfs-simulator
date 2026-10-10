@@ -476,6 +476,51 @@ SIMULATIONS = 10000
 DISPERSION = 8.0
 SALARY_CAP = 50000
 
+# NFL DFS scoring settings. Lineup builders use these site/format rules.
+# Player outcomes are still generated from the app's internal estimates; this
+# defines the fantasy-point scoring model and the single-game multiplier.
+DFS_SCORING_RULES = {
+    "DraftKings": {
+        "pass_yard": 0.04, "pass_td": 4, "interception": -1,
+        "rush_yard": 0.1, "rush_td": 6,
+        "receiving_yard": 0.1, "receiving_td": 6, "reception": 1,
+        "fumble_lost": -1, "two_point_conversion": 2,
+        "pass_300_bonus": 3, "rush_100_bonus": 3, "receiving_100_bonus": 3,
+        "single_game_multiplier": 1.5,
+    },
+    "FanDuel": {
+        "pass_yard": 0.04, "pass_td": 4, "interception": -1,
+        "rush_yard": 0.1, "rush_td": 6,
+        "receiving_yard": 0.1, "receiving_td": 6, "reception": 0.5,
+        "fumble_lost": -2, "two_point_conversion": 2,
+        "pass_300_bonus": 0, "rush_100_bonus": 0, "receiving_100_bonus": 0,
+        "single_game_multiplier": 1.5,
+    },
+}
+
+def score_nfl_stat_line(stats, platform):
+    """Calculate NFL fantasy points from a simulated stat line."""
+    rules = DFS_SCORING_RULES["FanDuel" if str(platform).lower().startswith("fanduel") else "DraftKings"]
+    score = (
+        float(stats.get("passing_yards", 0)) * rules["pass_yard"]
+        + float(stats.get("passing_tds", 0)) * rules["pass_td"]
+        + float(stats.get("interceptions", 0)) * rules["interception"]
+        + float(stats.get("rushing_yards", 0)) * rules["rush_yard"]
+        + float(stats.get("rushing_tds", 0)) * rules["rush_td"]
+        + float(stats.get("receiving_yards", 0)) * rules["receiving_yard"]
+        + float(stats.get("receiving_tds", 0)) * rules["receiving_td"]
+        + float(stats.get("receptions", 0)) * rules["reception"]
+        + float(stats.get("fumbles_lost", 0)) * rules["fumble_lost"]
+        + float(stats.get("two_point_conversions", 0)) * rules["two_point_conversion"]
+    )
+    if float(stats.get("passing_yards", 0)) >= 300:
+        score += rules["pass_300_bonus"]
+    if float(stats.get("rushing_yards", 0)) >= 100:
+        score += rules["rush_100_bonus"]
+    if float(stats.get("receiving_yards", 0)) >= 100:
+        score += rules["receiving_100_bonus"]
+    return score
+
 # ================================
 # PLAYER POOL
 # ================================
