@@ -29,10 +29,266 @@ lineup_mode = st.selectbox(
 st.subheader(platform + " " + lineup_mode)
 
 if platform == "FanDuel":
-    st.warning(
-        "FanDuel lineup rules and export are not implemented yet. "
-        "Choose DraftKings Showdown or DraftKings Classic for the available builders."
+    # FanDuel uses its own player upload and lineup rules. This separate path
+    # keeps DraftKings controls and saved builds unchanged.
+    st.write("### Upload FanDuel Salary File")
+    st.caption(
+        "Upload a FanDuel NFL player CSV. Player names, positions, salaries, "
+        "and IDs are read from the file. If projections are missing, add a "
+        "Projection or FPPG column for useful lineup rankings."
     )
+    fd_file = st.file_uploader(
+        "Upload a FanDuel player CSV",
+        type=["csv"],
+        key="fd_salary_file"
+    )
+
+    if fd_file is None:
+        st.info("Upload your FanDuel salary CSV to build FanDuel lineups.")
+        st.stop()
+
+    try:
+        fd_raw = pd.read_csv(fd_file)
+        fd_raw.columns = [str(c).strip() for c in fd_raw.columns]
+
+        def fd_find_column(frame, choices):
+            lookup = {str(c).strip().lower(): c for c in frame.columns}
+            for choice in choices:
+                if choice.lower() in lookup:
+                    return lookup[choice.lower()]
+            return None
+
+        fd_name_col = fd_find_column(
+            fd_raw, ["Nickname", "Name", "Name + ID", "Player", "Player Name"]
+        )
+        fd_salary_col = fd_find_column(fd_raw, ["Salary"])
+        fd_team_col = fd_find_column(
+            fd_raw, ["Team", "TeamAbbrev", "Team Abbrev", "Team Abbreviation"]
+        )
+        fd_pos_col = fd_find_column(
+            fd_raw, ["Position", "Roster Position", "RosterPosition"]
+        )
+        fd_proj_col = fd_find_column(
+            fd_raw, ["Projection", "Projected Points", "FPPG", "Fpts",
+                     "AvgPointsPerGame", "Avg Points Per Game"]
+        )
+        fd_id_col = fd_find_column(
+            fd_raw, ["Id", "ID", "Player ID", "FDP_ID", "PlayerId"]
+        )
+
+        missing_cols = []
+        if fd_name_col is None:
+            missing_cols.append("player name (Nickname or Name)")
+        if fd_salary_col is None:
+            missing_cols.append("Salary")
+        if fd_team_col is None:
+            missing_cols.append("Team")
+        if fd_pos_col is None:
+            missing_cols.append("Position")
+
+        if missing_cols:
+            st.error("Missing required columns: " + ", ".join(missing_cols))
+            st.stop()
+
+        fd_players = pd.DataFrame()
+        fd_players["Name"] = fd_raw[fd_name_col].astype(str).str.strip()
+        fd_players["Name"] = fd_players["Name"].str.replace(
+            r"\\s*\\(\\d+\\)\\s*$", "", regex=True
+        )
+        fd_players["Salary"] = pd.to_numeric(
+            fd_raw[fd_salary_col].astype(str).str.replace(r"[$,]", "", regex=True),
+            errors="coerce"
+        )
+        fd_players["Team"] = fd_raw[fd_team_col].astype(str).str.strip().str.upper()
+        fd_players["Position"] = fd_raw[fd_pos_col].astype(str).str.strip().str.upper()
+        fd_players["Projection"] = (
+            pd.to_numeric(fd_raw[fd_proj_col], errors="coerce").fillna(0.01)
+            if fd_proj_col is not None else 0.01
+        )
+        if fd_id_col is not None:
+            fd_players["FD_ID"] = fd_raw[fd_id_col].astype(str).str.strip()
+
+        fd_players = fd_players.dropna(subset=["Salary"])
+        fd_players = fd_players[
+            (fd_players["Name"] != "") &
+            (fd_players["Name"].str.lower() != "nan") &
+            (fd_players["Salary"] > 0)
+        ].drop_duplicates(subset=["Name"], keep="first").reset_index(drop=True)
+
+        if fd_players.empty:
+            st.error("No usable players were found in that CSV.")
+            st.stop()
+
+    except Exception as exc:
+        st.error(f"Could not read that FanDuel CSV: {exc}")
+        st.stop()
+
+    st.success(f"Loaded {len(fd_players)} FanDuel players.")
+    if fd_proj_col is None:
+        st.warning("No projection column found. All players currently have a placeholder projection of 0.01.")
+    st.dataframe(
+        fd_players.drop(columns=["FD_ID"], errors="ignore"),
+        use_container_width=True,
+        hide_index=True
+    )
+
+    fd_signature = (
+        "FanDuel",
+        lineup_mode,
+        tuple(fd_players[["Name", "Position", "Team", "Salary", "Projection"]]
+              .astype(str).itertuples(index=False, name=None))
+    )
+    if "fd_saved_builds" not in st.session_state:
+        st.session_state["fd_saved_builds"] = {}
+    fd_saved = st.session_state["fd_saved_builds"].get(fd_signature, {})
+    fd_build_key = "fd_lineups_" + lineup_mode.replace(" ", "_").lower()
+    if fd_build_key not in st.session_state and "lineups" in fd_saved:
+        st.session_state[fd_build_key] = fd_saved["lineups"]
+
+    if lineup_mode == "Single Game":
+        st.caption(
+            "FanDuel Single Game: 1 MVP (1.5x points and salary) plus 4 FLEX players. "
+            "Salary cap: $60,000."
+        )
+        fd_slots = ["MVP", "FLEX1", "FLEX2", "FLEX3", "FLEX4"]
+    else:
+        st.caption(
+            "FanDuel NFL Full Roster: QB, 2 RB, 3 WR, TE, FLEX (RB/WR/TE), D. "
+            "Salary cap: $60,000."
+        )
+        fd_slots = ["QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "FLEX", "D"]
+
+    if st.button("BUILD FANDUEL LINEUPS", type="primary", key="fd_build_" + lineup_mode):
+        rng = np.random.default_rng()
+        pool = fd_players.copy()
+        pool["Eligible"] = pool["Position"].apply(
+            lambda value: set(str(value).upper().replace(" ", "").split("/"))
+        )
+        results = []
+        seen = set()
+        max_attempts = 30000
+
+        for _ in range(max_attempts):
+            chosen = {}
+            used = set()
+            salary = 0
+            total_points = 0.0
+
+            if lineup_mode == "Single Game":
+                mvp_candidates = pool[pool["Salary"] * 1.5 <= 60000]
+                if mvp_candidates.empty:
+                    continue
+                mvp_weights = np.maximum(mvp_candidates["Projection"].to_numpy(float), 0.01)
+                mvp_weights /= mvp_weights.sum()
+                mvp_row = mvp_candidates.iloc[int(rng.choice(len(mvp_candidates), p=mvp_weights))]
+                mvp_name = mvp_row["Name"]
+                chosen["MVP"] = mvp_name
+                used.add(mvp_name)
+                salary = int(float(mvp_row["Salary"]) * 1.5)
+                total_points = float(mvp_row["Projection"]) * 1.5
+
+                flex_pool = pool[~pool["Name"].isin(used)]
+                for slot in ["FLEX1", "FLEX2", "FLEX3", "FLEX4"]:
+                    choices = flex_pool[
+                        (~flex_pool["Name"].isin(used)) &
+                        ((salary + flex_pool["Salary"]) <= 60000)
+                    ]
+                    if choices.empty:
+                        break
+                    weights = np.maximum(choices["Projection"].to_numpy(float), 0.01)
+                    weights /= weights.sum()
+                    picked = choices.iloc[int(rng.choice(len(choices), p=weights))]
+                    chosen[slot] = picked["Name"]
+                    used.add(picked["Name"])
+                    salary += int(picked["Salary"])
+                    total_points += float(picked["Projection"])
+            else:
+                roster = [
+                    ("QB", {"QB"}), ("RB1", {"RB"}), ("RB2", {"RB"}),
+                    ("WR1", {"WR"}), ("WR2", {"WR"}), ("WR3", {"WR"}),
+                    ("TE", {"TE"}), ("FLEX", {"RB", "WR", "TE"}),
+                    ("D", {"D", "DST", "DEF"})
+                ]
+                for slot, eligible in roster:
+                    choices = pool[
+                        (~pool["Name"].isin(used)) &
+                        pool["Eligible"].apply(lambda positions: bool(positions & eligible)) &
+                        ((pool["Salary"] + salary) <= 60000)
+                    ]
+                    if choices.empty:
+                        break
+                    weights = np.maximum(choices["Projection"].to_numpy(float), 0.01)
+                    weights /= weights.sum()
+                    picked = choices.iloc[int(rng.choice(len(choices), p=weights))]
+                    chosen[slot] = picked["Name"]
+                    used.add(picked["Name"])
+                    salary += int(picked["Salary"])
+                    total_points += float(picked["Projection"])
+
+            if len(chosen) != len(fd_slots) or salary > 60000:
+                continue
+            lineup_key = tuple(chosen[slot] for slot in fd_slots)
+            if lineup_key in seen:
+                continue
+            seen.add(lineup_key)
+            results.append({
+                **chosen,
+                "Salary": salary,
+                "ProjectedPoints": round(total_points, 2)
+            })
+            if len(results) >= 20:
+                break
+
+        if results:
+            fd_results = pd.DataFrame(results).sort_values(
+                "ProjectedPoints", ascending=False
+            ).reset_index(drop=True)
+            st.session_state[fd_build_key] = fd_results
+            st.session_state["fd_saved_builds"][fd_signature] = {"lineups": fd_results}
+        else:
+            st.error(
+                "No valid lineups found. Check player positions, salary values, "
+                "and make sure the uploaded slate has enough players for this contest type."
+            )
+
+    fd_results = st.session_state.get(fd_build_key)
+    if fd_results is not None:
+        st.write(f"Built {len(fd_results)} FanDuel lineups.")
+        st.dataframe(fd_results, use_container_width=True, hide_index=True)
+
+        if "FD_ID" in fd_players.columns:
+            fd_ids = dict(zip(fd_players["Name"], fd_players["FD_ID"].astype(str)))
+            export_slots = (
+                ["MVP", "FLEX", "FLEX", "FLEX", "FLEX"]
+                if lineup_mode == "Single Game"
+                else ["QB", "RB", "RB", "WR", "WR", "WR", "TE", "FLEX", "D"]
+            )
+            export_data = []
+            missing_ids = []
+            for _, lineup in fd_results.iterrows():
+                row_ids = []
+                for slot in fd_slots:
+                    name = lineup[slot]
+                    player_id = fd_ids.get(name, "")
+                    if not player_id or player_id.lower() == "nan":
+                        missing_ids.append(name)
+                    row_ids.append(player_id)
+                export_data.append(row_ids)
+            if missing_ids:
+                st.warning("Some player IDs are missing, so export is unavailable.")
+            else:
+                export_df = pd.DataFrame(export_data, columns=export_slots)
+                st.download_button(
+                    "EXPORT FANDUEL CSV",
+                    export_df.to_csv(index=False).encode("utf-8"),
+                    file_name=("FanDuel_Single_Game_Lineups.csv" if lineup_mode == "Single Game"
+                               else "FanDuel_Full_Roster_Lineups.csv"),
+                    mime="text/csv",
+                    key="fd_export_" + lineup_mode.replace(" ", "_").lower()
+                )
+        else:
+            st.info("This CSV has no player ID column, so lineup export is unavailable.")
+
     st.stop()
 
 # ================================
