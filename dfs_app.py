@@ -648,7 +648,7 @@ if salary_file is not None:
                         dff_page_url = "https://www.dailyfantasyfuel.com/nfl/projections/"
                         dff_page_response = requests.get(
                             dff_page_url,
-                            timeout=20,
+                            timeout=5,
                             headers={"User-Agent": "Mozilla/5.0 UniversalDFS-Simulator"}
                         )
                         dff_page_response.raise_for_status()
