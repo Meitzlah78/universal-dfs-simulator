@@ -849,12 +849,15 @@ else:
     player_display["Captain Min %"] = 0
     player_display["Captain Max %"] = 100
 
+# Put editable controls near the front so they are visible without
+# scrolling past every simulation-stat column.
 player_display = player_display[
     [
         "Name", "Position", "Team", "Opponent", "Salary", "CaptainSalary",
-        "Projection", "SimMean", "SimP10", "SimP25", "SimP50", "SimP75",
-        "SimP90", "SimP95", "SimP99", "Lock", "Fade",
-        "Min Exposure %", "Max Exposure %", "Captain Min %", "Captain Max %"
+        "Projection", "Lock", "Fade", "Min Exposure %", "Max Exposure %",
+        "Captain Min %", "Captain Max %",
+        "SimMean", "SimP10", "SimP25", "SimP50", "SimP75",
+        "SimP90", "SimP95", "SimP99"
     ]
 ]
 
