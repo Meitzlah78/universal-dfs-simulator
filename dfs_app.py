@@ -264,7 +264,7 @@ if platform == "FanDuel":
             fd_players["Projection"]
         )
 
-    if st.button("SIM FANDUEL PLAYERS", type="primary", key="fd_sim_" + lineup_mode.replace(" ", "_").lower()):
+    if st.button("SIM", type="primary", key="fd_sim_" + lineup_mode.replace(" ", "_").lower()):
         with st.spinner("Running 10,000 internal player simulations for FanDuel..."):
             position_rates = {
                 "QB": 2.00, "RB": 1.75, "WR": 1.70, "TE": 1.50,
@@ -1031,7 +1031,7 @@ if platform == "DraftKings" and lineup_mode == "Classic":
         ("TE", {"TE"}), ("FLEX", {"RB", "WR", "TE"}), ("DST", {"DST"})
     ]
 
-    if st.button("SIM CLASSIC PLAYERS", type="primary"):
+    if st.button("SIM", type="primary"):
         with st.spinner("Running 10,000 player simulations for DraftKings Classic..."):
             classic_simulation_df = run_game_simulations(players_df)
         st.session_state["simulation_df"] = classic_simulation_df
