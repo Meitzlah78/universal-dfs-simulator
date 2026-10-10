@@ -14,7 +14,7 @@ st.title("Universal DFS Simulator")
 
 
 def is_full_game_contest_name(value):
-    """Reject quarter/half/period and live contests across all DFS slate types."""
+    """Reject partial-game/live contests but allow both full-game and single-game formats."""
     name = str(value or "").strip().lower()
     partial_patterns = [
         r"\b(?:1st|2nd|3rd|4th|first|second|third|fourth)\s*(?:quarter|qtr|half)\b",
@@ -22,6 +22,12 @@ def is_full_game_contest_name(value):
         r"\b(?:live|in[- ]?game)\b",
     ]
     return not any(re.search(pattern, name, flags=re.IGNORECASE) for pattern in partial_patterns)
+
+
+def is_single_game_contest_name(value):
+    """Identify single-game formats without excluding them from full-game contests."""
+    name = str(value or "").strip().lower()
+    return bool(re.search(r"\b(showdown|single game|single-game|mvp|captain)\b", name))
 
 
 def remove_duplicate_entries(frame, entry_id_col=None):
