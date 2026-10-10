@@ -1352,14 +1352,14 @@ if platform == "DraftKings" and lineup_mode == "Classic":
             if control_map.get(name, {}).get("Lock", False)
         ]
         ranked_names = list(dict.fromkeys(
-            sorted(rankings, key=rankings.get, reverse=True)[:60]
+            sorted(rankings, key=rankings.get, reverse=True)[:45]
             + classic_locked_players
         ))
         classic_pool = classic_pool[classic_pool["Name"].isin(ranked_names)].copy()
         player_rows = classic_pool.set_index("Name").to_dict("index")
         candidate_lineups = []
         seen = set()
-        max_attempts = 50000
+        max_attempts = 5000
 
         for attempt in range(max_attempts):
             chosen = {}
