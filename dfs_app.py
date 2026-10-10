@@ -2254,13 +2254,22 @@ try:
                     # Try the documented draftables endpoint first, then the alternate
                     # available-players endpoint. Both are unofficial and may be blocked.
                     dk_urls = [
-                        f"https://api.draftkings.com/draftgroups/v1/draftgroups/{selected_dk_draft_group_id}/draftables?format=json",
-                        f"https://www.draftkings.com/lineup/getavailableplayers?draftGroupId={selected_dk_draft_group_id}",
+                        ("json", f"https://api.draftkings.com/draftgroups/v1/draftgroups/{selected_dk_draft_group_id}/draftables?format=json"),
+                        ("json", f"https://www.draftkings.com/lineup/getavailableplayers?draftGroupId={selected_dk_draft_group_id}"),
+                        ("csv", f"https://www.draftkings.com/lineup/getavailableplayerscsv?draftGroupId={selected_dk_draft_group_id}"),
                     ]
-                    for dk_url in dk_urls:
+                    draftables_raw = pd.DataFrame()
+                    for dk_format, dk_url in dk_urls:
                         try:
                             dk_response = requests.get(dk_url, headers=dk_headers, timeout=20)
                             dk_response.raise_for_status()
+                            if dk_format == "csv" or "csv" in dk_response.headers.get("Content-Type", "").lower():
+                                candidate_frame = pd.read_csv(io.StringIO(dk_response.text))
+                                if not candidate_frame.empty:
+                                    draftables_raw = candidate_frame
+                                    break
+                                dk_fetch_errors.append(f"{dk_url}: CSV response had no rows")
+                                continue
                             dk_json = dk_response.json()
                             candidates = (
                                 dk_json.get("draftables")
@@ -2275,13 +2284,13 @@ try:
                                 candidates = candidates.get("players", candidates.get("Players", []))
                             if isinstance(candidates, list) and candidates:
                                 draftables = candidates
+                                draftables_raw = pd.json_normalize(draftables)
                                 break
                             dk_fetch_errors.append(f"{dk_url}: response had no recognized player list")
                         except Exception as dk_error:
                             dk_fetch_errors.append(f"{dk_url}: {dk_error}")
-                    if not draftables:
+                    if draftables_raw.empty:
                         raise RuntimeError("DraftKings player endpoints failed. " + " | ".join(dk_fetch_errors))
-                    draftables_raw = pd.json_normalize(draftables)
                     if not draftables_raw.empty:
                         def dk_col(frame, names):
                             lower = {str(col).strip().lower(): col for col in frame.columns}
