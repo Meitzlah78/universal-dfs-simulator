@@ -186,7 +186,7 @@ def download_public_projection_table(source_name, platform_name):
             site = "fanduel" if "fanduel" in platform_key else "draftkings"
             url = f"https://www.dailyfantasyfuel.com/nfl/showdown-single-game-projections/{site}/"
         else:
-            url = "https://www.dailyfantasyfuel.com/nfl/projections/fanduel/" if "fanduel" in platform_key else "https://www.dailyfantasyfuel.com/nfl/projections/"
+            url = "https://www.dailyfantasyfuel.com/nfl/projections/fanduel/" if "fanduel" in platform_key else "https://www.dailyfantasyfuel.com/nfl/projections/draftkings/"
     elif source_name == "DraftEdge":
         url = "https://draftedge.com/nfl/"
     else:
