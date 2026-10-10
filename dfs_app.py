@@ -467,7 +467,19 @@ if entry_file is not None:
             selected_contest_id = str(selected_row["Contest ID"])
             selected_contest_name = str(selected_row["Contest Name"])
             selected_contest_entry_count = int(selected_row["Entries"])
-            selected_contest_entry_fee = selected_row["EntryFee"]
+            selected_contest_entry_fee = pd.to_numeric(
+                str(selected_row["EntryFee"]).replace("$", "").replace(",", ""),
+                errors="coerce"
+            )
+            st.session_state["selected_dk_contest"] = {
+                "id": selected_contest_id,
+                "name": selected_contest_name,
+                "your_entries": selected_contest_entry_count,
+                "entry_fee": (
+                    float(selected_contest_entry_fee)
+                    if pd.notna(selected_contest_entry_fee) else None
+                ),
+            }
             fee_text = (
                 f"${float(selected_contest_entry_fee):.2f}"
                 if pd.notna(selected_contest_entry_fee) else "not listed"
@@ -1374,9 +1386,16 @@ if contest_sim_clicked:
             len(contest_field_df) == 10000
         )
 
-        st.success(
-            f"Contest field created: {len(contest_field_df):,} lineups."
-        )
+        contest_details = st.session_state.get("selected_dk_contest")
+        if contest_details:
+            st.success(
+                f"Simulated contest field created for {contest_details['name']} "
+                f"(ID {contest_details['id']}): {len(contest_field_df):,} simulated opponent lineups."
+            )
+        else:
+            st.success(
+                f"Contest field created: {len(contest_field_df):,} simulated opponent lineups."
+            )
     else:
         st.warning("Run SIM or BUILD first.")
 
@@ -1433,6 +1452,16 @@ if build_clicked:
         st.session_state["contest_field_df"] = contest_field_df
         st.session_state["contest_field_count"] = len(contest_field_df)
         st.session_state["contest_field_ready"] = len(contest_field_df) == 10000
+
+    selected_contest = st.session_state.get("selected_dk_contest")
+    if selected_contest:
+        st.info(
+            f"Contest selected from your entry CSV: {selected_contest['name']} "
+            f"(ID {selected_contest['id']}). Your uploaded file has "
+            f"{selected_contest['your_entries']} of your entries in this contest. "
+            "The 10,000 opponents are simulated; the entry CSV does not contain "
+            "the actual opponent field or payout table."
+        )
 
     # Refresh rankings with the simulations created by this BUILD click.
     player_sim = {}
