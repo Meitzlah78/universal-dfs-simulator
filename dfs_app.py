@@ -103,22 +103,30 @@ if salary_file is not None:
         # Detect that format and skip those rows; ordinary salary CSVs load normally.
         salary_file.seek(0)
         first_lines = salary_file.getvalue().decode("utf-8-sig", errors="replace").splitlines()
-        is_lineup_template = (
-            len(first_lines) > 7
-            and "Roster Position" in first_lines[7]
-            and "AvgPointsPerGame" in first_lines[7]
+        header_line = next(
+            (i for i, line in enumerate(first_lines)
+             if "Roster Position" in line and "AvgPointsPerGame" in line),
+            None
         )
+        is_lineup_template = header_line is not None
+        is_showdown_template = False
 
         salary_file.seek(0)
         if is_lineup_template:
-            uploaded_df = pd.read_csv(salary_file, skiprows=7)
+            uploaded_df = pd.read_csv(salary_file, skiprows=header_line)
             uploaded_df.columns = [str(c).strip() for c in uploaded_df.columns]
-            # Keep FLEX rows so each player appears once at the regular salary.
             roster_col = "Roster Position" if "Roster Position" in uploaded_df.columns else None
+            # Showdown templates repeat each player as CPT and FLEX. Keep FLEX
+            # only for that format; Classic templates must keep all player rows.
             if roster_col:
-                uploaded_df = uploaded_df[
-                    uploaded_df[roster_col].astype(str).str.upper().eq("FLEX")
-                ].copy()
+                roster_values = set(
+                    uploaded_df[roster_col].astype(str).str.upper().str.strip()
+                )
+                is_showdown_template = "CPT" in roster_values
+                if is_showdown_template:
+                    uploaded_df = uploaded_df[
+                        uploaded_df[roster_col].astype(str).str.upper().str.strip().eq("FLEX")
+                    ].copy()
         else:
             uploaded_df = pd.read_csv(salary_file)
             uploaded_df.columns = [str(c).strip() for c in uploaded_df.columns]
@@ -180,8 +188,10 @@ if salary_file is not None:
                 st.success(f"Loaded {len(players_df)} players from the salary file.")
                 if projection_col is None:
                     st.warning("No projection column was found. Projections are set to 0.01 until projections are added.")
-                if is_lineup_template:
-                    st.info("DraftKings lineup template detected. FLEX rows are used for player salaries; CPT rows are ignored to avoid duplicate players.")
+                if is_showdown_template:
+                    st.info("DraftKings Showdown template detected. FLEX rows are used for player salaries; CPT rows are ignored to avoid duplicate players.")
+                elif is_lineup_template:
+                    st.info("Lineup template detected. Player rows were kept without applying Showdown-only filtering.")
                 st.caption("Check the player names, teams, salaries, and projections before building lineups.")
     except Exception as exc:
         st.error(f"Could not read that CSV: {exc}. The sample player pool is still being used.")
