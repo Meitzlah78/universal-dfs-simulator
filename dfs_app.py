@@ -13,20 +13,12 @@ st.set_page_config(
 
 st.title("Universal DFS Simulator")
 
-# Quick links to the two DraftKings upload pages.
-contest_link_col, player_link_col = st.columns(2)
-with contest_link_col:
-    st.link_button(
-        "CONTEST",
-        "https://www.draftkings.com/lineup/upload",
-        use_container_width=True,
-    )
-with player_link_col:
-    st.link_button(
-        "PLAYER",
-        "https://www.draftkings.com/entry/upload#",
-        use_container_width=True,
-    )
+# Quick link to DraftKings lineup upload.
+st.link_button(
+    "CONTEST",
+    "https://www.draftkings.com/lineup/upload",
+    use_container_width=True,
+)
 
 
 def is_full_game_contest_name(value):
@@ -2183,8 +2175,10 @@ if entry_file is not None:
     except Exception as exc:
         st.error(f"Could not read the DraftKings contest entry file: {exc}")
 
-# Live DraftKings lobby contest dropdown, matching the Colab selector.
-st.write("### DraftKings Lobby Contest")
+# Load the DraftKings slate list and allow automatic player/salary loading.
+selected_dk_draft_group_id = None
+auto_draftables_df = None
+st.write("### DraftKings Slate / Game")
 try:
     import requests
     lobby_response = requests.get(
@@ -2198,6 +2192,85 @@ try:
     lobby_df = pd.json_normalize(lobby_contests)
     if not lobby_df.empty and "id" in lobby_df.columns and "n" in lobby_df.columns:
         lobby_names = lobby_df["n"].fillna("").astype(str)
+
+        # Each Draft Group represents a slate. Showdown groups are single-game slates;
+        # Classic groups are multi-game slates. Keep the salary upload as an optional fallback.
+        if "dg" in lobby_df.columns:
+            slate_names = lobby_df["n"].fillna("").astype(str)
+            if lineup_mode == "Showdown":
+                slate_mask = (
+                    slate_names.str.contains("showdown", case=False, regex=False)
+                    | lobby_df.get("gameType", pd.Series("", index=lobby_df.index)).fillna("").astype(str).str.contains("showdown", case=False, regex=False)
+                )
+            else:
+                slate_mask = ~(
+                    slate_names.str.contains("showdown", case=False, regex=False)
+                    | lobby_df.get("gameType", pd.Series("", index=lobby_df.index)).fillna("").astype(str).str.contains("showdown", case=False, regex=False)
+                )
+            slate_rows = lobby_df.loc[slate_mask].copy()
+            if not slate_rows.empty:
+                slate_rows["dg"] = slate_rows["dg"].astype(str).str.replace(r"\\.0$", "", regex=True)
+                slate_options = (
+                    slate_rows.groupby("dg", as_index=False)
+                    .agg(SlateName=("n", "first"))
+                    .sort_values("SlateName", kind="stable")
+                )
+                slate_options["Slate Label"] = slate_options.apply(
+                    lambda row: f'{row["SlateName"]} | Slate ID {row["dg"]}', axis=1
+                )
+                chosen_slate_label = st.selectbox(
+                    "Choose a DraftKings " + ("single game" if lineup_mode == "Showdown" else "Classic slate"),
+                    slate_options["Slate Label"].tolist(),
+                    key="dk_auto_slate_" + ("showdown" if lineup_mode == "Showdown" else "classic"),
+                )
+                selected_dk_draft_group_id = str(
+                    slate_options.loc[slate_options["Slate Label"].eq(chosen_slate_label), "dg"].iloc[0]
+                )
+                try:
+                    draftables_response = requests.get(
+                        f"https://api.draftkings.com/draftgroups/v1/draftgroups/{selected_dk_draft_group_id}/draftables?format=json",
+                        headers={"User-Agent": "Mozilla/5.0", "Accept": "application/json"},
+                        timeout=20,
+                    )
+                    draftables_response.raise_for_status()
+                    draftables_json = draftables_response.json()
+                    draftables = draftables_json.get("draftables", draftables_json.get("Draftables", []))
+                    draftables_raw = pd.json_normalize(draftables)
+                    if not draftables_raw.empty:
+                        def dk_col(frame, names):
+                            lower = {str(col).strip().lower(): col for col in frame.columns}
+                            return next((lower[name.lower()] for name in names if name.lower() in lower), None)
+
+                        auto_name_col = dk_col(draftables_raw, ["displayName", "playerName", "name"])
+                        auto_salary_col = dk_col(draftables_raw, ["salary", "draftableSalary"])
+                        auto_team_col = dk_col(draftables_raw, ["teamAbbreviation", "teamAbbrev", "team", "teamName"])
+                        auto_position_col = dk_col(draftables_raw, ["position", "rosterPosition", "rosterSlot"])
+                        auto_id_col = dk_col(draftables_raw, ["draftableId", "id", "playerId"])
+                        if auto_name_col and auto_salary_col and auto_team_col:
+                            auto_draftables_df = pd.DataFrame({
+                                "Name": draftables_raw[auto_name_col].astype(str).str.strip(),
+                                "Salary": pd.to_numeric(draftables_raw[auto_salary_col], errors="coerce"),
+                                "TeamAbbrev": draftables_raw[auto_team_col].astype(str).str.strip().str.upper(),
+                                "Roster Position": draftables_raw[auto_position_col].astype(str).str.strip() if auto_position_col else "FLEX",
+                                "Position": draftables_raw[auto_position_col].astype(str).str.strip() if auto_position_col else "FLEX",
+                                "ID": draftables_raw[auto_id_col].astype(str).str.strip() if auto_id_col else "",
+                                "AvgPointsPerGame": 0,
+                            })
+                            auto_draftables_df = auto_draftables_df.dropna(subset=["Salary"])
+                            auto_draftables_df = auto_draftables_df[
+                                auto_draftables_df["Name"].ne("") &
+                                auto_draftables_df["Name"].str.lower().ne("nan") &
+                                auto_draftables_df["Salary"].gt(0)
+                            ].reset_index(drop=True)
+                            if not auto_draftables_df.empty:
+                                st.success(f"Loaded {auto_draftables_df['Name'].nunique()} players automatically for this slate.")
+                            else:
+                                auto_draftables_df = None
+                                st.warning("DraftKings returned a slate, but its player data could not be read. You can upload a salary CSV below.")
+                        else:
+                            st.warning("DraftKings player data did not include the expected name, salary, and team fields. You can upload a salary CSV below.")
+                except Exception as slate_error:
+                    st.warning(f"Could not automatically load players from DraftKings: {slate_error}. You can upload a salary CSV below.")
         if lineup_mode == "Showdown":
             lobby_mask = (
                 lobby_names.str.contains("showdown", case=False, regex=False)
@@ -2209,42 +2282,9 @@ try:
             # Exclude cash-game formats; keep tournament/GPP contests only.
             cash_game_pattern = r"\\b(50/50|double[- ]?up|head[- ]?to[- ]?head|h2h|cash game|winner[- ]?take[- ]?all)\\b"
             lobby_mask &= ~lobby_names.str.contains(cash_game_pattern, case=False, regex=True, na=False)
-            # For single-game slates, restrict contests to the matchup in the uploaded salary file.
-            uploaded_slate_teams = set()
-            if salary_file is not None:
-                try:
-                    salary_file.seek(0)
-                    slate_lines = salary_file.getvalue().decode("utf-8-sig", errors="replace").splitlines()
-                    slate_header = next(
-                        (i for i, line in enumerate(slate_lines)
-                         if "Roster Position" in line and "AvgPointsPerGame" in line),
-                        None
-                    )
-                    salary_file.seek(0)
-                    slate_players = pd.read_csv(salary_file, skiprows=slate_header) if slate_header is not None else pd.read_csv(salary_file)
-                    slate_players.columns = [str(c).strip() for c in slate_players.columns]
-                    slate_lookup = {str(c).strip().lower(): c for c in slate_players.columns}
-                    slate_team_col = next(
-                        (slate_lookup[k] for k in ["teamabbrev", "team", "team abbrev", "team abbreviation"] if k in slate_lookup),
-                        None
-                    )
-                    if slate_team_col is not None:
-                        uploaded_slate_teams = {
-                            str(team).strip().upper()
-                            for team in slate_players[slate_team_col].dropna().unique()
-                            if str(team).strip() and str(team).strip().lower() != "nan"
-                        }
-                except Exception:
-                    uploaded_slate_teams = set()
-            if len(uploaded_slate_teams) == 2:
-                lobby_text = lobby_df.fillna("").astype(str).agg(" ".join, axis=1).str.upper()
-                for team_code in uploaded_slate_teams:
-                    lobby_mask &= lobby_text.str.contains(
-                        rf"(?<![A-Z]){re.escape(team_code)}(?![A-Z])",
-                        regex=True
-                    )
-            elif salary_file is not None:
-                lobby_mask &= False
+            # Restrict contests to the selected slate/game instead of requiring a salary upload.
+            if selected_dk_draft_group_id and "dg" in lobby_df.columns:
+                lobby_mask &= lobby_df["dg"].astype(str).str.replace(r"\\.0$", "", regex=True).eq(selected_dk_draft_group_id)
         else:
             lobby_mask = ~(
                 lobby_names.str.contains("showdown", case=False, regex=False)
@@ -2351,6 +2391,13 @@ show_projection_refresh_status(
     [("DFF", dff_projection_file), ("DraftEdge", draftedge_projection_file)],
     "dk_" + lineup_mode.replace(" ", "_").lower()
 )
+
+if salary_file is None and auto_draftables_df is not None:
+    # Feed the automatically loaded DraftKings player pool through the same parser
+    # used for uploaded templates so player IDs and roster slots remain available.
+    import io
+    salary_file = io.BytesIO(auto_draftables_df.to_csv(index=False).encode("utf-8"))
+    st.caption("Automatic DraftKings player loading is active. You can still upload a salary/template CSV to override it.")
 
 if salary_file is not None:
     try:
