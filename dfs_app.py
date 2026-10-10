@@ -12,6 +12,37 @@ st.set_page_config(
 
 st.title("Universal DFS Simulator")
 
+def build_opponent_map(source_df, team_values):
+    """Map each NFL team to its opponent using matchup data when available."""
+    import re
+
+    teams = {
+        str(team).strip().upper()
+        for team in team_values
+        if str(team).strip() and str(team).strip().lower() != "nan"
+    }
+    opponents = {}
+
+    if source_df is not None:
+        lookup = {str(col).strip().casefold(): col for col in source_df.columns}
+        game_info_col = lookup.get("game info") or lookup.get("gameinfo")
+        if game_info_col is not None:
+            for game_info in source_df[game_info_col].dropna().astype(str):
+                match = re.search(r"([A-Z]{2,3})\\s*@\\s*([A-Z]{2,3})", game_info.upper())
+                if match:
+                    away, home = match.groups()
+                    opponents[away] = home
+                    opponents[home] = away
+
+    # For single-game files without a Game Info column, use the two teams present.
+    if not opponents and len(teams) == 2:
+        first, second = sorted(teams)
+        opponents[first] = second
+        opponents[second] = first
+
+    return opponents
+
+
 platform = st.selectbox(
     "DFS Site",
     ["DraftKings", "FanDuel"],
@@ -130,6 +161,8 @@ if platform == "FanDuel":
             errors="coerce"
         )
         fd_players["Team"] = fd_raw[fd_team_col].astype(str).str.strip().str.upper()
+        fd_opponents = build_opponent_map(fd_raw, fd_players["Team"])
+        fd_players["Opponent"] = fd_players["Team"].map(fd_opponents).fillna("—")
         fd_players["Position"] = fd_raw[fd_pos_col].astype(str).str.strip().str.upper()
         fd_players["Projection"] = (
             pd.to_numeric(fd_raw[fd_proj_col], errors="coerce").fillna(0.01)
@@ -712,17 +745,9 @@ if missing_projection_count:
 
 st.caption("Projection source counts: " + str(players_df["ProjectionSource"].value_counts().to_dict()))
 
-teams_in_slate = [
-    team for team in players_df["Team"].dropna().astype(str).unique()
-    if team.strip()
-]
-opponent_map = {}
-if len(teams_in_slate) == 2:
-    opponent_map = {
-        teams_in_slate[0]: teams_in_slate[1],
-        teams_in_slate[1]: teams_in_slate[0],
-    }
-players_df["Opponent"] = players_df["Team"].map(opponent_map)
+opponent_source = uploaded_df if "uploaded_df" in locals() else None
+opponent_map = build_opponent_map(opponent_source, players_df["Team"])
+players_df["Opponent"] = players_df["Team"].map(opponent_map).fillna("—")
 
 players_df["CaptainSalary"] = (
     players_df["Salary"] * 1.5
