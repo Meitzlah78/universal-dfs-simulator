@@ -296,6 +296,57 @@ def download_public_projection_table(source_name, platform_name):
         if result:
             return result
 
+        # Current DFF pages may render projections in table cells without the
+        # older data-ppg_proj attributes. Fall back to the visible row columns.
+        for row in row_html:
+            cells = re.findall(r"<td\\b([^>]*)>(.*?)</td>", row, flags=re.IGNORECASE | re.DOTALL)
+            if not cells:
+                continue
+            cell_texts = []
+            projection = None
+            for attrs, inner in cells:
+                label_match = re.search(
+                    r"(?:data-label|aria-label|title|class)=['\"]([^'\"]+)['\"]",
+                    attrs,
+                    flags=re.IGNORECASE
+                )
+                label = label_match.group(1).casefold() if label_match else ""
+                text_value = unescape(re.sub(r"<[^>]+>", " ", inner))
+                text_value = re.sub(r"\\s+", " ", text_value).strip()
+                cell_texts.append((label, text_value))
+                if any(token in label for token in ("ppg_projection", "projection", "projected points", "proj")):
+                    parsed = pd.to_numeric(text_value.replace(",", "").replace("$", ""), errors="coerce")
+                    if pd.notna(parsed) and np.isfinite(float(parsed)) and float(parsed) > 0:
+                        projection = float(parsed)
+
+            name_match = re.search(
+                r'<div\\b[^>]*class=["\'][^"\']*\\bbold\\b[^"\']*["\'][^>]*>\\s*([^<]+)',
+                row,
+                flags=re.IGNORECASE | re.DOTALL
+            )
+            name = unescape(name_match.group(1)).strip() if name_match else ""
+            if not name:
+                opening = re.search(r"<tr\\b[^>]*>", row, flags=re.IGNORECASE | re.DOTALL)
+                opening_tag = opening.group(0) if opening else row
+                name = attr_value(("data-player", "data-name"), opening_tag)
+
+            # On the current DFF layout the visible cells are position, player,
+            # salary, team, opponent, recent average, projection, then value.
+            if projection is None and len(cell_texts) > 6:
+                parsed = pd.to_numeric(
+                    cell_texts[6][1].replace(",", "").replace("$", ""),
+                    errors="coerce"
+                )
+                if pd.notna(parsed) and np.isfinite(float(parsed)) and float(parsed) > 0:
+                    projection = float(parsed)
+
+            key = normalize_projection_player_name(name)
+            if key and projection is not None:
+                result[key] = projection
+
+        if result:
+            return result
+
         # Some DFF pages put the same attributes on elements outside table rows.
         for match in re.finditer(
             r'data-ppg_proj=["\']([^"\']+)["\'].*?data-player_id=["\'][^"\']+["\'].*?<div class=["\']bold["\']>\s*([^<]+)',
