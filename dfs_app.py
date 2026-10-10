@@ -16,7 +16,7 @@ st.title("Universal DFS Simulator")
 # Quick link to DraftKings lineup upload.
 st.link_button(
     "CONTEST",
-    "https://www.draftkings.com/lineup/upload",
+    "https://www.draftkings.com/entry/upload",
     use_container_width=True,
 )
 
