@@ -551,17 +551,81 @@ if salary_file is not None:
                             draftedge_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=20
                         )
                         de_response.raise_for_status()
-                        de_tables = pd.read_html(StringIO(de_response.text))
+                        # Parse HTML with Python's built-in parser; lxml is not required.
+                        from html.parser import HTMLParser
+
+                        class DraftEdgeTableParser(HTMLParser):
+                            def __init__(self):
+                                super().__init__()
+                                self.tables = []
+                                self.in_table = False
+                                self.in_row = False
+                                self.in_cell = False
+                                self.current_table = []
+                                self.current_row = []
+                                self.current_cell = []
+
+                            def handle_starttag(self, tag, attrs):
+                                if tag == "table":
+                                    self.in_table = True
+                                    self.current_table = []
+                                elif self.in_table and tag == "tr":
+                                    self.in_row = True
+                                    self.current_row = []
+                                elif self.in_row and tag in ("td", "th"):
+                                    self.in_cell = True
+                                    self.current_cell = []
+
+                            def handle_data(self, data):
+                                if self.in_cell:
+                                    self.current_cell.append(data)
+
+                            def handle_endtag(self, tag):
+                                if self.in_cell and tag in ("td", "th"):
+                                    self.current_row.append(re.sub(r"\s+", " ", "".join(self.current_cell)).strip())
+                                    self.in_cell = False
+                                elif self.in_row and tag == "tr":
+                                    if self.current_row:
+                                        self.current_table.append(self.current_row)
+                                    self.in_row = False
+                                elif self.in_table and tag == "table":
+                                    if self.current_table:
+                                        self.tables.append(self.current_table)
+                                    self.in_table = False
+
+                        table_parser = DraftEdgeTableParser()
+                        table_parser.feed(de_response.text)
                         de_table = None
-                        for table in de_tables:
-                            cols = {str(col).strip().casefold() for col in table.columns}
-                            if {"team", "player", "proj"}.issubset(cols):
-                                de_table = table.copy()
+                        for raw_table in table_parser.tables:
+                            header_index = next(
+                                (i for i, row in enumerate(raw_table)
+                                 if {"team", "player", "proj"}.issubset(
+                                     {cell.strip().casefold() for cell in row}
+                                 )),
+                                None
+                            )
+                            if header_index is None:
+                                continue
+                            headers = [cell.strip() for cell in raw_table[header_index]]
+                            header_lookup = {name.casefold(): i for i, name in enumerate(headers)}
+                            records = []
+                            for row in raw_table[header_index + 1:]:
+                                required_index = max(
+                                    header_lookup["team"], header_lookup["player"], header_lookup["proj"]
+                                )
+                                if len(row) <= required_index:
+                                    continue
+                                records.append({
+                                    "Team": row[header_lookup["team"]],
+                                    "Player": row[header_lookup["player"]],
+                                    "Proj": row[header_lookup["proj"]]
+                                })
+                            if records:
+                                de_table = pd.DataFrame(records)
                                 break
                         if de_table is None:
                             raise ValueError("DraftEdge page did not contain the expected Team/Player/Proj table.")
 
-                        de_table.columns = [str(col).strip() for col in de_table.columns]
                         de_table["Player"] = de_table["Player"].astype(str).map(
                             lambda name: re.sub(r"\s+", " ", unescape(name)).strip()
                         )
