@@ -992,6 +992,20 @@ if platform == "DraftKings" and lineup_mode == "Classic":
         ("TE", {"TE"}), ("FLEX", {"RB", "WR", "TE"}), ("DST", {"DST"})
     ]
 
+    if st.button("SIM CLASSIC PLAYERS", type="primary"):
+        with st.spinner("Running 10,000 player simulations for DraftKings Classic..."):
+            classic_simulation_df = run_game_simulations(players_df)
+        st.session_state["simulation_df"] = classic_simulation_df
+        st.session_state["simulations_ready"] = True
+        generated_projections = {
+            str(player_name): float(classic_simulation_df[player_name].mean())
+            for player_name in classic_simulation_df.columns
+        }
+        internal_projection_store = st.session_state.setdefault("internal_projections_by_slate", {})
+        internal_projection_store[internal_key] = generated_projections
+        st.success("Classic player simulations completed.")
+        st.rerun()
+
     if st.button("BUILD CLASSIC LINEUPS", type="primary"):
         rng = np.random.default_rng()
         rankings = {}
