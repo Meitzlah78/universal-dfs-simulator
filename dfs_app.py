@@ -256,11 +256,14 @@ def apply_injury_statuses(frame, key_prefix):
         stale_build_keys = [
             key for key in list(st.session_state.keys())
             if any(token in str(key).lower() for token in (
-                "lineup", "portfolio", "simulation", "contest_field", "contest_results",
+                "lineups", "portfolio", "simulation", "contest_field", "contest_results",
                 "candidate", "exposure", "saved_build", "classic_pool_signature",
-                "final_lineups", "build_ready"
+                "final_lineups", "build_ready", "latest_field_ownership"
             ))
-            and key not in {"player_injury_statuses"}
+            and not any(token in str(key).lower() for token in (
+                "dropdown", "injury_status", "player_injury_statuses", "lineup_mode",
+                "platform", "slate_selector"
+            ))
         ]
         for key in stale_build_keys:
             st.session_state.pop(key, None)
