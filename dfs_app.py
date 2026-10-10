@@ -228,10 +228,11 @@ def download_public_projection_table(source_name, platform_name):
         page_text = re.sub(r"\s+", " ", page_text)
         if "Sort" in page_text:
             page_text = page_text.split("Sort", 1)[1]
+        # HTML responses may omit the visual pipe separators shown by browsers.
         row_pattern = re.compile(
-            r"\b(?:QB|WR|RB|TE|FLX|DST|K)\s*\|\s*(?:Image\s+)?(.+?)\s*\|\s*"
-            r"\$[\d,.]+k\s*\|\s*[A-Z]{2,3}\s*\|\s*[A-Z]{2,3}\s*\|\s*"
-            r"\d+\s*\|\s*(\d+(?:\.\d+)?)",
+            r"\b(?:QB|WR|RB|TE|FLX|DST|K)\s*\|?\s*(?:Image\s+)?(.+?)\s*\|?\s*"
+            r"\$[\d,.]+k\s*\|?\s*[A-Z]{2,3}\s*\|?\s*[A-Z]{2,3}\s*\|?\s*"
+            r"\d+\s*\|?\s*(\d+(?:\.\d+)?)",
             re.IGNORECASE
         )
         result = {}
