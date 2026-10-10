@@ -1151,6 +1151,8 @@ if platform == "DraftKings" and lineup_mode == "Classic":
         st.success("Classic player simulations completed.")
         st.rerun()
 
+    contest_sim_clicked = st.button("CONTEST SIM", type="primary")
+
     if st.button("BUILD", type="primary"):
         rng = np.random.default_rng()
         rankings = {}
@@ -1239,6 +1241,72 @@ if platform == "DraftKings" and lineup_mode == "Classic":
             ).reset_index(drop=True)
             st.session_state["classic_lineups"] = classic_results
             st.session_state["classic_pool_signature"] = slate_signature
+
+    if contest_sim_clicked:
+        if "simulation_df" not in st.session_state:
+            st.warning("Run SIM first, then run CONTEST SIM.")
+        elif len(classic_pool) < 9:
+            st.error("At least 9 eligible players are required for DraftKings Classic Contest Sim.")
+        else:
+            with st.spinner("Simulating 10,000 DraftKings Classic opponent lineups..."):
+                rng = np.random.default_rng()
+                sim_df = st.session_state["simulation_df"]
+                mean_scores = sim_df.mean(axis=0).to_dict()
+                pool = classic_pool.copy()
+                pool["MeanPoints"] = pool["Name"].map(mean_scores).fillna(pool["Projection"])
+                pool["Weight"] = pool["MeanPoints"].clip(lower=0.01)
+                roster_slots_for_contest = [
+                    ("QB", {"QB"}), ("RB1", {"RB"}), ("RB2", {"RB"}),
+                    ("WR1", {"WR"}), ("WR2", {"WR"}), ("WR3", {"WR"}),
+                    ("TE", {"TE"}), ("FLEX", {"RB", "WR", "TE"}), ("DST", {"DST"})
+                ]
+                rows = []
+                seen_contest = set()
+                attempts = 0
+                while len(rows) < 10000 and attempts < 250000:
+                    attempts += 1
+                    chosen = {}
+                    used = set()
+                    salary = 0
+                    for slot, eligible in roster_slots_for_contest:
+                        choices = pool[
+                            (~pool["Name"].isin(used))
+                            & pool["Eligible"].apply(lambda positions: bool(positions & eligible))
+                            & ((pool["Salary"] + salary) <= MAX_LINEUP_SALARY)
+                        ]
+                        if choices.empty:
+                            break
+                        weights = choices["Weight"].to_numpy(dtype=float)
+                        weights = weights / weights.sum()
+                        picked = choices.iloc[int(rng.choice(len(choices), p=weights))]
+                        chosen[slot] = str(picked["Name"])
+                        used.add(str(picked["Name"]))
+                        salary += int(picked["Salary"])
+                    if len(chosen) != len(roster_slots_for_contest):
+                        continue
+                    if salary < MIN_LINEUP_SALARY or salary > MAX_LINEUP_SALARY or salary > 50000:
+                        continue
+                    key = tuple(chosen[slot] for slot, _ in roster_slots_for_contest)
+                    if key in seen_contest:
+                        continue
+                    seen_contest.add(key)
+                    points = sum(float(mean_scores.get(name, 0.0)) for name in chosen.values())
+                    rows.append({**chosen, "Salary": salary, "ProjectedPoints": round(points, 2)})
+                contest_field_df = pd.DataFrame(rows)
+                st.session_state["classic_contest_field_df"] = contest_field_df
+                st.session_state["classic_contest_field_ready"] = len(contest_field_df) > 0
+            if not contest_field_df.empty:
+                st.success(f"Created {len(contest_field_df):,} simulated DraftKings Classic opponent lineups.")
+                st.write("### Contest Sim Results")
+                st.caption("Opponent lineup scores use each player's internal simulated average. This is a simulated field, not the actual contest entries.")
+                st.dataframe(
+                    contest_field_df.sort_values("ProjectedPoints", ascending=False).head(20),
+                    use_container_width=True,
+                    hide_index=True
+                )
+                st.metric("Simulated opponent lineups", f"{len(contest_field_df):,}")
+            else:
+                st.error("Could not create valid opponent lineups. Check the player pool and salary range.")
 
     classic_results = st.session_state.get("classic_lineups")
     if classic_results is not None:
