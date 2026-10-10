@@ -603,7 +603,11 @@ if platform == "DraftKings" and lineup_mode == "Classic":
 
             if len(chosen) != len(roster_slots) or salary > 50000:
                 continue
-            if not all(name in chosen.values() for name in locked_players):
+            classic_locked_players = [
+                name for name in available_players
+                if control_map.get(name, {}).get("Lock", False)
+            ]
+            if not all(name in chosen.values() for name in classic_locked_players):
                 continue
 
             key = tuple(chosen[slot] for slot, _ in roster_slots)
