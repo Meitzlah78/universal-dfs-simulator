@@ -226,7 +226,7 @@ def build_dk_contest_entry_export(entry_df, selected_contest_id, lineup_ids_df, 
         st.error("Your DraftKings entry file must include Entry ID and Contest ID to replace existing contest entries.")
         return None
     entries = entry_df.copy()
-    entries["Contest ID"] = entries["Contest ID"].astype(str).str.replace(r"\\.0$", "", regex=True).str.strip()
+    entries["Contest ID"] = entries["Contest ID"].astype(str).str.replace(r"\.0$", "", regex=True).str.strip()
     target_id = str(selected_contest_id or "").strip()
     if not target_id:
         st.error("Select your contest from the uploaded DraftKings entry file before exporting.")
@@ -244,7 +244,7 @@ def build_dk_contest_entry_export(entry_df, selected_contest_id, lineup_ids_df, 
     # Locate roster columns in the original entry template, including pandas' .1/.2
     # suffixes for duplicate headers such as FLEX,FLEX or RB,RB.
     original_columns = list(entries.columns)
-    normalized = [re.sub(r"\\.\\d+$", "", str(col)).strip().upper() for col in original_columns]
+    normalized = [re.sub(r"\.\d+$", "", str(col)).strip().upper() for col in original_columns]
     roster_column_indices = []
     used = set()
     for expected in expected_slots:
@@ -2201,7 +2201,7 @@ try:
                 "numEntries", "numberOfEntries", "entries", "size"
             ]
             size_col = next((c for c in size_aliases if c in lobby_matches.columns), None)
-            lobby_matches["id"] = lobby_matches["id"].astype(str).str.replace(r"\\.0$", "", regex=True)
+            lobby_matches["id"] = lobby_matches["id"].astype(str).str.replace(r"\.0$", "", regex=True)
             lobby_matches["_field_size"] = (
                 pd.to_numeric(lobby_matches[size_col], errors="coerce")
                 if size_col else np.nan
