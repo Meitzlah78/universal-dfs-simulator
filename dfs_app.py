@@ -226,13 +226,13 @@ def download_public_projection_table(source_name, platform_name):
         from bs4 import BeautifulSoup
         page_text = unescape(BeautifulSoup(response.text, "html.parser").get_text(" ", strip=True))
         row_pattern = re.compile(
-            r"\\b(?:QB|WR|RB|TE|FLX|DST|K)\\s+(.+?)\\s+\\$[\\d,.]+k\\s+"
-            r"([A-Z]{2,3})\\s+([A-Z]{2,3})\\s+\\d+\\s+(\\d+(?:\\.\\d+)?)",
+            r"\b(?:QB|WR|RB|TE|FLX|DST|K)\s+(.+?)\s+\$[\d,.]+k\s+"
+            r"([A-Z]{2,3})\s+([A-Z]{2,3})\s+\d+\s+(\d+(?:\.\d+)?)",
             re.IGNORECASE
         )
         result = {}
         for match in row_pattern.finditer(page_text):
-            player_name = re.sub(r"\\s+", " ", match.group(1)).strip()
+            player_name = re.sub(r"\s+", " ", match.group(1)).strip()
             # The first numeric value after opponent is the site's fantasy projection.
             key = normalize_projection_player_name(player_name)
             value = pd.to_numeric(match.group(4), errors="coerce")
