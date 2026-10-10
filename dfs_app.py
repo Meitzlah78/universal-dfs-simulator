@@ -1189,7 +1189,30 @@ if platform == "FanDuel":
     fd_results = st.session_state.get(fd_build_key)
     if fd_results is not None:
         st.write(f"Built {len(fd_results)} FanDuel lineups.")
-        st.dataframe(fd_results, use_container_width=True, hide_index=True)
+        fd_display = fd_results.copy()
+        fd_sim_key = "fd_simulation_df_" + lineup_mode.replace(" ", "_").lower()
+        fd_sim = st.session_state.get(fd_sim_key)
+        if not isinstance(fd_sim, pd.DataFrame) or fd_sim.empty:
+            try:
+                fd_sim = run_game_simulations(fd_players, platform="FanDuel")
+                st.session_state[fd_sim_key] = fd_sim
+            except Exception:
+                fd_sim = None
+        if isinstance(fd_sim, pd.DataFrame) and not fd_sim.empty:
+            fd_means = fd_sim.mean(axis=0, numeric_only=True).to_dict()
+            for slot in fd_slots:
+                if slot in fd_display.columns:
+                    multiplier = 1.5 if lineup_mode == "Single Game" and slot == "MVP" else 1.0
+                    fd_display[slot + " Sim Pts"] = fd_display[slot].map(
+                        lambda name: round(float(fd_means.get(str(name), 0.0)) * multiplier, 2)
+                    )
+            ordered_cols = []
+            for slot in fd_slots:
+                if slot in fd_display.columns:
+                    ordered_cols.extend([slot, slot + " Sim Pts"])
+            ordered_cols.extend(c for c in fd_display.columns if c not in ordered_cols)
+            fd_display = fd_display[ordered_cols]
+        st.dataframe(fd_display, use_container_width=True, hide_index=True)
 
         if "FD_ID" in fd_players.columns:
             fd_ids = dict(zip(fd_players["Name"], fd_players["FD_ID"].astype(str)))
@@ -2445,8 +2468,23 @@ if platform == "DraftKings" and lineup_mode == "Classic":
                 st.warning("Removed saved lineups containing players no longer eligible. Click BUILD to create replacement lineups.")
         if not classic_results.empty:
             st.write(f"Built {len(classic_results)} valid Classic lineups.")
+        classic_display = classic_results.drop(columns=["Score"], errors="ignore").copy()
+        classic_sim = st.session_state.get("simulation_df")
+        if isinstance(classic_sim, pd.DataFrame) and not classic_sim.empty:
+            classic_means = classic_sim.mean(axis=0, numeric_only=True).to_dict()
+            for slot in export_slots:
+                if slot in classic_display.columns:
+                    classic_display[slot + " Sim Pts"] = classic_display[slot].map(
+                        lambda name: round(float(classic_means.get(str(name), 0.0)), 2)
+                    )
+            ordered_cols = []
+            for slot in export_slots:
+                if slot in classic_display.columns:
+                    ordered_cols.extend([slot, slot + " Sim Pts"])
+            ordered_cols.extend(c for c in classic_display.columns if c not in ordered_cols)
+            classic_display = classic_display[ordered_cols]
         st.dataframe(
-            classic_results.drop(columns=["Score"], errors="ignore"),
+            classic_display,
             use_container_width=True,
             hide_index=True
         )
