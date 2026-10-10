@@ -487,6 +487,8 @@ DFS_SCORING_RULES = {
         "fumble_lost": -1, "two_point_conversion": 2,
         "pass_300_bonus": 3, "rush_100_bonus": 3, "receiving_100_bonus": 3,
         "single_game_multiplier": 1.5,
+        "sack": 1, "def_interception": 2, "fumble_recovery": 2,
+        "defensive_td": 6, "safety": 2, "blocked_kick": 2,
     },
     "FanDuel": {
         "pass_yard": 0.04, "pass_td": 4, "interception": -1,
@@ -495,43 +497,59 @@ DFS_SCORING_RULES = {
         "fumble_lost": -2, "two_point_conversion": 2,
         "pass_300_bonus": 0, "rush_100_bonus": 0, "receiving_100_bonus": 0,
         "single_game_multiplier": 1.5,
+        "sack": 1, "def_interception": 2, "fumble_recovery": 2,
+        "defensive_td": 6, "safety": 2, "blocked_kick": 2,
     },
 }
 
 def score_nfl_stat_line(stats, platform):
-    """Score simulated NFL stats using the selected DFS site's scoring rules."""
+    """Apply DraftKings or FanDuel NFL scoring to simulated player stat lines."""
     rules = DFS_SCORING_RULES["FanDuel" if str(platform).lower().startswith("fanduel") else "DraftKings"]
-    passing_yards = np.asarray(stats.get("passing_yards", 0), dtype=float)
-    rushing_yards = np.asarray(stats.get("rushing_yards", 0), dtype=float)
-    receiving_yards = np.asarray(stats.get("receiving_yards", 0), dtype=float)
+    arr = lambda key: np.asarray(stats.get(key, 0), dtype=float)
+    passing_yards, rushing_yards, receiving_yards = arr("passing_yards"), arr("rushing_yards"), arr("receiving_yards")
     score = (
         passing_yards * rules["pass_yard"]
-        + np.asarray(stats.get("passing_tds", 0), dtype=float) * rules["pass_td"]
-        + np.asarray(stats.get("interceptions", 0), dtype=float) * rules["interception"]
+        + arr("passing_tds") * rules["pass_td"]
+        + arr("interceptions") * rules["interception"]
         + rushing_yards * rules["rush_yard"]
-        + np.asarray(stats.get("rushing_tds", 0), dtype=float) * rules["rush_td"]
+        + arr("rushing_tds") * rules["rush_td"]
         + receiving_yards * rules["receiving_yard"]
-        + np.asarray(stats.get("receiving_tds", 0), dtype=float) * rules["receiving_td"]
-        + np.asarray(stats.get("receptions", 0), dtype=float) * rules["reception"]
-        + np.asarray(stats.get("fumbles_lost", 0), dtype=float) * rules["fumble_lost"]
-        + np.asarray(stats.get("two_point_conversions", 0), dtype=float) * rules["two_point_conversion"]
+        + arr("receiving_tds") * rules["receiving_td"]
+        + arr("receptions") * rules["reception"]
+        + arr("fumbles_lost") * rules["fumble_lost"]
+        + arr("two_point_conversions") * rules["two_point_conversion"]
+        + arr("sacks") * rules["sack"]
+        + arr("def_interceptions") * rules["def_interception"]
+        + arr("fumble_recoveries") * rules["fumble_recovery"]
+        + arr("defensive_tds") * rules["defensive_td"]
+        + arr("safeties") * rules["safety"]
+        + arr("blocked_kicks") * rules["blocked_kick"]
     )
     score = score + (passing_yards >= 300) * rules["pass_300_bonus"]
     score = score + (rushing_yards >= 100) * rules["rush_100_bonus"]
     score = score + (receiving_yards >= 100) * rules["receiving_100_bonus"]
-    score = score + np.asarray(stats.get("field_goals_made", 0), dtype=float) * 3
-    score = score + np.asarray(stats.get("field_goals_50_plus", 0), dtype=float) * 2
-    score = score + np.asarray(stats.get("extra_points_made", 0), dtype=float)
-    score = score + np.asarray(stats.get("sacks", 0), dtype=float)
-    score = score + np.asarray(stats.get("def_interceptions", 0), dtype=float) * 2
-    score = score + np.asarray(stats.get("fumble_recoveries", 0), dtype=float) * 2
-    score = score + np.asarray(stats.get("defensive_tds", 0), dtype=float) * 6
-    score = score + np.asarray(stats.get("safeties", 0), dtype=float) * 2
+    # Kicker scoring: 3 points for short FGs, 4 for 40-49 yards, 5 for 50+.
+    score = score + arr("fg_under_40") * 3 + arr("fg_40_49") * 4 + arr("fg_50_plus") * 5
+    score = score + arr("extra_points_made")
+    # Defense scoring includes points-allowed tiers; yardage allowed is modeled too.
+    points_allowed = arr("points_allowed")
+    score = score + np.select(
+        [points_allowed == 0, points_allowed <= 6, points_allowed <= 13,
+         points_allowed <= 20, points_allowed <= 27, points_allowed <= 34],
+        [10, 7, 4, 1, 0, -1], default=-4
+    ) * np.asarray(stats.get("is_defense", 0), dtype=float)
+    yards_allowed = arr("yards_allowed")
+    score = score + np.select(
+        [yards_allowed <= 100, yards_allowed <= 199, yards_allowed <= 299,
+         yards_allowed <= 349, yards_allowed <= 399, yards_allowed <= 449,
+         yards_allowed <= 499],
+        [3, 2, 1, 0, -1, -3, -5], default=-7
+    ) * np.asarray(stats.get("is_defense", 0), dtype=float)
     return score
 
 
 def _simulate_scored_player_outcomes(players_df, platform, rng):
-    """Generate internal stat lines and apply the selected site's scoring."""
+    """Simulate player stats and score them with the selected site's rules."""
     means = build_internal_projection_means(players_df)
     simulations = {}
     n = SIMULATIONS
@@ -546,6 +564,7 @@ def _simulate_scored_player_outcomes(players_df, platform, rng):
                 "interceptions": rng.poisson(0.65, n),
                 "rushing_yards": np.maximum(0, rng.normal(16, 20, n)),
                 "rushing_tds": rng.binomial(1, 0.12, n),
+                "fumbles_lost": rng.binomial(1, 0.08, n),
             }
         elif "RB" in positions:
             stats = {
@@ -554,6 +573,7 @@ def _simulate_scored_player_outcomes(players_df, platform, rng):
                 "receiving_yards": np.maximum(0, rng.normal(22, 20, n)),
                 "receiving_tds": rng.binomial(1, 0.10, n),
                 "receptions": rng.poisson(2.5, n),
+                "fumbles_lost": rng.binomial(1, 0.04, n),
             }
         elif "WR" in positions:
             stats = {
@@ -561,17 +581,20 @@ def _simulate_scored_player_outcomes(players_df, platform, rng):
                 "receiving_tds": rng.binomial(1, 0.28, n),
                 "receptions": rng.poisson(4.0, n),
                 "rushing_yards": np.maximum(0, rng.normal(2, 5, n)),
+                "fumbles_lost": rng.binomial(1, 0.02, n),
             }
         elif "TE" in positions:
             stats = {
                 "receiving_yards": np.maximum(0, rng.normal(34, 24, n)),
                 "receiving_tds": rng.binomial(1, 0.20, n),
                 "receptions": rng.poisson(2.7, n),
+                "fumbles_lost": rng.binomial(1, 0.02, n),
             }
         elif "K" in positions:
             stats = {
-                "field_goals_made": rng.poisson(1.7, n),
-                "field_goals_50_plus": rng.binomial(1, 0.25, n),
+                "fg_under_40": rng.poisson(1.0, n),
+                "fg_40_49": rng.poisson(0.5, n),
+                "fg_50_plus": rng.poisson(0.25, n),
                 "extra_points_made": rng.poisson(2.0, n),
             }
         else:
@@ -581,13 +604,21 @@ def _simulate_scored_player_outcomes(players_df, platform, rng):
                 "fumble_recoveries": rng.binomial(1, 0.45, n),
                 "defensive_tds": rng.binomial(1, 0.08, n),
                 "safeties": rng.binomial(1, 0.03, n),
+                "blocked_kicks": rng.binomial(1, 0.04, n),
+                "points_allowed": np.clip(rng.normal(22, 10, n), 0, 50),
+                "yards_allowed": np.clip(rng.normal(350, 80, n), 0, 650),
+                "is_defense": 1,
             }
         scores = np.asarray(score_nfl_stat_line(stats, platform), dtype=float)
-        # Keep salary-based internal estimates as the mean, while scoring the
-        # simulated stat outcomes with the selected site's point values.
+        # Adjust simulated opportunity volume by salary so higher-priced players
+        # tend to have more opportunity, while retaining site-specific scoring differences.
         actual_mean = float(np.mean(scores))
-        scores = scores * (target_mean / actual_mean) if actual_mean > 0 else np.full(n, target_mean)
-        simulations[name] = scores
+        if actual_mean > 0:
+            salary_factor = float(np.clip(target_mean / actual_mean, 0.65, 1.55))
+            scores = scores * salary_factor
+        else:
+            scores = np.full(n, target_mean)
+        simulations[name] = np.maximum(scores, 0)
     return pd.DataFrame(simulations)
 
 # ================================
