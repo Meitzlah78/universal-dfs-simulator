@@ -1749,6 +1749,76 @@ if entry_file is not None:
     except Exception as exc:
         st.error(f"Could not read the DraftKings contest entry file: {exc}")
 
+# Live DraftKings lobby contest dropdown, matching the Colab selector.
+st.write("### DraftKings Lobby Contest")
+try:
+    import requests
+    lobby_response = requests.get(
+        "https://www.draftkings.com/lobby/getcontests?sport=NFL",
+        headers={"User-Agent": "Mozilla/5.0", "Accept": "application/json"},
+        timeout=20,
+    )
+    lobby_response.raise_for_status()
+    lobby_data = lobby_response.json()
+    lobby_contests = lobby_data.get("Contests", lobby_data.get("contests", []))
+    lobby_df = pd.json_normalize(lobby_contests)
+    if not lobby_df.empty and "id" in lobby_df.columns and "n" in lobby_df.columns:
+        lobby_names = lobby_df["n"].fillna("").astype(str)
+        if lineup_mode == "Showdown":
+            lobby_mask = (
+                lobby_names.str.contains("showdown", case=False, regex=False)
+                | lobby_df.get("gameType", pd.Series("", index=lobby_df.index)).fillna("").astype(str).str.contains("showdown", case=False, regex=False)
+            )
+        else:
+            lobby_mask = ~(
+                lobby_names.str.contains("showdown", case=False, regex=False)
+                | lobby_df.get("gameType", pd.Series("", index=lobby_df.index)).fillna("").astype(str).str.contains("showdown", case=False, regex=False)
+            )
+        lobby_matches = lobby_df.loc[lobby_mask].copy()
+        if not lobby_matches.empty:
+            size_col = next((c for c in ["s", "entries", "entryCount", "numEntries", "fieldSize", "contestSize"] if c in lobby_matches.columns), None)
+            lobby_matches["id"] = lobby_matches["id"].astype(str).str.replace(r"\\.0$", "", regex=True)
+            lobby_matches["_field_size"] = pd.to_numeric(lobby_matches[size_col], errors="coerce") if size_col else np.nan
+            lobby_matches = lobby_matches.drop_duplicates(subset=["id"])
+            lobby_matches = lobby_matches.sort_values("n")
+            lobby_matches["Contest Label"] = lobby_matches.apply(
+                lambda row: f'{row["n"]} | ID {row["id"]}' + (f' | {int(row["_field_size"]):,} entries' if pd.notna(row["_field_size"]) and row["_field_size"] > 0 else ""),
+                axis=1,
+            )
+            previous_lobby_id = str((st.session_state.get("selected_dk_contest") or {}).get("id", ""))
+            default_index = next((i for i, value in enumerate(lobby_matches["id"].tolist()) if value == previous_lobby_id), 0)
+            chosen_lobby_label = st.selectbox(
+                "Select a DraftKings contest",
+                lobby_matches["Contest Label"].tolist(),
+                index=default_index,
+                key="dk_lobby_contest_dropdown",
+            )
+            chosen_lobby = lobby_matches.loc[lobby_matches["Contest Label"].eq(chosen_lobby_label)].iloc[0]
+            previous_selection = st.session_state.get("selected_dk_contest") or {}
+            try:
+                lobby_field_size = int(float(chosen_lobby["_field_size"])) if pd.notna(chosen_lobby["_field_size"]) else None
+            except (TypeError, ValueError):
+                lobby_field_size = None
+            st.session_state["selected_dk_contest"] = {
+                "id": str(chosen_lobby["id"]),
+                "name": str(chosen_lobby["n"]),
+                "your_entries": int(previous_selection.get("your_entries", 0) or 0)
+                    if str(previous_selection.get("id", "")) == str(chosen_lobby["id"]) else 0,
+                "entry_fee": previous_selection.get("entry_fee")
+                    if str(previous_selection.get("id", "")) == str(chosen_lobby["id"]) else None,
+                "field_size": lobby_field_size,
+            }
+            if lobby_field_size:
+                st.caption(f"Contest field: {lobby_field_size:,} total entries. Your entries are subtracted when known.")
+            else:
+                st.warning("DraftKings returned contest choices, but its field-size value was not found. The default opponent count will be used.")
+        else:
+            st.warning(f"No DraftKings {lineup_mode} contests were found in the lobby response.")
+    else:
+        st.warning("DraftKings lobby response did not contain the expected contest list.")
+except Exception as exc:
+    st.warning(f"Could not load the DraftKings lobby contest dropdown: {exc}")
+
 dk_opponent_target = get_contest_opponent_target("dk")
 st.caption(f"Simulated DraftKings opponents: {dk_opponent_target:,}")
 
