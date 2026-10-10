@@ -1906,6 +1906,39 @@ st.write("### Player Pool")
 
 player_display = players_df.copy()
 
+# Show realized Captain/Flex exposure from the current final portfolio in the Player Pool.
+# Percentages are based on the number of final portfolio lineups, not the candidate pool.
+portfolio_for_exposure = st.session_state.get("portfolio_df")
+if (
+    isinstance(portfolio_for_exposure, pd.DataFrame)
+    and not portfolio_for_exposure.empty
+    and "Captain" in portfolio_for_exposure.columns
+):
+    exposure_lineups = len(portfolio_for_exposure)
+    captain_counts = portfolio_for_exposure["Captain"].astype(str).str.strip().value_counts()
+    flex_columns = [c for c in ["Flex1", "Flex2", "Flex3", "Flex4", "Flex5"]
+                    if c in portfolio_for_exposure.columns]
+    if flex_columns and exposure_lineups:
+        flex_counts = (
+            portfolio_for_exposure[flex_columns]
+            .astype(str)
+            .apply(lambda row: pd.unique(row.str.strip()).tolist(), axis=1)
+            .explode()
+            .value_counts()
+        )
+    else:
+        flex_counts = pd.Series(dtype=int)
+    player_names = player_display["Name"].astype(str).str.strip()
+    player_display["Captain Exp %"] = player_names.map(
+        lambda name: round(100 * captain_counts.get(name, 0) / exposure_lineups, 1)
+    )
+    player_display["Flex Exp %"] = player_names.map(
+        lambda name: round(100 * flex_counts.get(name, 0) / exposure_lineups, 1)
+    )
+else:
+    player_display["Captain Exp %"] = np.nan
+    player_display["Flex Exp %"] = np.nan
+
 if "simulation_df" in st.session_state:
     simulation_df = st.session_state["simulation_df"]
 
