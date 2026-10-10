@@ -502,7 +502,7 @@ if salary_file is not None:
                     game_match = None
                     for game_info in game_info_values:
                         game_match = re.search(
-                            r"([A-Z]{2,3})\\s*@\\s*([A-Z]{2,3}).*?(\\d{1,2}/\\d{1,2}/\\d{4})",
+                            r"([A-Z]{2,3})\s*@\s*([A-Z]{2,3}).*?(\d{1,2}/\d{1,2}/\d{4})",
                             game_info.upper()
                         )
                         if game_match:
@@ -549,7 +549,7 @@ if salary_file is not None:
 
                     de_table.columns = [str(col).strip() for col in de_table.columns]
                     de_table["Player"] = de_table["Player"].astype(str).map(
-                        lambda name: re.sub(r"\\s+", " ", unescape(name)).strip()
+                        lambda name: re.sub(r"\s+", " ", unescape(name)).strip()
                     )
                     de_table["Proj"] = pd.to_numeric(
                         de_table["Proj"].astype(str).str.replace(",", "", regex=False),
@@ -558,7 +558,7 @@ if salary_file is not None:
                     # Normalize common suffixes and punctuation while matching names.
                     def normalize_player_name(name):
                         value = unescape(str(name)).casefold().strip()
-                        value = re.sub(r"\\b(jr|sr|ii|iii|iv|v)\\.?\\b", "", value)
+                        value = re.sub(r"\b(jr|sr|ii|iii|iv|v)\\.?\b", "", value)
                         return re.sub(r"[^a-z0-9]", "", value)
 
                     de_projections = {}
