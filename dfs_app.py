@@ -182,7 +182,10 @@ def download_public_projection_table(source_name, platform_name):
     import requests
     platform_key = str(platform_name).casefold()
     if source_name == "DFF":
-        url = "https://www.dailyfantasyfuel.com/nfl/projections/fanduel/" if "fanduel" in platform_key else "https://www.dailyfantasyfuel.com/nfl/projections/"
+        if "single game" in platform_key or "showdown" in platform_key:
+            url = "https://www.dailyfantasyfuel.com/nfl/showdown-single-game-projections/"
+        else:
+            url = "https://www.dailyfantasyfuel.com/nfl/projections/fanduel/" if "fanduel" in platform_key else "https://www.dailyfantasyfuel.com/nfl/projections/"
     elif source_name == "DraftEdge":
         url = "https://draftedge.com/nfl/"
     else:
@@ -190,20 +193,49 @@ def download_public_projection_table(source_name, platform_name):
     try:
         response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=(5, 12))
         response.raise_for_status()
-        tables = pd.read_html(io.StringIO(response.text))
     except Exception:
         return {}
+
+    # First try ordinary HTML tables, which work for sources that publish
+    # their projections as real tables.
+    try:
+        tables = pd.read_html(io.StringIO(response.text))
+    except Exception:
+        tables = []
     for table in tables:
         table.columns = [str(c).strip() for c in table.columns]
         lookup = {str(c).strip().casefold(): c for c in table.columns}
         name_col = next((lookup[k] for k in ("player", "name", "player name", "nickname") if k in lookup), None)
-        proj_col = next((lookup[k] for k in ("proj pts", "proj", "projection", "projected points", "my proj", "fpts", "projected fantasy points") if k in lookup), None)
+        proj_col = next((lookup[k] for k in ("proj pts", "proj", "projection", "projected points", "my proj", "fpts", "projected fantasy points", "fpts proj") if k in lookup), None)
         if name_col is None or proj_col is None:
             continue
         result = {}
         for _, row in table.iterrows():
             key = normalize_projection_player_name(row.get(name_col, ""))
             value = pd.to_numeric(str(row.get(proj_col, "")).replace(",", "").replace("$", ""), errors="coerce")
+            if key and pd.notna(value) and np.isfinite(float(value)) and float(value) > 0:
+                result[key] = float(value)
+        if result:
+            return result
+
+    # Daily Fantasy Fuel's single-game page renders rows as page elements
+    # rather than an HTML table, so pandas.read_html cannot see the players.
+    if source_name == "DFF" and ("single game" in platform_key or "showdown" in platform_key):
+        import re
+        from html import unescape
+        from bs4 import BeautifulSoup
+        page_text = unescape(BeautifulSoup(response.text, "html.parser").get_text(" ", strip=True))
+        row_pattern = re.compile(
+            r"\\b(?:QB|WR|RB|TE|FLX|DST|K)\\s+(.+?)\\s+\\$[\\d,.]+k\\s+"
+            r"([A-Z]{2,3})\\s+([A-Z]{2,3})\\s+\\d+\\s+(\\d+(?:\\.\\d+)?)",
+            re.IGNORECASE
+        )
+        result = {}
+        for match in row_pattern.finditer(page_text):
+            player_name = re.sub(r"\\s+", " ", match.group(1)).strip()
+            # The first numeric value after opponent is the site's fantasy projection.
+            key = normalize_projection_player_name(player_name)
+            value = pd.to_numeric(match.group(4), errors="coerce")
             if key and pd.notna(value) and np.isfinite(float(value)) and float(value) > 0:
                 result[key] = float(value)
         if result:
@@ -475,7 +507,7 @@ if platform == "FanDuel":
         st.error(f"Could not read that FanDuel CSV: {exc}")
         st.stop()
 
-    fd_players = apply_external_projection_sources(fd_players, fd_dff_projection_file, fd_draftedge_projection_file, platform_name="FanDuel")
+    fd_players = apply_external_projection_sources(fd_players, fd_dff_projection_file, fd_draftedge_projection_file, platform_name=("FanDuel Single Game" if lineup_mode == "Single Game" else "FanDuel Full Roster"))
     fd_players = exclude_zero_projection_players(fd_players, "FanDuel " + lineup_mode)
     fd_players = apply_injury_statuses(fd_players, "injury_status_fd_" + lineup_mode.replace(" ", "_").lower())
     # Remove stale saved builds as soon as an Out player is excluded.
