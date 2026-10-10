@@ -180,23 +180,38 @@ players_df["CaptainSalary"] = (
     players_df["Salary"] * 1.5
 ).astype(int)
 
-# Clear saved results when the uploaded player pool changes, so results from
-# a previous slate cannot be mixed with the new slate.
+# Save results by player pool instead of deleting them when the slate changes.
+# This lets a user return to a previously loaded slate and recover its last build.
 slate_signature = tuple(
     players_df[["Name", "Team", "Salary", "Projection"]]
     .astype(str)
     .itertuples(index=False, name=None)
 )
-if st.session_state.get("slate_signature") != slate_signature:
-    for key in [
-        "simulation_df", "simulations_ready", "contest_field_df",
-        "contest_field_count", "contest_field_ready", "candidates_df",
-        "candidates_ready", "contest_results_df", "portfolio_df",
-        "portfolio_count_used", "portfolio_metric_used",
-        "final_lineups", "dk_player_ids"
-    ]:
+BUILD_STATE_KEYS = [
+    "simulation_df", "simulations_ready", "contest_field_df",
+    "contest_field_count", "contest_field_ready", "candidates_df",
+    "candidates_ready", "contest_results_df", "portfolio_df",
+    "portfolio_count_used", "portfolio_metric_used",
+    "final_lineups", "dk_player_ids"
+]
+if "saved_builds_by_slate" not in st.session_state:
+    st.session_state["saved_builds_by_slate"] = {}
+
+previous_signature = st.session_state.get("active_slate_signature")
+if previous_signature is not None and previous_signature != slate_signature:
+    st.session_state["saved_builds_by_slate"][previous_signature] = {
+        key: st.session_state[key]
+        for key in BUILD_STATE_KEYS
+        if key in st.session_state
+    }
+    for key in BUILD_STATE_KEYS:
         st.session_state.pop(key, None)
-    st.session_state["slate_signature"] = slate_signature
+
+if previous_signature != slate_signature:
+    previous_build = st.session_state["saved_builds_by_slate"].get(slate_signature, {})
+    for key, value in previous_build.items():
+        st.session_state[key] = value
+    st.session_state["active_slate_signature"] = slate_signature
 
 # ================================
 # SIMULATION
