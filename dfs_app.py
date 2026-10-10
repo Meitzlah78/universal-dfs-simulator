@@ -666,20 +666,19 @@ def build_opponent_map(source_df, team_values):
 
 
 def get_contest_opponent_target(platform_key, default=20000):
-    """Return simulated opponent count, excluding the user's own entries."""
+    """Use selected contest field size when available; otherwise keep the existing default."""
     contest = st.session_state.get(f"selected_{platform_key}_contest") or {}
     try:
         own_entries = max(0, int(contest.get("your_entries", 0) or 0))
     except (TypeError, ValueError):
         own_entries = 0
-    total_entries = st.session_state.get(f"{platform_key}_total_contest_entries")
-    if total_entries is None:
-        return default
+    field_size = contest.get("field_size")
     try:
-        total_entries = max(1, int(total_entries))
+        if field_size is not None and pd.notna(field_size):
+            return max(0, int(float(field_size)) - own_entries)
     except (TypeError, ValueError):
-        total_entries = default + own_entries
-    return max(0, total_entries - own_entries)
+        pass
+    return default
 
 
 platform = st.selectbox(
@@ -773,15 +772,6 @@ if platform == "FanDuel":
         except Exception as exc:
             st.error(f"Could not read the FanDuel contest entry file: {exc}")
 
-    if "fd_total_contest_entries" not in st.session_state:
-        fd_own_entries = int((st.session_state.get("selected_fd_contest") or {}).get("your_entries", 0) or 0)
-        st.session_state["fd_total_contest_entries"] = min(200000, 20000 + fd_own_entries)
-    st.number_input(
-        "Total FanDuel contest entries (including yours)",
-        min_value=1, max_value=200000, step=100,
-        key="fd_total_contest_entries",
-        help="Use the total field size shown on the contest page. Your own entries are subtracted automatically."
-    )
     fd_opponent_target = get_contest_opponent_target("fd")
     st.caption(f"Simulated FanDuel opponents: {fd_opponent_target:,}")
 
@@ -1759,15 +1749,6 @@ if entry_file is not None:
     except Exception as exc:
         st.error(f"Could not read the DraftKings contest entry file: {exc}")
 
-if "dk_total_contest_entries" not in st.session_state:
-    dk_own_entries = int((st.session_state.get("selected_dk_contest") or {}).get("your_entries", 0) or 0)
-    st.session_state["dk_total_contest_entries"] = min(200000, 20000 + dk_own_entries)
-st.number_input(
-    "Total DraftKings contest entries (including yours)",
-    min_value=1, max_value=200000, step=100,
-    key="dk_total_contest_entries",
-    help="Use the total field size shown on the contest page. Your own entries are subtracted automatically."
-)
 dk_opponent_target = get_contest_opponent_target("dk")
 st.caption(f"Simulated DraftKings opponents: {dk_opponent_target:,}")
 
