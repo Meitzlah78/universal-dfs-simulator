@@ -210,6 +210,32 @@ def download_public_projection_table(source_name, platform_name):
             return result
     return {}
 
+def refresh_public_projection_sources():
+    """Warm all public projection downloads on app start and every 30 minutes."""
+    status = {}
+    for platform_name in ("DraftKings", "FanDuel"):
+        status[f"DFF ({platform_name})"] = bool(download_public_projection_table("DFF", platform_name))
+        status[f"DraftEdge ({platform_name})"] = bool(download_public_projection_table("DraftEdge", platform_name))
+    return status
+
+
+@st.fragment(run_every="30m")
+def automatic_projection_refresh():
+    """Runs on initial page load and automatically refreshes every 30 minutes."""
+    from datetime import datetime
+    status = refresh_public_projection_sources()
+    st.session_state["automatic_projection_refresh_time"] = datetime.now().astimezone().strftime("%Y-%m-%d %I:%M:%S %p %Z")
+    st.session_state["automatic_projection_refresh_status"] = status
+    successful = [name for name, loaded in status.items() if loaded]
+    if successful:
+        st.caption("Automatic projection downloads checked for all slate types: " + ", ".join(successful) + ". Last check: " + st.session_state["automatic_projection_refresh_time"])
+    else:
+        st.warning("Automatic projection download was checked, but no public projection tables could be loaded. The app will try again in 30 minutes.")
+
+
+automatic_projection_refresh()
+
+
 def get_projection_source_data(uploaded_file, source_name, platform_name):
     uploaded = read_projection_csv(uploaded_file, source_name)
     if uploaded:
