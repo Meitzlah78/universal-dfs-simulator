@@ -599,6 +599,9 @@ if salary_file is not None:
                 st.error("No usable players were found in that file. The sample player pool is still being used.")
             else:
                 players_df = loaded_players.reset_index(drop=True)
+            # Ignore any projection column in the uploaded salary CSV.
+            players_df["Projection"] = np.nan
+            players_df["ProjectionSource"] = "Internal Simulation"
 
     except Exception as exc:
         st.error(f"Could not read that CSV: {exc}. The sample player pool is still being used.")
