@@ -1792,21 +1792,24 @@ try:
                 lambda row: f'{row["n"]} | ID {row["id"]}' + (f' | {int(row["_field_size"]):,} entries' if pd.notna(row["_field_size"]) and row["_field_size"] > 0 else ""),
                 axis=1,
             )
-            previous_lobby_id = str((st.session_state.get("selected_dk_contest") or {}).get("id", ""))
+            # Keep a separate contest choice for each DraftKings slate type.
+            dk_slate_key = "showdown" if lineup_mode == "Showdown" else "classic"
+            dk_saved_contests = st.session_state.get("selected_dk_contests_by_slate", {})
+            previous_selection = dk_saved_contests.get(dk_slate_key, {})
+            previous_lobby_id = str(previous_selection.get("id", ""))
             default_index = next((i for i, value in enumerate(lobby_matches["id"].tolist()) if value == previous_lobby_id), 0)
             chosen_lobby_label = st.selectbox(
-                "Select a DraftKings contest",
+                f"Select a DraftKings {lineup_mode} contest",
                 lobby_matches["Contest Label"].tolist(),
                 index=default_index,
-                key="dk_lobby_contest_dropdown",
+                key=f"dk_lobby_contest_dropdown_{dk_slate_key}",
             )
             chosen_lobby = lobby_matches.loc[lobby_matches["Contest Label"].eq(chosen_lobby_label)].iloc[0]
-            previous_selection = st.session_state.get("selected_dk_contest") or {}
             try:
                 lobby_field_size = int(float(chosen_lobby["_field_size"])) if pd.notna(chosen_lobby["_field_size"]) else None
             except (TypeError, ValueError):
                 lobby_field_size = None
-            st.session_state["selected_dk_contest"] = {
+            active_dk_selection = {
                 "id": str(chosen_lobby["id"]),
                 "name": str(chosen_lobby["n"]),
                 "your_entries": int(previous_selection.get("your_entries", 0) or 0)
@@ -1815,6 +1818,10 @@ try:
                     if str(previous_selection.get("id", "")) == str(chosen_lobby["id"]) else None,
                 "field_size": lobby_field_size,
             }
+            dk_saved_contests[dk_slate_key] = active_dk_selection
+            st.session_state["selected_dk_contests_by_slate"] = dk_saved_contests
+            # Keep the active-slate alias for existing contest simulation/export logic.
+            st.session_state["selected_dk_contest"] = active_dk_selection
             if lobby_field_size:
                 st.caption(f"Contest field: {lobby_field_size:,} total entries. Your entries are subtracted when known.")
             else:
