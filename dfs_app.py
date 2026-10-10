@@ -1609,11 +1609,12 @@ def internal_slate_key(frame):
 internal_key = internal_slate_key(players_df)
 saved_internal_projections = st.session_state.get("internal_projections_by_slate", {}).get(internal_key)
 if saved_internal_projections:
+    # After SIM, keep the simulator's own projections on reruns instead of
+    # replacing them with the original public/uploaded projection sources.
     saved_values = players_df["Name"].map(saved_internal_projections)
-    internal_mask = players_df["ProjectionSource"].eq("Internal Simulation")
-    players_df.loc[internal_mask, "Projection"] = saved_values.loc[internal_mask].fillna(
-        players_df.loc[internal_mask, "Projection"]
-    )
+    saved_mask = pd.to_numeric(saved_values, errors="coerce").gt(0)
+    players_df.loc[saved_mask, "Projection"] = saved_values.loc[saved_mask]
+    players_df.loc[saved_mask, "ProjectionSource"] = "Internal Simulation"
 players_df = exclude_zero_projection_players(players_df, "DraftKings " + lineup_mode)
 st.caption("Projection values use the DFF/DraftEdge average when both are available, otherwise the single available source. Unmatched players use internal estimates.")
 if st.session_state.get("nfl_historical_stats_status"):
@@ -2266,6 +2267,19 @@ if build_clicked:
 
     st.session_state["simulation_df"] = simulation_df
     st.session_state["simulations_ready"] = True
+    # Persist this slate's simulated means so the Projection column updates
+    # immediately and remains updated after Streamlit reruns.
+    generated_projections = {
+        str(player_name): float(simulation_df[player_name].mean())
+        for player_name in simulation_df.columns
+    }
+    internal_projection_store = st.session_state.setdefault("internal_projections_by_slate", {})
+    internal_projection_store[internal_key] = generated_projections
+    projected_values = players_df["Name"].map(generated_projections)
+    projected_mask = pd.to_numeric(projected_values, errors="coerce").gt(0)
+    players_df.loc[projected_mask, "Projection"] = projected_values.loc[projected_mask]
+    players_df.loc[projected_mask, "ProjectionSource"] = "Internal Simulation"
+
     # Save simulated mean scores as a session-only fallback for later uploads/reruns.
     simulation_projection_cache = st.session_state.setdefault(
         "simulation_projection_cache", {}
