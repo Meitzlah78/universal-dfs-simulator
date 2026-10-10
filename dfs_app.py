@@ -493,7 +493,7 @@ if salary_file is not None:
                     import requests
                     from html import unescape
 
-                    dff_url = "https://www.dailyfantasyfuel.com/nfl/showdown-single-game-projections/"
+                    dff_url = "https://www.dailyfantasyfuel.com/nfl/showdown-single-game-projections/draftkings"
                     dff_response = requests.get(
                         dff_url,
                         headers={"User-Agent": "Mozilla/5.0"},
