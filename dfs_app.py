@@ -1769,6 +1769,42 @@ try:
                 lobby_names.str.contains("showdown", case=False, regex=False)
                 | lobby_df.get("gameType", pd.Series("", index=lobby_df.index)).fillna("").astype(str).str.contains("showdown", case=False, regex=False)
             )
+            # For single-game slates, restrict contests to the matchup in the uploaded salary file.
+            uploaded_slate_teams = set()
+            if salary_file is not None:
+                try:
+                    salary_file.seek(0)
+                    slate_lines = salary_file.getvalue().decode("utf-8-sig", errors="replace").splitlines()
+                    slate_header = next(
+                        (i for i, line in enumerate(slate_lines)
+                         if "Roster Position" in line and "AvgPointsPerGame" in line),
+                        None
+                    )
+                    salary_file.seek(0)
+                    slate_players = pd.read_csv(salary_file, skiprows=slate_header) if slate_header is not None else pd.read_csv(salary_file)
+                    slate_players.columns = [str(c).strip() for c in slate_players.columns]
+                    slate_lookup = {str(c).strip().lower(): c for c in slate_players.columns}
+                    slate_team_col = next(
+                        (slate_lookup[k] for k in ["teamabbrev", "team", "team abbrev", "team abbreviation"] if k in slate_lookup),
+                        None
+                    )
+                    if slate_team_col is not None:
+                        uploaded_slate_teams = {
+                            str(team).strip().upper()
+                            for team in slate_players[slate_team_col].dropna().unique()
+                            if str(team).strip() and str(team).strip().lower() != "nan"
+                        }
+                except Exception:
+                    uploaded_slate_teams = set()
+            if len(uploaded_slate_teams) == 2:
+                lobby_text = lobby_df.fillna("").astype(str).agg(" ".join, axis=1).str.upper()
+                for team_code in uploaded_slate_teams:
+                    lobby_mask &= lobby_text.str.contains(
+                        rf"(?<![A-Z]){re.escape(team_code)}(?![A-Z])",
+                        regex=True
+                    )
+            elif salary_file is not None:
+                lobby_mask &= False
         else:
             lobby_mask = ~(
                 lobby_names.str.contains("showdown", case=False, regex=False)
@@ -1827,7 +1863,10 @@ try:
             else:
                 st.warning("DraftKings returned contest choices, but its field-size value was not found. The default opponent count will be used.")
         else:
-            st.warning(f"No DraftKings {lineup_mode} contests were found in the lobby response.")
+            if lineup_mode == "Showdown" and salary_file is not None:
+                st.warning("No single-game contests matched the two teams in your uploaded salary file. Check that the file is for the correct Showdown slate.")
+            else:
+                st.warning(f"No DraftKings {lineup_mode} contests were found in the lobby response.")
     else:
         st.warning("DraftKings lobby response did not contain the expected contest list.")
 except Exception as exc:
