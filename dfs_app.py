@@ -13,6 +13,46 @@ st.set_page_config(
 st.title("Universal DFS Simulator")
 
 
+def calculate_field_ownership(field_df, slots, captain_slot=None):
+    """Calculate player ownership percentages from simulated opponent lineups."""
+    if field_df is None or field_df.empty:
+        return pd.DataFrame(columns=["Name", "Ownership %", "Captain/MVP Ownership %"])
+    valid_slots = [slot for slot in slots if slot in field_df.columns]
+    total_lineups = len(field_df)
+    if not valid_slots or total_lineups == 0:
+        return pd.DataFrame(columns=["Name", "Ownership %", "Captain/MVP Ownership %"])
+    counts = {}
+    captain_counts = {}
+    for _, row in field_df[valid_slots].iterrows():
+        seen = set()
+        for slot in valid_slots:
+            name = str(row.get(slot, "")).strip()
+            if not name or name.lower() in {"nan", "none"}:
+                continue
+            if name not in seen:
+                counts[name] = counts.get(name, 0) + 1
+                seen.add(name)
+        if captain_slot and captain_slot in valid_slots:
+            captain = str(row.get(captain_slot, "")).strip()
+            if captain and captain.lower() not in {"nan", "none"}:
+                captain_counts[captain] = captain_counts.get(captain, 0) + 1
+    names = sorted(set(counts) | set(captain_counts))
+    return pd.DataFrame([{
+        "Name": name,
+        "Ownership %": round(100 * counts.get(name, 0) / total_lineups, 2),
+        "Captain/MVP Ownership %": round(100 * captain_counts.get(name, 0) / total_lineups, 2),
+    } for name in names]).sort_values("Ownership %", ascending=False).reset_index(drop=True)
+
+
+def show_field_ownership(field_df, slots, title, captain_slot=None):
+    ownership_df = calculate_field_ownership(field_df, slots, captain_slot)
+    st.session_state["latest_field_ownership"] = ownership_df
+    if not ownership_df.empty:
+        st.write("### " + title)
+        st.caption(f"Ownership calculated from {len(field_df):,} simulated opponent lineups. Captain/MVP ownership is shown separately where applicable.")
+        st.dataframe(ownership_df, use_container_width=True, hide_index=True)
+
+
 def apply_injury_statuses(frame, key_prefix):
     """Let the user mark players Active, Questionable, or Out across all slate types."""
     if "player_injury_statuses" not in st.session_state:
@@ -1168,6 +1208,7 @@ if platform == "FanDuel":
             st.session_state["fd_contest_field_" + lineup_mode.replace(" ", "_").lower()] = opponent_df
             st.session_state["fd_contest_field_ready_" + lineup_mode.replace(" ", "_").lower()] = not opponent_df.empty
             if not opponent_df.empty:
+                show_field_ownership(opponent_df, fd_slots, "Simulated FanDuel Player Ownership", captain_slot=("MVP" if lineup_mode == "Single Game" else None))
                 st.success(f"Created {len(opponent_df):,} simulated FanDuel opponent lineups.")
                 user_lineups = st.session_state.get(fd_build_key)
                 if user_lineups is None or user_lineups.empty:
@@ -2457,6 +2498,7 @@ if platform == "DraftKings" and lineup_mode == "Classic":
                 st.write("### Top Simulated Opponents")
                 st.dataframe(contest_field_df.sort_values("ProjectedPoints", ascending=False).head(20), use_container_width=True, hide_index=True)
                 st.metric("Simulated opponent lineups", f"{len(contest_field_df):,}")
+                show_field_ownership(contest_field_df, [slot for slot, _ in contest_slots], "Simulated Field Player Ownership")
             else:
                 st.error("Could not create valid opponent lineups. Check the player pool and salary range.")
     classic_results = st.session_state.get("classic_lineups")
@@ -2640,6 +2682,8 @@ if contest_sim_clicked:
             len(contest_field_df) == 10000
         )
 
+        show_field_ownership(contest_field_df, ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"], "Simulated Field Player Ownership", captain_slot="Captain")
+
         contest_details = st.session_state.get("selected_dk_contest")
         if contest_details:
             st.success(
@@ -2702,6 +2746,7 @@ if build_clicked:
                     "Salary": total_salary
                 })
         contest_field_df = pd.DataFrame(contest_field)
+        show_field_ownership(contest_field_df, ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"], "Simulated Field Player Ownership", captain_slot="Captain")
         st.session_state["contest_field_df"] = contest_field_df
         st.session_state["contest_field_count"] = len(contest_field_df)
         st.session_state["contest_field_ready"] = len(contest_field_df) == 10000
