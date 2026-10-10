@@ -757,16 +757,19 @@ if salary_file is not None:
                                     )
                                     if not name:
                                         continue
+                                    # On DFF's current NFL page, player rows are laid out as
+                                    # position, image, name, salary, team, opponent, rank,
+                                    # fantasy points, value, then matchup odds. Prefer the
+                                    # fantasy-points column rather than later odds/total columns.
                                     projection_value = None
-                                    for value in values:
+                                    projection_candidates = values[7:8] if len(values) > 7 else []
+                                    for value in projection_candidates:
                                         cleaned = value.replace(",", "").strip()
                                         try:
                                             number = float(cleaned)
                                         except (TypeError, ValueError):
                                             continue
-                                        # Skip jersey/ID-like small integers and ratios; DFF fantasy
-                                        # projections are normally positive decimal values.
-                                        if "." in cleaned and 0 < number < 100:
+                                        if 0 < number < 100:
                                             projection_value = number
                                     if projection_value is not None:
                                         parsed_rows.append({
