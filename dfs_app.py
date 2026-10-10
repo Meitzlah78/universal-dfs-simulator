@@ -3051,9 +3051,21 @@ if platform == "DraftKings" and lineup_mode == "Classic":
             if missing:
                 st.warning("Some player IDs are missing. Upload the DraftKings lineup template to enable export.")
             else:
-                # DraftKings upload templates use repeated roster-slot names.
+                # Match the DraftKings entry-upload template when an entry file is available.
                 dk_upload_columns = ["QB", "RB", "RB", "WR", "WR", "WR", "TE", "FLEX", "DST"]
-                export_df = pd.DataFrame(export_data, columns=dk_upload_columns)
+                lineup_ids_df = pd.DataFrame(export_data, columns=dk_upload_columns)
+                export_df = lineup_ids_df
+                if entry_file is not None and "entry_df" in locals():
+                    dk_entry_rows = entry_df.copy()
+                    if selected_contest_id is not None and "Contest ID" in dk_entry_rows.columns:
+                        dk_entry_rows = dk_entry_rows[
+                            dk_entry_rows["Contest ID"].astype(str) == str(selected_contest_id)
+                        ]
+                    metadata_cols = [c for c in ["Entry ID", "Contest Name", "Contest ID", "Entry Fee"] if c in dk_entry_rows.columns]
+                    if metadata_cols:
+                        metadata = dk_entry_rows[metadata_cols].reset_index(drop=True)
+                        if len(metadata) >= len(lineup_ids_df):
+                            export_df = pd.concat([metadata.iloc[:len(lineup_ids_df)], lineup_ids_df], axis=1)
                 st.download_button(
                     "EXPORT DRAFTKINGS CLASSIC CSV",
                     export_df.to_csv(index=False).encode("utf-8"),
@@ -4003,7 +4015,20 @@ if platform == "DraftKings" and lineup_mode == "Showdown":
                 st.warning("Some DraftKings CPT/FLEX IDs are missing. Re-upload the correct Showdown template CSV.")
                 st.write(sorted(set(missing_ids)))
             else:
-                export_df = pd.DataFrame(export_rows, columns=["CPT", "FLEX", "FLEX", "FLEX", "FLEX", "FLEX"])
+                # DraftKings entry upload files include contest metadata before the roster slots.
+                lineup_ids_df = pd.DataFrame(export_rows, columns=["CPT", "FLEX", "FLEX", "FLEX", "FLEX", "FLEX"])
+                export_df = lineup_ids_df
+                if entry_file is not None and "entry_df" in locals():
+                    dk_entry_rows = entry_df.copy()
+                    if selected_contest_id is not None and "Contest ID" in dk_entry_rows.columns:
+                        dk_entry_rows = dk_entry_rows[
+                            dk_entry_rows["Contest ID"].astype(str) == str(selected_contest_id)
+                        ]
+                    metadata_cols = [c for c in ["Entry ID", "Contest Name", "Contest ID", "Entry Fee"] if c in dk_entry_rows.columns]
+                    if metadata_cols:
+                        metadata = dk_entry_rows[metadata_cols].reset_index(drop=True)
+                        if len(metadata) >= len(lineup_ids_df):
+                            export_df = pd.concat([metadata.iloc[:len(lineup_ids_df)], lineup_ids_df], axis=1)
                 st.download_button(
                     label="EXPORT DRAFTKINGS SHOWDOWN LINEUPS",
                     data=export_df.to_csv(index=False).encode("utf-8"),
