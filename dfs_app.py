@@ -1876,9 +1876,31 @@ try:
             )
         lobby_matches = lobby_df.loc[lobby_mask].copy()
         if not lobby_matches.empty:
-            size_col = next((c for c in ["s", "entries", "entryCount", "numEntries", "fieldSize", "contestSize"] if c in lobby_matches.columns), None)
+            # Do not use the short "s" field: it is not a reliable contest field-size value
+            # and was causing every contest to appear to have only 1 entry.
+            size_aliases = [
+                "fieldSize", "contestSize", "totalEntries", "entryCount",
+                "numEntries", "numberOfEntries", "entries", "size"
+            ]
+            size_col = next((c for c in size_aliases if c in lobby_matches.columns), None)
             lobby_matches["id"] = lobby_matches["id"].astype(str).str.replace(r"\\.0$", "", regex=True)
-            lobby_matches["_field_size"] = pd.to_numeric(lobby_matches[size_col], errors="coerce") if size_col else np.nan
+            lobby_matches["_field_size"] = (
+                pd.to_numeric(lobby_matches[size_col], errors="coerce")
+                if size_col else np.nan
+            )
+            # If the API does not provide an explicit field-size column, try other
+            # numeric fields only when their values look like contest sizes (> 1).
+            if size_col is None:
+                candidate_cols = [
+                    c for c in lobby_matches.columns
+                    if c not in {"id", "n"} and c.lower() not in {"s", "m", "a"}
+                ]
+                for candidate in candidate_cols:
+                    values = pd.to_numeric(lobby_matches[candidate], errors="coerce")
+                    plausible = values[values > 1]
+                    if not plausible.empty and plausible.median() >= 10:
+                        lobby_matches["_field_size"] = values
+                        break
             # Remove duplicate API records by contest ID, then duplicate contest names.
             lobby_matches = lobby_matches.drop_duplicates(subset=["id"], keep="first").copy()
             lobby_matches["_normalized_name"] = lobby_matches["n"].fillna("").astype(str).str.strip().str.casefold()
