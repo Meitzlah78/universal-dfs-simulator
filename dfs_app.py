@@ -463,11 +463,15 @@ if salary_file is not None:
                 if position_col is not None else "FLEX"
             )
             loaded_players["Projection"] = (
-                pd.to_numeric(uploaded_df[projection_col], errors="coerce").fillna(0.01)
-                if projection_col is not None else 0.01
+                pd.to_numeric(uploaded_df[projection_col], errors="coerce")
+                if projection_col is not None else np.nan
             )
             if id_col is not None:
                 loaded_players["DK_ID"] = uploaded_df[id_col].astype(str).str.strip()
+            # Keep missing projections blank until the DFF refresh below has a chance to fill them.
+            loaded_players["Projection"] = pd.to_numeric(
+                loaded_players["Projection"], errors="coerce"
+            )
             loaded_players = loaded_players.dropna(subset=["Name", "Salary"])
             loaded_players = loaded_players[
                 (loaded_players["Name"] != "") &
@@ -479,9 +483,76 @@ if salary_file is not None:
                 st.error("No usable players were found in that file. The sample player pool is still being used.")
             else:
                 players_df = loaded_players.reset_index(drop=True)
+
+                # Pull current DraftKings Showdown projections from Daily Fantasy Fuel (DFF),
+                # matching the same source and parsing method used in the Colab notebook.
+                dff_count = 0
+                dff_error = None
+                try:
+                    import re
+                    import requests
+                    from html import unescape
+
+                    dff_url = "https://www.dailyfantasyfuel.com/nfl/showdown-single-game-projections/"
+                    dff_response = requests.get(
+                        dff_url,
+                        headers={"User-Agent": "Mozilla/5.0"},
+                        timeout=15
+                    )
+                    dff_response.raise_for_status()
+                    dff_rows = re.findall(
+                        r'data-ppg_proj="([^"]+)"'
+                        r'.*?data-player_id="[^"]+"'
+                        r'.*?<div class="bold">\\s*([^<]+)',
+                        dff_response.text,
+                        flags=re.S
+                    )
+                    dff_aliases = {
+                        "J. Williams": "Javonte Williams",
+                        "J. Daniels": "Jalon Daniels",
+                        "G. Pickens": "George Pickens",
+                        "B. Irving": "Bucky Irving",
+                        "B. Aubrey": "Brandon Aubrey",
+                        "E. Egbuka": "Emeka Egbuka",
+                        "C. Godwin Jr.": "Chris Godwin Jr.",
+                        "C. McLaughlin": "Chase McLaughlin",
+                        "K. Gainwell": "Kenny Gainwell",
+                        "T. Goodson": "Tyler Goodson",
+                        "K. Turpin": "KaVontae Turpin",
+                    }
+                    dff_projections = {}
+                    for raw_projection, raw_name in dff_rows:
+                        try:
+                            value = float(raw_projection)
+                        except (TypeError, ValueError):
+                            continue
+                        name = re.sub(r"\\s+", " ", unescape(raw_name)).strip()
+                        name = dff_aliases.get(name, name)
+                        if value > 0 and name:
+                            dff_projections[name.casefold()] = value
+
+                    if dff_projections:
+                        matched = players_df["Name"].map(
+                            lambda name: dff_projections.get(str(name).strip().casefold())
+                        )
+                        found = matched.notna()
+                        if found.any():
+                            players_df.loc[found, "Projection"] = matched.loc[found].astype(float)
+                            players_df["ProjectionSource"] = np.where(found, "Daily Fantasy Fuel (DFF)", "Salary CSV")
+                            dff_count = int(found.sum())
+                except Exception as exc:
+                    dff_error = str(exc)
+
                 st.success(f"Loaded {len(players_df)} players from the salary file.")
-                if projection_col is None:
-                    st.warning("No projection column was found. Projections are set to 0.01 until projections are added.")
+                if dff_count:
+                    st.success(f"Applied current DFF projections to {dff_count} players.")
+                elif projection_col is None:
+                    st.warning(
+                        "DFF projections could not be matched to this slate. "
+                        "The simulator will not pretend the 0.01 placeholders are real projections."
+                    )
+                    if dff_error:
+                        st.caption(f"DFF refresh detail: {dff_error}")
                 if is_showdown_template:
                     st.info("DraftKings Showdown template detected. FLEX rows are used for player salaries; CPT rows are ignored to avoid duplicate players.")
                 elif is_lineup_template:
@@ -491,6 +562,21 @@ if salary_file is not None:
         st.error(f"Could not read that CSV: {exc}. The sample player pool is still being used.")
 
 # Infer the opposing team from the teams present in the uploaded slate.
+# Never run the simulator with fake 0.01 projections. If a source did not provide
+# projections, stop and tell the user instead of generating misleading lineups.
+if "ProjectionSource" not in players_df.columns:
+    players_df["ProjectionSource"] = "Salary CSV"
+players_df["Projection"] = pd.to_numeric(players_df["Projection"], errors="coerce")
+missing_projection_count = int(players_df["Projection"].isna().sum())
+if missing_projection_count:
+    st.warning(
+        f"{missing_projection_count} players still have no valid projection. "
+        "Upload a CSV with projections or use a slate for which DFF projections are available before building lineups."
+    )
+    players_df["Projection"] = players_df["Projection"].fillna(0.0)
+
+st.caption("Projection source counts: " + str(players_df["ProjectionSource"].value_counts().to_dict()))
+
 teams_in_slate = [
     team for team in players_df["Team"].dropna().astype(str).unique()
     if team.strip()
