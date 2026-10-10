@@ -503,7 +503,7 @@ if salary_file is not None:
                     dff_rows = re.findall(
                         r'data-ppg_proj="([^"]+)"'
                         r'.*?data-player_id="[^"]+"'
-                        r'.*?<div class="bold">\\s*([^<]+)',
+                        r'.*?<div class="bold">\s*([^<]+)',
                         dff_response.text,
                         flags=re.S
                     )
@@ -526,7 +526,7 @@ if salary_file is not None:
                             value = float(raw_projection)
                         except (TypeError, ValueError):
                             continue
-                        name = re.sub(r"\\s+", " ", unescape(raw_name)).strip()
+                        name = re.sub(r"\s+", " ", unescape(raw_name)).strip()
                         name = dff_aliases.get(name, name)
                         if value > 0 and name:
                             dff_projections[name.casefold()] = value
