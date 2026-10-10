@@ -1140,79 +1140,88 @@ if platform == "FanDuel":
         pool["Eligible"] = pool["Position"].apply(
             lambda value: set(str(value).upper().replace(" ", "").split("/"))
         )
+        pool = pool.drop_duplicates("Name", keep="first").reset_index(drop=True)
+        names = pool["Name"].astype(str).to_numpy(dtype=object)
+        salaries = pd.to_numeric(pool["Salary"], errors="coerce").fillna(0).to_numpy(dtype=np.int64)
+        projections = pd.to_numeric(pool["Projection"], errors="coerce").fillna(0.01).clip(lower=0.01).to_numpy(dtype=float)
+        eligible_sets = pool["Eligible"].tolist()
         results = []
         seen = set()
         target_lineups = 5000
         max_attempts = 500000
+        salary_min, salary_max = int(fd_salary_range[0]), min(int(fd_salary_range[1]), 60000)
+        if lineup_mode == "Single Game":
+            slots = ["MVP", "FLEX1", "FLEX2", "FLEX3", "FLEX4"]
+            mvp_indices = np.flatnonzero((salaries * 1.5 <= salary_max))
+            mvp_weights = projections[mvp_indices].copy()
+            if len(mvp_weights):
+                mvp_weights /= mvp_weights.sum()
+        else:
+            roster = [
+                ("QB", {"QB"}), ("RB1", {"RB"}), ("RB2", {"RB"}),
+                ("WR1", {"WR"}), ("WR2", {"WR"}), ("WR3", {"WR"}),
+                ("TE", {"TE"}), ("FLEX", {"RB", "WR", "TE"}),
+                ("D", {"D", "DST", "DEF"})
+            ]
+            slots = [slot for slot, _ in roster]
+            eligible_indices = {
+                slot: np.asarray([i for i, positions in enumerate(eligible_sets) if positions & eligible], dtype=int)
+                for slot, eligible in roster
+            }
 
         for _ in range(max_attempts):
+            chosen_indices = []
             chosen = {}
             used = set()
             salary = 0
             total_points = 0.0
-
             if lineup_mode == "Single Game":
-                mvp_candidates = pool[(pool["Salary"] * 1.5 <= fd_salary_range[1]) & (pool["Salary"] * 1.5 <= 60000)]
-                if mvp_candidates.empty:
-                    continue
-                mvp_weights = np.maximum(mvp_candidates["Projection"].to_numpy(float), 0.01)
-                mvp_weights /= mvp_weights.sum()
-                mvp_row = mvp_candidates.iloc[int(rng.choice(len(mvp_candidates), p=mvp_weights))]
-                mvp_name = mvp_row["Name"]
-                chosen["MVP"] = mvp_name
-                used.add(mvp_name)
-                salary = int(float(mvp_row["Salary"]) * 1.5)
-                total_points = float(mvp_row["Projection"]) * 1.5
-
-                flex_pool = pool[~pool["Name"].isin(used)]
-                for slot in ["FLEX1", "FLEX2", "FLEX3", "FLEX4"]:
-                    choices = flex_pool[
-                        (~flex_pool["Name"].isin(used)) &
-                        ((salary + flex_pool["Salary"]) <= fd_salary_range[1]) & ((salary + flex_pool["Salary"]) <= 60000)
-                    ]
-                    if choices.empty:
+                if not len(mvp_indices):
+                    break
+                mvp_idx = int(rng.choice(mvp_indices, p=mvp_weights))
+                chosen["MVP"] = names[mvp_idx]
+                chosen_indices.append(mvp_idx)
+                used.add(mvp_idx)
+                salary = int(round(salaries[mvp_idx] * 1.5))
+                total_points = projections[mvp_idx] * 1.5
+                for slot in slots[1:]:
+                    choices = np.asarray([
+                        i for i in range(len(names))
+                        if i not in used and salary + salaries[i] <= salary_max
+                    ], dtype=int)
+                    if not len(choices):
                         break
-                    weights = np.maximum(choices["Projection"].to_numpy(float), 0.01)
+                    weights = projections[choices].copy()
                     weights /= weights.sum()
-                    picked = choices.iloc[int(rng.choice(len(choices), p=weights))]
-                    chosen[slot] = picked["Name"]
-                    used.add(picked["Name"])
-                    salary += int(picked["Salary"])
-                    total_points += float(picked["Projection"])
+                    picked = int(rng.choice(choices, p=weights))
+                    chosen[slot] = names[picked]
+                    chosen_indices.append(picked)
+                    used.add(picked)
+                    salary += int(salaries[picked])
+                    total_points += projections[picked]
             else:
-                roster = [
-                    ("QB", {"QB"}), ("RB1", {"RB"}), ("RB2", {"RB"}),
-                    ("WR1", {"WR"}), ("WR2", {"WR"}), ("WR3", {"WR"}),
-                    ("TE", {"TE"}), ("FLEX", {"RB", "WR", "TE"}),
-                    ("D", {"D", "DST", "DEF"})
-                ]
-                for slot, eligible in roster:
-                    choices = pool[
-                        (~pool["Name"].isin(used)) &
-                        pool["Eligible"].apply(lambda positions: bool(positions & eligible)) &
-                        ((pool["Salary"] + salary) <= fd_salary_range[1]) & ((pool["Salary"] + salary) <= 60000)
-                    ]
-                    if choices.empty:
+                for slot, _ in roster:
+                    choices = np.asarray([
+                        i for i in eligible_indices[slot]
+                        if i not in used and salary + salaries[i] <= salary_max
+                    ], dtype=int)
+                    if not len(choices):
                         break
-                    weights = np.maximum(choices["Projection"].to_numpy(float), 0.01)
+                    weights = projections[choices].copy()
                     weights /= weights.sum()
-                    picked = choices.iloc[int(rng.choice(len(choices), p=weights))]
-                    chosen[slot] = picked["Name"]
-                    used.add(picked["Name"])
-                    salary += int(picked["Salary"])
-                    total_points += float(picked["Projection"])
-
-            if len(chosen) != len(fd_slots) or salary < fd_salary_range[0] or salary > fd_salary_range[1] or salary > 60000:
+                    picked = int(rng.choice(choices, p=weights))
+                    chosen[slot] = names[picked]
+                    chosen_indices.append(picked)
+                    used.add(picked)
+                    salary += int(salaries[picked])
+                    total_points += projections[picked]
+            if len(chosen) != len(slots) or salary < salary_min or salary > salary_max:
                 continue
-            lineup_key = tuple(chosen[slot] for slot in fd_slots)
+            lineup_key = tuple(chosen[slot] for slot in slots)
             if lineup_key in seen:
                 continue
             seen.add(lineup_key)
-            results.append({
-                **chosen,
-                "Salary": salary,
-                "ProjectedPoints": round(total_points, 2)
-            })
+            results.append({**chosen, "Salary": salary, "ProjectedPoints": round(total_points, 2)})
             if len(results) >= target_lineups:
                 break
 
@@ -2610,8 +2619,6 @@ if platform == "DraftKings" and lineup_mode == "Classic":
                 + player_sim.get(player, {}).get("P99", row["Projection"] * 2.3) * 0.25
                 + player_sim.get(player, {}).get("Mean", row["Projection"]) * 0.25
             )
-
-        # Use the best projected players while keeping enough depth for each slot.
         classic_locked_players = [
             name for name in available_players
             if control_map.get(name, {}).get("Lock", False)
@@ -2620,59 +2627,59 @@ if platform == "DraftKings" and lineup_mode == "Classic":
             sorted(rankings, key=rankings.get, reverse=True)
             + classic_locked_players
         ))
-        classic_pool = classic_pool[classic_pool["Name"].isin(ranked_names)].copy()
-        player_rows = classic_pool.set_index("Name").to_dict("index")
+        classic_pool = classic_pool[classic_pool["Name"].isin(ranked_names)].drop_duplicates("Name", keep="first").copy()
+        classic_names = classic_pool["Name"].astype(str).to_numpy(dtype=object)
+        classic_salaries = pd.to_numeric(classic_pool["Salary"], errors="coerce").fillna(0).to_numpy(dtype=np.int64)
+        classic_eligible = classic_pool["Eligible"].tolist()
+        classic_weights = np.asarray([max(rankings.get(name, 0.01), 0.01) for name in classic_names], dtype=float)
+        classic_weights /= classic_weights.sum()
+        classic_means = np.asarray([
+            float(player_sim.get(name, {}).get("Mean", classic_pool.iloc[i]["Projection"]))
+            for i, name in enumerate(classic_names)
+        ], dtype=float)
+        eligible_indices = {
+            slot: np.asarray([i for i, positions in enumerate(classic_eligible) if positions & eligible], dtype=int)
+            for slot, eligible in roster_slots
+        }
+        locked_indices = {
+            i for i, name in enumerate(classic_names) if name in set(classic_locked_players)
+        }
         candidate_lineups = []
         seen = set()
         max_attempts = 500000
         target_lineups = 5000
-
-        for attempt in range(max_attempts):
+        for _ in range(max_attempts):
             chosen = {}
             used = set()
             salary = 0
-            slots = list(roster_slots)
-            # Fill the most restrictive positions first; FLEX is last.
-            for slot, eligible in slots:
-                choices = [
-                    name for name in ranked_names
-                    if name in player_rows
-                    and name not in used
-                    and player_rows[name]["Eligible"] & eligible
-                    and salary + float(player_rows[name]["Salary"]) <= MAX_LINEUP_SALARY
-                ]
-                if not choices:
+            for slot, _eligible in roster_slots:
+                choices = np.asarray([
+                    i for i in eligible_indices[slot]
+                    if i not in used and salary + classic_salaries[i] <= MAX_LINEUP_SALARY
+                ], dtype=int)
+                if not len(choices):
                     break
-                weights = np.array([
-                    max(rankings.get(name, 0.01), 0.01) for name in choices
-                ], dtype=float)
+                weights = classic_weights[choices].copy()
                 weights /= weights.sum()
-                # Mix projection-weighted choices with random choices for lineup variety.
                 if rng.random() < 0.25:
-                    picked = str(rng.choice(choices))
+                    picked = int(rng.choice(choices))
                 else:
-                    picked = str(rng.choice(choices, p=weights))
-                chosen[slot] = picked
+                    picked = int(rng.choice(choices, p=weights))
+                chosen[slot] = str(classic_names[picked])
                 used.add(picked)
-                salary += int(player_rows[picked]["Salary"])
-
+                salary += int(classic_salaries[picked])
             if len(chosen) != len(roster_slots) or salary < MIN_LINEUP_SALARY or salary > MAX_LINEUP_SALARY or salary > 50000:
                 continue
             if not all(name in chosen.values() for name in classic_locked_players):
                 continue
-
             key = tuple(chosen[slot] for slot, _ in roster_slots)
             if key in seen:
                 continue
             seen.add(key)
-            projected_points = sum(
-                float(player_sim.get(name, {}).get("Mean", player_rows[name]["Projection"]))
-                for name in chosen.values()
-            )
+            selected_indices = [int(np.where(classic_names == chosen[slot])[0][0]) for slot, _ in roster_slots]
+            projected_points = float(classic_means[selected_indices].sum())
             candidate_lineups.append({
-                **chosen,
-                "Salary": salary,
-                "ProjectedPoints": projected_points,
+                **chosen, "Salary": salary, "ProjectedPoints": projected_points,
                 "Score": sum(rankings.get(name, 0.01) for name in chosen.values())
             })
             if len(candidate_lineups) >= target_lineups:
