@@ -2057,7 +2057,19 @@ selected_contest_entry_fee = None
 if entry_file is not None:
     try:
         entry_file.seek(0)
-        entry_df = pd.read_csv(entry_file)
+        try:
+            entry_df = pd.read_csv(entry_file)
+        except pd.errors.ParserError:
+            # Some DK exports have inconsistent quoting/extra commas in a few rows.
+            # Use the Python parser as a fallback so a malformed row does not crash the app.
+            entry_file.seek(0)
+            entry_df = pd.read_csv(entry_file, engine="python", on_bad_lines="warn")
+            st.warning(
+                "The DraftKings CSV has rows with inconsistent column counts. "
+                "The app used a fallback reader and may have skipped malformed rows. "
+                "Check the selected contest's entry count against DraftKings before exporting. "
+                "For safest results, re-download the CSV from DraftKings My Contests."
+            )
         entry_df.columns = [str(c).strip() for c in entry_df.columns]
         required_entry_columns = {"Contest Name", "Contest ID"}
         if required_entry_columns.issubset(entry_df.columns):
