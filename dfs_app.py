@@ -830,6 +830,23 @@ else:
     ]:
         player_display[column] = np.nan
 
+# Show player stats and Lock/Fade switches together in the player pool.
+# The switches are saved and then passed into the lineup-building controls below.
+existing_control_values = st.session_state.get("control_values")
+if existing_control_values is not None:
+    existing_control_values = existing_control_values.drop_duplicates("Name").set_index("Name")
+    player_display["Lock"] = player_display["Name"].map(
+        existing_control_values["Lock"] if "Lock" in existing_control_values.columns
+        else pd.Series(dtype=object)
+    ).fillna(False).astype(bool)
+    player_display["Fade"] = player_display["Name"].map(
+        existing_control_values["Fade"] if "Fade" in existing_control_values.columns
+        else pd.Series(dtype=object)
+    ).fillna(False).astype(bool)
+else:
+    player_display["Lock"] = False
+    player_display["Fade"] = False
+
 player_display = player_display[
     [
         "Name",
@@ -846,14 +863,39 @@ player_display = player_display[
         "SimP75",
         "SimP90",
         "SimP95",
-        "SimP99"
+        "SimP99",
+        "Lock",
+        "Fade"
     ]
 ]
 
-st.dataframe(
+edited_player_display = st.data_editor(
     player_display,
     use_container_width=True,
-    hide_index=True
+    hide_index=True,
+    disabled=[c for c in player_display.columns if c not in ["Lock", "Fade"]],
+    column_config={
+        "Lock": st.column_config.CheckboxColumn(
+            "Lock",
+            help="Force this player into the lineup builds."
+        ),
+        "Fade": st.column_config.CheckboxColumn(
+            "Fade",
+            help="Keep this player out of lineup builds."
+        ),
+        "Salary": st.column_config.NumberColumn("Salary", format="$%d"),
+        "CaptainSalary": st.column_config.NumberColumn("CPT Salary", format="$%d"),
+        "Projection": st.column_config.NumberColumn("Projection", format="%.1f"),
+        "SimMean": st.column_config.NumberColumn("Sim Avg", format="%.1f"),
+        "SimP10": st.column_config.NumberColumn("P10", format="%.1f"),
+        "SimP25": st.column_config.NumberColumn("P25", format="%.1f"),
+        "SimP50": st.column_config.NumberColumn("Median", format="%.1f"),
+        "SimP75": st.column_config.NumberColumn("P75", format="%.1f"),
+        "SimP90": st.column_config.NumberColumn("P90", format="%.1f"),
+        "SimP95": st.column_config.NumberColumn("P95", format="%.1f"),
+        "SimP99": st.column_config.NumberColumn("P99", format="%.1f"),
+    },
+    key="player_pool_editor"
 )
 
 # ================================
@@ -918,48 +960,36 @@ else:
         current_controls[setting] = current_controls[setting].fillna(default).astype(int)
     control_values = current_controls
 
+# Apply Lock/Fade choices made directly in the Player Pool table.
+editor_controls = edited_player_display.set_index("Name")[["Lock", "Fade"]]
+control_values["Lock"] = control_values["Name"].map(editor_controls["Lock"]).fillna(
+    control_values["Lock"]
+).astype(bool)
+control_values["Fade"] = control_values["Name"].map(editor_controls["Fade"]).fillna(
+    control_values["Fade"]
+).astype(bool)
+
 st.session_state["control_values"] = control_values
 control_values = st.session_state["control_values"]
 
-headers = st.columns(
-    [2.4, 0.45, 0.45, 0.55, 0.55, 0.55, 1.0, 1.0, 1.0, 1.0]
-)
+st.caption("Lock and Fade are controlled in the Player Pool table above. Exposure settings are adjusted here.")
 
+headers = st.columns([2.4, 0.6, 0.6, 1.0, 1.0, 1.0, 1.0])
 headers[0].write("Player")
 headers[1].write("Pos")
 headers[2].write("Team")
-headers[3].write("Opp")
-headers[4].write("Lock")
-headers[5].write("Fade")
-headers[6].write("Min")
-headers[7].write("Max")
-headers[8].write("CPT Min")
-headers[9].write("CPT Max")
+headers[3].write("Min")
+headers[4].write("Max")
+headers[5].write("CPT Min")
+headers[6].write("CPT Max")
 
 for idx in control_values.index:
 
-    row = st.columns(
-        [2.4, 0.45, 0.45, 0.55, 0.55, 0.55, 1.0, 1.0, 1.0, 1.0]
-    )
+    row = st.columns([2.4, 0.6, 0.6, 1.0, 1.0, 1.0, 1.0])
 
     row[0].write(control_values.loc[idx, "Name"])
     row[1].write(control_values.loc[idx, "Position"])
     row[2].write(control_values.loc[idx, "Team"])
-    row[3].write(control_values.loc[idx, "Opponent"])
-
-    control_values.loc[idx, "Lock"] = row[4].checkbox(
-        "Lock",
-        value=bool(control_values.loc[idx, "Lock"]),
-        key=f"lock_{idx}",
-        label_visibility="collapsed"
-    )
-
-    control_values.loc[idx, "Fade"] = row[5].checkbox(
-        "Fade",
-        value=bool(control_values.loc[idx, "Fade"]),
-        key=f"fade_{idx}",
-        label_visibility="collapsed"
-    )
 
     settings = [
         ("Min Exposure %", "min"),
@@ -968,7 +998,7 @@ for idx in control_values.index:
         ("Captain Max %", "cmax")
     ]
 
-    for col, (setting, short) in enumerate(settings, start=6):
+    for col, (setting, short) in enumerate(settings, start=3):
 
         value = int(control_values.loc[idx, setting])
 
