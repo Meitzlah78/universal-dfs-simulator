@@ -1144,6 +1144,14 @@ if platform == "FanDuel":
         names = pool["Name"].astype(str).to_numpy(dtype=object)
         salaries = pd.to_numeric(pool["Salary"], errors="coerce").fillna(0).to_numpy(dtype=np.int64)
         projections = pd.to_numeric(pool["Projection"], errors="coerce").fillna(0.01).clip(lower=0.01).to_numpy(dtype=float)
+        sim_means = np.asarray([float(player_sim.get(name, {}).get("Mean", projections[i])) for i, name in enumerate(names)], dtype=float)
+        lineup_scores = np.asarray([
+            float(player_sim.get(name, {}).get("P95", projections[i])) * 0.50
+            + float(player_sim.get(name, {}).get("P99", projections[i] * 2.3)) * 0.25
+            + sim_means[i] * 0.25
+            for i, name in enumerate(names)
+        ], dtype=float)
+        lineup_scores = np.clip(lineup_scores, 0.01, None)
         eligible_sets = pool["Eligible"].tolist()
         results = []
         seen = set()
@@ -1153,7 +1161,7 @@ if platform == "FanDuel":
         if lineup_mode == "Single Game":
             slots = ["MVP", "FLEX1", "FLEX2", "FLEX3", "FLEX4"]
             mvp_indices = np.flatnonzero((salaries * 1.5 <= salary_max))
-            mvp_weights = projections[mvp_indices].copy()
+            mvp_weights = lineup_scores[mvp_indices].copy()
             if len(mvp_weights):
                 mvp_weights /= mvp_weights.sum()
         else:
@@ -1175,6 +1183,7 @@ if platform == "FanDuel":
             used = set()
             salary = 0
             total_points = 0.0
+            total_score = 0.0
             if lineup_mode == "Single Game":
                 if not len(mvp_indices):
                     break
@@ -1183,7 +1192,8 @@ if platform == "FanDuel":
                 chosen_indices.append(mvp_idx)
                 used.add(mvp_idx)
                 salary = int(round(salaries[mvp_idx] * 1.5))
-                total_points = projections[mvp_idx] * 1.5
+                total_points = sim_means[mvp_idx] * 1.5
+                total_score = lineup_scores[mvp_idx] * 1.5
                 for slot in slots[1:]:
                     choices = np.asarray([
                         i for i in range(len(names))
@@ -1191,14 +1201,15 @@ if platform == "FanDuel":
                     ], dtype=int)
                     if not len(choices):
                         break
-                    weights = projections[choices].copy()
+                    weights = lineup_scores[choices].copy()
                     weights /= weights.sum()
                     picked = int(rng.choice(choices, p=weights))
                     chosen[slot] = names[picked]
                     chosen_indices.append(picked)
                     used.add(picked)
                     salary += int(salaries[picked])
-                    total_points += projections[picked]
+                    total_points += sim_means[picked]
+                    total_score += lineup_scores[picked]
             else:
                 for slot, _ in roster:
                     choices = np.asarray([
@@ -1207,27 +1218,28 @@ if platform == "FanDuel":
                     ], dtype=int)
                     if not len(choices):
                         break
-                    weights = projections[choices].copy()
+                    weights = lineup_scores[choices].copy()
                     weights /= weights.sum()
                     picked = int(rng.choice(choices, p=weights))
                     chosen[slot] = names[picked]
                     chosen_indices.append(picked)
                     used.add(picked)
                     salary += int(salaries[picked])
-                    total_points += projections[picked]
+                    total_points += sim_means[picked]
+                    total_score += lineup_scores[picked]
             if len(chosen) != len(slots) or salary < salary_min or salary > salary_max:
                 continue
             lineup_key = tuple(chosen[slot] for slot in slots)
             if lineup_key in seen:
                 continue
             seen.add(lineup_key)
-            results.append({**chosen, "Salary": salary, "ProjectedPoints": round(total_points, 2)})
+            results.append({**chosen, "Salary": salary, "ProjectedPoints": round(total_points, 2), "Score": round(total_score, 2)})
             if len(results) >= target_lineups:
                 break
 
         if results:
             fd_results = pd.DataFrame(results).sort_values(
-                "ProjectedPoints", ascending=False
+                "Score", ascending=False
             ).reset_index(drop=True)
             st.session_state[fd_build_key] = fd_results
             st.session_state["fd_saved_builds"][fd_signature] = {"lineups": fd_results}
