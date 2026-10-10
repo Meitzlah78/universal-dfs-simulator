@@ -1094,21 +1094,29 @@ if salary_file is not None:
     except Exception as exc:
         st.error(f"Could not read that CSV: {exc}. The sample player pool is still being used.")
 
-# Infer the opposing team from the teams present in the uploaded slate.
-# Never run the simulator with fake 0.01 projections. If a source did not provide
-# projections, stop and tell the user instead of generating misleading lineups.
+# The simulator now creates its own projections from salary and position.
+# Any DFF, DraftEdge, or salary-file projections are ignored by the simulation model.
 if "ProjectionSource" not in players_df.columns:
-    players_df["ProjectionSource"] = "Salary CSV"
-players_df["Projection"] = pd.to_numeric(players_df["Projection"], errors="coerce")
-missing_projection_count = int(players_df["Projection"].isna().sum())
-if missing_projection_count:
-    st.warning(
-        f"{missing_projection_count} players still have no valid projection. "
-        "Upload a CSV with projections or wait until DraftEdge projections are available for this slate before building lineups."
-    )
-    players_df["Projection"] = players_df["Projection"].fillna(0.0)
+    players_df["ProjectionSource"] = "Internal Simulation"
+players_df["Projection"] = pd.to_numeric(players_df["Projection"], errors="coerce").fillna(0.0)
 
-st.caption("Projection source counts: " + str(players_df["ProjectionSource"].value_counts().to_dict()))
+def internal_slate_key(frame):
+    """Stable identity for an uploaded slate, independent of external projections."""
+    return tuple(
+        frame[["Name", "Team", "Position", "Salary"]]
+        .astype(str)
+        .itertuples(index=False, name=None)
+    )
+
+internal_key = internal_slate_key(players_df)
+saved_internal_projections = st.session_state.get("internal_projections_by_slate", {}).get(internal_key)
+if saved_internal_projections:
+    players_df["Projection"] = players_df["Name"].map(saved_internal_projections).fillna(0.0)
+    players_df["ProjectionSource"] = "Internal Simulation"
+else:
+    players_df["ProjectionSource"] = "Internal Simulation"
+
+st.caption("Projection source: Internal Simulation (salary and position model; external projections are not used).")
 
 opponent_source = uploaded_df if "uploaded_df" in locals() else None
 opponent_map = build_opponent_map(opponent_source, players_df["Team"])
@@ -1156,33 +1164,40 @@ if previous_signature != slate_signature:
 # SIMULATION
 # ================================
 
+def build_internal_projection_means(players_df):
+    """Estimate fantasy points internally from salary and position, not outside projections."""
+    salary = pd.to_numeric(players_df["Salary"], errors="coerce").fillna(0).to_numpy(dtype=float)
+    positions = players_df["Position"].astype(str).str.upper().str.split("/")
+    position_rates = {
+        "QB": 2.00,
+        "RB": 1.75,
+        "WR": 1.70,
+        "TE": 1.50,
+        "K": 1.35,
+        "DST": 1.35,
+        "D": 1.35,
+        "DEF": 1.35,
+    }
+    means = []
+    for pay, eligible_positions in zip(salary, positions):
+        rates = [position_rates[pos.strip()] for pos in eligible_positions if pos.strip() in position_rates]
+        rate = max(rates) if rates else 1.60
+        means.append(max(0.3, (pay / 1000.0) * rate))
+    return np.asarray(means, dtype=float)
+
+
 def run_game_simulations(players_df):
-    rng = np.random.default_rng(42)
-
-    means = np.maximum(
-        players_df["Projection"].to_numpy(dtype=float),
-        0.01
-    )
-
+    # Generate independent outcomes from the simulator's own salary/position model.
+    rng = np.random.default_rng()
+    means = build_internal_projection_means(players_df)
     n = float(DISPERSION)
     p = n / (n + means)
-
     sims = rng.negative_binomial(
         n=n,
         p=p,
         size=(SIMULATIONS, len(players_df))
     ).astype(float)
-
-    sim_means = sims.mean(axis=0)
-
-    for i in range(len(means)):
-        if sim_means[i] > 0:
-            sims[:, i] *= means[i] / sim_means[i]
-
-    return pd.DataFrame(
-        sims,
-        columns=players_df["Name"].tolist()
-    )
+    return pd.DataFrame(sims, columns=players_df["Name"].tolist())
 
 # ================================
 # PLAYER DISPLAY
@@ -1519,31 +1534,22 @@ simulate_clicked = st.button(
 )
 
 if simulate_clicked:
-    with st.spinner("Running 10,000 game simulations..."):
+    with st.spinner("Creating internal projections and running 10,000 game simulations..."):
         simulation_df = run_game_simulations(players_df)
+
+    # The simulated averages become the app's own projections for this slate.
+    generated_projections = {
+        str(player_name): float(simulation_df[player_name].mean())
+        for player_name in simulation_df.columns
+    }
+    players_df["Projection"] = players_df["Name"].map(generated_projections).fillna(0.0)
+    players_df["ProjectionSource"] = "Internal Simulation"
+    internal_projection_store = st.session_state.setdefault("internal_projections_by_slate", {})
+    internal_projection_store[internal_key] = generated_projections
 
     st.session_state["simulation_df"] = simulation_df
     st.session_state["simulations_ready"] = True
-    # Save simulated mean scores as a session-only fallback for later uploads/reruns.
-    simulation_projection_cache = st.session_state.setdefault(
-        "simulation_projection_cache", {}
-    )
-    valid_projection_names = set(
-        players_df.loc[
-            pd.to_numeric(players_df["Projection"], errors="coerce").gt(0),
-            "Name"
-        ].astype(str)
-    )
-    for player_name in simulation_df.columns:
-        projection_mean = float(simulation_df[player_name].mean())
-        if (
-            player_name in valid_projection_names
-            and np.isfinite(projection_mean)
-            and projection_mean > 0
-        ):
-            simulation_projection_cache[normalize_simulation_cache_name(player_name)] = projection_mean
-
-    st.success("10,000 game simulations completed.")
+    st.success("10,000 simulations completed. Internal projections were updated from the simulated results.")
     # Rerun so the Player Pool immediately displays the newly calculated simulation stats.
     st.rerun()
 
