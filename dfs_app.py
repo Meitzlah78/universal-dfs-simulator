@@ -865,6 +865,22 @@ editable_columns = [
     "Lock", "Fade", "Min Exposure %", "Max Exposure %",
     "Captain Min %", "Captain Max %"
 ]
+# Compact player pool styling
+st.markdown("""
+<style>
+div[data-testid="stDataEditor"] { font-size: 0.78rem; }
+div[data-testid="stDataEditor"] [role="gridcell"],
+div[data-testid="stDataEditor"] [role="columnheader"] {
+    padding: 2px 5px !important;
+    min-height: 26px !important;
+    font-size: 0.78rem !important;
+}
+div[data-testid="stDataEditor"] button {
+    min-height: 24px !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
 edited_player_display = st.data_editor(
     player_display,
     use_container_width=True,
