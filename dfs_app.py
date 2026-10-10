@@ -1012,7 +1012,7 @@ if platform == "DraftKings" and lineup_mode == "Classic":
                     if name in player_rows
                     and name not in used
                     and player_rows[name]["Eligible"] & eligible
-                    and MIN_LINEUP_SALARY <= salary + float(player_rows[name]["Salary"]) <= MAX_LINEUP_SALARY
+                    and salary + float(player_rows[name]["Salary"]) <= MAX_LINEUP_SALARY
                 ]
                 if not choices:
                     break
@@ -1188,7 +1188,7 @@ if contest_sim_clicked:
                 + sum(salary_map[p] for p in flex)
             )
 
-            if total_salary < MIN_LINEUP_SALARY or total_salary > min(SALARY_CAP, MAX_LINEUP_SALARY):
+            if total_salary > SALARY_CAP:
                 continue
 
             lineup_teams = set(
@@ -1287,7 +1287,7 @@ if build_clicked:
                     captain_salary_map[captain]
                     + sum(salary_map[p] for p in flex)
                 )
-                if total_salary < MIN_LINEUP_SALARY or total_salary > min(SALARY_CAP, MAX_LINEUP_SALARY):
+                if total_salary > SALARY_CAP:
                     continue
                 lineup_teams = set(
                     players_df.loc[players_df["Name"].isin(selected), "Team"]
