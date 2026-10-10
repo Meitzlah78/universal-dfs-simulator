@@ -1003,11 +1003,39 @@ if salary_file is not None:
                 players_df["ProjectionSource"] = "Salary CSV"
                 players_df.loc[draftedge_found, "ProjectionSource"] = "DraftEdge"
                 players_df.loc[dff_found, "ProjectionSource"] = "DFF"
-                found = dff_found | draftedge_found
+                # Last-resort backup: reuse average scores from an earlier simulation
+                # in this app session for players whose projection is still missing.
+                simulation_projection_cache = st.session_state.setdefault(
+                    "simulation_projection_cache", {}
+                )
+                missing_before_sim_backup = players_df["Projection"].isna()
+                simulation_matched = players_df["Name"].map(
+                    lambda name: simulation_projection_cache.get(
+                        normalize_projection_name(name)
+                    )
+                )
+                simulation_found = missing_before_sim_backup & simulation_matched.notna()
+                if simulation_found.any():
+                    players_df.loc[simulation_found, "Projection"] = (
+                        simulation_matched.loc[simulation_found].astype(float)
+                    )
+
+                players_df["ProjectionSource"] = "Salary CSV"
+                players_df.loc[draftedge_found, "ProjectionSource"] = "DraftEdge"
+                players_df.loc[dff_found, "ProjectionSource"] = "DFF"
+                players_df.loc[simulation_found, "ProjectionSource"] = "Simulation Backup"
+
+                found = dff_found | draftedge_found | simulation_found
                 draftedge_count = int(draftedge_found.sum())
                 dff_count = int(dff_found.sum())
+                simulation_backup_count = int(simulation_found.sum())
                 draftedge_error = active_cache.get("error")
 
+                if simulation_backup_count:
+                    st.info(
+                        f"Simulation backup filled missing projections for "
+                        f"{simulation_backup_count} players from earlier simulations in this session."
+                    )
                 if dff_error:
                     st.warning(dff_error + " DraftEdge will be used for any players it can match.")
                 elif dff_count:
@@ -1029,8 +1057,11 @@ if salary_file is not None:
 
 
                 st.success(f"Loaded {len(players_df)} players from the salary file.")
-                if dff_count + draftedge_count:
-                    st.success(f"Applied projections to {dff_count + draftedge_count} players: DFF first, then DraftEdge.")
+                if dff_count + draftedge_count + simulation_backup_count:
+                    st.success(
+                        f"Applied projections: DFF first, DraftEdge second, "
+                        f"simulation backup third ({simulation_backup_count} backup matches)."
+                    )
                 else:
                     st.warning("No DFF or DraftEdge projections matched. Check the uploaded files and matchup/date before building lineups.")
                     if draftedge_error:
@@ -1485,6 +1516,14 @@ if simulate_clicked:
 
     st.session_state["simulation_df"] = simulation_df
     st.session_state["simulations_ready"] = True
+    # Save simulated mean scores as a session-only fallback for later uploads/reruns.
+    simulation_projection_cache = st.session_state.setdefault(
+        "simulation_projection_cache", {}
+    )
+    for player_name in simulation_df.columns:
+        projection_mean = float(simulation_df[player_name].mean())
+        if np.isfinite(projection_mean) and projection_mean > 0:
+            simulation_projection_cache[normalize_projection_name(player_name)] = projection_mean
 
     st.success("10,000 game simulations completed.")
 
@@ -1597,6 +1636,14 @@ if build_clicked:
 
     st.session_state["simulation_df"] = simulation_df
     st.session_state["simulations_ready"] = True
+    # Save simulated mean scores as a session-only fallback for later uploads/reruns.
+    simulation_projection_cache = st.session_state.setdefault(
+        "simulation_projection_cache", {}
+    )
+    for player_name in simulation_df.columns:
+        projection_mean = float(simulation_df[player_name].mean())
+        if np.isfinite(projection_mean) and projection_mean > 0:
+            simulation_projection_cache[normalize_projection_name(player_name)] = projection_mean
 
     # Build the 10,000-lineup contest field automatically for this run.
     with st.spinner("Building the simulated contest field..."):
