@@ -764,6 +764,24 @@ if previous_signature != slate_signature:
         st.session_state[key] = value
     st.session_state["active_slate_signature"] = slate_signature
 
+# Never display a saved DraftKings Classic build if it contains a player who is
+# no longer in the current eligible pool (including players newly marked Out).
+if platform == "DraftKings" and lineup_mode == "Classic":
+    saved_classic = st.session_state.get("classic_lineups")
+    if saved_classic is not None and not saved_classic.empty:
+        classic_slot_columns = [
+            column for column in ["QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "FLEX", "DST"]
+            if column in saved_classic.columns
+        ]
+        current_names = set(players_df["Name"].astype(str))
+        saved_names = set(
+            saved_classic[classic_slot_columns].astype(str).to_numpy().ravel()
+        ) if classic_slot_columns else set()
+        if not saved_names.issubset(current_names):
+            st.session_state.pop("classic_lineups", None)
+            st.session_state.pop("classic_pool_signature", None)
+            st.info("The saved Classic lineups were cleared because they included players no longer in the current player pool. Build fresh lineups.")
+
 # ================================
 # SIMULATION
 # ================================
