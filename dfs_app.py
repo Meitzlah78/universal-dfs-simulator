@@ -297,21 +297,43 @@ div.stButton > button {
 st.write("### Player Controls")
 st.caption("− / + changes exposure by 1%.")
 
+# Keep settings for players that remain, and add new uploaded players.
+default_control_columns = [
+    "Name", "Position", "Team", "Opponent",
+    "Lock", "Fade", "Min Exposure %", "Max Exposure %",
+    "Captain Min %", "Captain Max %"
+]
 if "control_values" not in st.session_state:
-
-    control_values = players_df[
-        ["Name", "Position", "Team", "Opponent"]
-    ].copy()
-
+    control_values = players_df[["Name", "Position", "Team", "Opponent"]].copy()
     control_values["Lock"] = False
     control_values["Fade"] = False
     control_values["Min Exposure %"] = 0
     control_values["Max Exposure %"] = 100
     control_values["Captain Min %"] = 0
     control_values["Captain Max %"] = 100
+else:
+    previous_controls = st.session_state["control_values"].copy()
+    current_controls = players_df[["Name", "Position", "Team", "Opponent"]].copy()
+    setting_columns = [
+        "Lock", "Fade", "Min Exposure %", "Max Exposure %",
+        "Captain Min %", "Captain Max %"
+    ]
+    previous_by_name = previous_controls.drop_duplicates("Name").set_index("Name")
+    for setting in setting_columns:
+        current_controls[setting] = current_controls["Name"].map(
+            previous_by_name[setting] if setting in previous_by_name.columns
+            else pd.Series(dtype=object)
+        )
+    current_controls["Lock"] = current_controls["Lock"].fillna(False).astype(bool)
+    current_controls["Fade"] = current_controls["Fade"].fillna(False).astype(bool)
+    for setting, default in [
+        ("Min Exposure %", 0), ("Max Exposure %", 100),
+        ("Captain Min %", 0), ("Captain Max %", 100)
+    ]:
+        current_controls[setting] = current_controls[setting].fillna(default).astype(int)
+    control_values = current_controls
 
-    st.session_state["control_values"] = control_values
-
+st.session_state["control_values"] = control_values
 control_values = st.session_state["control_values"]
 
 headers = st.columns(
