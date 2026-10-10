@@ -2063,7 +2063,12 @@ existing_control_values = st.session_state.get("control_values")
 if existing_control_values is not None:
     existing_control_values = existing_control_values.drop_duplicates("Name").set_index("Name")
 
-control_display = players_df[["Name", "Position", "Team", "Opponent"]].copy()
+# Combine player details, simulated stats, realized exposure, and editable controls
+# into one table so exposure is visible beside the limits you can change.
+control_display = player_display.copy()
+for required_column in ["Name", "Position", "Team", "Opponent"]:
+    if required_column not in control_display.columns:
+        control_display[required_column] = players_df[required_column].values
 for setting, default in [
     ("Lock", False), ("Fade", False),
     ("Min Exposure %", 0), ("Max Exposure %", 100),
@@ -2074,13 +2079,21 @@ for setting, default in [
     else:
         control_display[setting] = default
 
-st.write("### Player Controls")
-st.caption("Change these settings directly for each player. Lock includes a player, Fade excludes a player, and exposure values set lineup percentages.")
+st.write("### Player Controls & Exposure")
+st.caption("Everything is together here. Review current exposure, then change Min/Max Exp % to guide future builds. Lock includes a player; Fade excludes a player.")
+editable_control_columns = [
+    "Lock", "Fade", "Min Exposure %", "Max Exposure %",
+    "Captain Min %", "Captain Max %"
+]
+disabled_control_columns = [
+    column for column in control_display.columns
+    if column not in editable_control_columns
+]
 edited_player_controls = st.data_editor(
     control_display,
     use_container_width=True,
     hide_index=True,
-    disabled=["Name", "Position", "Team", "Opponent"],
+    disabled=disabled_control_columns,
     column_config={
         "Lock": st.column_config.CheckboxColumn("Lock", help="Force this player into lineup builds."),
         "Fade": st.column_config.CheckboxColumn("Fade", help="Keep this player out of lineup builds."),
@@ -2102,9 +2115,6 @@ player_display = player_display[
 # Captain exposure is only relevant to DraftKings Showdown.
 if platform == "DraftKings" and lineup_mode == "Classic":
     player_display = player_display.drop(columns=["Captain Exp %"], errors="ignore")
-st.write("### Player Pool")
-st.dataframe(player_display, use_container_width=True, hide_index=True)
-
 # Copy/paste-ready player pool export for sharing analysis in ChatGPT.
 with st.expander("Copy Player Info to ChatGPT"):
     st.caption("Copy the text below and paste it into ChatGPT. It includes player details, simulation stats, and Captain/Flex exposure when available.")
