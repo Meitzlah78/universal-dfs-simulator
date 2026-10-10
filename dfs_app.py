@@ -183,7 +183,8 @@ def download_public_projection_table(source_name, platform_name):
     platform_key = str(platform_name).casefold()
     if source_name == "DFF":
         if "single game" in platform_key or "showdown" in platform_key:
-            url = "https://www.dailyfantasyfuel.com/nfl/showdown-single-game-projections/"
+            site = "fanduel" if "fanduel" in platform_key else "draftkings"
+            url = f"https://www.dailyfantasyfuel.com/nfl/showdown-single-game-projections/{site}/"
         else:
             url = "https://www.dailyfantasyfuel.com/nfl/projections/fanduel/" if "fanduel" in platform_key else "https://www.dailyfantasyfuel.com/nfl/projections/"
     elif source_name == "DraftEdge":
@@ -229,8 +230,9 @@ def download_public_projection_table(source_name, platform_name):
         if "Sort" in page_text:
             page_text = page_text.split("Sort", 1)[1]
         row_pattern = re.compile(
-            r"\b(?:QB|WR|RB|TE|FLX|DST|K)\s+(.+?)\s+\$[\d,.]+k\s+"
-            r"([A-Z]{2,3})\s+([A-Z]{2,3})\s+\d+\s+(\d+(?:\.\d+)?)",
+            r"\\b(?:QB|WR|RB|TE|FLX|DST|K)\\s*\\|\\s*(?:Image\\s+)?(.+?)\\s*\\|\\s*"
+            r"\\$[\\d,.]+k\\s*\\|\\s*[A-Z]{2,3}\\s*\\|\\s*[A-Z]{2,3}\\s*\\|\\s*"
+            r"\\d+\\s*\\|\\s*(\\d+(?:\\.\\d+)?)",
             re.IGNORECASE
         )
         result = {}
@@ -238,7 +240,7 @@ def download_public_projection_table(source_name, platform_name):
             player_name = re.sub(r"\s+", " ", match.group(1)).strip()
             # The first numeric value after opponent is the site's fantasy projection.
             key = normalize_projection_player_name(player_name)
-            value = pd.to_numeric(match.group(4), errors="coerce")
+            value = pd.to_numeric(match.group(2), errors="coerce")
             if key and pd.notna(value) and np.isfinite(float(value)) and float(value) > 0:
                 result[key] = float(value)
         if result:
@@ -248,7 +250,7 @@ def download_public_projection_table(source_name, platform_name):
 def refresh_public_projection_sources():
     """Warm all public projection downloads on app start and every 30 minutes."""
     status = {}
-    for platform_name in ("DraftKings", "FanDuel"):
+    for platform_name in ("DraftKings Classic", "DraftKings Showdown", "FanDuel Full Roster", "FanDuel Single Game"):
         status[f"DFF ({platform_name})"] = bool(download_public_projection_table("DFF", platform_name))
         status[f"DraftEdge ({platform_name})"] = bool(download_public_projection_table("DraftEdge", platform_name))
     return status
