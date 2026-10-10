@@ -682,22 +682,56 @@ if salary_file is not None:
                             (url for url in dff_link_parser.links if "csv" in url.lower()),
                             dff_link_parser.links[0] if dff_link_parser.links else None
                         )
-                        if not dff_csv_url:
-                            raise ValueError(
-                                "DFF's CSV download link was not found on its projections page."
-                            )
 
-                        dff_csv_response = requests.get(
-                            dff_csv_url,
-                            timeout=20,
-                            headers={"User-Agent": "Mozilla/5.0 UniversalDFS-Simulator"}
-                        )
-                        dff_csv_response.raise_for_status()
-                        if not dff_csv_response.text.strip() or "<html" in dff_csv_response.text[:500].lower():
-                            raise ValueError(
-                                "DFF returned a webpage instead of a projections CSV."
+                        # DFF's download button may be created by page scripts, so
+                        # try a direct CSV link first, then fall back to its public
+                        # projections table if no CSV link is present in the HTML.
+                        if dff_csv_url:
+                            dff_csv_response = requests.get(
+                                dff_csv_url,
+                                timeout=20,
+                                headers={"User-Agent": "Mozilla/5.0 UniversalDFS-Simulator"}
                             )
-                        dff_df = pd.read_csv(StringIO(dff_csv_response.text))
+                            dff_csv_response.raise_for_status()
+                            if (
+                                dff_csv_response.text.strip()
+                                and "<html" not in dff_csv_response.text[:500].lower()
+                            ):
+                                dff_df = pd.read_csv(StringIO(dff_csv_response.text))
+
+                        if dff_df is None:
+                            try:
+                                dff_tables = pd.read_html(StringIO(dff_page_response.text))
+                            except Exception:
+                                dff_tables = []
+                            for candidate_table in dff_tables:
+                                candidate_table.columns = [
+                                    str(col[-1] if isinstance(col, tuple) else col).strip()
+                                    for col in candidate_table.columns
+                                ]
+                                candidate_name = find_column(
+                                    candidate_table,
+                                    ["Name", "Player", "Player Name", "Nickname"]
+                                )
+                                candidate_projection = find_column(
+                                    candidate_table,
+                                    [
+                                        "Projection", "Projected Points", "Proj", "FPTS",
+                                        "Fantasy Points", "DK Points", "Points", "Fpts",
+                                        "FPTS Proj", "FP Projection", "Proj. FPTS",
+                                        "FPTS Projection", "Fantasy Points Projection"
+                                    ]
+                                )
+                                if candidate_name is not None and candidate_projection is not None:
+                                    dff_df = candidate_table
+                                    break
+
+                        if dff_df is None:
+                            raise ValueError(
+                                "DFF's download link was not available in the page HTML, "
+                                "and its projections table could not be read directly. "
+                                "The site may require a browser session or a download endpoint."
+                            )
                     except Exception as exc:
                         dff_error = "Automatic DFF download failed: " + str(exc)
 
