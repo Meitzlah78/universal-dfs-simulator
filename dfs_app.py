@@ -918,11 +918,16 @@ if salary_file is not None:
                 dff_count = int(dff_found.sum())
                 draftedge_error = active_cache.get("error")
 
-                if dff_file is not None:
-                    if dff_error:
-                        st.error("Could not read the DFF projections file: " + dff_error)
-                    else:
-                        st.success(f"DFF projections matched for {dff_count} players (first choice).")
+                if dff_error:
+                    st.warning(dff_error + " DraftEdge will be used for any players it can match.")
+                elif dff_count:
+                    st.success(
+                        f"DFF projections downloaded and matched for {dff_count} players (first choice)."
+                        if dff_file is None
+                        else f"Uploaded DFF projections matched for {dff_count} players (first choice)."
+                    )
+                else:
+                    st.warning("DFF data was loaded, but no player names matched this slate. DraftEdge will be used as backup.")
                 if active_cache.get("updated_at"):
                     st.session_state["draftedge_last_updated"] = active_cache["updated_at"]
                     st.success(f"DraftEdge projections filled gaps for {draftedge_count} players.")
