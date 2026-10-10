@@ -250,22 +250,45 @@ def apply_injury_statuses(frame, key_prefix):
         if new_status == "Out" and old_status != "Out":
             newly_out.append(str(row["Name"]).strip())
     st.session_state["player_injury_statuses"] = saved_statuses
-    # A newly-Out player invalidates every cached build/simulation so stale lineups
-    # cannot keep showing that player. Injury status table is retained separately.
-    if newly_out:
-        # Clear every current and archived lineup/build cache. In particular, DK
-        # stores builds inside saved_builds_by_slate, and both sites can restore
-        # archived portfolios after the injury editor runs.
+    # If a player is Out, clear caches only when that player's name is actually
+    # present in a saved lineup/build. This also catches Out statuses saved earlier.
+    out_names = {
+        str(row["Name"]).strip().casefold()
+        for _, row in edited_statuses.iterrows()
+        if str(row["Injury Status"]).strip().casefold() == "out"
+    }
+
+    def cache_contains_out_player(value):
+        if isinstance(value, pd.DataFrame):
+            return any(
+                value[column].astype(str).str.strip().str.casefold().isin(out_names).any()
+                for column in value.columns
+            )
+        if isinstance(value, dict):
+            return any(cache_contains_out_player(item) for item in value.values())
+        if isinstance(value, (list, tuple, set)):
+            return any(cache_contains_out_player(item) for item in value)
+        return isinstance(value, str) and value.strip().casefold() in out_names
+
+    cache_tokens = (
+        "lineup", "portfolio", "simulation", "contest_field", "contest_results",
+        "candidate", "exposure", "saved_build", "classic_pool_signature",
+        "build_ready", "latest_field_ownership", "fd_active_signature",
+        "fd_saved_builds", "fd_lineups"
+    )
+    stale_cache_found = any(
+        any(token in str(key).lower() for token in cache_tokens)
+        and cache_contains_out_player(value)
+        for key, value in list(st.session_state.items())
+    )
+    if newly_out or stale_cache_found:
+        # Clear every current and archived lineup/build cache so archived slate
+        # state cannot restore a lineup containing an Out player.
         preserve_tokens = (
             "dropdown", "injury_status", "player_injury_statuses", "lineup_mode",
             "platform", "slate_selector"
         )
-        clear_tokens = (
-            "lineup", "portfolio", "simulation", "contest_field", "contest_results",
-            "candidate", "exposure", "saved_build", "classic_pool_signature",
-            "build_ready", "latest_field_ownership", "active_slate_signature",
-            "fd_active_signature", "fd_saved_builds", "fd_lineups"
-        )
+        clear_tokens = cache_tokens + ("active_slate_signature",)
         stale_build_keys = [
             key for key in list(st.session_state.keys())
             if any(token in str(key).lower() for token in clear_tokens)
@@ -273,9 +296,13 @@ def apply_injury_statuses(frame, key_prefix):
         ]
         for key in stale_build_keys:
             st.session_state.pop(key, None)
+        if newly_out:
+            changed_names = newly_out
+        else:
+            changed_names = sorted(out_names)
         st.warning(
-            "Removed saved lineups and simulations because these players were marked Out: "
-            + ", ".join(newly_out)
+            "Removed saved lineups and simulations containing Out players: "
+            + ", ".join(changed_names)
             + ". Build new lineups; Out players are excluded."
         )
 
