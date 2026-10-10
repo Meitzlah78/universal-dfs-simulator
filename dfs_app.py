@@ -265,7 +265,8 @@ if platform == "FanDuel":
         )
 
     if st.button("SIM", type="primary", key="fd_sim_" + lineup_mode.replace(" ", "_").lower()):
-        with st.spinner("Running 10,000 internal player simulations for FanDuel..."):
+        with st.spinner("Running 10,000 FanDuel scoring simulations..."):
+            rng = np.random.default_rng()
             position_rates = {
                 "QB": 2.00, "RB": 1.75, "WR": 1.70, "TE": 1.50,
                 "K": 1.35, "D": 1.35, "DST": 1.35, "DEF": 1.35
@@ -276,19 +277,78 @@ if platform == "FanDuel":
                 rates = [position_rates[pos] for pos in eligible_positions if pos in position_rates]
                 rate = max(rates) if rates else 1.60
                 means.append(max(0.3, float(player_row["Salary"]) / 1000.0 * rate))
+            # FanDuel scoring differs from DraftKings: half-point receptions,
+            # -2 lost fumbles, and no 300/100-yard bonuses.
             means = np.asarray(means, dtype=float)
-            rng = np.random.default_rng()
-            dispersion = 8.0
-            probabilities = dispersion / (dispersion + means)
-            simulated_scores = rng.negative_binomial(
-                n=dispersion, p=probabilities, size=(10000, len(fd_players))
-            )
+            simulated_scores = np.zeros((10000, len(fd_players)), dtype=float)
+            for index, (_, player_row) in enumerate(fd_players.iterrows()):
+                positions = set(str(player_row["Position"]).upper().replace(" ", "").split("/"))
+                n = 10000
+                if "QB" in positions:
+                    stats = {"passing_yards": np.maximum(0, rng.normal(225, 65, n)),
+                             "passing_tds": rng.poisson(1.45, n), "interceptions": rng.poisson(0.65, n),
+                             "rushing_yards": np.maximum(0, rng.normal(16, 20, n)),
+                             "rushing_tds": rng.binomial(1, 0.12, n)}
+                elif "RB" in positions:
+                    stats = {"rushing_yards": np.maximum(0, rng.normal(55, 30, n)),
+                             "rushing_tds": rng.binomial(2, 0.18, n),
+                             "receiving_yards": np.maximum(0, rng.normal(22, 20, n)),
+                             "receiving_tds": rng.binomial(1, 0.10, n), "receptions": rng.poisson(2.5, n)}
+                elif "WR" in positions:
+                    stats = {"receiving_yards": np.maximum(0, rng.normal(55, 35, n)),
+                             "receiving_tds": rng.binomial(1, 0.28, n), "receptions": rng.poisson(4.0, n),
+                             "rushing_yards": np.maximum(0, rng.normal(2, 5, n))}
+                elif "TE" in positions:
+                    stats = {"receiving_yards": np.maximum(0, rng.normal(34, 24, n)),
+                             "receiving_tds": rng.binomial(1, 0.20, n), "receptions": rng.poisson(2.7, n)}
+                elif positions & {"K"}:
+                    stats = {"fg_under_40": rng.poisson(1.0, n), "fg_40_49": rng.poisson(0.5, n),
+                             "fg_50_plus": rng.poisson(0.25, n), "extra_points_made": rng.poisson(2.0, n)}
+                else:
+                    stats = {"sacks": rng.poisson(2.3, n), "def_interceptions": rng.binomial(1, 0.7, n),
+                             "fumble_recoveries": rng.binomial(1, 0.45, n), "defensive_tds": rng.binomial(1, 0.08, n),
+                             "safeties": rng.binomial(1, 0.03, n), "blocked_kicks": rng.binomial(1, 0.04, n),
+                             "points_allowed": np.clip(rng.normal(22, 10, n), 0, 50),
+                             "yards_allowed": np.clip(rng.normal(350, 80, n), 0, 650), "is_defense": 1}
+                score = (
+                    np.asarray(stats.get("passing_yards", 0), dtype=float) * 0.04
+                    + np.asarray(stats.get("passing_tds", 0), dtype=float) * 4
+                    - np.asarray(stats.get("interceptions", 0), dtype=float)
+                    + np.asarray(stats.get("rushing_yards", 0), dtype=float) * 0.1
+                    + np.asarray(stats.get("rushing_tds", 0), dtype=float) * 6
+                    + np.asarray(stats.get("receiving_yards", 0), dtype=float) * 0.1
+                    + np.asarray(stats.get("receiving_tds", 0), dtype=float) * 6
+                    + np.asarray(stats.get("receptions", 0), dtype=float) * 0.5
+                    - np.asarray(stats.get("fumbles_lost", 0), dtype=float) * 2
+                    + np.asarray(stats.get("fg_under_40", 0), dtype=float) * 3
+                    + np.asarray(stats.get("fg_40_49", 0), dtype=float) * 4
+                    + np.asarray(stats.get("fg_50_plus", 0), dtype=float) * 5
+                    + np.asarray(stats.get("extra_points_made", 0), dtype=float)
+                    + np.asarray(stats.get("sacks", 0), dtype=float)
+                    + np.asarray(stats.get("def_interceptions", 0), dtype=float) * 2
+                    + np.asarray(stats.get("fumble_recoveries", 0), dtype=float) * 2
+                    + np.asarray(stats.get("defensive_tds", 0), dtype=float) * 6
+                    + np.asarray(stats.get("safeties", 0), dtype=float) * 2
+                    + np.asarray(stats.get("blocked_kicks", 0), dtype=float) * 2
+                )
+                if "D" in positions or "DST" in positions or "DEF" in positions:
+                    pa = np.asarray(stats["points_allowed"], dtype=float)
+                    ya = np.asarray(stats["yards_allowed"], dtype=float)
+                    score += np.select([pa == 0, pa <= 6, pa <= 13, pa <= 20, pa <= 27, pa <= 34],
+                                       [10, 7, 4, 1, 0, -1], default=-4)
+                    score += np.select([ya <= 100, ya <= 199, ya <= 299, ya <= 349, ya <= 399, ya <= 449, ya <= 499],
+                                       [3, 2, 1, 0, -1, -3, -5], default=-7)
+                # Keep the internal salary estimate as an opportunity guide.
+                avg = float(np.mean(score))
+                if avg > 0:
+                    score *= float(np.clip(means[index] / avg, 0.65, 1.55))
+                simulated_scores[:, index] = np.maximum(score, 0)
             generated_projections = {
                 str(name): float(simulated_scores[:, index].mean())
                 for index, name in enumerate(fd_players["Name"])
             }
             fd_projection_store[fd_projection_key] = generated_projections
-        st.success("FanDuel player simulations completed.")
+        st.success("FanDuel scoring simulations completed.")
         st.rerun()
 
     st.success(f"Loaded {len(fd_players)} FanDuel players after injury-status filtering.")
