@@ -852,86 +852,49 @@ else:
     ]:
         player_display[column] = np.nan
 
-# Keep stats, Lock/Fade, and min/max exposure controls together in the player pool.
+# Show editable player settings in their own block, separate from player stats.
 existing_control_values = st.session_state.get("control_values")
 if existing_control_values is not None:
     existing_control_values = existing_control_values.drop_duplicates("Name").set_index("Name")
-    for setting, default in [
-        ("Lock", False), ("Fade", False),
-        ("Min Exposure %", 0), ("Max Exposure %", 100),
-        ("Captain Min %", 0), ("Captain Max %", 100)
-    ]:
-        player_display[setting] = player_display["Name"].map(
-            existing_control_values[setting]
-            if setting in existing_control_values.columns
-            else pd.Series(dtype=object)
-        ).fillna(default)
-else:
-    player_display["Lock"] = False
-    player_display["Fade"] = False
-    player_display["Min Exposure %"] = 0
-    player_display["Max Exposure %"] = 100
-    player_display["Captain Min %"] = 0
-    player_display["Captain Max %"] = 100
 
-# Put editable controls near the front so they are visible without
-# scrolling past every simulation-stat column.
-player_display = player_display[
-    [
-        "Name", "Position", "Team", "Opponent", "Salary", "CaptainSalary",
-        "Projection", "Lock", "Fade", "Min Exposure %", "Max Exposure %",
-        "Captain Min %", "Captain Max %",
-        "SimMean", "SimP10", "SimP25", "SimP50", "SimP75",
-        "SimP90", "SimP95", "SimP99"
-    ]
-]
+control_display = players_df[["Name", "Position", "Team", "Opponent"]].copy()
+for setting, default in [
+    ("Lock", False), ("Fade", False),
+    ("Min Exposure %", 0), ("Max Exposure %", 100),
+    ("Captain Min %", 0), ("Captain Max %", 100)
+]:
+    if existing_control_values is not None and setting in existing_control_values.columns:
+        control_display[setting] = control_display["Name"].map(existing_control_values[setting]).fillna(default)
+    else:
+        control_display[setting] = default
 
-editable_columns = [
-    "Lock", "Fade", "Min Exposure %", "Max Exposure %",
-    "Captain Min %", "Captain Max %"
-]
-# Compact player pool styling
-st.markdown("""
-<style>
-div[data-testid="stDataEditor"] { font-size: 0.78rem; }
-div[data-testid="stDataEditor"] [role="gridcell"],
-div[data-testid="stDataEditor"] [role="columnheader"] {
-    padding: 2px 5px !important;
-    min-height: 26px !important;
-    font-size: 0.78rem !important;
-}
-div[data-testid="stDataEditor"] button {
-    min-height: 24px !important;
-}
-</style>
-""", unsafe_allow_html=True)
-
-edited_player_display = st.data_editor(
-    player_display,
+st.write("### Player Controls")
+st.caption("Change these settings directly for each player. Lock includes a player, Fade excludes a player, and exposure values set lineup percentages.")
+edited_player_controls = st.data_editor(
+    control_display,
     use_container_width=True,
     hide_index=True,
-    disabled=[c for c in player_display.columns if c not in editable_columns],
+    disabled=["Name", "Position", "Team", "Opponent"],
     column_config={
         "Lock": st.column_config.CheckboxColumn("Lock", help="Force this player into lineup builds."),
         "Fade": st.column_config.CheckboxColumn("Fade", help="Keep this player out of lineup builds."),
-        "Min Exposure %": st.column_config.NumberColumn("Min Exp %", min_value=0, max_value=100, step=5, format="%d%%", help="Minimum percentage of lineups containing this player."),
-        "Max Exposure %": st.column_config.NumberColumn("Max Exp %", min_value=0, max_value=100, step=5, format="%d%%", help="Maximum percentage of lineups containing this player."),
-        "Captain Min %": st.column_config.NumberColumn("CPT Min %", min_value=0, max_value=100, step=5, format="%d%%", help="Minimum captain exposure."),
-        "Captain Max %": st.column_config.NumberColumn("CPT Max %", min_value=0, max_value=100, step=5, format="%d%%", help="Maximum captain exposure."),
-        "Salary": st.column_config.NumberColumn("Salary", format="$%d"),
-        "CaptainSalary": st.column_config.NumberColumn("CPT Salary", format="$%d"),
-        "Projection": st.column_config.NumberColumn("Projection", format="%.1f"),
-        "SimMean": st.column_config.NumberColumn("Sim Avg", format="%.1f"),
-        "SimP10": st.column_config.NumberColumn("P10", format="%.1f"),
-        "SimP25": st.column_config.NumberColumn("P25", format="%.1f"),
-        "SimP50": st.column_config.NumberColumn("Median", format="%.1f"),
-        "SimP75": st.column_config.NumberColumn("P75", format="%.1f"),
-        "SimP90": st.column_config.NumberColumn("P90", format="%.1f"),
-        "SimP95": st.column_config.NumberColumn("P95", format="%.1f"),
-        "SimP99": st.column_config.NumberColumn("P99", format="%.1f"),
+        "Min Exposure %": st.column_config.NumberColumn("Min Exp %", min_value=0, max_value=100, step=5, format="%d%%"),
+        "Max Exposure %": st.column_config.NumberColumn("Max Exp %", min_value=0, max_value=100, step=5, format="%d%%"),
+        "Captain Min %": st.column_config.NumberColumn("CPT Min %", min_value=0, max_value=100, step=5, format="%d%%"),
+        "Captain Max %": st.column_config.NumberColumn("CPT Max %", min_value=0, max_value=100, step=5, format="%d%%"),
     },
-    key="player_pool_editor"
+    key="player_controls_editor"
 )
+
+# Keep the player stats table read-only; settings are changed in the block above.
+player_display = player_display[
+    [c for c in player_display.columns if c not in [
+        "Lock", "Fade", "Min Exposure %", "Max Exposure %",
+        "Captain Min %", "Captain Max %"
+    ]]
+]
+st.write("### Player Pool")
+st.dataframe(player_display, use_container_width=True, hide_index=True)
 
 # Keep the Lock/Fade selections from the Player Pool editor and preserve
 # the existing exposure controls internally at their saved/default values.
@@ -957,7 +920,7 @@ else:
     control_values["Captain Min %"] = 0
     control_values["Captain Max %"] = 100
 
-editor_controls = edited_player_display.set_index("Name")
+editor_controls = edited_player_controls.set_index("Name")
 for setting in [
     "Lock", "Fade", "Min Exposure %", "Max Exposure %",
     "Captain Min %", "Captain Max %"
