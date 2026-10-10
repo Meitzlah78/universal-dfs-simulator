@@ -336,7 +336,7 @@ def download_public_projection_table(source_name, platform_name):
                         continue
                     dated_html = dated_response.text
                     dated_rows = re.findall(
-                        r"<tr\\b[^>]*class=['\\"][^'\\"]*projections-listing[^'\\"]*['\\"][^>]*>.*?</tr>",
+                        r"<tr\b[^>]*class=['\"][^'\"]*projections-listing[^'\"]*['\"][^>]*>.*?</tr>",
                         dated_html,
                         flags=re.IGNORECASE | re.DOTALL
                     )
@@ -348,7 +348,7 @@ def download_public_projection_table(source_name, platform_name):
                         def dated_attr(attrs, source):
                             for attr in attrs:
                                 m = re.search(
-                                    r"\\b" + re.escape(attr) + r"\\s*=\\s*['\\"]([^'\\"]*)['\\"]",
+                                    r"\b" + re.escape(attr) + r"\s*=\s*['\"]([^'\"]*)['\"]",
                                     source,
                                     flags=re.IGNORECASE
                                 )
@@ -359,7 +359,7 @@ def download_public_projection_table(source_name, platform_name):
                         name = dated_attr(("data-player", "data-name"), opening_tag)
                         if not name:
                             nm = re.search(
-                                r"<div\\b[^>]*class=['\\"][^'\\"]*\\bbold\\b[^'\\"]*['\\"][^>]*>\\s*([^<]+)",
+                                r"<div\b[^>]*class=['\"][^'\"]*\bbold\b[^'\"]*['\"][^>]*>\s*([^<]+)",
                                 row,
                                 flags=re.IGNORECASE | re.DOTALL
                             )
