@@ -2229,9 +2229,22 @@ try:
                 slate_options["Slate Label"] = slate_options.apply(
                     lambda row: f'{row["SlateName"]} | Slate ID {row["dg"]}', axis=1
                 )
+                # If a contest-entry CSV was uploaded, default to the game named in that file.
+                def dk_matchup_from_text(value):
+                    match = re.search(r"\\b([A-Z]{2,3})\\s*[@vV]s?\\.?\\s*([A-Z]{2,3})\\b", str(value).upper())
+                    return tuple(sorted(match.groups())) if match else None
+
+                entry_matchup = dk_matchup_from_text(selected_contest_name) if selected_contest_name else None
+                slate_default_index = 0
+                if entry_matchup:
+                    for i, slate_name in enumerate(slate_options["SlateName"].astype(str).tolist()):
+                        if dk_matchup_from_text(slate_name) == entry_matchup:
+                            slate_default_index = i
+                            break
                 chosen_slate_label = st.selectbox(
                     "Choose a DraftKings single-game slate",
                     slate_options["Slate Label"].tolist(),
+                    index=slate_default_index,
                     key="dk_auto_slate_" + ("showdown" if lineup_mode == "Showdown" else "classic"),
                 )
                 selected_dk_draft_group_id = str(
@@ -2385,11 +2398,29 @@ try:
                 axis=1,
             )
             # Keep a separate contest choice for each DraftKings slate type.
+            # Prefer the contest from the uploaded entry CSV when it matches this slate;
+            # otherwise preserve the user's last selection for this slate.
             dk_slate_key = "showdown" if lineup_mode == "Showdown" else "classic"
             dk_saved_contests = st.session_state.get("selected_dk_contests_by_slate", {})
             previous_selection = dk_saved_contests.get(dk_slate_key, {})
             previous_lobby_id = str(previous_selection.get("id", ""))
             default_index = next((i for i, value in enumerate(lobby_matches["id"].tolist()) if value == previous_lobby_id), 0)
+
+            if selected_contest_name:
+                entry_name_normalized = re.sub(r"[^a-z0-9]+", "", str(selected_contest_name).lower())
+                entry_matchup = dk_matchup_from_text(selected_contest_name)
+                for i, lobby_name in enumerate(lobby_matches["n"].astype(str).tolist()):
+                    lobby_name_normalized = re.sub(r"[^a-z0-9]+", "", lobby_name.lower())
+                    lobby_matchup = dk_matchup_from_text(lobby_name)
+                    name_matches = (
+                        entry_name_normalized in lobby_name_normalized
+                        or lobby_name_normalized in entry_name_normalized
+                    )
+                    matchup_matches = entry_matchup is not None and lobby_matchup == entry_matchup
+                    if name_matches or (matchup_matches and " ".join(str(selected_contest_name).lower().split()) in " ".join(lobby_name.lower().split())):
+                        default_index = i
+                        break
+
             chosen_lobby_label = st.selectbox(
                 f"Select a DraftKings {lineup_mode} contest",
                 lobby_matches["Contest Label"].tolist(),
