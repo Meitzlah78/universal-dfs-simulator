@@ -225,6 +225,9 @@ def download_public_projection_table(source_name, platform_name):
         from html import unescape
         from bs4 import BeautifulSoup
         page_text = unescape(BeautifulSoup(response.text, "html.parser").get_text(" ", strip=True))
+        # Ignore navigation and position filters so the first QB/WR token is a player row.
+        if "Sort" in page_text:
+            page_text = page_text.split("Sort", 1)[1]
         row_pattern = re.compile(
             r"\b(?:QB|WR|RB|TE|FLX|DST|K)\s+(.+?)\s+\$[\d,.]+k\s+"
             r"([A-Z]{2,3})\s+([A-Z]{2,3})\s+\d+\s+(\d+(?:\.\d+)?)",
