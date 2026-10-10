@@ -305,14 +305,95 @@ def download_public_projection_table(source_name, platform_name):
         if result:
             return result
 
+        # Showdown pages need the slate date in the URL. The Colab notebook
+        # confirmed this route works; discover upcoming slate dates from DFF.
+        if is_single_game:
+            try:
+                from datetime import date
+                slate_response = requests.get(
+                    f"https://www.dailyfantasyfuel.com/data/slates/recent/nfl/{site}",
+                    headers=headers,
+                    timeout=30
+                )
+                slate_response.raise_for_status()
+                slate_payload = slate_response.json()
+                dates = sorted({
+                    str(item.get("start_date", ""))
+                    for item in slate_payload.get("dates", [])
+                    if item.get("start_date")
+                })
+                today = date.today().isoformat()
+                dates = [d for d in dates if d >= today] + [d for d in dates if d < today]
+                for slate_date in dates:
+                    dated_url = (
+                        f"https://www.dailyfantasyfuel.com/nfl/"
+                        f"showdown-single-game-projections/{site}/{slate_date}/"
+                    )
+                    try:
+                        dated_response = requests.get(dated_url, headers=headers, timeout=30)
+                        dated_response.raise_for_status()
+                    except Exception:
+                        continue
+                    dated_html = dated_response.text
+                    dated_rows = re.findall(
+                        r'<tr\\b[^>]*class=["\\'][^"\\']*projections-listing[^"\\']*["\\'][^>]*>.*?</tr>',
+                        dated_html,
+                        flags=re.IGNORECASE | re.DOTALL
+                    )
+                    dated_result = {}
+                    for row in dated_rows:
+                        opening = re.search(r'<tr\\b[^>]*>', row, flags=re.IGNORECASE | re.DOTALL)
+                        opening_tag = opening.group(0) if opening else row
+
+                        def dated_attr(attrs, source):
+                            for attr in attrs:
+                                m = re.search(
+                                    r'\\b' + re.escape(attr) + r'\\s*=\\s*["\\']([^"\\']*)["\\']',
+                                    source,
+                                    flags=re.IGNORECASE
+                                )
+                                if m:
+                                    return unescape(m.group(1)).strip()
+                            return ""
+
+                        name = dated_attr(("data-player", "data-name"), opening_tag)
+                        if not name:
+                            nm = re.search(
+                                r'<div\\b[^>]*class=["\\'][^"\\']*\\bbold\\b[^"\\']*["\\'][^>]*>\\s*([^<]+)',
+                                row,
+                                flags=re.IGNORECASE | re.DOTALL
+                            )
+                            if nm:
+                                name = unescape(nm.group(1)).strip()
+                        proj = dated_attr(
+                            ("data-ppg_proj", "data-ppg-proj", "data-value_proj", "data-projection"),
+                            row
+                        )
+                        key = normalize_projection_player_name(name)
+                        value = pd.to_numeric(proj, errors="coerce")
+                        if key and pd.notna(value) and np.isfinite(float(value)) and float(value) > 0:
+                            dated_result[key] = float(value)
+                    if dated_result:
+                        return dated_result
+            except Exception:
+                pass
+
     return {}
 
 def refresh_public_projection_sources():
     """Warm all public projection downloads on app start and every 30 minutes."""
     status = {}
     for platform_name in ("DraftKings Classic", "DraftKings Showdown", "FanDuel Full Roster", "FanDuel Single Game"):
-        status[f"DFF ({platform_name})"] = bool(download_public_projection_table("DFF", platform_name))
-        status[f"DraftEdge ({platform_name})"] = bool(download_public_projection_table("DraftEdge", platform_name))
+        for source_name in ("DFF", "DraftEdge"):
+            loaded = bool(download_public_projection_table(source_name, platform_name))
+            status[f"{source_name} ({platform_name})"] = loaded
+            # Streamlit caches empty returns too; clear failed keys so the next
+            # rerun can retry immediately instead of preserving a failed fetch.
+            if not loaded:
+                try:
+                    download_public_projection_table.clear(source_name, platform_name)
+                except Exception:
+                    pass
     return status
 
 
