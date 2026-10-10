@@ -1779,8 +1779,15 @@ try:
             size_col = next((c for c in ["s", "entries", "entryCount", "numEntries", "fieldSize", "contestSize"] if c in lobby_matches.columns), None)
             lobby_matches["id"] = lobby_matches["id"].astype(str).str.replace(r"\\.0$", "", regex=True)
             lobby_matches["_field_size"] = pd.to_numeric(lobby_matches[size_col], errors="coerce") if size_col else np.nan
-            lobby_matches = lobby_matches.drop_duplicates(subset=["id"])
-            lobby_matches = lobby_matches.sort_values("n")
+            # Remove repeated lobby records, then prioritize the requested contest types.
+            lobby_matches = lobby_matches.drop_duplicates(subset=["id"], keep="first").copy()
+            lobby_matches["_priority"] = 3
+            lobby_matches.loc[lobby_matches["n"].astype(str).str.contains("jukebox", case=False, regex=False), "_priority"] = 0
+            lobby_matches.loc[lobby_matches["n"].astype(str).str.contains("first down", case=False, regex=False), "_priority"] = 1
+            lobby_matches.loc[lobby_matches["n"].astype(str).str.contains("dime package", case=False, regex=False), "_priority"] = 2
+            lobby_matches = lobby_matches.sort_values(
+                ["_priority", "n"], ascending=[True, True], kind="stable"
+            )
             lobby_matches["Contest Label"] = lobby_matches.apply(
                 lambda row: f'{row["n"]} | ID {row["id"]}' + (f' | {int(row["_field_size"]):,} entries' if pd.notna(row["_field_size"]) and row["_field_size"] > 0 else ""),
                 axis=1,
