@@ -3005,33 +3005,58 @@ PORTFOLIO_METRICS = {
 
 
 def build_portfolio(results_df, lineup_count, metric):
-    """Build a portfolio using the selected ranking metric."""
-
+    """Build a high-ranked portfolio while enforcing player exposure controls."""
     if lineup_count < 1:
         raise ValueError("Lineup count must be at least 1.")
-
-    if lineup_count > len(results_df):
-        raise ValueError(
-            f"Only {len(results_df)} lineups are available."
-        )
-
     if metric not in results_df.columns:
+        raise ValueError(f"Ranking metric not found: {metric}")
+
+    ranked = results_df.sort_values(metric, ascending=False)
+    player_counts = {}
+    captain_counts = {}
+    selected_rows = []
+    lineup_columns = ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"]
+
+    def exposure_limit(player, setting, default=100):
+        settings = control_map.get(str(player), {})
+        try:
+            percent = float(settings.get(setting, default))
+        except (TypeError, ValueError):
+            percent = float(default)
+        if percent <= 0:
+            return 0
+        return max(1, int(np.ceil(lineup_count * min(100.0, percent) / 100.0)))
+
+    for _, row in ranked.iterrows():
+        if len(selected_rows) >= lineup_count:
+            break
+        names = [str(row[col]) for col in lineup_columns]
+        captain = str(row["Captain"])
+        if any(
+            player_counts.get(name, 0) >= exposure_limit(name, "Max Exposure %")
+            for name in names
+        ):
+            continue
+        if captain_counts.get(captain, 0) >= exposure_limit(captain, "Captain Max %"):
+            continue
+        selected_rows.append(row.copy())
+        for name in set(names):
+            player_counts[name] = player_counts.get(name, 0) + 1
+        captain_counts[captain] = captain_counts.get(captain, 0) + 1
+
+    if not selected_rows:
         raise ValueError(
-            f"Ranking metric not found: {metric}"
+            "No lineups fit the current exposure limits. Increase Max Exp % or Captain Max % and try again."
         )
 
-    portfolio = (
-        results_df
-        .sort_values(metric, ascending=False)
-        .head(lineup_count)
-        .copy()
-        .reset_index(drop=True)
-    )
-
+    portfolio = pd.DataFrame(selected_rows).reset_index(drop=True)
     portfolio["Locked"] = False
-
+    if len(portfolio) < lineup_count:
+        st.warning(
+            f"Exposure limits allowed {len(portfolio)} of {lineup_count} requested lineups. "
+            "Raise some Max Exp % or Captain Max % limits to allow more."
+        )
     return portfolio
-
 
 def lock_portfolio_lineup(portfolio_df, lineup_index):
     """Lock one lineup so it cannot be replaced."""
