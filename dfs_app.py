@@ -1454,9 +1454,21 @@ def _simulate_scored_player_outcomes(players_df, platform, rng):
                 historical_points, size=n, replace=True, p=probabilities
             ).astype(float)
 
+        # Use the supplied projection as a soft anchor so generic stat estimates
+        # do not give low-projection bench players unrealistic averages. Keep some
+        # of the sampled historical/statistical mean, and preserve the outcome
+        # distribution and shared game-script variation rather than setting every
+        # simulation equal to the projection.
+        projection = pd.to_numeric(
+            pd.Series([row.get("Projection", np.nan)]), errors="coerce"
+        ).iloc[0]
+        sampled_mean = float(np.mean(scores)) if len(scores) else 0.0
+        if np.isfinite(projection) and projection > 0 and np.isfinite(sampled_mean) and sampled_mean > 0:
+            target_mean = 0.75 * float(projection) + 0.25 * sampled_mean
+            scores = scores * (target_mean / sampled_mean)
+
         # Shared game script adjusts the sampled outcome modestly. Trailing teams
-        # throw more; leading teams lean more on their running backs. This is a
-        # game-context adjustment, not a projection calibration.
+        # throw more; leading teams lean more on their running backs.
         scoring_factor = script["scoring"]
         if position_type in ("QB", "WR", "TE"):
             script_factor = (
