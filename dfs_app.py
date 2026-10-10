@@ -1190,28 +1190,6 @@ if platform == "FanDuel":
     if fd_results is not None:
         st.write(f"Built {len(fd_results)} FanDuel lineups.")
         fd_display = fd_results.copy()
-        fd_sim_key = "fd_simulation_df_" + lineup_mode.replace(" ", "_").lower()
-        fd_sim = st.session_state.get(fd_sim_key)
-        if not isinstance(fd_sim, pd.DataFrame) or fd_sim.empty:
-            try:
-                fd_sim = run_game_simulations(fd_players, platform="FanDuel")
-                st.session_state[fd_sim_key] = fd_sim
-            except Exception:
-                fd_sim = None
-        if isinstance(fd_sim, pd.DataFrame) and not fd_sim.empty:
-            fd_means = fd_sim.mean(axis=0, numeric_only=True).to_dict()
-            for slot in fd_slots:
-                if slot in fd_display.columns:
-                    multiplier = 1.5 if lineup_mode == "Single Game" and slot == "MVP" else 1.0
-                    fd_display[slot + " Sim Pts"] = fd_display[slot].map(
-                        lambda name: round(float(fd_means.get(str(name), 0.0)) * multiplier, 2)
-                    )
-            ordered_cols = []
-            for slot in fd_slots:
-                if slot in fd_display.columns:
-                    ordered_cols.extend([slot, slot + " Sim Pts"])
-            ordered_cols.extend(c for c in fd_display.columns if c not in ordered_cols)
-            fd_display = fd_display[ordered_cols]
         st.dataframe(fd_display, use_container_width=True, hide_index=True)
 
         if "FD_ID" in fd_players.columns:
