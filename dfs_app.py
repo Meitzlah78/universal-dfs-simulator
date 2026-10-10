@@ -11,7 +11,28 @@ st.set_page_config(
 )
 
 st.title("Universal DFS Simulator")
-st.subheader("DraftKings Showdown")
+
+platform = st.selectbox(
+    "DFS Site",
+    ["DraftKings", "FanDuel"],
+    key="dfs_platform"
+)
+mode_options = {
+    "DraftKings": ["Showdown", "Classic"],
+    "FanDuel": ["Single Game", "Full Roster"],
+}
+lineup_mode = st.selectbox(
+    "Contest Type",
+    mode_options[platform],
+    key="lineup_mode_" + platform
+)
+st.subheader(platform + " " + lineup_mode)
+
+if platform != "DraftKings" or lineup_mode != "Showdown":
+    st.warning(
+        "This format is selected, but its lineup rules and export are not "
+        "implemented yet. DraftKings Showdown remains the only working build mode."
+    )
 
 # ================================
 # SETTINGS
