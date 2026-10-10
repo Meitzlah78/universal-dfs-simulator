@@ -214,6 +214,29 @@ def build_showdown_opponent_field(available_players, simulation_df, players_df,
     return pd.DataFrame.from_records(rows, columns=columns)
 
 
+def remove_out_players_from_lineups(lineups, slot_columns, label="export"):
+    """Final safety filter: never display or export a lineup containing an Out player."""
+    if not isinstance(lineups, pd.DataFrame) or lineups.empty:
+        return lineups
+    statuses = st.session_state.get("player_injury_statuses", {})
+    out_names = {
+        str(name).strip().casefold()
+        for name, status in statuses.items()
+        if str(status).strip().casefold() == "out"
+    }
+    valid_slots = [col for col in slot_columns if col in lineups.columns]
+    if not out_names or not valid_slots:
+        return lineups
+    contains_out = pd.Series(False, index=lineups.index)
+    for col in valid_slots:
+        contains_out |= lineups[col].astype(str).str.strip().str.casefold().isin(out_names)
+    removed = int(contains_out.sum())
+    if removed:
+        st.warning(f"Removed {removed} {label} lineup(s) containing a player marked Out. Export the refreshed file.")
+        return lineups.loc[~contains_out].reset_index(drop=True)
+    return lineups
+
+
 def apply_injury_statuses(frame, key_prefix):
     """Let the user mark players Active, Questionable, or Out across all slate types."""
     if "player_injury_statuses" not in st.session_state:
@@ -1590,6 +1613,8 @@ if platform == "FanDuel":
 
     fd_results = st.session_state.get(fd_build_key)
     if fd_results is not None:
+        fd_results = remove_out_players_from_lineups(fd_results, fd_slots, "FanDuel")
+        st.session_state[fd_build_key] = fd_results
         st.write(f"Built {len(fd_results)} FanDuel lineups.")
         fd_display = fd_results.copy()
         st.dataframe(fd_display, use_container_width=True, hide_index=True)
@@ -3095,6 +3120,10 @@ if platform == "DraftKings" and lineup_mode == "Classic":
             hide_index=True
         )
 
+        classic_results = remove_out_players_from_lineups(
+            classic_results, ["QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "FLEX", "DST"], "DraftKings Classic"
+        )
+        st.session_state["classic_lineups"] = classic_results
         id_column = "DK_ID" if "DK_ID" in classic_pool.columns else None
         if id_column:
             ids = dict(zip(classic_pool["Name"], classic_pool[id_column].astype(str)))
@@ -3987,6 +4016,12 @@ if "contest_results_df" in st.session_state:
         "Salary", "Lineup Ownership Score (%)", "ContestScore", "WinRate", "Top1", "Top5",
         "Top10", "CashRate"
     ]
+    portfolio_df = remove_out_players_from_lineups(
+        portfolio_df,
+        ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5", "QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "FLEX", "DST", "MVP", "D"],
+        "portfolio export"
+    )
+    st.session_state["portfolio_df"] = portfolio_df
     portfolio_export_df = portfolio_df[
         [col for col in export_columns if col in portfolio_df.columns]
     ].copy()
@@ -4055,6 +4090,11 @@ else:
 # Export the selected final portfolio using CPT and FLEX IDs from the uploaded DK template.
 if platform == "DraftKings" and lineup_mode == "Showdown":
     export_portfolio = st.session_state.get("portfolio_df")
+    export_portfolio = remove_out_players_from_lineups(
+        export_portfolio, ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"], "DraftKings Showdown export"
+    )
+    if isinstance(export_portfolio, pd.DataFrame):
+        st.session_state["portfolio_df"] = export_portfolio
     dk_player_ids = st.session_state.get("dk_player_ids", {})
     if isinstance(export_portfolio, pd.DataFrame) and not export_portfolio.empty:
         if not dk_player_ids:
