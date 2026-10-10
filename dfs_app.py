@@ -1650,7 +1650,27 @@ if salary_file is not None:
                     uploaded_df[roster_col].astype(str).str.upper().str.strip()
                 )
                 is_showdown_template = "CPT" in roster_values
+                # Save separate CPT/FLEX IDs before keeping one FLEX row per player.
                 if is_showdown_template:
+                    template_cols = {str(c).strip().lower(): c for c in uploaded_df.columns}
+                    template_name_col = next(
+                        (template_cols[c] for c in ["name", "name + id", "player", "player name"] if c in template_cols),
+                        None
+                    )
+                    template_id_col = next(
+                        (template_cols[c] for c in ["id", "player id", "dk id"] if c in template_cols),
+                        None
+                    )
+                    dk_id_map = {}
+                    if template_name_col is not None and template_id_col is not None:
+                        for _, template_row in uploaded_df.iterrows():
+                            template_name = str(template_row[template_name_col]).strip()
+                            template_name = re.sub(r"\\s*\\(\\d+\\)\\s*$", "", template_name)
+                            template_slot = str(template_row[roster_col]).upper().strip()
+                            template_id = str(template_row[template_id_col]).strip()
+                            if template_name and template_name.lower() != "nan" and template_id and template_id.lower() != "nan":
+                                dk_id_map.setdefault(template_name, {})[template_slot] = template_id
+                    st.session_state["dk_player_ids"] = dk_id_map
                     uploaded_df = uploaded_df[
                         uploaded_df[roster_col].astype(str).str.upper().str.strip().eq("FLEX")
                     ].copy()
@@ -3477,111 +3497,44 @@ else:
 
 # ============================================
 # ============================================
-# DRAFTKINGS EXPORT BUTTONS
-# ============================================
-
-if (
-    "final_lineups" in st.session_state
-    and "dk_player_ids" in st.session_state
-):
-
-    final_lineups = st.session_state["final_lineups"]
-    dk_player_ids = st.session_state["dk_player_ids"]
-
-    export_rows = []
-    missing_ids = []
-
-    for _, row in final_lineups.iterrows():
-
-        captain = str(row["Captain"]).strip()
-
-        flex_players = [
-            str(row["Flex1"]).strip(),
-            str(row["Flex2"]).strip(),
-            str(row["Flex3"]).strip(),
-            str(row["Flex4"]).strip(),
-            str(row["Flex5"]).strip()
-        ]
-
-        captain_id = dk_player_ids.get(
-            captain, {}
-        ).get("CPT")
-
-        flex_ids = [
-            dk_player_ids.get(
-                player, {}
-            ).get("FLEX")
-            for player in flex_players
-        ]
-
-        if not captain_id:
-            missing_ids.append(
-                f"{captain} - CPT"
-            )
-
-        for player, player_id in zip(
-            flex_players,
-            flex_ids
-        ):
-
-            if not player_id:
-                missing_ids.append(
-                    f"{player} - FLEX"
+# DRAFTKINGS SHOWDOWN EXPORT BUTTON
+# Export the selected final portfolio using CPT and FLEX IDs from the uploaded DK template.
+if platform == "DraftKings" and lineup_mode == "Showdown":
+    export_portfolio = st.session_state.get("portfolio_df")
+    dk_player_ids = st.session_state.get("dk_player_ids", {})
+    if isinstance(export_portfolio, pd.DataFrame) and not export_portfolio.empty:
+        if not dk_player_ids:
+            st.warning("Upload the DraftKings Showdown lineup template CSV first so the app can get the CPT/FLEX player IDs.")
+        else:
+            export_rows = []
+            missing_ids = []
+            for _, row in export_portfolio.iterrows():
+                captain = str(row.get("Captain", "")).strip()
+                flex_players = [str(row.get(f"Flex{i}", "")).strip() for i in range(1, 6)]
+                captain_id = dk_player_ids.get(captain, {}).get("CPT")
+                flex_ids = [dk_player_ids.get(player, {}).get("FLEX") for player in flex_players]
+                if not captain_id:
+                    missing_ids.append(f"{captain} - CPT")
+                for player, player_id in zip(flex_players, flex_ids):
+                    if not player_id:
+                        missing_ids.append(f"{player} - FLEX")
+                export_rows.append([captain_id or ""] + [player_id or "" for player_id in flex_ids])
+            if missing_ids:
+                st.warning("Some DraftKings CPT/FLEX IDs are missing. Re-upload the correct Showdown template CSV.")
+                st.write(sorted(set(missing_ids)))
+            else:
+                export_df = pd.DataFrame(export_rows, columns=["CPT", "FLEX", "FLEX", "FLEX", "FLEX", "FLEX"])
+                st.download_button(
+                    label="EXPORT DRAFTKINGS SHOWDOWN LINEUPS",
+                    data=export_df.to_csv(index=False).encode("utf-8"),
+                    file_name="DraftKings_Showdown_Lineups.csv",
+                    mime="text/csv",
+                    use_container_width=True
                 )
-
-        export_rows.append(
-            [captain_id] + flex_ids
-        )
-
-    if missing_ids:
-
-        st.error("Missing DraftKings IDs:")
-        st.write(missing_ids)
-
+                st.link_button(
+                    "UPLOAD TO DRAFTKINGS",
+                    "https://www.draftkings.com/lineup/upload",
+                    use_container_width=True
+                )
     else:
-
-        export_df = pd.DataFrame(
-            export_rows,
-            columns=[
-                "CPT",
-                "FLEX",
-                "FLEX",
-                "FLEX",
-                "FLEX",
-                "FLEX"
-            ]
-        )
-
-        csv_data = export_df.to_csv(
-            index=False
-        ).encode("utf-8")
-
-        st.success(
-            "DraftKings IDs ready for export."
-        )
-
-        st.download_button(
-            label="EXPORT CSV",
-            data=csv_data,
-            file_name="NFL_DraftKings_20_Lineups_Upload.csv",
-            mime="text/csv",
-            use_container_width=True
-        )
-
-        st.link_button(
-            "UPLOAD TO DRAFTKINGS",
-            "https://www.draftkings.com/lineup/upload",
-            use_container_width=True
-        )
-
-elif "final_lineups" in st.session_state:
-
-    st.warning(
-        "Upload the DraftKings contest CSV template first."
-    )
-
-else:
-
-    st.info(
-        "Click BUILD LINEUPS first."
-    )
+        st.info("Run CONTEST SIM and build your final portfolio first.")
