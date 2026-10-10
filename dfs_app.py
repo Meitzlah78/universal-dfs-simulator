@@ -423,6 +423,67 @@ salary_file = st.file_uploader(
     type=["csv"],
     help="Upload the salary CSV for the slate. If you do not upload one, the sample player pool below is used."
 )
+
+entry_file = st.file_uploader(
+    "Upload DraftKings Contest Entry File",
+    type=["csv"],
+    key="dk_contest_entry_file",
+    help="Upload the CSV downloaded from DraftKings My Contests. The app will identify the contests included in the file."
+)
+
+selected_contest_id = None
+selected_contest_name = None
+selected_contest_entry_count = 0
+selected_contest_entry_fee = None
+
+if entry_file is not None:
+    try:
+        entry_file.seek(0)
+        entry_df = pd.read_csv(entry_file)
+        entry_df.columns = [str(c).strip() for c in entry_df.columns]
+        required_entry_columns = {"Contest Name", "Contest ID"}
+        if required_entry_columns.issubset(entry_df.columns):
+            entry_df["Contest ID"] = entry_df["Contest ID"].astype(str).str.replace(r"\\.0$", "", regex=True)
+            contest_summary = (
+                entry_df.groupby(["Contest ID", "Contest Name"], dropna=False)
+                .agg(
+                    Entries=("Entry ID", "count") if "Entry ID" in entry_df.columns else ("Contest ID", "size"),
+                    EntryFee=("Entry Fee", "first") if "Entry Fee" in entry_df.columns else ("Contest ID", "size")
+                )
+                .reset_index()
+            )
+            contest_summary["Contest Label"] = contest_summary.apply(
+                lambda row: f"{row['Contest Name']} | ID {row['Contest ID']} | {int(row['Entries'])} of your entries",
+                axis=1
+            )
+            selected_label = st.selectbox(
+                "Select the contest to simulate against",
+                contest_summary["Contest Label"].tolist(),
+                key="dk_selected_contest"
+            )
+            selected_row = contest_summary.loc[
+                contest_summary["Contest Label"].eq(selected_label)
+            ].iloc[0]
+            selected_contest_id = str(selected_row["Contest ID"])
+            selected_contest_name = str(selected_row["Contest Name"])
+            selected_contest_entry_count = int(selected_row["Entries"])
+            selected_contest_entry_fee = selected_row["EntryFee"]
+            fee_text = (
+                f"${float(selected_contest_entry_fee):.2f}"
+                if pd.notna(selected_contest_entry_fee) else "not listed"
+            )
+            st.success(
+                f"Selected: {selected_contest_name} | Contest ID: {selected_contest_id} | "
+                f"Your entries in this file: {selected_contest_entry_count} | Entry fee: {fee_text}"
+            )
+            st.caption(
+                "This file identifies your contest and your entries. It does not provide the full opponent field or payout table, "
+                "so those details are not assumed by the simulator yet."
+            )
+        else:
+            st.error("This CSV does not appear to be a DraftKings contest entry file. It needs Contest Name and Contest ID columns.")
+    except Exception as exc:
+        st.error(f"Could not read the DraftKings contest entry file: {exc}")
 dff_file = st.file_uploader(
     "Upload Daily Fantasy Fuel (DFF) projections CSV",
     type=["csv"],
