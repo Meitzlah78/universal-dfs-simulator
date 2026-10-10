@@ -3149,6 +3149,8 @@ player_rank = sorted(available_players, key=lambda p: showdown_rankings[p], reve
 search_pool = list(dict.fromkeys(
     player_rank[:20] + locked_players
 ))
+# Use a local generator for randomized candidate order on every slate build.
+rng = np.random.default_rng()
 # Shuffle candidate search order so the 5,000-lineup pool explores more flex combinations.
 rng.shuffle(search_pool)
 
