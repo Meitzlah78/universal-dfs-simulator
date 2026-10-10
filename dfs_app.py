@@ -1544,6 +1544,8 @@ if simulate_clicked:
             simulation_projection_cache[normalize_simulation_cache_name(player_name)] = projection_mean
 
     st.success("10,000 game simulations completed.")
+    # Rerun so the Player Pool immediately displays the newly calculated simulation stats.
+    st.rerun()
 
 build_clicked = st.button(
     "BUILD",
