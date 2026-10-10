@@ -219,26 +219,26 @@ def download_public_projection_table(source_name, platform_name):
         if result:
             return result
 
-    # Daily Fantasy Fuel's single-game page renders rows as page elements
-    # rather than an HTML table, so pandas.read_html cannot see the players.
-    if source_name == "DFF" and ("single game" in platform_key or "showdown" in platform_key):
+    # DFF player rows are rendered as text elements, not standard HTML tables.
+    # Parse the same row layout on Classic and single-game pages.
+    if source_name == "DFF":
         import re
         from html import unescape
         from bs4 import BeautifulSoup
         page_text = unescape(BeautifulSoup(response.text, "html.parser").get_text(" ", strip=True))
-        # Ignore navigation and position filters so the first QB/WR token is a player row.
         if "Sort" in page_text:
             page_text = page_text.split("Sort", 1)[1]
         row_pattern = re.compile(
-            r"\b(?:QB|WR|RB|TE|FLX|DST|K)\s*\|\s*(?:Image\s+)?(.+?)\s*\|\s*"
-            r"\$[\d,.]+k\s*\|\s*[A-Z]{2,3}\s*\|\s*[A-Z]{2,3}\s*\|\s*"
-            r"\d+\s*\|\s*(\d+(?:\.\d+)?)",
+            r"\\b(?:QB|WR|RB|TE|FLX|DST|K)\\s*\\|\\s*(?:Image\\s+)?(.+?)\\s*\\|\\s*"
+            r"\\$[\\d,.]+k\\s*\\|\\s*[A-Z]{2,3}\\s*\\|\\s*[A-Z]{2,3}\\s*\\|\\s*"
+            r"\\d+\\s*\\|\\s*(\\d+(?:\\.\\d+)?)",
             re.IGNORECASE
         )
         result = {}
         for match in row_pattern.finditer(page_text):
-            player_name = re.sub(r"\s+", " ", match.group(1)).strip()
-            # The first numeric value after opponent is the site's fantasy projection.
+            player_name = re.sub(r"\\s+", " ", match.group(1)).strip()
+            # DFF adds a trailing Q for questionable players; it is not part of the name.
+            player_name = re.sub(r"\\s+Q$", "", player_name, flags=re.IGNORECASE)
             key = normalize_projection_player_name(player_name)
             value = pd.to_numeric(match.group(2), errors="coerce")
             if key and pd.notna(value) and np.isfinite(float(value)) and float(value) > 0:
