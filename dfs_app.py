@@ -127,10 +127,15 @@ def show_projection_refresh_status(source_files, key_prefix):
 
 
 def normalize_projection_player_name(name):
-    """Normalize names so projection CSVs match the uploaded slate."""
+    """Normalize player names, including position/image prefixes from HTML tables."""
     import re
     value = str(name).casefold().strip()
     value = re.sub(r"\s*\(\d+\)\s*$", "", value)
+    # HTML table parsers can include the position and image alt text in the
+    # player-name cell (for example, "QB Image Jalen Hurts").
+    for _ in range(3):
+        value = re.sub(r"^(?:qb|rb|wr|te|dst|def|d|k|flex|flx|cpt|mvp)\s+", "", value)
+        value = re.sub(r"^(?:image|img)\s+", "", value)
     value = re.sub(r"\s+(jr|sr|ii|iii|iv|v)\.?$", "", value)
     return re.sub(r"[^a-z0-9]", "", value)
 
