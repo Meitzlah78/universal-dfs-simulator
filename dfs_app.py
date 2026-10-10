@@ -1031,6 +1031,7 @@ if platform == "FanDuel":
             ).any() for col in lineup_columns if col in saved_lineups.columns):
                 st.session_state["fd_saved_builds"].pop(saved_key, None)
 
+    st.caption("The 5,000-lineup build automatically spreads player exposure while still favoring stronger simulated scores.")
     st.write("### Build Salary Range")
     fd_salary_range = st.slider(
         "Allowed lineup salary range",
@@ -1242,6 +1243,7 @@ if platform == "FanDuel":
         eligible_sets = pool["Eligible"].tolist()
         results = []
         seen = set()
+        player_build_counts = {str(name): 0 for name in names}
         target_lineups = 5000
         max_attempts = 500000
         salary_min, salary_max = int(fd_salary_range[0]), min(int(fd_salary_range[1]), 60000)
@@ -1289,6 +1291,12 @@ if platform == "FanDuel":
                     if not len(choices):
                         break
                     weights = lineup_scores[choices].copy()
+                    expected_exposure = max(1.0, target_lineups * len(slots) / max(1, len(names)))
+                    exposure_penalty = np.asarray([
+                        (1.0 + player_build_counts.get(str(names[i]), 0) / expected_exposure) ** 1.5
+                        for i in choices
+                    ], dtype=float)
+                    weights /= exposure_penalty
                     weights /= weights.sum()
                     picked = int(rng.choice(choices, p=weights))
                     chosen[slot] = names[picked]
@@ -1306,6 +1314,12 @@ if platform == "FanDuel":
                     if not len(choices):
                         break
                     weights = lineup_scores[choices].copy()
+                    expected_exposure = max(1.0, target_lineups * len(slots) / max(1, len(names)))
+                    exposure_penalty = np.asarray([
+                        (1.0 + player_build_counts.get(str(names[i]), 0) / expected_exposure) ** 1.5
+                        for i in choices
+                    ], dtype=float)
+                    weights /= exposure_penalty
                     weights /= weights.sum()
                     picked = int(rng.choice(choices, p=weights))
                     chosen[slot] = names[picked]
@@ -1320,6 +1334,8 @@ if platform == "FanDuel":
             if lineup_key in seen:
                 continue
             seen.add(lineup_key)
+            for player_name in set(chosen.values()):
+                player_build_counts[str(player_name)] = player_build_counts.get(str(player_name), 0) + 1
             results.append({**chosen, "Salary": salary, "ProjectedPoints": round(total_points, 2), "Score": round(total_score, 2)})
             if len(results) >= target_lineups:
                 break
@@ -2709,7 +2725,7 @@ if platform == "DraftKings" and lineup_mode == "Classic":
     st.write("### DraftKings Classic Lineups")
     st.caption(
         "Classic roster: QB, 2 RB, 3 WR, TE, FLEX (RB/WR/TE), DST. "
-        "Salary cap: $50,000."
+        "Salary cap: $50,000. The 5,000-lineup build automatically spreads exposure instead of repeatedly selecting the same top players."
     )
 
     def classic_positions(value):
@@ -2785,6 +2801,7 @@ if platform == "DraftKings" and lineup_mode == "Classic":
         }
         candidate_lineups = []
         seen = set()
+        classic_build_counts = {str(name): 0 for name in classic_names}
         max_attempts = 500000
         target_lineups = 5000
         for _ in range(max_attempts):
@@ -2799,6 +2816,12 @@ if platform == "DraftKings" and lineup_mode == "Classic":
                 if not len(choices):
                     break
                 weights = classic_weights[choices].copy()
+                expected_exposure = max(1.0, target_lineups * len(roster_slots) / max(1, len(classic_names)))
+                exposure_penalty = np.asarray([
+                    (1.0 + classic_build_counts.get(str(classic_names[i]), 0) / expected_exposure) ** 1.5
+                    for i in choices
+                ], dtype=float)
+                weights /= exposure_penalty
                 weights /= weights.sum()
                 if rng.random() < 0.25:
                     picked = int(rng.choice(choices))
@@ -2815,6 +2838,8 @@ if platform == "DraftKings" and lineup_mode == "Classic":
             if key in seen:
                 continue
             seen.add(key)
+            for player_name in set(chosen.values()):
+                classic_build_counts[str(player_name)] = classic_build_counts.get(str(player_name), 0) + 1
             selected_indices = [int(np.where(classic_names == chosen[slot])[0][0]) for slot, _ in roster_slots]
             projected_points = float(classic_means[selected_indices].sum())
             candidate_lineups.append({
@@ -3124,6 +3149,8 @@ player_rank = sorted(available_players, key=lambda p: showdown_rankings[p], reve
 search_pool = list(dict.fromkeys(
     player_rank[:20] + locked_players
 ))
+# Shuffle candidate search order so the 5,000-lineup pool explores more flex combinations.
+rng.shuffle(search_pool)
 
 # ============================================
 # ============================================
@@ -3155,6 +3182,7 @@ for captain in search_pool:
         p for p in search_pool
         if p != captain
     ]
+    rng.shuffle(flex_pool)
 
     for flex_players in itertools.combinations(
         flex_pool,
