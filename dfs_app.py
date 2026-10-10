@@ -830,59 +830,53 @@ else:
     ]:
         player_display[column] = np.nan
 
-# Show player stats and Lock/Fade switches together in the player pool.
-# The switches are saved and then passed into the lineup-building controls below.
+# Keep stats, Lock/Fade, and min/max exposure controls together in the player pool.
 existing_control_values = st.session_state.get("control_values")
 if existing_control_values is not None:
     existing_control_values = existing_control_values.drop_duplicates("Name").set_index("Name")
-    player_display["Lock"] = player_display["Name"].map(
-        existing_control_values["Lock"] if "Lock" in existing_control_values.columns
-        else pd.Series(dtype=object)
-    ).fillna(False).astype(bool)
-    player_display["Fade"] = player_display["Name"].map(
-        existing_control_values["Fade"] if "Fade" in existing_control_values.columns
-        else pd.Series(dtype=object)
-    ).fillna(False).astype(bool)
+    for setting, default in [
+        ("Lock", False), ("Fade", False),
+        ("Min Exposure %", 0), ("Max Exposure %", 100),
+        ("Captain Min %", 0), ("Captain Max %", 100)
+    ]:
+        player_display[setting] = player_display["Name"].map(
+            existing_control_values[setting]
+            if setting in existing_control_values.columns
+            else pd.Series(dtype=object)
+        ).fillna(default)
 else:
     player_display["Lock"] = False
     player_display["Fade"] = False
+    player_display["Min Exposure %"] = 0
+    player_display["Max Exposure %"] = 100
+    player_display["Captain Min %"] = 0
+    player_display["Captain Max %"] = 100
 
 player_display = player_display[
     [
-        "Name",
-        "Position",
-        "Team",
-        "Opponent",
-        "Salary",
-        "CaptainSalary",
-        "Projection",
-        "SimMean",
-        "SimP10",
-        "SimP25",
-        "SimP50",
-        "SimP75",
-        "SimP90",
-        "SimP95",
-        "SimP99",
-        "Lock",
-        "Fade"
+        "Name", "Position", "Team", "Opponent", "Salary", "CaptainSalary",
+        "Projection", "SimMean", "SimP10", "SimP25", "SimP50", "SimP75",
+        "SimP90", "SimP95", "SimP99", "Lock", "Fade",
+        "Min Exposure %", "Max Exposure %", "Captain Min %", "Captain Max %"
     ]
 ]
 
+editable_columns = [
+    "Lock", "Fade", "Min Exposure %", "Max Exposure %",
+    "Captain Min %", "Captain Max %"
+]
 edited_player_display = st.data_editor(
     player_display,
     use_container_width=True,
     hide_index=True,
-    disabled=[c for c in player_display.columns if c not in ["Lock", "Fade"]],
+    disabled=[c for c in player_display.columns if c not in editable_columns],
     column_config={
-        "Lock": st.column_config.CheckboxColumn(
-            "Lock",
-            help="Force this player into the lineup builds."
-        ),
-        "Fade": st.column_config.CheckboxColumn(
-            "Fade",
-            help="Keep this player out of lineup builds."
-        ),
+        "Lock": st.column_config.CheckboxColumn("Lock", help="Force this player into lineup builds."),
+        "Fade": st.column_config.CheckboxColumn("Fade", help="Keep this player out of lineup builds."),
+        "Min Exposure %": st.column_config.NumberColumn("Min Exp %", min_value=0, max_value=100, step=5, format="%d%%", help="Minimum percentage of lineups containing this player."),
+        "Max Exposure %": st.column_config.NumberColumn("Max Exp %", min_value=0, max_value=100, step=5, format="%d%%", help="Maximum percentage of lineups containing this player."),
+        "Captain Min %": st.column_config.NumberColumn("CPT Min %", min_value=0, max_value=100, step=5, format="%d%%", help="Minimum captain exposure."),
+        "Captain Max %": st.column_config.NumberColumn("CPT Max %", min_value=0, max_value=100, step=5, format="%d%%", help="Maximum captain exposure."),
         "Salary": st.column_config.NumberColumn("Salary", format="$%d"),
         "CaptainSalary": st.column_config.NumberColumn("CPT Salary", format="$%d"),
         "Projection": st.column_config.NumberColumn("Projection", format="%.1f"),
@@ -922,9 +916,20 @@ else:
     control_values["Captain Min %"] = 0
     control_values["Captain Max %"] = 100
 
-editor_controls = edited_player_display.set_index("Name")[["Lock", "Fade"]]
-control_values["Lock"] = control_values["Name"].map(editor_controls["Lock"]).fillna(control_values["Lock"]).astype(bool)
-control_values["Fade"] = control_values["Name"].map(editor_controls["Fade"]).fillna(control_values["Fade"]).astype(bool)
+editor_controls = edited_player_display.set_index("Name")
+for setting in [
+    "Lock", "Fade", "Min Exposure %", "Max Exposure %",
+    "Captain Min %", "Captain Max %"
+]:
+    control_values[setting] = control_values["Name"].map(
+        editor_controls[setting]
+    ).fillna(control_values[setting])
+control_values["Lock"] = control_values["Lock"].astype(bool)
+control_values["Fade"] = control_values["Fade"].astype(bool)
+for setting in ["Min Exposure %", "Max Exposure %", "Captain Min %", "Captain Max %"]:
+    control_values[setting] = pd.to_numeric(control_values[setting], errors="coerce").fillna(
+        0 if "Min" in setting else 100
+    ).clip(0, 100)
 st.session_state["control_values"] = control_values
 edited_controls = control_values.copy()
 control_map = edited_controls.set_index("Name").to_dict("index")
