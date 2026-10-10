@@ -898,39 +898,22 @@ edited_player_display = st.data_editor(
     key="player_pool_editor"
 )
 
-# ================================
-# SETTINGS DISPLAY
-# ================================
-
-
-st.divider()
-
-
-st.markdown("""
-<style>
-div.stButton > button {
-    min-height: 16px !important;
-    height: 16px !important;
-    width: 18px !important;
-    min-width: 18px !important;
-    padding: 0px !important;
-    margin: 0px !important;
-    font-size: 9px !important;
-    line-height: 16px !important;
-}
-</style>
-""", unsafe_allow_html=True)
-
-st.write("### Player Controls")
-st.caption("− / + changes exposure by 1%.")
-
-# Keep settings for players that remain, and add new uploaded players.
-default_control_columns = [
-    "Name", "Position", "Team", "Opponent",
-    "Lock", "Fade", "Min Exposure %", "Max Exposure %",
-    "Captain Min %", "Captain Max %"
-]
-if "control_values" not in st.session_state:
+# Keep the Lock/Fade selections from the Player Pool editor and preserve
+# the existing exposure controls internally at their saved/default values.
+existing_controls = st.session_state.get("control_values")
+if existing_controls is not None:
+    previous_by_name = existing_controls.drop_duplicates("Name").set_index("Name")
+    control_values = players_df[["Name", "Position", "Team", "Opponent"]].copy()
+    for setting, default in [
+        ("Lock", False), ("Fade", False),
+        ("Min Exposure %", 0), ("Max Exposure %", 100),
+        ("Captain Min %", 0), ("Captain Max %", 100)
+    ]:
+        if setting in previous_by_name.columns:
+            control_values[setting] = control_values["Name"].map(previous_by_name[setting]).fillna(default)
+        else:
+            control_values[setting] = default
+else:
     control_values = players_df[["Name", "Position", "Team", "Opponent"]].copy()
     control_values["Lock"] = False
     control_values["Fade"] = False
@@ -938,94 +921,12 @@ if "control_values" not in st.session_state:
     control_values["Max Exposure %"] = 100
     control_values["Captain Min %"] = 0
     control_values["Captain Max %"] = 100
-else:
-    previous_controls = st.session_state["control_values"].copy()
-    current_controls = players_df[["Name", "Position", "Team", "Opponent"]].copy()
-    setting_columns = [
-        "Lock", "Fade", "Min Exposure %", "Max Exposure %",
-        "Captain Min %", "Captain Max %"
-    ]
-    previous_by_name = previous_controls.drop_duplicates("Name").set_index("Name")
-    for setting in setting_columns:
-        current_controls[setting] = current_controls["Name"].map(
-            previous_by_name[setting] if setting in previous_by_name.columns
-            else pd.Series(dtype=object)
-        )
-    current_controls["Lock"] = current_controls["Lock"].fillna(False).astype(bool)
-    current_controls["Fade"] = current_controls["Fade"].fillna(False).astype(bool)
-    for setting, default in [
-        ("Min Exposure %", 0), ("Max Exposure %", 100),
-        ("Captain Min %", 0), ("Captain Max %", 100)
-    ]:
-        current_controls[setting] = current_controls[setting].fillna(default).astype(int)
-    control_values = current_controls
 
-# Apply Lock/Fade choices made directly in the Player Pool table.
 editor_controls = edited_player_display.set_index("Name")[["Lock", "Fade"]]
-control_values["Lock"] = control_values["Name"].map(editor_controls["Lock"]).fillna(
-    control_values["Lock"]
-).astype(bool)
-control_values["Fade"] = control_values["Name"].map(editor_controls["Fade"]).fillna(
-    control_values["Fade"]
-).astype(bool)
-
-st.session_state["control_values"] = control_values
-control_values = st.session_state["control_values"]
-
-st.caption("Lock and Fade are controlled in the Player Pool table above. Exposure settings are adjusted here.")
-
-headers = st.columns([2.4, 0.6, 0.6, 1.0, 1.0, 1.0, 1.0])
-headers[0].write("Player")
-headers[1].write("Pos")
-headers[2].write("Team")
-headers[3].write("Min")
-headers[4].write("Max")
-headers[5].write("CPT Min")
-headers[6].write("CPT Max")
-
-for idx in control_values.index:
-
-    row = st.columns([2.4, 0.6, 0.6, 1.0, 1.0, 1.0, 1.0])
-
-    row[0].write(control_values.loc[idx, "Name"])
-    row[1].write(control_values.loc[idx, "Position"])
-    row[2].write(control_values.loc[idx, "Team"])
-
-    settings = [
-        ("Min Exposure %", "min"),
-        ("Max Exposure %", "max"),
-        ("Captain Min %", "cmin"),
-        ("Captain Max %", "cmax")
-    ]
-
-    for col, (setting, short) in enumerate(settings, start=3):
-
-        value = int(control_values.loc[idx, setting])
-
-        small = row[col].columns([0.5, 1.0, 0.5])
-
-        if small[0].button(
-            "−",
-            key=f"minus_{idx}_{short}",
-            width="content"
-        ):
-            value = max(0, value - 1)
-
-        small[1].write(f"{value}%")
-
-        if small[2].button(
-            "+",
-            key=f"plus_{idx}_{short}",
-            width="content"
-        ):
-            value = min(100, value + 1)
-
-        control_values.loc[idx, setting] = value
-
+control_values["Lock"] = control_values["Name"].map(editor_controls["Lock"]).fillna(control_values["Lock"]).astype(bool)
+control_values["Fade"] = control_values["Name"].map(editor_controls["Fade"]).fillna(control_values["Fade"]).astype(bool)
 st.session_state["control_values"] = control_values
 edited_controls = control_values.copy()
-
-# Build control lookup before any button handlers use it.
 control_map = edited_controls.set_index("Name").to_dict("index")
 available_players = [
     p for p in players_df["Name"]
