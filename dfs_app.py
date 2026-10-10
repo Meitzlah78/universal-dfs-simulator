@@ -2568,7 +2568,15 @@ CANDIDATE_COUNT = 5000
 
 candidates = []
 
+# Spread the 5,000 candidate lineups across eligible captains instead of
+# filling the entire candidate pool with the first captain's combinations.
+per_captain_candidate_limit = max(
+    1,
+    int(np.ceil(CANDIDATE_COUNT / max(1, len(search_pool))))
+)
+
 for captain in search_pool:
+    captain_candidates = []
 
     if control_map[captain]["Captain Max %"] <= 0:
         continue
@@ -2652,7 +2660,7 @@ for captain in search_pool:
             + total_mean * 0.25
         )
 
-        candidates.append({
+        captain_candidates.append({
             "Captain": captain,
             "Flex1": flex_players[0],
             "Flex2": flex_players[1],
@@ -2666,10 +2674,10 @@ for captain in search_pool:
             "Score": score
         })
 
-        # Stop once we have 10,000 candidates
-        if len(candidates) >= CANDIDATE_COUNT:
+        if len(captain_candidates) >= per_captain_candidate_limit:
             break
 
+    candidates.extend(captain_candidates)
     if len(candidates) >= CANDIDATE_COUNT:
         break
 
@@ -3102,6 +3110,50 @@ if "contest_results_df" in st.session_state:
         use_container_width=True,
         hide_index=True
     )
+
+    # Show realized exposure in the final portfolio after Contest Sim.
+    lineup_columns = [
+        col for col in ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"]
+        if col in portfolio_df.columns
+    ]
+    captain_count = (
+        portfolio_df["Captain"].value_counts()
+        if "Captain" in portfolio_df.columns else pd.Series(dtype=int)
+    )
+    total_lineups = len(portfolio_df)
+    exposure_rows = []
+    if total_lineups:
+        for _, player_row in players_df.iterrows():
+            player_name = str(player_row["Name"])
+            appearances = sum(
+                (portfolio_df[col].astype(str) == player_name).sum()
+                for col in lineup_columns
+            )
+            captain_appearances = int(captain_count.get(player_name, 0))
+            if appearances:
+                exposure_rows.append({
+                    "Player": player_name,
+                    "Team": player_row.get("Team", ""),
+                    "Position": player_row.get("Position", ""),
+                    "Lineups": int(appearances),
+                    "Exposure %": round(100 * appearances / total_lineups, 1),
+                    "Captain Lineups": captain_appearances,
+                    "Captain %": round(100 * captain_appearances / total_lineups, 1)
+                })
+
+    st.write("### Final Portfolio Exposure")
+    st.caption(
+        "Exposure is based on your selected final portfolio, not the 5,000 candidates "
+        "or the simulated opponent field."
+    )
+    if exposure_rows:
+        exposure_df = pd.DataFrame(exposure_rows).sort_values(
+            ["Exposure %", "Captain %", "Player"],
+            ascending=[False, False, True]
+        )
+        st.dataframe(exposure_df, use_container_width=True, hide_index=True)
+    else:
+        st.info("Build a portfolio to see player exposure.")
 
     export_columns = [
         "Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5",
