@@ -252,6 +252,45 @@ if platform == "FanDuel":
         key="fd_build_salary_range_" + lineup_mode.replace(" ", "_").lower(),
         help="Only build lineups whose total salary falls inside this range."
     )
+    # Keep simulator-generated projections for this exact FanDuel player pool.
+    fd_projection_key = tuple(
+        fd_players[["Name", "Position", "Team", "Salary"]]
+        .astype(str).itertuples(index=False, name=None)
+    )
+    fd_projection_store = st.session_state.setdefault("fd_internal_projections_by_slate", {})
+    saved_fd_projections = fd_projection_store.get(fd_projection_key)
+    if saved_fd_projections:
+        fd_players["Projection"] = fd_players["Name"].map(saved_fd_projections).fillna(
+            fd_players["Projection"]
+        )
+
+    if st.button("SIM FANDUEL PLAYERS", type="primary", key="fd_sim_" + lineup_mode.replace(" ", "_").lower()):
+        with st.spinner("Running 10,000 internal player simulations for FanDuel..."):
+            position_rates = {
+                "QB": 2.00, "RB": 1.75, "WR": 1.70, "TE": 1.50,
+                "K": 1.35, "D": 1.35, "DST": 1.35, "DEF": 1.35
+            }
+            means = []
+            for _, player_row in fd_players.iterrows():
+                eligible_positions = str(player_row["Position"]).upper().replace(" ", "").split("/")
+                rates = [position_rates[pos] for pos in eligible_positions if pos in position_rates]
+                rate = max(rates) if rates else 1.60
+                means.append(max(0.3, float(player_row["Salary"]) / 1000.0 * rate))
+            means = np.asarray(means, dtype=float)
+            rng = np.random.default_rng()
+            dispersion = 8.0
+            probabilities = dispersion / (dispersion + means)
+            simulated_scores = rng.negative_binomial(
+                n=dispersion, p=probabilities, size=(10000, len(fd_players))
+            )
+            generated_projections = {
+                str(name): float(simulated_scores[:, index].mean())
+                for index, name in enumerate(fd_players["Name"])
+            }
+            fd_projection_store[fd_projection_key] = generated_projections
+        st.success("FanDuel player simulations completed.")
+        st.rerun()
+
     st.success(f"Loaded {len(fd_players)} FanDuel players after injury-status filtering.")
     if fd_proj_col is None:
         st.warning("No projection column found. All players currently have a placeholder projection of 0.01.")
