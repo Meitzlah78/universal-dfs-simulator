@@ -1216,11 +1216,13 @@ def _simulate_scored_player_outcomes(players_df, platform, rng):
         # Adjust simulated opportunity volume by salary so higher-priced players
         # tend to have more opportunity, while retaining site-specific scoring differences.
         actual_mean = float(np.mean(scores))
-        if actual_mean > 0:
-            salary_factor = float(np.clip(target_mean / actual_mean, 0.65, 1.55))
-            scores = scores * salary_factor
+        if actual_mean > 0 and np.isfinite(target_mean) and target_mean > 0:
+            # Calibrate each simulated distribution to the simulator's own
+            # baseline mean. The old 0.65–1.55 cap let raw stat-line scores
+            # push nearly every player's displayed projection far above target.
+            scores = scores * (target_mean / actual_mean)
         else:
-            scores = np.full(n, target_mean)
+            scores = np.full(n, max(target_mean, 0.0) if np.isfinite(target_mean) else 0.0)
         simulations[name] = np.maximum(scores, 0)
     return pd.DataFrame(simulations)
 
