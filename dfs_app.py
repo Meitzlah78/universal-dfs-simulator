@@ -423,7 +423,7 @@ def download_public_projection_table(source_name, platform_name, target_names=No
             value = pd.to_numeric(projection, errors="coerce")
             if key and pd.notna(value) and np.isfinite(float(value)) and float(value) > 0:
                 result[key] = float(value)
-        if result:
+        if result and matches_target(result):
             return result
 
         # Showdown pages need the slate date in the URL. The Colab notebook
