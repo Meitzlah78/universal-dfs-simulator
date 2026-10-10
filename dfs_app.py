@@ -504,20 +504,8 @@ if entry_file is not None:
             st.error("This CSV does not appear to be a DraftKings contest entry file. It needs Contest Name and Contest ID columns.")
     except Exception as exc:
         st.error(f"Could not read the DraftKings contest entry file: {exc}")
-dff_file = st.file_uploader(
-    "Optional: Upload DFF projections CSV (otherwise downloaded automatically)",
-    type=["csv"],
-    key="dff_projection_file",
-    help="Normally, the app downloads DFF projections automatically when you upload a DraftKings salary/template CSV. Upload a DFF CSV here only if you want to override the automatic download."
-)
-
-st.write("### Projection Controls")
-st.caption("Use this button to pull the latest projections for the uploaded slate.")
-refresh_clicked = st.button("🔄 REFRESH DRAFTEDGE PROJECTIONS NOW", key="refresh_draftedge", type="primary", use_container_width=True)
-if "draftedge_last_updated" in st.session_state:
-    st.caption("Last successful DraftEdge update: " + st.session_state["draftedge_last_updated"])
-else:
-    st.caption("DraftEdge projections have not been successfully refreshed in this session.")
+st.write("### Projections")
+st.caption("The simulator creates its own projections from player salary and position. DFF and DraftEdge projections are not used.")
 
 if salary_file is not None:
     try:
@@ -612,493 +600,36 @@ if salary_file is not None:
             else:
                 players_df = loaded_players.reset_index(drop=True)
 
-                # Projection priority: DFF first, DraftEdge fills gaps, salary CSV last.
-                import hashlib
-                import re
-                import requests
-                from io import StringIO
-                from html import unescape
-                from datetime import datetime
-
-                def normalize_projection_name(name):
-                    value = str(name).casefold().strip()
-                    value = re.sub(r"\s+(jr|sr|ii|iii|iv|v)\.?$", "", value)
-                    return re.sub(r"[^a-z0-9]", "", value)
-
-                dff_projections = {}
-                dff_error = None
-                dff_source_label = "automatic DFF download"
-
-                # An uploaded DFF CSV overrides the automatic download.
-                dff_df = None
-                if dff_file is not None:
-                    try:
-                        dff_file.seek(0)
-                        dff_df = pd.read_csv(dff_file)
-                        dff_source_label = "uploaded DFF CSV"
-                    except Exception as exc:
-                        dff_error = "Could not read uploaded DFF CSV: " + str(exc)
-
-                # Otherwise, download the public DraftKings NFL projections CSV from DFF.
-                if dff_df is None and dff_file is None:
-                    try:
-                        from html.parser import HTMLParser
-                        from urllib.parse import urljoin
-
-                        dff_page_url = "https://www.dailyfantasyfuel.com/nfl/projections/"
-                        dff_page_response = requests.get(
-                            dff_page_url,
-                            timeout=5,
-                            headers={"User-Agent": "Mozilla/5.0 UniversalDFS-Simulator"}
-                        )
-                        dff_page_response.raise_for_status()
-
-                        class DFFDownloadLinkParser(HTMLParser):
-                            def __init__(self):
-                                super().__init__()
-                                self.links = []
-                                self._href = None
-                                self._text = []
-
-                            def handle_starttag(self, tag, attrs):
-                                if tag.lower() == "a":
-                                    attrs_map = dict(attrs)
-                                    self._href = attrs_map.get("href")
-                                    self._text = []
-
-                            def handle_data(self, data):
-                                if self._href is not None:
-                                    self._text.append(data)
-
-                            def handle_endtag(self, tag):
-                                if tag.lower() == "a" and self._href is not None:
-                                    label = " ".join(self._text).strip().lower()
-                                    href = self._href
-                                    if (
-                                        "csv" in href.lower()
-                                        or "download" in href.lower()
-                                        or "download projections" in label
-                                        or ("projection" in label and "csv" in label)
-                                    ):
-                                        self.links.append(urljoin(dff_page_url, href))
-                                    self._href = None
-                                    self._text = []
-
-                        dff_link_parser = DFFDownloadLinkParser()
-                        dff_link_parser.feed(dff_page_response.text)
-                        dff_csv_url = next(
-                            (url for url in dff_link_parser.links if "csv" in url.lower()),
-                            dff_link_parser.links[0] if dff_link_parser.links else None
-                        )
-
-                        # DFF's download button may be created by page scripts, so
-                        # try a direct CSV link first, then fall back to its public
-                        # projections table if no CSV link is present in the HTML.
-                        if dff_csv_url:
-                            dff_csv_response = requests.get(
-                                dff_csv_url,
-                                timeout=20,
-                                headers={"User-Agent": "Mozilla/5.0 UniversalDFS-Simulator"}
-                            )
-                            dff_csv_response.raise_for_status()
-                            if (
-                                dff_csv_response.text.strip()
-                                and "<html" not in dff_csv_response.text[:500].lower()
-                            ):
-                                dff_df = pd.read_csv(StringIO(dff_csv_response.text))
-
-                        if dff_df is None:
-                            # First try real HTML tables in the page.
-                            try:
-                                dff_tables = pd.read_html(StringIO(dff_page_response.text))
-                            except Exception:
-                                dff_tables = []
-                            for candidate_table in dff_tables:
-                                candidate_table.columns = [
-                                    str(col[-1] if isinstance(col, tuple) else col).strip()
-                                    for col in candidate_table.columns
-                                ]
-                                candidate_name = find_column(
-                                    candidate_table,
-                                    ["Name", "Player", "Player Name", "Nickname"]
-                                )
-                                candidate_projection = find_column(
-                                    candidate_table,
-                                    [
-                                        "Projection", "Projected Points", "Proj", "FPTS",
-                                        "Fantasy Points", "DK Points", "Points", "Fpts",
-                                        "FPTS Proj", "FP Projection", "Proj. FPTS",
-                                        "FPTS Projection", "Fantasy Points Projection"
-                                    ]
-                                )
-                                if candidate_name is not None and candidate_projection is not None:
-                                    dff_df = candidate_table
-                                    break
-
-                        if dff_df is None:
-                            # Some versions of DFF render players as table-like rows
-                            # instead of a standard HTML <table>. Read those rows directly.
-                            try:
-                                from bs4 import BeautifulSoup
-                                soup = BeautifulSoup(dff_page_response.text, "html.parser")
-                                row_nodes = soup.select("tr, [role='row']")
-                                parsed_rows = []
-                                for row_node in row_nodes:
-                                    cells = row_node.find_all(["th", "td"], recursive=False)
-                                    if not cells:
-                                        cells = row_node.select("[role='cell'], [role='gridcell'], [role='columnheader']")
-                                    values = [cell.get_text(" ", strip=True) for cell in cells]
-                                    if len(values) < 2:
-                                        continue
-                                    joined = " ".join(values).casefold()
-                                    if "projection" in joined and ("player" in joined or "name" in joined):
-                                        continue
-                                    # DFF's player rows include a position and salary; the
-                                    # fantasy-point projection is the decimal value after matchup data.
-                                    name = next(
-                                        (value for value in values
-                                         if value and not value.startswith("$")
-                                         and not value.casefold() in {
-                                             "qb", "rb", "wr", "te", "dst", "flex", "k", "image"
-                                         }),
-                                        None
-                                    )
-                                    if not name:
-                                        continue
-                                    # On DFF's current NFL page, player rows are laid out as
-                                    # position, image, name, salary, team, opponent, rank,
-                                    # fantasy points, value, then matchup odds. Prefer the
-                                    # fantasy-points column rather than later odds/total columns.
-                                    projection_value = None
-                                    projection_candidates = values[7:8] if len(values) > 7 else []
-                                    for value in projection_candidates:
-                                        cleaned = value.replace(",", "").strip()
-                                        try:
-                                            number = float(cleaned)
-                                        except (TypeError, ValueError):
-                                            continue
-                                        if 0 < number < 100:
-                                            projection_value = number
-                                    if projection_value is not None:
-                                        parsed_rows.append({
-                                            "Name": name,
-                                            "Projection": projection_value
-                                        })
-                                if parsed_rows:
-                                    dff_df = pd.DataFrame(parsed_rows).drop_duplicates(
-                                        subset=["Name"], keep="first"
-                                    )
-                            except Exception:
-                                pass
-
-                        if dff_df is None:
-                            raise ValueError(
-                                "Could not read player projections from DFF's page HTML. "
-                                "The page may be rendering its player rows in browser-only scripts."
-                            )
-                    except Exception as exc:
-                        dff_error = "Automatic DFF download failed: " + str(exc)
-
-                if dff_df is not None:
-                    try:
-                        dff_df.columns = [str(c).strip() for c in dff_df.columns]
-                        dff_name_col = find_column(
-                            dff_df, ["Name", "Player", "Player Name", "Nickname", "Player Name + ID"]
-                        )
-                        dff_proj_col = find_column(
-                            dff_df, [
-                                "Projection", "Projected Points", "Proj", "FPTS",
-                                "Fantasy Points", "DK Points", "Points", "Fpts",
-                                "FPTS Proj", "FP Projection", "Proj. FPTS"
-                            ]
-                        )
-                        if dff_name_col is None or dff_proj_col is None:
-                            raise ValueError(
-                                "The downloaded DFF CSV did not contain recognizable player-name and projection columns. "
-                                "Columns found: " + ", ".join(map(str, dff_df.columns))
-                            )
-                        dff_df["_projection"] = pd.to_numeric(
-                            dff_df[dff_proj_col].astype(str).str.replace(",", "", regex=False),
-                            errors="coerce"
-                        )
-                        for _, dff_row in dff_df.iterrows():
-                            dff_name = str(dff_row[dff_name_col]).strip()
-                            dff_value = dff_row["_projection"]
-                            if dff_name and dff_name.lower() != "nan" and pd.notna(dff_value):
-                                dff_projections[normalize_projection_name(dff_name)] = float(dff_value)
-                        if not dff_projections:
-                            raise ValueError("No usable player projections were found in the DFF data.")
-                    except Exception as exc:
-                        dff_error = "Could not read DFF projections: " + str(exc)
-                        dff_projections = {}
-
-                slate_signature = hashlib.sha256(salary_file.getvalue()).hexdigest()
-                cache_key = "draftedge_cache_" + slate_signature
-                refresh_needed = (
-                    refresh_clicked
-                    or st.session_state.get("draftedge_active_slate") != slate_signature
-                    or cache_key not in st.session_state
-                )
-                draftedge_error = None
-                if refresh_needed:
-                    fresh_cache = {"projections": {}, "updated_at": None, "error": None, "draftedge_names": [], "parsed_rows": 0}
-                    try:
-                        game_info_col = find_column(uploaded_df, ["Game Info", "GameInfo"])
-                        game_info_values = (
-                            uploaded_df[game_info_col].dropna().astype(str).tolist()
-                            if game_info_col is not None else []
-                        )
-                        game_match = None
-                        for game_info in game_info_values:
-                            game_match = re.search(
-                                r"([A-Z]{2,3})\s*@\s*([A-Z]{2,3}).*?(\d{1,2}/\d{1,2}/\d{4})",
-                                game_info.upper()
-                            )
-                            if game_match:
-                                break
-
-                        team_slug = {
-                            "ARI": "ari", "ATL": "atl", "BAL": "bal", "BUF": "buf",
-                            "CAR": "car", "CHI": "chi", "CIN": "cin", "CLE": "cle",
-                            "DAL": "dal", "DEN": "den", "DET": "det", "GB": "gb",
-                            "HOU": "hou", "IND": "ind", "JAX": "jax", "KC": "kc",
-                            "LV": "lv", "LAC": "lac", "LAR": "la", "MIA": "mia",
-                            "MIN": "min", "NE": "ne", "NO": "no", "NYG": "nyg",
-                            "NYJ": "nyj", "PHI": "phi", "PIT": "pit", "SEA": "sea",
-                            "SF": "sf", "TB": "tb", "TEN": "ten", "WAS": "was",
-                            "WSH": "was"
-                        }
-                        if not game_match:
-                            raise ValueError("Could not find matchup/date in the salary CSV's Game Info column.")
-                        away, home, date_text = game_match.groups()
-                        if away not in team_slug or home not in team_slug:
-                            raise ValueError(f"DraftEdge URL mapping is missing for {away} or {home}.")
-                        game_date = pd.to_datetime(date_text, format="%m/%d/%Y")
-                        draftedge_url = (
-                            f"https://draftedge.com/nfl/game/"
-                            f"{team_slug[away]}-{team_slug[home]}-{game_date:%Y-%m-%d}/"
-                        )
-                        de_response = requests.get(
-                            draftedge_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=20
-                        )
-                        de_response.raise_for_status()
-                        # Parse HTML with Python's built-in parser; lxml is not required.
-                        from html.parser import HTMLParser
-
-                        class DraftEdgeTableParser(HTMLParser):
-                            def __init__(self):
-                                super().__init__()
-                                self.tables = []
-                                self.table_depth = 0
-                                self.in_row = False
-                                self.in_cell = False
-                                self.current_table = []
-                                self.current_row = []
-                                self.current_cell = []
-
-                            def handle_starttag(self, tag, attrs):
-                                if tag == "table":
-                                    self.table_depth += 1
-                                    if self.table_depth == 1:
-                                        self.current_table = []
-                                elif self.table_depth == 1 and tag == "tr":
-                                    self.in_row = True
-                                    self.current_row = []
-                                elif self.table_depth == 1 and self.in_row and tag in ("td", "th"):
-                                    self.in_cell = True
-                                    self.current_cell = []
-
-                            def handle_data(self, data):
-                                if self.table_depth == 1 and self.in_cell:
-                                    self.current_cell.append(data)
-
-                            def handle_endtag(self, tag):
-                                if self.table_depth == 1 and self.in_cell and tag in ("td", "th"):
-                                    self.current_row.append(re.sub(r"\\s+", " ", "".join(self.current_cell)).strip())
-                                    self.in_cell = False
-                                elif self.table_depth == 1 and self.in_row and tag == "tr":
-                                    if self.current_row:
-                                        self.current_table.append(self.current_row)
-                                    self.in_row = False
-                                elif tag == "table" and self.table_depth > 0:
-                                    if self.table_depth == 1 and self.current_table:
-                                        self.tables.append(self.current_table)
-                                    self.table_depth -= 1
-
-                        table_parser = DraftEdgeTableParser()
-                        table_parser.feed(de_response.text)
-                        de_records = []
-                        for raw_table in table_parser.tables:
-                            header_index = next(
-                                (i for i, row in enumerate(raw_table)
-                                 if {"team", "player", "proj"}.issubset(
-                                     {cell.strip().casefold() for cell in row}
-                                 )),
-                                None
-                            )
-                            if header_index is None:
-                                continue
-                            headers = [cell.strip() for cell in raw_table[header_index]]
-                            header_lookup = {name.casefold(): i for i, name in enumerate(headers)}
-                            required_index = max(
-                                header_lookup["team"], header_lookup["player"], header_lookup["proj"]
-                            )
-                            for row in raw_table[header_index + 1:]:
-                                if len(row) <= required_index:
-                                    continue
-                                de_records.append({
-                                    "Team": row[header_lookup["team"]],
-                                    "Player": row[header_lookup["player"]],
-                                    "Proj": row[header_lookup["proj"]]
-                                })
-                        if not de_records:
-                            raise ValueError("DraftEdge page did not contain the expected Team/Player/Proj table.")
-                        de_table = pd.DataFrame(de_records)
-                        fresh_cache["parsed_rows"] = int(len(de_table))
-
-                        de_table["Player"] = de_table["Player"].astype(str).map(
-                            lambda name: re.sub(r"\s+", " ", unescape(name)).strip()
-                        )
-                        de_table["Proj"] = pd.to_numeric(
-                            de_table["Proj"].astype(str).str.replace(",", "", regex=False),
-                            errors="coerce"
-                        )
-
-                        def normalize_player_name(name):
-                            value = unescape(str(name)).casefold().strip()
-                            value = re.sub(r"\s+(jr|sr|ii|iii|iv|v)\.?$", "", value)
-                            return re.sub(r"[^a-z0-9]", "", value)
-
-                        for _, row in de_table.iterrows():
-                            player_name = str(row["Player"]).strip()
-                            projection_value = row["Proj"]
-                            if player_name and pd.notna(projection_value) and projection_value >= 0:
-                                fresh_cache["projections"][normalize_player_name(player_name)] = float(projection_value)
-
-                        fresh_cache["draftedge_names"] = sorted(
-                            str(name) for name in de_table.loc[de_table["Proj"].notna(), "Player"].tolist()
-                        )
-                        matched_count = sum(
-                            normalize_player_name(name) in fresh_cache["projections"]
-                            for name in players_df["Name"]
-                        )
-                        if matched_count == 0:
-                            raise ValueError(f"No player names matched. URL checked: {draftedge_url}")
-
-                        fresh_cache["updated_at"] = datetime.now(__import__("zoneinfo").ZoneInfo("America/New_York")).strftime("%b %d, %Y %I:%M:%S %p ET")
-                    except Exception as exc:
-                        fresh_cache["error"] = str(exc)
-
-                    st.session_state[cache_key] = fresh_cache
-                    st.session_state["draftedge_active_slate"] = slate_signature
-
-                active_cache = st.session_state.get(cache_key, {"projections": {}, "updated_at": None, "error": None})
-                draftedge_projections = active_cache.get("projections", {})
-                dff_matched = players_df["Name"].map(
-                    lambda name: dff_projections.get(normalize_projection_name(name))
-                )
-                dff_found = dff_matched.notna()
-                if dff_found.any():
-                    players_df.loc[dff_found, "Projection"] = dff_matched.loc[dff_found].astype(float)
-
-                draftedge_matched = players_df["Name"].map(
-                    lambda name: draftedge_projections.get(normalize_projection_name(name))
-                )
-                draftedge_found = draftedge_matched.notna() & ~dff_found
-                if draftedge_found.any():
-                    players_df.loc[draftedge_found, "Projection"] = draftedge_matched.loc[draftedge_found].astype(float)
-
-                players_df["ProjectionSource"] = "Salary CSV"
-                players_df.loc[draftedge_found, "ProjectionSource"] = "DraftEdge"
-                players_df.loc[dff_found, "ProjectionSource"] = "DFF"
-                # Last-resort backup: reuse average scores from an earlier simulation
-                # in this app session for players whose projection is still missing.
-                simulation_projection_cache = st.session_state.setdefault(
-                    "simulation_projection_cache", {}
-                )
-                missing_before_sim_backup = players_df["Projection"].isna()
-                simulation_matched = players_df["Name"].map(
-                    lambda name: simulation_projection_cache.get(
-                        normalize_simulation_cache_name(name)
-                    )
-                )
-                simulation_found = missing_before_sim_backup & simulation_matched.notna()
-                if simulation_found.any():
-                    players_df.loc[simulation_found, "Projection"] = (
-                        simulation_matched.loc[simulation_found].astype(float)
-                    )
-
-                players_df["ProjectionSource"] = "Salary CSV"
-                players_df.loc[draftedge_found, "ProjectionSource"] = "DraftEdge"
-                players_df.loc[dff_found, "ProjectionSource"] = "DFF"
-                players_df.loc[simulation_found, "ProjectionSource"] = "Simulation Backup"
-
-                found = dff_found | draftedge_found | simulation_found
-                draftedge_count = int(draftedge_found.sum())
-                dff_count = int(dff_found.sum())
-                simulation_backup_count = int(simulation_found.sum())
-                draftedge_error = active_cache.get("error")
-
-                if simulation_backup_count:
-                    st.info(
-                        f"Simulation backup filled missing projections for "
-                        f"{simulation_backup_count} players from earlier simulations in this session."
-                    )
-                if dff_error:
-                    st.warning(dff_error + " DraftEdge will be used for any players it can match.")
-                elif dff_count:
-                    st.success(
-                        f"DFF projections downloaded and matched for {dff_count} players (first choice)."
-                        if dff_file is None
-                        else f"Uploaded DFF projections matched for {dff_count} players (first choice)."
-                    )
-                else:
-                    st.warning("DFF data was loaded, but no player names matched this slate. DraftEdge will be used as backup.")
-                if active_cache.get("updated_at"):
-                    st.session_state["draftedge_last_updated"] = active_cache["updated_at"]
-                    st.success(f"DraftEdge projections filled gaps for {draftedge_count} players.")
-                elif draftedge_error:
-                    st.error("DraftEdge refresh failed. Last successful update time has not changed.")
-                    st.caption("Refresh detail: " + str(draftedge_error))
-                else:
-                    st.warning("DraftEdge projections are not available yet. Click REFRESH PROJECTIONS to try again.")
-
-
-                st.success(f"Loaded {len(players_df)} players from the salary file.")
-                if dff_count + draftedge_count + simulation_backup_count:
-                    st.success(
-                        f"Applied projections: DFF first, DraftEdge second, "
-                        f"simulation backup third ({simulation_backup_count} backup matches)."
-                    )
-                else:
-                    st.warning("No DFF or DraftEdge projections matched. Check the uploaded files and matchup/date before building lineups.")
-                    if draftedge_error:
-                        st.caption(f"DraftEdge refresh detail: {draftedge_error}")
-                if is_showdown_template:
-                    st.info("DraftKings Showdown template detected. FLEX rows are used for player salaries; CPT rows are ignored to avoid duplicate players.")
-                elif is_lineup_template:
-                    st.info("Lineup template detected. Player rows were kept without applying Showdown-only filtering.")
-                st.caption("Check the player names, teams, salaries, and projections before building lineups.")
-                with st.expander("DraftEdge matching details"):
-                    st.write(f"DFF projections loaded: {len(dff_projections)}")
-                    st.write(f"DFF players matched: {dff_count}")
-                    st.write(f"DraftEdge player rows parsed: {active_cache.get('parsed_rows', 'unknown')}")
-                    st.write(f"Usable DraftEdge projections: {len(draftedge_projections)}")
-                    st.write(f"DraftEdge players used after DFF priority: {draftedge_count}")
-                    unmatched_names = players_df.loc[~found, "Name"].astype(str).tolist()
-                    st.write("Salary-file players not matched:")
-                    st.write(", ".join(unmatched_names) if unmatched_names else "All players matched.")
-                    st.write("Names found on DraftEdge:")
-                    draftedge_names = active_cache.get("draftedge_names", [])
-                    st.write(", ".join(draftedge_names) if draftedge_names else "No diagnostic names saved. Click Refresh DraftEdge Projections.")
     except Exception as exc:
         st.error(f"Could not read that CSV: {exc}. The sample player pool is still being used.")
+
+def build_internal_projection_means(players_df):
+    """Estimate fantasy points internally from salary and position, not outside projections."""
+    salary = pd.to_numeric(players_df["Salary"], errors="coerce").fillna(0).to_numpy(dtype=float)
+    positions = players_df["Position"].astype(str).str.upper().str.split("/")
+    position_rates = {
+        "QB": 2.00,
+        "RB": 1.75,
+        "WR": 1.70,
+        "TE": 1.50,
+        "K": 1.35,
+        "DST": 1.35,
+        "D": 1.35,
+        "DEF": 1.35,
+    }
+    means = []
+    for pay, eligible_positions in zip(salary, positions):
+        rates = [position_rates[pos.strip()] for pos in eligible_positions if pos.strip() in position_rates]
+        rate = max(rates) if rates else 1.60
+        means.append(max(0.3, (pay / 1000.0) * rate))
+    return np.asarray(means, dtype=float)
+
 
 # The simulator now creates its own projections from salary and position.
 # Any DFF, DraftEdge, or salary-file projections are ignored by the simulation model.
 if "ProjectionSource" not in players_df.columns:
     players_df["ProjectionSource"] = "Internal Simulation"
-players_df["Projection"] = pd.to_numeric(players_df["Projection"], errors="coerce").fillna(0.0)
+players_df["Projection"] = build_internal_projection_means(players_df)
 
 def internal_slate_key(frame):
     """Stable identity for an uploaded slate, independent of external projections."""
@@ -1111,10 +642,10 @@ def internal_slate_key(frame):
 internal_key = internal_slate_key(players_df)
 saved_internal_projections = st.session_state.get("internal_projections_by_slate", {}).get(internal_key)
 if saved_internal_projections:
-    players_df["Projection"] = players_df["Name"].map(saved_internal_projections).fillna(0.0)
-    players_df["ProjectionSource"] = "Internal Simulation"
-else:
-    players_df["ProjectionSource"] = "Internal Simulation"
+    players_df["Projection"] = players_df["Name"].map(saved_internal_projections).fillna(
+        pd.Series(build_internal_projection_means(players_df), index=players_df.index)
+    )
+players_df["ProjectionSource"] = "Internal Simulation"
 
 st.caption("Projection source: Internal Simulation (salary and position model; external projections are not used).")
 
@@ -1160,28 +691,6 @@ if previous_signature != slate_signature:
 # ================================
 # SIMULATION
 # ================================
-
-def build_internal_projection_means(players_df):
-    """Estimate fantasy points internally from salary and position, not outside projections."""
-    salary = pd.to_numeric(players_df["Salary"], errors="coerce").fillna(0).to_numpy(dtype=float)
-    positions = players_df["Position"].astype(str).str.upper().str.split("/")
-    position_rates = {
-        "QB": 2.00,
-        "RB": 1.75,
-        "WR": 1.70,
-        "TE": 1.50,
-        "K": 1.35,
-        "DST": 1.35,
-        "D": 1.35,
-        "DEF": 1.35,
-    }
-    means = []
-    for pay, eligible_positions in zip(salary, positions):
-        rates = [position_rates[pos.strip()] for pos in eligible_positions if pos.strip() in position_rates]
-        rate = max(rates) if rates else 1.60
-        means.append(max(0.3, (pay / 1000.0) * rate))
-    return np.asarray(means, dtype=float)
-
 
 def run_game_simulations(players_df):
     # Generate independent outcomes from the simulator's own salary/position model.
@@ -1546,7 +1055,7 @@ if simulate_clicked:
 
     st.session_state["simulation_df"] = simulation_df
     st.session_state["simulations_ready"] = True
-    st.success("10,000 simulations completed. Internal projections were updated from the simulated results.")
+    st.success("10,000 simulations completed. Player projections now use the simulator’s own results.")
     # Rerun so the Player Pool immediately displays the newly calculated simulation stats.
     st.rerun()
 
