@@ -687,7 +687,7 @@ if salary_file is not None:
                         if matched_count == 0:
                             raise ValueError(f"No player names matched. URL checked: {draftedge_url}")
 
-                        fresh_cache["updated_at"] = datetime.now().astimezone().strftime("%b %d, %Y %I:%M:%S %p %Z")
+                        fresh_cache["updated_at"] = datetime.now(__import__("zoneinfo").ZoneInfo("America/New_York")).strftime("%b %d, %Y %I:%M:%S %p ET")
                     except Exception as exc:
                         fresh_cache["error"] = str(exc)
 
