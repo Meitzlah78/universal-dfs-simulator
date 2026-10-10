@@ -2042,12 +2042,15 @@ players_df = pd.DataFrame([
 # ================================
 
 st.divider()
-st.write("### Upload DraftKings Salary File")
-salary_file = st.file_uploader(
-    "Upload a DraftKings player CSV",
-    type=["csv"],
-    help="Upload the salary CSV for the slate. If you do not upload one, the sample player pool below is used."
-)
+st.write("### Automatic Player Pool")
+st.caption("The app will try to load players and salaries from the selected DraftKings slate automatically.")
+with st.expander("Optional: upload a DraftKings salary/template CSV instead"):
+    salary_file = st.file_uploader(
+        "Upload a DraftKings player CSV",
+        type=["csv"],
+        help="Optional. Use this only if automatic player loading is unavailable or you want to override the downloaded player list.",
+        key="dk_optional_salary_file",
+    )
 
 entry_file = st.file_uploader(
     "Upload DraftKings Contest Entry File",
