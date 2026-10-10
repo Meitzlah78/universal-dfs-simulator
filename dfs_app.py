@@ -145,7 +145,15 @@ def add_lineup_field_ownership(portfolio_df):
         ownership_df["Name"].astype(str),
         pd.to_numeric(captain_series, errors="coerce").fillna(0.0)
     ))
-    slots = [slot for slot in ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5", "QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "FLEX", "DST", "MVP"] if slot in portfolio_df.columns]
+    # Support every roster format by detecting lineup slots from known roster names
+    # and excluding common non-player/stat columns.
+    known_slots = {
+        "Captain", "MVP", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5",
+        "QB", "RB", "RB1", "RB2", "RB3", "WR", "WR1", "WR2", "WR3", "WR4",
+        "TE", "FLEX", "UTIL", "DST", "D", "DEF", "K", "P", "G", "F", "C",
+        "PG", "SG", "SF", "PF", "CPT"
+    }
+    slots = [col for col in portfolio_df.columns if str(col).strip() in known_slots]
     if not slots:
         return portfolio_df
 
@@ -1506,7 +1514,7 @@ if platform == "FanDuel":
                     st.warning("Click BUILD first so CONTEST SIM can compare your lineups against the simulated field.")
                 else:
                     scores = opponent_df["ProjectedPoints"].to_numpy(dtype=float)
-                    compared = user_lineups.copy()
+                    compared = add_lineup_field_ownership(user_lineups.copy())
                     compared["BeatsOpponents"] = compared["ProjectedPoints"].apply(lambda score: int(np.sum(scores < float(score))))
                     compared["FieldPercentile"] = compared["ProjectedPoints"].apply(lambda score: round(100.0 * np.mean(scores <= float(score)), 1))
                     compared["FieldRank"] = compared["ProjectedPoints"].apply(lambda score: 1 + int(np.sum(scores > float(score))))
@@ -2963,6 +2971,7 @@ if platform == "DraftKings" and lineup_mode == "Classic":
                 user_lineups = st.session_state["classic_lineups"].copy()
                 opponent_scores = contest_field_df["ProjectedPoints"].to_numpy(dtype=float) if not contest_field_df.empty else np.array([])
                 if len(opponent_scores):
+                    user_lineups = add_lineup_field_ownership(user_lineups)
                     user_lineups["BeatsOpponents"] = user_lineups["ProjectedPoints"].apply(lambda score: int(np.sum(opponent_scores < float(score))))
                     user_lineups["FieldPercentile"] = user_lineups["ProjectedPoints"].apply(lambda score: round(100.0 * np.mean(opponent_scores <= float(score)), 1))
                     user_lineups["FieldRank"] = user_lineups["ProjectedPoints"].apply(lambda score: 1 + int(np.sum(opponent_scores > float(score))))
