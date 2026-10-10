@@ -695,6 +695,66 @@ if platform == "FanDuel":
         type=["csv"],
         key="fd_salary_file"
     )
+
+    st.write("### Contest Selector")
+    fd_entry_file = st.file_uploader(
+        "Upload FanDuel Contest Entry File",
+        type=["csv"],
+        key="fd_contest_entry_file",
+        help="Upload your FanDuel contest entries CSV. It must include contest name and contest ID columns."
+    )
+    if fd_entry_file is not None:
+        try:
+            fd_entry_file.seek(0)
+            fd_entry_df = pd.read_csv(fd_entry_file)
+            fd_entry_df.columns = [str(c).strip() for c in fd_entry_df.columns]
+            fd_entry_lookup = {str(c).strip().casefold(): c for c in fd_entry_df.columns}
+            fd_name_col = next((fd_entry_lookup[k] for k in ("contest name", "contest") if k in fd_entry_lookup), None)
+            fd_id_col = next((fd_entry_lookup[k] for k in ("contest id", "contestid", "contest_id") if k in fd_entry_lookup), None)
+            fd_entries_col = next((fd_entry_lookup[k] for k in ("entry id", "entryid", "entry_id") if k in fd_entry_lookup), None)
+            fd_fee_col = next((fd_entry_lookup[k] for k in ("entry fee", "entryfee", "entry_fee", "fee") if k in fd_entry_lookup), None)
+            if fd_name_col is None or fd_id_col is None:
+                st.error("This CSV needs Contest Name and Contest ID columns for the contest selector.")
+            else:
+                fd_entry_df[fd_id_col] = fd_entry_df[fd_id_col].astype(str).str.replace(r"\\.0$", "", regex=True)
+                fd_group_columns = [fd_id_col, fd_name_col]
+                fd_agg = {
+                    "Entries": (fd_entries_col, "count") if fd_entries_col else (fd_id_col, "size"),
+                    "EntryFee": (fd_fee_col, "first") if fd_fee_col else (fd_id_col, "size"),
+                }
+                fd_contest_summary = fd_entry_df.groupby(fd_group_columns, dropna=False).agg(**fd_agg).reset_index()
+                fd_contest_summary["Contest Label"] = fd_contest_summary.apply(
+                    lambda row: f"{row[fd_name_col]} | ID {row[fd_id_col]} | {int(row['Entries'])} of your entries",
+                    axis=1
+                )
+                fd_selected_label = st.selectbox(
+                    "Select the FanDuel contest to simulate against",
+                    fd_contest_summary["Contest Label"].tolist(),
+                    key="fd_selected_contest"
+                )
+                fd_selected_row = fd_contest_summary.loc[
+                    fd_contest_summary["Contest Label"].eq(fd_selected_label)
+                ].iloc[0]
+                fd_fee = pd.to_numeric(
+                    str(fd_selected_row["EntryFee"]).replace("$", "").replace(",", ""),
+                    errors="coerce"
+                )
+                st.session_state["selected_fd_contest"] = {
+                    "id": str(fd_selected_row[fd_id_col]),
+                    "name": str(fd_selected_row[fd_name_col]),
+                    "your_entries": int(fd_selected_row["Entries"]),
+                    "entry_fee": float(fd_fee) if pd.notna(fd_fee) else None,
+                }
+                fd_fee_text = f"${float(fd_fee):.2f}" if pd.notna(fd_fee) else "not listed"
+                st.success(
+                    f"Selected: {fd_selected_row[fd_name_col]} | Contest ID: {fd_selected_row[fd_id_col]} | "
+                    f"Your entries: {int(fd_selected_row['Entries'])} | Entry fee: {fd_fee_text}"
+                )
+                st.caption(
+                    "The entry file identifies your contest and entries. Opponent lineups and payouts are simulated, not taken from actual contest results."
+                )
+        except Exception as exc:
+            st.error(f"Could not read the FanDuel contest entry file: {exc}")
     st.write("### Projection Sources")
     fd_dff_projection_file = None
     fd_draftedge_projection_file = None
@@ -1210,6 +1270,14 @@ if platform == "FanDuel":
             if not opponent_df.empty:
                 show_field_ownership(opponent_df, fd_slots, "Simulated FanDuel Player Ownership", captain_slot=("MVP" if lineup_mode == "Single Game" else None))
                 st.success(f"Created {len(opponent_df):,} simulated FanDuel opponent lineups.")
+                fd_contest_details = st.session_state.get("selected_fd_contest")
+                if fd_contest_details:
+                    st.info(
+                        f"Contest selected from your FanDuel entry CSV: {fd_contest_details['name']} "
+                        f"(ID {fd_contest_details['id']}). Your file has "
+                        f"{fd_contest_details['your_entries']} entries in this contest. "
+                        "The opponent field is simulated."
+                    )
                 user_lineups = st.session_state.get(fd_build_key)
                 if user_lineups is None or user_lineups.empty:
                     st.warning("Click BUILD first so CONTEST SIM can compare your lineups against the simulated field.")
