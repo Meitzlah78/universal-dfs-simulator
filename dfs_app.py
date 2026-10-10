@@ -244,13 +244,14 @@ def get_projection_source_data(uploaded_file, source_name, platform_name):
     return downloaded, "automatic download" if downloaded else "unavailable"
 
 def apply_external_projection_sources(players_frame, dff_file, draftedge_file, platform_name='DraftKings'):
-    """Average DFF and DraftEdge where both match; otherwise use whichever exists."""
+    """Use external-site projections only for players those sites actually list."""
     result = players_frame.copy()
     dff, dff_status = get_projection_source_data(dff_file, "DFF", platform_name)
     draftedge, draftedge_status = get_projection_source_data(draftedge_file, "DraftEdge", platform_name)
-    internal = pd.to_numeric(result.get("Projection", pd.Series(np.nan, index=result.index)), errors="coerce")
+    external_available = bool(dff or draftedge)
     projections, sources = [], []
     dff_matches = draftedge_matches = averages = 0
+    keep_indices = []
     for index, row in result.iterrows():
         key = normalize_projection_player_name(row.get("Name", ""))
         dff_value, edge_value = dff.get(key), draftedge.get(key)
@@ -261,22 +262,29 @@ def apply_external_projection_sources(players_frame, dff_file, draftedge_file, p
             value, source = dff_value, "DFF"
         elif edge_value is not None:
             value, source = edge_value, "DraftEdge"
+        elif external_available:
+            # If at least one external source loaded, do not invent a projection
+            # for players absent from both projection lists.
+            continue
         else:
-            value = internal.loc[index] if index in internal.index and pd.notna(internal.loc[index]) else np.nan
-            source = "Internal Simulation"
-        dff_matches += int(dff_value is not None)
-        draftedge_matches += int(edge_value is not None)
+            # If both websites fail to load, keep the player row but leave its
+            # projection blank; the zero/missing projection filter removes it.
+            value, source = np.nan, "Not listed / source unavailable"
+        keep_indices.append(index)
         projections.append(value)
         sources.append(source)
+        dff_matches += int(dff_value is not None)
+        draftedge_matches += int(edge_value is not None)
+
+    result = result.loc[keep_indices].copy()
     result["Projection"] = pd.to_numeric(pd.Series(projections, index=result.index), errors="coerce")
     result["ProjectionSource"] = sources
     st.caption(
         f"Projection files matched: DFF {dff_matches} players; DraftEdge {draftedge_matches} players; "
         f"averaged {averages} players. DFF source: {dff_status}; DraftEdge source: {draftedge_status}. "
-        "Players without either source use the simulator estimate."
+        "Players absent from both loaded projection lists are excluded; no internal projection is created for them."
     )
     return result
-
 
 def normalize_simulation_cache_name(name):
     """Normalize player names for session-only simulated projection matching."""
