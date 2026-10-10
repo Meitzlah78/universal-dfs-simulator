@@ -491,7 +491,8 @@ if platform == "FanDuel":
         )
         results = []
         seen = set()
-        max_attempts = 30000
+        target_lineups = 5000 if lineup_mode == "Single Game" else 20
+        max_attempts = 250000 if lineup_mode == "Single Game" else 30000
 
         for _ in range(max_attempts):
             chosen = {}
@@ -561,7 +562,7 @@ if platform == "FanDuel":
                 "Salary": salary,
                 "ProjectedPoints": round(total_points, 2)
             })
-            if len(results) >= 20:
+            if len(results) >= target_lineups:
                 break
 
         if results:
