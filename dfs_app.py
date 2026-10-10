@@ -31,8 +31,10 @@ st.subheader(platform + " " + lineup_mode)
 if platform != "DraftKings" or lineup_mode != "Showdown":
     st.warning(
         "This format is selected, but its lineup rules and export are not "
-        "implemented yet. DraftKings Showdown remains the only working build mode."
+        "implemented yet. The current builder is DraftKings Showdown only, "
+        "so it is paused to prevent invalid lineups."
     )
+    st.stop()
 
 # ================================
 # SETTINGS
