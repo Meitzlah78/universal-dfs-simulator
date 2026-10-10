@@ -1528,9 +1528,19 @@ if simulate_clicked:
     simulation_projection_cache = st.session_state.setdefault(
         "simulation_projection_cache", {}
     )
+    valid_projection_names = set(
+        players_df.loc[
+            pd.to_numeric(players_df["Projection"], errors="coerce").gt(0),
+            "Name"
+        ].astype(str)
+    )
     for player_name in simulation_df.columns:
         projection_mean = float(simulation_df[player_name].mean())
-        if np.isfinite(projection_mean) and projection_mean > 0:
+        if (
+            player_name in valid_projection_names
+            and np.isfinite(projection_mean)
+            and projection_mean > 0
+        ):
             simulation_projection_cache[normalize_simulation_cache_name(player_name)] = projection_mean
 
     st.success("10,000 game simulations completed.")
@@ -1648,10 +1658,20 @@ if build_clicked:
     simulation_projection_cache = st.session_state.setdefault(
         "simulation_projection_cache", {}
     )
+    valid_projection_names = set(
+        players_df.loc[
+            pd.to_numeric(players_df["Projection"], errors="coerce").gt(0),
+            "Name"
+        ].astype(str)
+    )
     for player_name in simulation_df.columns:
         projection_mean = float(simulation_df[player_name].mean())
-        if np.isfinite(projection_mean) and projection_mean > 0:
-            simulation_projection_cache[normalize_projection_name(player_name)] = projection_mean
+        if (
+            player_name in valid_projection_names
+            and np.isfinite(projection_mean)
+            and projection_mean > 0
+        ):
+            simulation_projection_cache[normalize_simulation_cache_name(player_name)] = projection_mean
 
     # Build the 10,000-lineup contest field automatically for this run.
     with st.spinner("Building the simulated contest field..."):
