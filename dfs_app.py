@@ -93,7 +93,7 @@ if platform == "FanDuel":
         fd_players = pd.DataFrame()
         fd_players["Name"] = fd_raw[fd_name_col].astype(str).str.strip()
         fd_players["Name"] = fd_players["Name"].str.replace(
-            r"\\s*\\(\\d+\\)\\s*$", "", regex=True
+            r"\s*\(\d+\)\s*$, "", regex=True
         )
         fd_players["Salary"] = pd.to_numeric(
             fd_raw[fd_salary_col].astype(str).str.replace(r"[$,]", "", regex=True),
@@ -140,10 +140,19 @@ if platform == "FanDuel":
     )
     if "fd_saved_builds" not in st.session_state:
         st.session_state["fd_saved_builds"] = {}
-    fd_saved = st.session_state["fd_saved_builds"].get(fd_signature, {})
     fd_build_key = "fd_lineups_" + lineup_mode.replace(" ", "_").lower()
-    if fd_build_key not in st.session_state and "lineups" in fd_saved:
-        st.session_state[fd_build_key] = fd_saved["lineups"]
+    fd_active_key = "fd_active_signature_" + lineup_mode.replace(" ", "_").lower()
+    previous_fd_signature = st.session_state.get(fd_active_key)
+    if previous_fd_signature != fd_signature:
+        if previous_fd_signature is not None and fd_build_key in st.session_state:
+            st.session_state["fd_saved_builds"][previous_fd_signature] = {
+                "lineups": st.session_state[fd_build_key]
+            }
+        st.session_state.pop(fd_build_key, None)
+        fd_saved = st.session_state["fd_saved_builds"].get(fd_signature, {})
+        if "lineups" in fd_saved:
+            st.session_state[fd_build_key] = fd_saved["lineups"]
+        st.session_state[fd_active_key] = fd_signature
 
     if lineup_mode == "Single Game":
         st.caption(
