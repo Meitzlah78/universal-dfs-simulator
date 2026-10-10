@@ -1153,7 +1153,8 @@ def score_nfl_stat_line(stats, platform):
 
 def _simulate_scored_player_outcomes(players_df, platform, rng):
     """Simulate player stats and score them with the selected site's rules."""
-    means = build_internal_projection_means(players_df, platform=platform, include_history=True)
+    historical = load_nfl_historical_player_stats()
+    means = build_internal_projection_means(players_df, platform=platform, include_history=False)
     simulations = {}
     n = SIMULATIONS
     for index, (_, row) in enumerate(players_df.iterrows()):
@@ -1215,14 +1216,32 @@ def _simulate_scored_player_outcomes(players_df, platform, rng):
         scores = np.asarray(score_nfl_stat_line(stats, platform), dtype=float)
         # Adjust simulated opportunity volume by salary so higher-priced players
         # tend to have more opportunity, while retaining site-specific scoring differences.
-        actual_mean = float(np.mean(scores))
-        if actual_mean > 0 and np.isfinite(target_mean) and target_mean > 0:
-            # Calibrate each simulated distribution to the simulator's own
-            # baseline mean. The old 0.65–1.55 cap let raw stat-line scores
-            # push nearly every player's displayed projection far above target.
-            scores = scores * (target_mean / actual_mean)
+        # When weekly historical scores are available, resample that player's
+        # own recent results. This makes both the outcome distribution and
+        # projection responsive to the player's actual history instead of
+        # relying only on generic position-level stat distributions.
+        historical_result = _historical_player_average(
+            name, next(iter(positions), ""), platform, historical, return_scores=True
+        )
+        if historical_result is not None:
+            historical_points, recency_weights = historical_result
+            recency_probabilities = recency_weights / recency_weights.sum()
+            scores = rng.choice(
+                historical_points, size=n, replace=True, p=recency_probabilities
+            ).astype(float)
+            historical_mean = float(np.average(historical_points, weights=recency_weights))
+            if historical_mean > 0 and np.isfinite(target_mean) and target_mean > 0:
+                scores = scores * (target_mean / historical_mean)
+            else:
+                scores = np.full(n, max(target_mean, 0.0))
         else:
-            scores = np.full(n, max(target_mean, 0.0) if np.isfinite(target_mean) else 0.0)
+            actual_mean = float(np.mean(scores))
+            if actual_mean > 0 and np.isfinite(target_mean) and target_mean > 0:
+                # Calibrate fallback stat-line simulations to the internal
+                # salary/position baseline when player history is unavailable.
+                scores = scores * (target_mean / actual_mean)
+            else:
+                scores = np.full(n, max(target_mean, 0.0) if np.isfinite(target_mean) else 0.0)
         simulations[name] = np.maximum(scores, 0)
     return pd.DataFrame(simulations)
 
@@ -1499,8 +1518,8 @@ def load_nfl_historical_player_stats():
     return historical
 
 
-def _historical_player_average(player_name, position, platform, historical):
-    """Recency-weighted fantasy points per game from historical weekly stats."""
+def _historical_player_average(player_name, position, platform, historical, return_scores=False):
+    """Return recency-weighted fantasy points, or the recent weekly scores themselves."""
     if historical.empty:
         return None
     name_col = next((col for col in ["player_display_name", "player_name", "name"] if col in historical.columns), None)
@@ -1546,6 +1565,8 @@ def _historical_player_average(player_name, position, platform, historical):
     # More recent games count more, but older games still provide a baseline.
     weights = np.linspace(0.5, 1.5, len(points))
     average = float(np.average(points, weights=weights))
+    if return_scores:
+        return (points, weights) if len(points) and np.isfinite(points).all() else None
     return max(0.0, average) if np.isfinite(average) else None
 
 
