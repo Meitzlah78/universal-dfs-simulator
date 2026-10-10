@@ -908,10 +908,11 @@ if platform == "FanDuel":
         elif lineup_mode == "Single Game":
             fd_player_display["MVP Exp %"] = 0.0
         else:
-            fd_player_display["MVP Exp %"] = np.nan
+            fd_player_display = fd_player_display.drop(columns=["MVP Exp %"], errors="ignore")
     else:
         fd_player_display["Exposure %"] = np.nan
-        fd_player_display["MVP Exp %"] = np.nan
+        if lineup_mode == "Single Game":
+            fd_player_display["MVP Exp %"] = np.nan
 
     st.dataframe(fd_player_display, use_container_width=True, hide_index=True)
     with st.expander("Copy Player Info to ChatGPT"):
@@ -2060,6 +2061,9 @@ player_display = player_display[
         "Captain Min %", "Captain Max %"
     ]]
 ]
+# Captain exposure is only relevant to DraftKings Showdown.
+if platform == "DraftKings" and lineup_mode == "Classic":
+    player_display = player_display.drop(columns=["Captain Exp %"], errors="ignore")
 st.write("### Player Pool")
 st.dataframe(player_display, use_container_width=True, hide_index=True)
 
