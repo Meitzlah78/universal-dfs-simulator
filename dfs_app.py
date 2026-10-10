@@ -1332,9 +1332,10 @@ if platform == "DraftKings" and lineup_mode == "Classic":
         st.success("Classic player simulations completed.")
         st.rerun()
 
+    build_clicked = st.button("BUILD", type="primary")
     contest_sim_clicked = st.button("CONTEST SIM", type="primary")
 
-    if st.button("BUILD", type="primary"):
+    if build_clicked:
         rng = np.random.default_rng()
         rankings = {}
         for _, row in classic_pool.iterrows():
