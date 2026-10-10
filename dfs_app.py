@@ -24,14 +24,11 @@ def calculate_field_ownership(field_df, slots, captain_slot=None):
     # Vectorized counting avoids iterating over every row for large contest fields.
     slot_values = field_df[valid_slots].astype("string").apply(lambda col: col.str.strip())
     slot_values = slot_values.replace({"": pd.NA, "nan": pd.NA, "None": pd.NA})
-    stacked = slot_values.stack().reset_index(level=1, drop=True)
-    counts = stacked.groupby(stacked.index).first() if False else stacked.value_counts().to_dict()
-    if len(valid_slots) > 1:
-        row_ids = np.repeat(np.arange(len(slot_values)), len(valid_slots))
-        flat_names = slot_values.to_numpy(dtype=object).ravel()
-        valid = pd.notna(flat_names) & ~np.isin(flat_names, ["", "nan", "None", "<NA>"])
-        pairs = pd.DataFrame({"row": row_ids[valid], "name": flat_names[valid]}).drop_duplicates()
-        counts = pairs["name"].value_counts().to_dict()
+    row_ids = np.repeat(np.arange(len(slot_values)), len(valid_slots))
+    flat_names = slot_values.to_numpy(dtype=object).ravel()
+    valid = pd.notna(flat_names) & ~np.isin(flat_names, ["", "nan", "None", "<NA>"])
+    pairs = pd.DataFrame({"row": row_ids[valid], "name": flat_names[valid]}).drop_duplicates()
+    counts = pairs["name"].value_counts().to_dict()
     captain_counts = {}
     if captain_slot and captain_slot in valid_slots:
         captain_values = slot_values[captain_slot].dropna()
