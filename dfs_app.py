@@ -543,7 +543,7 @@ if salary_file is not None:
                 )
                 draftedge_error = None
                 if refresh_needed:
-                    fresh_cache = {"projections": {}, "updated_at": None, "error": None}
+                    fresh_cache = {"projections": {}, "updated_at": None, "error": None, "draftedge_names": [], "parsed_rows": 0}
                     try:
                         game_info_col = find_column(uploaded_df, ["Game Info", "GameInfo"])
                         game_info_values = (
@@ -656,6 +656,7 @@ if salary_file is not None:
                         if not de_records:
                             raise ValueError("DraftEdge page did not contain the expected Team/Player/Proj table.")
                         de_table = pd.DataFrame(de_records)
+                        fresh_cache["parsed_rows"] = int(len(de_table))
 
                         de_table["Player"] = de_table["Player"].astype(str).map(
                             lambda name: re.sub(r"\s+", " ", unescape(name)).strip()
@@ -676,6 +677,9 @@ if salary_file is not None:
                             if player_name and pd.notna(projection_value) and projection_value >= 0:
                                 fresh_cache["projections"][normalize_player_name(player_name)] = float(projection_value)
 
+                        fresh_cache["draftedge_names"] = sorted(
+                            str(name) for name in de_table.loc[de_table["Proj"].notna(), "Player"].tolist()
+                        )
                         matched_count = sum(
                             normalize_player_name(name) in fresh_cache["projections"]
                             for name in players_df["Name"]
@@ -727,6 +731,15 @@ if salary_file is not None:
                 elif is_lineup_template:
                     st.info("Lineup template detected. Player rows were kept without applying Showdown-only filtering.")
                 st.caption("Check the player names, teams, salaries, and projections before building lineups.")
+                with st.expander("DraftEdge matching details"):
+                    st.write(f"DraftEdge player rows parsed: {active_cache.get('parsed_rows', 'unknown')}")
+                    st.write(f"Usable DraftEdge projections: {len(draftedge_projections)}")
+                    unmatched_names = players_df.loc[~found, "Name"].astype(str).tolist()
+                    st.write("Salary-file players not matched:")
+                    st.write(", ".join(unmatched_names) if unmatched_names else "All players matched.")
+                    st.write("Names found on DraftEdge:")
+                    draftedge_names = active_cache.get("draftedge_names", [])
+                    st.write(", ".join(draftedge_names) if draftedge_names else "No diagnostic names saved. Click Refresh DraftEdge Projections.")
     except Exception as exc:
         st.error(f"Could not read that CSV: {exc}. The sample player pool is still being used.")
 
