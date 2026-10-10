@@ -499,27 +499,96 @@ DFS_SCORING_RULES = {
 }
 
 def score_nfl_stat_line(stats, platform):
-    """Calculate NFL fantasy points from a simulated stat line."""
+    """Score simulated NFL stats using the selected DFS site's scoring rules."""
     rules = DFS_SCORING_RULES["FanDuel" if str(platform).lower().startswith("fanduel") else "DraftKings"]
+    passing_yards = np.asarray(stats.get("passing_yards", 0), dtype=float)
+    rushing_yards = np.asarray(stats.get("rushing_yards", 0), dtype=float)
+    receiving_yards = np.asarray(stats.get("receiving_yards", 0), dtype=float)
     score = (
-        float(stats.get("passing_yards", 0)) * rules["pass_yard"]
-        + float(stats.get("passing_tds", 0)) * rules["pass_td"]
-        + float(stats.get("interceptions", 0)) * rules["interception"]
-        + float(stats.get("rushing_yards", 0)) * rules["rush_yard"]
-        + float(stats.get("rushing_tds", 0)) * rules["rush_td"]
-        + float(stats.get("receiving_yards", 0)) * rules["receiving_yard"]
-        + float(stats.get("receiving_tds", 0)) * rules["receiving_td"]
-        + float(stats.get("receptions", 0)) * rules["reception"]
-        + float(stats.get("fumbles_lost", 0)) * rules["fumble_lost"]
-        + float(stats.get("two_point_conversions", 0)) * rules["two_point_conversion"]
+        passing_yards * rules["pass_yard"]
+        + np.asarray(stats.get("passing_tds", 0), dtype=float) * rules["pass_td"]
+        + np.asarray(stats.get("interceptions", 0), dtype=float) * rules["interception"]
+        + rushing_yards * rules["rush_yard"]
+        + np.asarray(stats.get("rushing_tds", 0), dtype=float) * rules["rush_td"]
+        + receiving_yards * rules["receiving_yard"]
+        + np.asarray(stats.get("receiving_tds", 0), dtype=float) * rules["receiving_td"]
+        + np.asarray(stats.get("receptions", 0), dtype=float) * rules["reception"]
+        + np.asarray(stats.get("fumbles_lost", 0), dtype=float) * rules["fumble_lost"]
+        + np.asarray(stats.get("two_point_conversions", 0), dtype=float) * rules["two_point_conversion"]
     )
-    if float(stats.get("passing_yards", 0)) >= 300:
-        score += rules["pass_300_bonus"]
-    if float(stats.get("rushing_yards", 0)) >= 100:
-        score += rules["rush_100_bonus"]
-    if float(stats.get("receiving_yards", 0)) >= 100:
-        score += rules["receiving_100_bonus"]
+    score = score + (passing_yards >= 300) * rules["pass_300_bonus"]
+    score = score + (rushing_yards >= 100) * rules["rush_100_bonus"]
+    score = score + (receiving_yards >= 100) * rules["receiving_100_bonus"]
+    score = score + np.asarray(stats.get("field_goals_made", 0), dtype=float) * 3
+    score = score + np.asarray(stats.get("field_goals_50_plus", 0), dtype=float) * 2
+    score = score + np.asarray(stats.get("extra_points_made", 0), dtype=float)
+    score = score + np.asarray(stats.get("sacks", 0), dtype=float)
+    score = score + np.asarray(stats.get("def_interceptions", 0), dtype=float) * 2
+    score = score + np.asarray(stats.get("fumble_recoveries", 0), dtype=float) * 2
+    score = score + np.asarray(stats.get("defensive_tds", 0), dtype=float) * 6
+    score = score + np.asarray(stats.get("safeties", 0), dtype=float) * 2
     return score
+
+
+def _simulate_scored_player_outcomes(players_df, platform, rng):
+    """Generate internal stat lines and apply the selected site's scoring."""
+    means = build_internal_projection_means(players_df)
+    simulations = {}
+    n = SIMULATIONS
+    for index, (_, row) in enumerate(players_df.iterrows()):
+        name = str(row["Name"])
+        positions = set(str(row.get("Position", "")).upper().replace(" ", "").split("/"))
+        target_mean = float(means[index])
+        if "QB" in positions:
+            stats = {
+                "passing_yards": np.maximum(0, rng.normal(225, 65, n)),
+                "passing_tds": rng.poisson(1.45, n),
+                "interceptions": rng.poisson(0.65, n),
+                "rushing_yards": np.maximum(0, rng.normal(16, 20, n)),
+                "rushing_tds": rng.binomial(1, 0.12, n),
+            }
+        elif "RB" in positions:
+            stats = {
+                "rushing_yards": np.maximum(0, rng.normal(55, 30, n)),
+                "rushing_tds": rng.binomial(2, 0.18, n),
+                "receiving_yards": np.maximum(0, rng.normal(22, 20, n)),
+                "receiving_tds": rng.binomial(1, 0.10, n),
+                "receptions": rng.poisson(2.5, n),
+            }
+        elif "WR" in positions:
+            stats = {
+                "receiving_yards": np.maximum(0, rng.normal(55, 35, n)),
+                "receiving_tds": rng.binomial(1, 0.28, n),
+                "receptions": rng.poisson(4.0, n),
+                "rushing_yards": np.maximum(0, rng.normal(2, 5, n)),
+            }
+        elif "TE" in positions:
+            stats = {
+                "receiving_yards": np.maximum(0, rng.normal(34, 24, n)),
+                "receiving_tds": rng.binomial(1, 0.20, n),
+                "receptions": rng.poisson(2.7, n),
+            }
+        elif "K" in positions:
+            stats = {
+                "field_goals_made": rng.poisson(1.7, n),
+                "field_goals_50_plus": rng.binomial(1, 0.25, n),
+                "extra_points_made": rng.poisson(2.0, n),
+            }
+        else:
+            stats = {
+                "sacks": rng.poisson(2.3, n),
+                "def_interceptions": rng.binomial(1, 0.7, n),
+                "fumble_recoveries": rng.binomial(1, 0.45, n),
+                "defensive_tds": rng.binomial(1, 0.08, n),
+                "safeties": rng.binomial(1, 0.03, n),
+            }
+        scores = np.asarray(score_nfl_stat_line(stats, platform), dtype=float)
+        # Keep salary-based internal estimates as the mean, while scoring the
+        # simulated stat outcomes with the selected site's point values.
+        actual_mean = float(np.mean(scores))
+        scores = scores * (target_mean / actual_mean) if actual_mean > 0 else np.full(n, target_mean)
+        simulations[name] = scores
+    return pd.DataFrame(simulations)
 
 # ================================
 # PLAYER POOL
@@ -870,28 +939,10 @@ if platform == "DraftKings" and lineup_mode == "Classic":
 # SIMULATION
 # ================================
 
-def run_game_simulations(players_df):
-    # Generate independent outcomes from the simulator's own salary/position model.
-    # Keep the model mean intact by scaling each player's simulation results back
-    # to the intended salary/position estimate.
+def run_game_simulations(players_df, platform="DraftKings"):
+    # Simulate stat lines first, then calculate fantasy points with site scoring.
     rng = np.random.default_rng()
-    means = build_internal_projection_means(players_df)
-    n = float(DISPERSION)
-    p = n / (n + means)
-    sims = rng.negative_binomial(
-        n=n,
-        p=p,
-        size=(SIMULATIONS, len(players_df))
-    ).astype(float)
-    sampled_means = sims.mean(axis=0)
-    scale = np.divide(
-        means,
-        sampled_means,
-        out=np.ones_like(means, dtype=float),
-        where=sampled_means > 0
-    )
-    sims *= scale
-    return pd.DataFrame(sims, columns=players_df["Name"].tolist())
+    return _simulate_scored_player_outcomes(players_df, platform, rng)
 
 # ================================
 # PLAYER DISPLAY
@@ -1088,7 +1139,7 @@ if platform == "DraftKings" and lineup_mode == "Classic":
 
     if st.button("SIM", type="primary"):
         with st.spinner("Running 10,000 player simulations for DraftKings Classic..."):
-            classic_simulation_df = run_game_simulations(players_df)
+            classic_simulation_df = run_game_simulations(players_df, platform=platform)
         st.session_state["simulation_df"] = classic_simulation_df
         st.session_state["simulations_ready"] = True
         generated_projections = {
@@ -1243,7 +1294,7 @@ simulate_clicked = st.button(
 
 if simulate_clicked:
     with st.spinner("Creating internal projections and running 10,000 game simulations..."):
-        simulation_df = run_game_simulations(players_df)
+        simulation_df = run_game_simulations(players_df, platform=platform)
 
     # The simulated averages become the app's own projections for this slate.
     generated_projections = {
@@ -1366,7 +1417,7 @@ if build_clicked:
     # One-click workflow: simulate players, build a contest field, then
     # continue below to create and score candidate lineups.
     with st.spinner("Running 10,000 game simulations..."):
-        simulation_df = run_game_simulations(players_df)
+        simulation_df = run_game_simulations(players_df, platform=platform)
 
     st.session_state["simulation_df"] = simulation_df
     st.session_state["simulations_ready"] = True
