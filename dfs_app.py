@@ -1154,7 +1154,7 @@ def score_nfl_stat_line(stats, platform):
 def _simulate_scored_player_outcomes(players_df, platform, rng):
     """Simulate player stats and score them with the selected site's rules."""
     historical = load_nfl_historical_player_stats()
-    means = build_internal_projection_means(players_df, platform=platform, include_history=False)
+    means = build_internal_projection_means(players_df, platform=platform, include_history=True)
     simulations = {}
     n = SIMULATIONS
     for index, (_, row) in enumerate(players_df.iterrows()):
