@@ -678,34 +678,15 @@ if platform == "FanDuel":
         key="fd_build_salary_range_" + lineup_mode.replace(" ", "_").lower(),
         help="Only build lineups whose total salary falls inside this range."
     )
-    # Keep simulator-generated projections for this exact FanDuel player pool.
-    fd_projection_key = tuple(
-        fd_players[["Name", "Position", "Team", "Salary"]]
-        .astype(str).itertuples(index=False, name=None)
-    )
-    fd_projection_store = st.session_state.setdefault("fd_internal_projections_by_slate", {})
-    saved_fd_projections = fd_projection_store.get(fd_projection_key)
-    if saved_fd_projections:
-        fd_players["Projection"] = fd_players["Name"].map(saved_fd_projections).fillna(
-            fd_players["Projection"]
-        )
-
-    if st.button("SIM", type="primary", key="fd_sim_" + lineup_mode.replace(" ", "_").lower()):
+        if st.button("SIM", type="primary", key="fd_sim_" + lineup_mode.replace(" ", "_").lower()):
         with st.spinner("Running 10,000 FanDuel scoring simulations..."):
             rng = np.random.default_rng()
             position_rates = {
                 "QB": 2.00, "RB": 1.75, "WR": 1.70, "TE": 1.50,
                 "K": 1.35, "D": 1.35, "DST": 1.35, "DEF": 1.35
             }
-            means = []
-            for _, player_row in fd_players.iterrows():
-                eligible_positions = str(player_row["Position"]).upper().replace(" ", "").split("/")
-                rates = [position_rates[pos] for pos in eligible_positions if pos in position_rates]
-                rate = max(rates) if rates else 1.60
-                means.append(max(0.3, float(player_row["Salary"]) / 1000.0 * rate))
             # FanDuel scoring differs from DraftKings: half-point receptions,
             # -2 lost fumbles, and no 300/100-yard bonuses.
-            means = np.asarray(means, dtype=float)
             simulated_scores = np.zeros((10000, len(fd_players)), dtype=float)
             for index, (_, player_row) in enumerate(fd_players.iterrows()):
                 positions = set(str(player_row["Position"]).upper().replace(" ", "").split("/"))
@@ -764,16 +745,9 @@ if platform == "FanDuel":
                                        [10, 7, 4, 1, 0, -1], default=-4)
                     score += np.select([ya <= 100, ya <= 199, ya <= 299, ya <= 349, ya <= 399, ya <= 449, ya <= 499],
                                        [3, 2, 1, 0, -1, -3, -5], default=-7)
-                # Keep the internal salary estimate as an opportunity guide.
-                avg = float(np.mean(score))
-                if avg > 0:
-                    score *= float(np.clip(means[index] / avg, 0.65, 1.55))
+                # Keep the generated outcomes unscaled; do not force them to
+                # match salary-based estimates or external projections.
                 simulated_scores[:, index] = np.maximum(score, 0)
-            generated_projections = {
-                str(name): float(simulated_scores[:, index].mean())
-                for index, name in enumerate(fd_players["Name"])
-            }
-            fd_projection_store[fd_projection_key] = generated_projections
         st.success("FanDuel scoring simulations completed.")
         st.rerun()
 
@@ -1708,14 +1682,6 @@ def internal_slate_key(frame):
     )
 
 internal_key = internal_slate_key(players_df)
-saved_internal_projections = st.session_state.get("internal_projections_by_slate", {}).get(internal_key)
-if saved_internal_projections:
-    # After SIM, keep the simulator's own projections on reruns instead of
-    # replacing them with the original public/uploaded projection sources.
-    saved_values = players_df["Name"].map(saved_internal_projections)
-    saved_mask = pd.to_numeric(saved_values, errors="coerce").gt(0)
-    players_df.loc[saved_mask, "Projection"] = saved_values.loc[saved_mask]
-    players_df.loc[saved_mask, "ProjectionSource"] = "Internal Simulation"
 players_df = exclude_zero_projection_players(players_df, "DraftKings " + lineup_mode)
 st.caption("Projection values use the DFF/DraftEdge average when both are available, otherwise the single available source. Unmatched players use internal estimates.")
 if st.session_state.get("nfl_historical_stats_status"):
@@ -1997,12 +1963,6 @@ if platform == "DraftKings" and lineup_mode == "Classic":
             classic_simulation_df = run_game_simulations(players_df, platform=platform)
         st.session_state["simulation_df"] = classic_simulation_df
         st.session_state["simulations_ready"] = True
-        generated_projections = {
-            str(player_name): float(classic_simulation_df[player_name].mean())
-            for player_name in classic_simulation_df.columns
-        }
-        internal_projection_store = st.session_state.setdefault("internal_projections_by_slate", {})
-        internal_projection_store[internal_key] = generated_projections
         st.success("Classic player simulations completed.")
         st.rerun()
 
@@ -2243,16 +2203,6 @@ if simulate_clicked:
     with st.spinner("Creating internal projections and running 10,000 game simulations..."):
         simulation_df = run_game_simulations(players_df, platform=platform)
 
-    # The simulated averages become the app's own projections for this slate.
-    generated_projections = {
-        str(player_name): float(simulation_df[player_name].mean())
-        for player_name in simulation_df.columns
-    }
-    players_df["Projection"] = players_df["Name"].map(generated_projections).fillna(0.0)
-    players_df["ProjectionSource"] = "Internal Simulation"
-    internal_projection_store = st.session_state.setdefault("internal_projections_by_slate", {})
-    internal_projection_store[internal_key] = generated_projections
-
     st.session_state["simulation_df"] = simulation_df
     st.session_state["simulations_ready"] = True
     st.success("10,000 simulations completed. Player projections now use the simulator’s own results.")
@@ -2368,38 +2318,6 @@ if build_clicked:
 
     st.session_state["simulation_df"] = simulation_df
     st.session_state["simulations_ready"] = True
-    # Persist this slate's simulated means so the Projection column updates
-    # immediately and remains updated after Streamlit reruns.
-    generated_projections = {
-        str(player_name): float(simulation_df[player_name].mean())
-        for player_name in simulation_df.columns
-    }
-    internal_projection_store = st.session_state.setdefault("internal_projections_by_slate", {})
-    internal_projection_store[internal_key] = generated_projections
-    projected_values = players_df["Name"].map(generated_projections)
-    projected_mask = pd.to_numeric(projected_values, errors="coerce").gt(0)
-    players_df.loc[projected_mask, "Projection"] = projected_values.loc[projected_mask]
-    players_df.loc[projected_mask, "ProjectionSource"] = "Internal Simulation"
-
-    # Save simulated mean scores as a session-only fallback for later uploads/reruns.
-    simulation_projection_cache = st.session_state.setdefault(
-        "simulation_projection_cache", {}
-    )
-    valid_projection_names = set(
-        players_df.loc[
-            pd.to_numeric(players_df["Projection"], errors="coerce").gt(0),
-            "Name"
-        ].astype(str)
-    )
-    for player_name in simulation_df.columns:
-        projection_mean = float(simulation_df[player_name].mean())
-        if (
-            player_name in valid_projection_names
-            and np.isfinite(projection_mean)
-            and projection_mean > 0
-        ):
-            simulation_projection_cache[normalize_simulation_cache_name(player_name)] = projection_mean
-
     # Build the 10,000-lineup contest field automatically for this run.
     with st.spinner("Building the simulated contest field..."):
         contest_field = []
