@@ -62,6 +62,81 @@ players_df = pd.DataFrame([
     "Projection"
 ])
 
+# ================================
+# DRAFTKINGS SALARY FILE UPLOAD
+# ================================
+
+st.divider()
+st.write("### Upload DraftKings Salary File")
+salary_file = st.file_uploader(
+    "Upload a DraftKings player CSV",
+    type=["csv"],
+    help="Upload the salary CSV for the slate. If you do not upload one, the sample player pool below is used."
+)
+
+if salary_file is not None:
+    try:
+        uploaded_df = pd.read_csv(salary_file)
+        uploaded_df.columns = [str(c).strip() for c in uploaded_df.columns]
+
+        def find_column(frame, choices):
+            lookup = {str(c).strip().lower(): c for c in frame.columns}
+            for choice in choices:
+                if choice.lower() in lookup:
+                    return lookup[choice.lower()]
+            return None
+
+        name_col = find_column(uploaded_df, ["Name", "Name + ID", "Player", "Player Name"])
+        salary_col = find_column(uploaded_df, ["Salary"])
+        team_col = find_column(uploaded_df, ["TeamAbbrev", "Team", "Team Abbrev", "Team Abbreviation"])
+        position_col = find_column(uploaded_df, ["Roster Position", "Position", "RosterPosition"])
+        projection_col = find_column(uploaded_df, ["Projection", "Projected Points", "Fpts", "FPPG", "AvgPointsPerGame", "Avg Points Per Game"])
+
+        missing = []
+        if name_col is None:
+            missing.append("player name (Name or Name + ID)")
+        if salary_col is None:
+            missing.append("Salary")
+        if team_col is None:
+            missing.append("team (TeamAbbrev or Team)")
+
+        if missing:
+            st.error("Could not load the salary file. Missing columns: " + ", ".join(missing) + ". The sample player pool is still being used.")
+        else:
+            loaded_players = pd.DataFrame()
+            loaded_players["Name"] = uploaded_df[name_col].astype(str).str.strip()
+            loaded_players["Name"] = loaded_players["Name"].str.replace(r"\\s*\\(\\d+\\)\\s*$", "", regex=True)
+            loaded_players["Salary"] = pd.to_numeric(
+                uploaded_df[salary_col].astype(str).str.replace(r"[$,]", "", regex=True),
+                errors="coerce"
+            )
+            loaded_players["Team"] = uploaded_df[team_col].astype(str).str.strip().str.upper()
+            loaded_players["Position"] = (
+                uploaded_df[position_col].astype(str).str.split("/").str[0].str.strip()
+                if position_col is not None else "FLEX"
+            )
+            loaded_players["Projection"] = (
+                pd.to_numeric(uploaded_df[projection_col], errors="coerce").fillna(0.01)
+                if projection_col is not None else 0.01
+            )
+            loaded_players = loaded_players.dropna(subset=["Name", "Salary"])
+            loaded_players = loaded_players[
+                (loaded_players["Name"] != "") &
+                (loaded_players["Name"].str.lower() != "nan") &
+                (loaded_players["Salary"] > 0)
+            ].drop_duplicates(subset=["Name"], keep="first")
+
+            if loaded_players.empty:
+                st.error("No usable players were found in that file. The sample player pool is still being used.")
+            else:
+                players_df = loaded_players.reset_index(drop=True)
+                st.success(f"Loaded {len(players_df)} players from the salary file.")
+                if projection_col is None:
+                    st.warning("No projection column was found. Projections are set to 0.01 until projections are added.")
+                st.caption("Check the player names, teams, salaries, and projections before building lineups.")
+    except Exception as exc:
+        st.error(f"Could not read that CSV: {exc}. The sample player pool is still being used.")
+
 players_df["Opponent"] = players_df["Team"].map({
     "DAL": "TB",
     "TB": "DAL"
