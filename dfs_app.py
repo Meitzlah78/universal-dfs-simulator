@@ -181,12 +181,21 @@ def read_projection_csv(uploaded_file, source_label):
 
 
 @st.cache_data(show_spinner=False, ttl=1800)
-def download_public_projection_table(source_name, platform_name):
+def download_public_projection_table(source_name, platform_name, target_names=None):
     """Download real projections using the same HTML-table/row attributes tested in Colab."""
     import io
     import re
     from html import unescape
     import requests
+
+    target_keys = {
+        normalize_projection_player_name(name)
+        for name in (target_names or [])
+        if normalize_projection_player_name(name)
+    }
+
+    def matches_target(projections):
+        return not target_keys or bool(target_keys.intersection(projections))
 
     platform_key = str(platform_name).casefold()
     is_single_game = "single game" in platform_key or "showdown" in platform_key
@@ -275,7 +284,7 @@ def download_public_projection_table(source_name, platform_name):
                 )
                 if key and pd.notna(value) and np.isfinite(float(value)) and float(value) > 0:
                     dff_result[key] = float(value)
-            if dff_result:
+            if dff_result and matches_target(dff_result):
                 return dff_result
 
     for table in tables:
@@ -302,7 +311,7 @@ def download_public_projection_table(source_name, platform_name):
             )
             if key and pd.notna(value) and np.isfinite(float(value)) and float(value) > 0:
                 result[key] = float(value)
-        if result:
+        if result and matches_target(result):
             return result
 
     # DFF's known-working Colab extraction reads projection values from the
@@ -349,7 +358,7 @@ def download_public_projection_table(source_name, platform_name):
             if key and pd.notna(value) and np.isfinite(float(value)) and float(value) > 0:
                 result[key] = float(value)
 
-        if result:
+        if result and matches_target(result):
             return result
 
         # Current DFF pages may render projections in table cells without the
@@ -400,7 +409,7 @@ def download_public_projection_table(source_name, platform_name):
             if key and projection is not None:
                 result[key] = projection
 
-        if result:
+        if result and matches_target(result):
             return result
 
         # Some DFF pages put the same attributes on elements outside table rows.
@@ -485,7 +494,7 @@ def download_public_projection_table(source_name, platform_name):
                         value = pd.to_numeric(proj, errors="coerce")
                         if key and pd.notna(value) and np.isfinite(float(value)) and float(value) > 0:
                             dated_result[key] = float(value)
-                    if dated_result:
+                    if dated_result and matches_target(dated_result):
                         return dated_result
             except Exception:
                 pass
@@ -526,18 +535,19 @@ def automatic_projection_refresh():
 automatic_projection_refresh()
 
 
-def get_projection_source_data(uploaded_file, source_name, platform_name):
+def get_projection_source_data(uploaded_file, source_name, platform_name, target_names=None):
     uploaded = read_projection_csv(uploaded_file, source_name)
     if uploaded:
         return uploaded, "uploaded CSV"
-    downloaded = download_public_projection_table(source_name, platform_name)
+    downloaded = download_public_projection_table(source_name, platform_name, target_names=target_names)
     return downloaded, "automatic download" if downloaded else "unavailable"
 
 def apply_external_projection_sources(players_frame, dff_file, draftedge_file, platform_name='DraftKings'):
     """Use external-site projections only for players those sites actually list."""
     result = players_frame.copy()
-    dff, dff_status = get_projection_source_data(dff_file, "DFF", platform_name)
-    draftedge, draftedge_status = get_projection_source_data(draftedge_file, "DraftEdge", platform_name)
+    target_names = result["Name"].astype(str).tolist() if "Name" in result.columns else []
+    dff, dff_status = get_projection_source_data(dff_file, "DFF", platform_name, target_names)
+    draftedge, draftedge_status = get_projection_source_data(draftedge_file, "DraftEdge", platform_name, target_names)
     external_available = bool(dff or draftedge)
     projections, sources = [], []
     dff_matches = draftedge_matches = averages = 0
