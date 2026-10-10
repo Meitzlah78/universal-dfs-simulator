@@ -320,7 +320,7 @@ def download_public_projection_table(source_name, platform_name):
                         projection = float(parsed)
 
             name_match = re.search(
-                r'<div\\b[^>]*class=["\'][^"\']*\\bbold\\b[^"\']*["\'][^>]*>\\s*([^<]+)',
+                r"<div\b[^>]*class=[^>]*\bbold\b[^>]*>\s*([^<]+)",
                 row,
                 flags=re.IGNORECASE | re.DOTALL
             )
