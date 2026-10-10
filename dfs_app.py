@@ -240,6 +240,18 @@ if platform == "FanDuel":
         st.stop()
 
     fd_players = apply_injury_statuses(fd_players, "injury_status_fd_" + lineup_mode.replace(" ", "_").lower())
+
+    st.write("### Build Salary Range")
+    fd_salary_range = st.slider(
+        "Allowed lineup salary range",
+        min_value=0,
+        max_value=60000,
+        value=(54000, 60000),
+        step=100,
+        format="$%d",
+        key="fd_build_salary_range_" + lineup_mode.replace(" ", "_").lower(),
+        help="Only build lineups whose total salary falls inside this range."
+    )
     st.success(f"Loaded {len(fd_players)} FanDuel players after injury-status filtering.")
     if fd_proj_col is None:
         st.warning("No projection column found. All players currently have a placeholder projection of 0.01.")
@@ -301,7 +313,7 @@ if platform == "FanDuel":
             total_points = 0.0
 
             if lineup_mode == "Single Game":
-                mvp_candidates = pool[pool["Salary"] * 1.5 <= 60000]
+                mvp_candidates = pool[(pool["Salary"] * 1.5 <= fd_salary_range[1]) & (pool["Salary"] * 1.5 <= 60000)]
                 if mvp_candidates.empty:
                     continue
                 mvp_weights = np.maximum(mvp_candidates["Projection"].to_numpy(float), 0.01)
@@ -317,7 +329,7 @@ if platform == "FanDuel":
                 for slot in ["FLEX1", "FLEX2", "FLEX3", "FLEX4"]:
                     choices = flex_pool[
                         (~flex_pool["Name"].isin(used)) &
-                        ((salary + flex_pool["Salary"]) <= 60000)
+                        ((salary + flex_pool["Salary"]) <= fd_salary_range[1]) & ((salary + flex_pool["Salary"]) <= 60000)
                     ]
                     if choices.empty:
                         break
@@ -339,7 +351,7 @@ if platform == "FanDuel":
                     choices = pool[
                         (~pool["Name"].isin(used)) &
                         pool["Eligible"].apply(lambda positions: bool(positions & eligible)) &
-                        ((pool["Salary"] + salary) <= 60000)
+                        ((pool["Salary"] + salary) <= fd_salary_range[1]) & ((pool["Salary"] + salary) <= 60000)
                     ]
                     if choices.empty:
                         break
@@ -351,7 +363,7 @@ if platform == "FanDuel":
                     salary += int(picked["Salary"])
                     total_points += float(picked["Projection"])
 
-            if len(chosen) != len(fd_slots) or salary > 60000:
+            if len(chosen) != len(fd_slots) or salary < fd_salary_range[0] or salary > fd_salary_range[1] or salary > 60000:
                 continue
             lineup_key = tuple(chosen[slot] for slot in fd_slots)
             if lineup_key in seen:
@@ -676,6 +688,19 @@ def build_internal_projection_means(players_df):
 
 players_df = apply_injury_statuses(players_df, "injury_status_dk_" + lineup_mode.replace(" ", "_").lower())
 
+st.write("### Build Salary Range")
+dk_salary_range = st.slider(
+    "Allowed lineup salary range",
+    min_value=0,
+    max_value=50000,
+    value=(45000, 50000),
+    step=100,
+    format="$%d",
+    key="dk_build_salary_range_" + lineup_mode.replace(" ", "_").lower(),
+    help="Only build lineups whose total salary falls inside this range."
+)
+MIN_LINEUP_SALARY, MAX_LINEUP_SALARY = dk_salary_range
+
 # The simulator now creates its own projections from salary and position.
 # Any DFF, DraftEdge, or salary-file projections are ignored by the simulation model.
 if "ProjectionSource" not in players_df.columns:
@@ -987,7 +1012,7 @@ if platform == "DraftKings" and lineup_mode == "Classic":
                     if name in player_rows
                     and name not in used
                     and player_rows[name]["Eligible"] & eligible
-                    and salary + float(player_rows[name]["Salary"]) <= 50000
+                    and MIN_LINEUP_SALARY <= salary + float(player_rows[name]["Salary"]) <= MAX_LINEUP_SALARY
                 ]
                 if not choices:
                     break
@@ -1004,7 +1029,7 @@ if platform == "DraftKings" and lineup_mode == "Classic":
                 used.add(picked)
                 salary += int(player_rows[picked]["Salary"])
 
-            if len(chosen) != len(roster_slots) or salary > 50000:
+            if len(chosen) != len(roster_slots) or salary < MIN_LINEUP_SALARY or salary > MAX_LINEUP_SALARY or salary > 50000:
                 continue
             if not all(name in chosen.values() for name in classic_locked_players):
                 continue
@@ -1163,7 +1188,7 @@ if contest_sim_clicked:
                 + sum(salary_map[p] for p in flex)
             )
 
-            if total_salary > SALARY_CAP:
+            if total_salary < MIN_LINEUP_SALARY or total_salary > min(SALARY_CAP, MAX_LINEUP_SALARY):
                 continue
 
             lineup_teams = set(
@@ -1262,7 +1287,7 @@ if build_clicked:
                     captain_salary_map[captain]
                     + sum(salary_map[p] for p in flex)
                 )
-                if total_salary > SALARY_CAP:
+                if total_salary < MIN_LINEUP_SALARY or total_salary > min(SALARY_CAP, MAX_LINEUP_SALARY):
                     continue
                 lineup_teams = set(
                     players_df.loc[players_df["Name"].isin(selected), "Team"]
@@ -1371,7 +1396,7 @@ for captain in search_pool:
             )
         )
 
-        if total_salary > SALARY_CAP:
+        if total_salary < MIN_LINEUP_SALARY or total_salary > min(SALARY_CAP, MAX_LINEUP_SALARY):
             continue
 
         # DraftKings Showdown requires players
