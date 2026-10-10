@@ -1157,8 +1157,10 @@ def internal_slate_key(frame):
 internal_key = internal_slate_key(players_df)
 saved_internal_projections = st.session_state.get("internal_projections_by_slate", {}).get(internal_key)
 if saved_internal_projections:
-    players_df["Projection"] = players_df["Name"].map(saved_internal_projections).fillna(
-        pd.Series(build_internal_projection_means(players_df, platform=platform), index=players_df.index)
+    saved_values = players_df["Name"].map(saved_internal_projections)
+    internal_mask = players_df["ProjectionSource"].eq("Internal Simulation")
+    players_df.loc[internal_mask, "Projection"] = saved_values.loc[internal_mask].fillna(
+        players_df.loc[internal_mask, "Projection"]
     )
 st.caption("Projection values use the DFF/DraftEdge average when both are available, otherwise the single available source. Unmatched players use internal estimates.")
 if st.session_state.get("nfl_historical_stats_status"):
