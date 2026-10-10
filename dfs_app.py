@@ -177,74 +177,134 @@ def read_projection_csv(uploaded_file, source_label):
 
 @st.cache_data(show_spinner=False, ttl=1800)
 def download_public_projection_table(source_name, platform_name):
-    """Try to download public projections; cache successful or empty results for 30 minutes."""
+    """Download real projections using the same HTML-table/row attributes tested in Colab."""
     import io
+    import re
+    from html import unescape
     import requests
+
     platform_key = str(platform_name).casefold()
+    is_single_game = "single game" in platform_key or "showdown" in platform_key
+    site = "fanduel" if "fanduel" in platform_key else "draftkings"
+
     if source_name == "DFF":
-        if "single game" in platform_key or "showdown" in platform_key:
-            site = "fanduel" if "fanduel" in platform_key else "draftkings"
+        if is_single_game:
             url = f"https://www.dailyfantasyfuel.com/nfl/showdown-single-game-projections/{site}/"
         else:
-            url = "https://www.dailyfantasyfuel.com/nfl/projections/fanduel/" if "fanduel" in platform_key else "https://www.dailyfantasyfuel.com/nfl/projections/draftkings/"
+            url = "https://www.dailyfantasyfuel.com/nfl/projections/fanduel/" if site == "fanduel" else "https://www.dailyfantasyfuel.com/nfl/projections/"
     elif source_name == "DraftEdge":
         url = "https://draftedge.com/nfl/"
     else:
         return {}
+
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/154.0 Safari/537.36"
+        )
+    }
     try:
-        response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=(5, 12))
+        response = requests.get(url, headers=headers, timeout=30)
         response.raise_for_status()
     except Exception:
         return {}
 
-    # First try ordinary HTML tables, which work for sources that publish
-    # their projections as real tables.
+    # DraftEdge's working Colab method: inspect every HTML table and select
+    # whichever table has a player column and a projection column.
     try:
         tables = pd.read_html(io.StringIO(response.text))
     except Exception:
         tables = []
+
     for table in tables:
         table.columns = [str(c).strip() for c in table.columns]
-        lookup = {str(c).strip().casefold(): c for c in table.columns}
-        name_col = next((lookup[k] for k in ("player", "name", "player name", "nickname") if k in lookup), None)
-        proj_col = next((lookup[k] for k in ("proj pts", "proj", "projection", "projected points", "my proj", "fpts", "projected fantasy points", "fpts proj") if k in lookup), None)
+        lookup = {str(col).strip().casefold(): col for col in table.columns}
+        name_col = next(
+            (col for key, col in lookup.items() if "player" in key or key in ("name", "nickname")),
+            None
+        )
+        proj_col = next(
+            (col for key, col in lookup.items()
+             if "proj" in key or "projection" in key or key in ("fpts", "fppg")),
+            None
+        )
         if name_col is None or proj_col is None:
             continue
+
         result = {}
         for _, row in table.iterrows():
             key = normalize_projection_player_name(row.get(name_col, ""))
-            value = pd.to_numeric(str(row.get(proj_col, "")).replace(",", "").replace("$", ""), errors="coerce")
+            value = pd.to_numeric(
+                str(row.get(proj_col, "")).replace(",", "").replace("$", ""),
+                errors="coerce"
+            )
             if key and pd.notna(value) and np.isfinite(float(value)) and float(value) > 0:
                 result[key] = float(value)
         if result:
             return result
 
-    # DFF player rows are rendered as text elements, not standard HTML tables.
-    # Use only the standard library so the app does not need BeautifulSoup installed.
+    # DFF's known-working Colab extraction reads projection values from the
+    # HTML attributes on each tr.projections-listing row, not visual page text.
     if source_name == "DFF":
-        import re
-        from html import unescape
-        page_text = unescape(re.sub(r"<[^>]*>", " ", response.text))
-        page_text = re.sub(r"\s+", " ", page_text)
-        if "Sort" in page_text:
-            page_text = page_text.split("Sort", 1)[1]
-        # HTML responses may omit the visual pipe separators shown by browsers.
-        row_pattern = re.compile(
-            r"\b(?:QB|WR|RB|TE|FLX|DST|K)\s*\|?\s*(?:Image\s+)?(.+?)\s*\|?\s*"
-            r"\$[\d,.]+k\s*\|?\s*[A-Z]{2,3}\s*\|?\s*[A-Z]{2,3}\s*\|?\s*"
-            r"\d+\s*\|?\s*(\d+(?:\.\d+)?)",
-            re.IGNORECASE
+        html = response.text
+        row_html = re.findall(
+            r'<tr\b[^>]*class=["\'][^"\']*projections-listing[^"\']*["\'][^>]*>.*?</tr>',
+            html,
+            flags=re.IGNORECASE | re.DOTALL
         )
         result = {}
-        for match in row_pattern.finditer(page_text):
-            player_name = re.sub(r"\s+", " ", match.group(1)).strip()
-            player_name = re.sub(r"\s+Q$", "", player_name, flags=re.IGNORECASE)
-            key = normalize_projection_player_name(player_name)
-            value = pd.to_numeric(match.group(2), errors="coerce")
+        for row in row_html:
+            opening = re.search(r'<tr\b[^>]*>', row, flags=re.IGNORECASE | re.DOTALL)
+            opening_tag = opening.group(0) if opening else row
+
+            def attr_value(attr_names, source):
+                for attr in attr_names:
+                    match = re.search(
+                        r'\b' + re.escape(attr) + r'\s*=\s*["\']([^"\']*)["\']',
+                        source,
+                        flags=re.IGNORECASE
+                    )
+                    if match:
+                        return unescape(match.group(1)).strip()
+                return ""
+
+            name = attr_value(("data-player", "data-name"), opening_tag)
+            if not name:
+                name_match = re.search(
+                    r'<div\b[^>]*class=["\'][^"\']*\bbold\b[^"\']*["\'][^>]*>\s*([^<]+)',
+                    row,
+                    flags=re.IGNORECASE | re.DOTALL
+                )
+                if name_match:
+                    name = unescape(name_match.group(1)).strip()
+
+            projection = attr_value(
+                ("data-ppg_proj", "data-ppg-proj", "data-value_proj", "data-projection"),
+                row
+            )
+            key = normalize_projection_player_name(name)
+            value = pd.to_numeric(projection, errors="coerce")
+            if key and pd.notna(value) and np.isfinite(float(value)) and float(value) > 0:
+                result[key] = float(value)
+
+        if result:
+            return result
+
+        # Some DFF pages put the same attributes on elements outside table rows.
+        for match in re.finditer(
+            r'data-ppg_proj=["\']([^"\']+)["\'].*?data-player_id=["\'][^"\']+["\'].*?<div class=["\']bold["\']>\s*([^<]+)',
+            html,
+            flags=re.IGNORECASE | re.DOTALL
+        ):
+            projection, name = match.groups()
+            key = normalize_projection_player_name(unescape(name).strip())
+            value = pd.to_numeric(projection, errors="coerce")
             if key and pd.notna(value) and np.isfinite(float(value)) and float(value) > 0:
                 result[key] = float(value)
         if result:
             return result
+
     return {}
 
 def refresh_public_projection_sources():
