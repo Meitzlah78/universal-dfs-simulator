@@ -665,6 +665,23 @@ def build_opponent_map(source_df, team_values):
     return opponents
 
 
+def get_contest_opponent_target(platform_key, default=20000):
+    """Return simulated opponent count, excluding the user's own entries."""
+    contest = st.session_state.get(f"selected_{platform_key}_contest") or {}
+    try:
+        own_entries = max(0, int(contest.get("your_entries", 0) or 0))
+    except (TypeError, ValueError):
+        own_entries = 0
+    total_entries = st.session_state.get(f"{platform_key}_total_contest_entries")
+    if total_entries is None:
+        return default
+    try:
+        total_entries = max(1, int(total_entries))
+    except (TypeError, ValueError):
+        total_entries = default + own_entries
+    return max(0, total_entries - own_entries)
+
+
 platform = st.selectbox(
     "DFS Site",
     ["DraftKings", "FanDuel"],
