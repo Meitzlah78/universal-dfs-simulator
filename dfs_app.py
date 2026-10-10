@@ -3184,12 +3184,25 @@ for captain in search_pool:
         p for p in search_pool
         if p != captain
     ]
-    rng.shuffle(flex_pool)
 
-    for flex_players in itertools.combinations(
-        flex_pool,
-        5
+    # Sample flex groups randomly instead of taking the first combinations.
+    # itertools.combinations() favors players near the start of the pool,
+    # which was causing players like Allen and Stafford to appear everywhere.
+    seen_flex_groups = set()
+    captain_attempts = 0
+    max_captain_attempts = max(1000, per_captain_candidate_limit * 40)
+    while (
+        len(captain_candidates) < per_captain_candidate_limit
+        and captain_attempts < max_captain_attempts
+        and len(flex_pool) >= 5
     ):
+        captain_attempts += 1
+        sampled = rng.choice(np.asarray(flex_pool, dtype=object), size=5, replace=False)
+        flex_players = tuple(str(p) for p in sampled)
+        flex_key = tuple(sorted(flex_players))
+        if flex_key in seen_flex_groups:
+            continue
+        seen_flex_groups.add(flex_key)
 
         lineup_players = [
             captain
@@ -3281,9 +3294,6 @@ for captain in search_pool:
             "SimP99": total_p99,
             "Score": score
         })
-
-        if len(captain_candidates) >= per_captain_candidate_limit:
-            break
 
     candidates.extend(captain_candidates)
     if len(candidates) >= CANDIDATE_COUNT:
