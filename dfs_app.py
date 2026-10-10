@@ -1676,7 +1676,12 @@ MIN_LINEUP_SALARY, MAX_LINEUP_SALARY = dk_salary_range
 
 # Internal estimates fill gaps; uploaded DFF/DraftEdge projections take priority.
 players_df["Projection"] = build_internal_projection_means(players_df, platform=platform)
-players_df = apply_external_projection_sources(players_df, dff_projection_file, draftedge_projection_file, platform_name="DraftKings")
+players_df = apply_external_projection_sources(
+    players_df,
+    dff_projection_file,
+    draftedge_projection_file,
+    platform_name=("DraftKings Showdown" if lineup_mode == "Showdown" else "DraftKings Classic"),
+)
 
 def internal_slate_key(frame):
     """Stable identity for an uploaded slate, independent of external projections."""
