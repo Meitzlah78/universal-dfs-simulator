@@ -1035,7 +1035,7 @@ MIN_LINEUP_SALARY, MAX_LINEUP_SALARY = dk_salary_range
 # Any DFF, DraftEdge, or salary-file projections are ignored by the simulation model.
 if "ProjectionSource" not in players_df.columns:
     players_df["ProjectionSource"] = "Internal Simulation"
-players_df["Projection"] = build_internal_projection_means(players_df)
+players_df["Projection"] = build_internal_projection_means(players_df, platform=platform)
 
 def internal_slate_key(frame):
     """Stable identity for an uploaded slate, independent of external projections."""
@@ -1053,7 +1053,11 @@ if saved_internal_projections:
     )
 players_df["ProjectionSource"] = "Internal Simulation"
 
-st.caption("Projection source: Internal Simulation (salary and position model; external projections are not used).")
+st.caption("Projection source: Internal Simulation blended with recent historical NFL game results when player history is available; salary and position estimates are used when history is missing.")
+if st.session_state.get("nfl_historical_stats_status"):
+    st.caption(st.session_state["nfl_historical_stats_status"])
+    if st.session_state.get("nfl_historical_players_matched") is not None:
+        st.caption("Historical player matches in current pool: " + str(st.session_state["nfl_historical_players_matched"]))
 
 opponent_source = uploaded_df if "uploaded_df" in locals() else None
 opponent_map = build_opponent_map(opponent_source, players_df["Team"])
