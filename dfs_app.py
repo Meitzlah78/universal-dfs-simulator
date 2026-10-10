@@ -28,11 +28,10 @@ lineup_mode = st.selectbox(
 )
 st.subheader(platform + " " + lineup_mode)
 
-if platform != "DraftKings" or lineup_mode != "Showdown":
+if platform == "FanDuel":
     st.warning(
-        "This format is selected, but its lineup rules and export are not "
-        "implemented yet. The current builder is DraftKings Showdown only, "
-        "so it is paused to prevent invalid lineups."
+        "FanDuel lineup rules and export are not implemented yet. "
+        "Choose DraftKings Showdown or DraftKings Classic for the available builders."
     )
     st.stop()
 
