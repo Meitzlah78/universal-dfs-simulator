@@ -93,7 +93,7 @@ if platform == "FanDuel":
         fd_players = pd.DataFrame()
         fd_players["Name"] = fd_raw[fd_name_col].astype(str).str.strip()
         fd_players["Name"] = fd_players["Name"].str.replace(
-            r"\s*\(\d+\)\s*$, "", regex=True
+            r"\s*\(\d+\)\s*$", "", regex=True
         )
         fd_players["Salary"] = pd.to_numeric(
             fd_raw[fd_salary_col].astype(str).str.replace(r"[$,]", "", regex=True),
