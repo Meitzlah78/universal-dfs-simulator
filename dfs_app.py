@@ -4091,6 +4091,19 @@ if "contest_results_df" in st.session_state:
     portfolio_export_df = portfolio_df[
         [col for col in export_columns if col in portfolio_df.columns]
     ].copy()
+
+    # Include the selected contest number/name in analysis exports too.
+    # Keep these metadata columns out of DraftKings roster-upload templates.
+    selected_dk_contest = st.session_state.get("selected_dk_contest", {})
+    if isinstance(selected_dk_contest, dict):
+        contest_id = selected_dk_contest.get("id")
+        contest_name = selected_dk_contest.get("name")
+        if contest_id not in (None, ""):
+            portfolio_export_df.insert(0, "Contest ID", str(contest_id))
+        if contest_name not in (None, ""):
+            insert_at = 1 if "Contest ID" in portfolio_export_df.columns else 0
+            portfolio_export_df.insert(insert_at, "Contest Name", str(contest_name))
+
     for col in ["WinRate", "Top1", "Top5", "Top10", "CashRate"]:
         if col in portfolio_export_df.columns:
             portfolio_export_df[col] = portfolio_export_df[col] * 100
