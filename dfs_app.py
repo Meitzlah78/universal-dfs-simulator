@@ -933,7 +933,7 @@ if platform == "FanDuel":
     st.dataframe(fd_player_display, use_container_width=True, hide_index=True)
     with st.expander("Copy Player Info to ChatGPT"):
         st.caption("Copy all player columns shown in this FanDuel player table and paste them into ChatGPT.")
-        st.code(fd_player_display.to_csv(index=False, sep="\\t", na_rep=""), language=None)
+        st.code(fd_player_display.to_csv(index=False, sep="\t", na_rep=""), language=None)
 
     fd_signature = (
         "FanDuel",
@@ -2121,7 +2121,7 @@ with st.expander("Copy Player Info to ChatGPT"):
     # Export every column currently shown in the Player Pool, including any
     # additional projection/simulation/exposure fields added later.
     copy_df = player_display.copy()
-    copy_text = copy_df.to_csv(index=False, sep="\\t", na_rep="")
+    copy_text = copy_df.to_csv(index=False, sep="\t", na_rep="")
     st.code(copy_text, language=None)
 
 # Keep the Lock/Fade selections from the Player Pool editor and preserve
