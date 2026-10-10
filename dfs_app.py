@@ -13,6 +13,56 @@ st.set_page_config(
 st.title("Universal DFS Simulator")
 
 
+def ownership_adjusted_player_scores(pool, names, base_scores, player_sim, projection_fallback=None):
+    """Subtract an ownership tax, while allowing strong simulated upside to offset it."""
+    names = list(names)
+    base_scores = np.asarray(base_scores, dtype=float)
+    lookup = {str(c).strip().lower(): c for c in pool.columns}
+    ownership_col = next(
+        (lookup[k] for k in ("projected ownership", "ownership", "own%", "ownership %", "projected own", "own")
+         if k in lookup),
+        None
+    )
+    name_col = lookup.get("name")
+    actual_ownership = {}
+    if ownership_col is not None and name_col is not None:
+        for _, row in pool[[name_col, ownership_col]].dropna(subset=[name_col]).iterrows():
+            try:
+                value = float(str(row[ownership_col]).replace("%", "").strip())
+                if value > 0:
+                    actual_ownership[str(row[name_col])] = value
+            except (TypeError, ValueError):
+                pass
+
+    # If the uploaded data has no ownership, use a clearly labeled internal proxy:
+    # players with stronger baseline scores are treated as more likely to be popular.
+    if actual_ownership:
+        ownership = np.asarray([actual_ownership.get(str(n), np.nan) for n in names], dtype=float)
+        missing = ~np.isfinite(ownership)
+        if missing.any():
+            ranks = pd.Series(base_scores).rank(pct=True).to_numpy()
+            ownership[missing] = 5.0 + 30.0 * ranks[missing]
+    else:
+        ranks = pd.Series(base_scores).rank(pct=True).to_numpy()
+        ownership = 5.0 + 30.0 * ranks
+
+    ownership = np.clip(ownership, 0.0, 100.0)
+    upside = np.asarray([
+        max(
+            0.0,
+            float(player_sim.get(str(name), {}).get("P99", base_scores[i]))
+            - float(player_sim.get(str(name), {}).get("P95", base_scores[i]))
+        )
+        for i, name in enumerate(names)
+    ], dtype=float)
+
+    # Only tax ownership above 15%. Big P99-vs-P95 upside reduces the tax.
+    raw_tax = np.maximum(ownership - 15.0, 0.0) * 0.06
+    upside_credit = np.minimum(raw_tax, upside * 0.08)
+    adjusted = np.maximum(0.01, base_scores - raw_tax + upside_credit)
+    return adjusted, ownership
+
+
 def calculate_field_ownership(field_df, slots, captain_slot=None):
     """Calculate player ownership percentages from simulated opponent lineups."""
     if field_df is None or field_df.empty:
@@ -1151,7 +1201,9 @@ if platform == "FanDuel":
             + sim_means[i] * 0.25
             for i, name in enumerate(names)
         ], dtype=float)
-        lineup_scores = np.clip(lineup_scores, 0.01, None)
+        lineup_scores, fd_ownership_proxy = ownership_adjusted_player_scores(
+            pool, names, np.clip(lineup_scores, 0.01, None), player_sim
+        )
         eligible_sets = pool["Eligible"].tolist()
         results = []
         seen = set()
@@ -2653,6 +2705,14 @@ if platform == "DraftKings" and lineup_mode == "Classic":
                 + player_sim.get(player, {}).get("P99", row["Projection"] * 2.3) * 0.25
                 + player_sim.get(player, {}).get("Mean", row["Projection"]) * 0.25
             )
+        classic_base_scores = np.asarray([rankings.get(str(name), 0.01) for name in classic_pool["Name"]], dtype=float)
+        classic_adjusted_scores, classic_ownership_proxy = ownership_adjusted_player_scores(
+            classic_pool, classic_pool["Name"].astype(str).tolist(), classic_base_scores, player_sim
+        )
+        rankings = {
+            str(name): float(classic_adjusted_scores[i])
+            for i, name in enumerate(classic_pool["Name"].astype(str).tolist())
+        }
         classic_locked_players = [
             name for name in available_players
             if control_map.get(name, {}).get("Lock", False)
@@ -3000,15 +3060,20 @@ locked_players = [
 # RANK PLAYERS
 # ============================================
 
-player_rank = sorted(
-    available_players,
-    key=lambda p: (
-        player_sim[p]["P95"] * 0.50
-        + player_sim[p]["P99"] * 0.25
-        + player_sim[p]["Mean"] * 0.25
-    ),
-    reverse=True
+showdown_base_scores = np.asarray([
+    player_sim[p]["P95"] * 0.50
+    + player_sim[p]["P99"] * 0.25
+    + player_sim[p]["Mean"] * 0.25
+    for p in available_players
+], dtype=float)
+showdown_adjusted_scores, showdown_ownership_proxy = ownership_adjusted_player_scores(
+    players_df[players_df["Name"].isin(available_players)].drop_duplicates("Name"),
+    available_players, showdown_base_scores, player_sim
 )
+showdown_rankings = {
+    p: float(showdown_adjusted_scores[i]) for i, p in enumerate(available_players)
+}
+player_rank = sorted(available_players, key=lambda p: showdown_rankings[p], reverse=True)
 
 # Use top players plus all locked players.
 search_pool = list(dict.fromkeys(
@@ -3114,11 +3179,19 @@ for captain in search_pool:
             )
         )
 
-        score = (
+        raw_score = (
             total_p95 * 0.50
             + total_p99 * 0.25
             + total_mean * 0.25
         )
+        lineup_ownership = (
+            showdown_ownership_proxy[list(available_players).index(captain)] * 1.5
+            + sum(showdown_ownership_proxy[list(available_players).index(p)] for p in flex_players)
+        )
+        lineup_upside = max(0.0, total_p99 - total_p95)
+        ownership_tax = max(0.0, lineup_ownership - 15.0 * 6.5) * 0.06
+        upside_credit = min(ownership_tax, lineup_upside * 0.08)
+        score = raw_score - ownership_tax + upside_credit
 
         captain_candidates.append({
             "Captain": captain,
