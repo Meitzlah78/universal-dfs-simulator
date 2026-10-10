@@ -932,8 +932,15 @@ if platform == "FanDuel":
 
     st.dataframe(fd_player_display, use_container_width=True, hide_index=True)
     with st.expander("Copy Player Info to ChatGPT"):
-        st.caption("Copy all player columns shown in this FanDuel player table and paste them into ChatGPT.")
-        st.code(fd_player_display.to_csv(index=False, sep="\t", na_rep=""), language=None)
+        st.caption("Click inside the text box, press Ctrl+A, then Ctrl+C. Paste the copied text into ChatGPT.")
+        fd_copy_text = fd_player_display.to_csv(index=False, sep="\t", na_rep="")
+        st.text_area(
+            "Player data (copy this text)",
+            value=fd_copy_text,
+            height=300,
+            key="fd_chatgpt_player_export",
+            label_visibility="collapsed"
+        )
 
     fd_signature = (
         "FanDuel",
@@ -2122,7 +2129,13 @@ with st.expander("Copy Player Info to ChatGPT"):
     # additional projection/simulation/exposure fields added later.
     copy_df = player_display.copy()
     copy_text = copy_df.to_csv(index=False, sep="\t", na_rep="")
-    st.code(copy_text, language=None)
+    st.text_area(
+        "Player data (copy this text)",
+        value=copy_text,
+        height=350,
+        key="dk_chatgpt_player_export_" + platform + "_" + lineup_mode,
+        label_visibility="collapsed"
+    )
 
 # Keep the Lock/Fade selections from the Player Pool editor and preserve
 # the existing exposure controls internally at their saved/default values.
@@ -3282,6 +3295,15 @@ if "contest_results_df" in st.session_state:
             ascending=[False, False, True]
         )
         st.dataframe(exposure_df, use_container_width=True, hide_index=True)
+        with st.expander("Copy Final Exposure to ChatGPT"):
+            st.caption("Click inside the text box, press Ctrl+A, then Ctrl+C. Paste the copied text into ChatGPT.")
+            st.text_area(
+                "Final exposure data (copy this text)",
+                value=exposure_df.to_csv(index=False, sep="\t", na_rep=""),
+                height=300,
+                key="chatgpt_final_exposure_export",
+                label_visibility="collapsed"
+            )
     else:
         st.info("Build a portfolio to see player exposure.")
 
