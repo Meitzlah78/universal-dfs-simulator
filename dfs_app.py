@@ -2231,7 +2231,7 @@ try:
                 )
                 # If a contest-entry CSV was uploaded, default to the game named in that file.
                 def dk_matchup_from_text(value):
-                    match = re.search(r"\\b([A-Z]{2,3})\\s*[@vV]s?\\.?\\s*([A-Z]{2,3})\\b", str(value).upper())
+                    match = re.search(r"\b([A-Z]{2,3})\s*[@vV]s?\.?\s*([A-Z]{2,3})\b", str(value).upper())
                     return tuple(sorted(match.groups())) if match else None
 
                 entry_matchup = dk_matchup_from_text(selected_contest_name) if selected_contest_name else None
@@ -2419,9 +2419,9 @@ try:
                     matchup_matches = entry_matchup is not None and lobby_matchup == entry_matchup
                     # Contest names can differ slightly between the entry CSV and lobby.
                     # If the game matches and the core contest name overlaps, prefer it.
-                    core_entry = re.sub(r"\\([^)]*\\)", "", str(selected_contest_name)).lower()
+                    core_entry = re.sub(r"\([^)]*\)", "", str(selected_contest_name)).lower()
                     core_entry = re.sub(r"[^a-z0-9]+", "", core_entry)
-                    core_lobby = re.sub(r"\\([^)]*\\)", "", lobby_name).lower()
+                    core_lobby = re.sub(r"\([^)]*\)", "", lobby_name).lower()
                     core_lobby = re.sub(r"[^a-z0-9]+", "", core_lobby)
                     core_matches = (
                         core_entry in core_lobby
@@ -2432,6 +2432,22 @@ try:
                     if name_matches or (matchup_matches and core_matches):
                         default_index = i
                         break
+
+            # Streamlit preserves a selectbox's prior session value even when its index
+            # changes. Explicitly sync it to the uploaded-entry contest match.
+            contest_select_key = f"dk_lobby_contest_dropdown_{dk_slate_key}"
+            if selected_contest_name and 0 <= default_index < len(lobby_matches):
+                matched_name = str(lobby_matches.iloc[default_index]["n"])
+                matched_matchup = dk_matchup_from_text(matched_name)
+                entry_matchup = dk_matchup_from_text(selected_contest_name)
+                entry_norm = re.sub(r"[^a-z0-9]+", "", str(selected_contest_name).lower())
+                matched_norm = re.sub(r"[^a-z0-9]+", "", matched_name.lower())
+                if entry_norm in matched_norm or matched_norm in entry_norm or (
+                    entry_matchup is not None and matched_matchup == entry_matchup
+                    and re.sub(r"[^a-z0-9]+", "", re.sub(r"\([^)]*\)", "", str(selected_contest_name)).lower())[:8]
+                    in re.sub(r"[^a-z0-9]+", "", re.sub(r"\([^)]*\)", "", matched_name).lower())
+                ):
+                    st.session_state[contest_select_key] = lobby_matches.iloc[default_index]["Contest Label"]
 
             chosen_lobby_label = st.selectbox(
                 f"Select a DraftKings {lineup_mode} contest",
