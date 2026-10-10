@@ -3172,10 +3172,21 @@ if "contest_results_df" in st.session_state:
         portfolio_metric_label
     ]
 
+    current_control_signature = tuple(
+        sorted(
+            (
+                str(name),
+                float(values.get("Max Exposure %", 100)),
+                float(values.get("Captain Max %", 100))
+            )
+            for name, values in control_map.items()
+        )
+    )
     if (
         "portfolio_df" not in st.session_state
         or st.session_state.get("portfolio_count_used") != portfolio_count
         or st.session_state.get("portfolio_metric_used") != portfolio_metric
+        or st.session_state.get("portfolio_control_signature") != current_control_signature
     ):
 
         old_portfolio = st.session_state.get("portfolio_df")
@@ -3253,6 +3264,7 @@ if "contest_results_df" in st.session_state:
         st.session_state["portfolio_df"] = portfolio_df
         st.session_state["portfolio_count_used"] = portfolio_count
         st.session_state["portfolio_metric_used"] = portfolio_metric
+        st.session_state["portfolio_control_signature"] = current_control_signature
 
     portfolio_df = st.session_state["portfolio_df"].copy()
 
