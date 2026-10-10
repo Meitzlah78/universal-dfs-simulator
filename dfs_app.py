@@ -700,6 +700,7 @@ if salary_file is not None:
                                 dff_df = pd.read_csv(StringIO(dff_csv_response.text))
 
                         if dff_df is None:
+                            # First try real HTML tables in the page.
                             try:
                                 dff_tables = pd.read_html(StringIO(dff_page_response.text))
                             except Exception:
@@ -727,10 +728,62 @@ if salary_file is not None:
                                     break
 
                         if dff_df is None:
+                            # Some versions of DFF render players as table-like rows
+                            # instead of a standard HTML <table>. Read those rows directly.
+                            try:
+                                from bs4 import BeautifulSoup
+                                soup = BeautifulSoup(dff_page_response.text, "html.parser")
+                                row_nodes = soup.select("tr, [role='row']")
+                                parsed_rows = []
+                                for row_node in row_nodes:
+                                    cells = row_node.find_all(["th", "td"], recursive=False)
+                                    if not cells:
+                                        cells = row_node.select("[role='cell'], [role='gridcell'], [role='columnheader']")
+                                    values = [cell.get_text(" ", strip=True) for cell in cells]
+                                    if len(values) < 2:
+                                        continue
+                                    joined = " ".join(values).casefold()
+                                    if "projection" in joined and ("player" in joined or "name" in joined):
+                                        continue
+                                    # DFF's player rows include a position and salary; the
+                                    # fantasy-point projection is the decimal value after matchup data.
+                                    name = next(
+                                        (value for value in values
+                                         if value and not value.startswith("$")
+                                         and not value.casefold() in {
+                                             "qb", "rb", "wr", "te", "dst", "flex", "k", "image"
+                                         }),
+                                        None
+                                    )
+                                    if not name:
+                                        continue
+                                    projection_value = None
+                                    for value in values:
+                                        cleaned = value.replace(",", "").strip()
+                                        try:
+                                            number = float(cleaned)
+                                        except (TypeError, ValueError):
+                                            continue
+                                        # Skip jersey/ID-like small integers and ratios; DFF fantasy
+                                        # projections are normally positive decimal values.
+                                        if "." in cleaned and 0 < number < 100:
+                                            projection_value = number
+                                    if projection_value is not None:
+                                        parsed_rows.append({
+                                            "Name": name,
+                                            "Projection": projection_value
+                                        })
+                                if parsed_rows:
+                                    dff_df = pd.DataFrame(parsed_rows).drop_duplicates(
+                                        subset=["Name"], keep="first"
+                                    )
+                            except Exception:
+                                pass
+
+                        if dff_df is None:
                             raise ValueError(
-                                "DFF's download link was not available in the page HTML, "
-                                "and its projections table could not be read directly. "
-                                "The site may require a browser session or a download endpoint."
+                                "Could not read player projections from DFF's page HTML. "
+                                "The page may be rendering its player rows in browser-only scripts."
                             )
                     except Exception as exc:
                         dff_error = "Automatic DFF download failed: " + str(exc)
