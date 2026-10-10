@@ -13,6 +13,29 @@ st.set_page_config(
 st.title("Universal DFS Simulator")
 
 
+def is_full_game_contest_name(value):
+    """Reject quarter/half/period and live contests across all DFS slate types."""
+    name = str(value or "").strip().lower()
+    partial_patterns = [
+        r"\b(?:1st|2nd|3rd|4th|first|second|third|fourth)\s*(?:quarter|qtr|half)\b",
+        r"\b(?:first half|second half|1st half|2nd half|quarter contest|half contest)\b",
+        r"\b(?:live|in[- ]?game)\b",
+    ]
+    return not any(re.search(pattern, name, flags=re.IGNORECASE) for pattern in partial_patterns)
+
+
+def remove_duplicate_entries(frame, entry_id_col=None):
+    """Count each uploaded contest entry once when an entry identifier is available."""
+    if frame is None or frame.empty:
+        return frame
+    if entry_id_col and entry_id_col in frame.columns:
+        clean = frame.copy()
+        clean[entry_id_col] = clean[entry_id_col].astype(str).str.strip()
+        clean = clean.drop_duplicates(subset=[entry_id_col], keep="first")
+        return clean
+    return frame.drop_duplicates(keep="first")
+
+
 def ownership_adjusted_player_scores(pool, names, base_scores, player_sim, projection_fallback=None):
     """Subtract an ownership tax, while allowing strong simulated upside to offset it."""
     names = list(names)
@@ -820,6 +843,12 @@ if platform == "FanDuel":
                 st.error("This CSV needs Contest Name and Contest ID columns for the contest selector.")
             else:
                 fd_entry_df[fd_id_col] = fd_entry_df[fd_id_col].astype(str).str.replace(r"\.0$", "", regex=True)
+                fd_entry_df = remove_duplicate_entries(fd_entry_df, fd_entries_col)
+                fd_entry_df = fd_entry_df[
+                    fd_entry_df[fd_name_col].apply(is_full_game_contest_name)
+                ].copy()
+                if fd_entry_df.empty:
+                    st.warning("No full-game FanDuel contests were found in this entry file.")
                 fd_group_columns = [fd_id_col, fd_name_col]
                 fd_agg = {
                     "Entries": (fd_entries_col, "count") if fd_entries_col else (fd_id_col, "size"),
@@ -1806,6 +1835,14 @@ if entry_file is not None:
         required_entry_columns = {"Contest Name", "Contest ID"}
         if required_entry_columns.issubset(entry_df.columns):
             entry_df["Contest ID"] = entry_df["Contest ID"].astype(str).str.replace(r"\.0$", "", regex=True)
+            entry_df = remove_duplicate_entries(
+                entry_df, "Entry ID" if "Entry ID" in entry_df.columns else None
+            )
+            entry_df = entry_df[
+                entry_df["Contest Name"].apply(is_full_game_contest_name)
+            ].copy()
+            if entry_df.empty:
+                st.warning("No full-game DraftKings contests were found in this entry file.")
             contest_summary = (
                 entry_df.groupby(["Contest ID", "Contest Name"], dropna=False)
                 .agg(
@@ -1926,6 +1963,8 @@ try:
                 lobby_names.str.contains("showdown", case=False, regex=False)
                 | lobby_df.get("gameType", pd.Series("", index=lobby_df.index)).fillna("").astype(str).str.contains("showdown", case=False, regex=False)
             )
+        # Apply full-game filtering to every DraftKings slate mode, not just Showdown.
+        lobby_mask &= lobby_names.apply(is_full_game_contest_name)
         lobby_matches = lobby_df.loc[lobby_mask].copy()
         if not lobby_matches.empty:
             # Do not use the short "s" field: it is not a reliable contest field-size value
