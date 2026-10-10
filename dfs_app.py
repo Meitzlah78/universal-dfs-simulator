@@ -2230,14 +2230,44 @@ try:
                     slate_options.loc[slate_options["Slate Label"].eq(chosen_slate_label), "dg"].iloc[0]
                 )
                 try:
-                    draftables_response = requests.get(
+                    dk_headers = {
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+                        "Accept": "application/json, text/plain, */*",
+                        "Accept-Language": "en-US,en;q=0.9",
+                        "Referer": "https://www.draftkings.com/",
+                    }
+                    draftables = []
+                    dk_fetch_errors = []
+                    # Try the documented draftables endpoint first, then the alternate
+                    # available-players endpoint. Both are unofficial and may be blocked.
+                    dk_urls = [
                         f"https://api.draftkings.com/draftgroups/v1/draftgroups/{selected_dk_draft_group_id}/draftables?format=json",
-                        headers={"User-Agent": "Mozilla/5.0", "Accept": "application/json"},
-                        timeout=20,
-                    )
-                    draftables_response.raise_for_status()
-                    draftables_json = draftables_response.json()
-                    draftables = draftables_json.get("draftables", draftables_json.get("Draftables", []))
+                        f"https://www.draftkings.com/lineup/getavailableplayers?draftGroupId={selected_dk_draft_group_id}",
+                    ]
+                    for dk_url in dk_urls:
+                        try:
+                            dk_response = requests.get(dk_url, headers=dk_headers, timeout=20)
+                            dk_response.raise_for_status()
+                            dk_json = dk_response.json()
+                            candidates = (
+                                dk_json.get("draftables")
+                                or dk_json.get("Draftables")
+                                or dk_json.get("players")
+                                or dk_json.get("Players")
+                                or dk_json.get("availablePlayers")
+                                or dk_json.get("AvailablePlayers")
+                                or []
+                            )
+                            if isinstance(candidates, dict):
+                                candidates = candidates.get("players", candidates.get("Players", []))
+                            if isinstance(candidates, list) and candidates:
+                                draftables = candidates
+                                break
+                            dk_fetch_errors.append(f"{dk_url}: response had no recognized player list")
+                        except Exception as dk_error:
+                            dk_fetch_errors.append(f"{dk_url}: {dk_error}")
+                    if not draftables:
+                        raise RuntimeError("DraftKings player endpoints failed. " + " | ".join(dk_fetch_errors))
                     draftables_raw = pd.json_normalize(draftables)
                     if not draftables_raw.empty:
                         def dk_col(frame, names):
