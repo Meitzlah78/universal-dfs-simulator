@@ -48,7 +48,37 @@ if platform == "FanDuel":
         st.stop()
 
     try:
-        fd_raw = pd.read_csv(fd_file)
+        # FanDuel exports may include preamble rows or inconsistent rows before
+        # the actual player table. Find the real header row before parsing.
+        import csv
+        import io
+
+        fd_text = fd_file.getvalue().decode("utf-8-sig", errors="replace")
+        fd_lines = fd_text.splitlines()
+        fd_header_line = None
+        for line_index, line in enumerate(fd_lines[:60]):
+            try:
+                cells = next(csv.reader([line]))
+            except Exception:
+                continue
+            normalized = {str(cell).strip().lower() for cell in cells}
+            has_name = bool(normalized & {"nickname", "name", "name + id", "player", "player name"})
+            has_salary = "salary" in normalized
+            has_team = bool(normalized & {"team", "teamabbrev", "team abbrev", "team abbreviation"})
+            has_position = bool(normalized & {"position", "roster position", "rosterposition"})
+            if has_name and has_salary and has_team and has_position:
+                fd_header_line = line_index
+                break
+
+        if fd_header_line is None:
+            fd_raw = pd.read_csv(io.StringIO(fd_text), engine="python", on_bad_lines="skip")
+        else:
+            fd_raw = pd.read_csv(
+                io.StringIO(fd_text),
+                skiprows=fd_header_line,
+                engine="python",
+                on_bad_lines="skip"
+            )
         fd_raw.columns = [str(c).strip() for c in fd_raw.columns]
 
         def fd_find_column(frame, choices):
