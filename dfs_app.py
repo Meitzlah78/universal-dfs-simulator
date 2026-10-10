@@ -180,6 +180,24 @@ players_df["CaptainSalary"] = (
     players_df["Salary"] * 1.5
 ).astype(int)
 
+# Clear saved results when the uploaded player pool changes, so results from
+# a previous slate cannot be mixed with the new slate.
+slate_signature = tuple(
+    players_df[["Name", "Team", "Salary", "Projection"]]
+    .astype(str)
+    .itertuples(index=False, name=None)
+)
+if st.session_state.get("slate_signature") != slate_signature:
+    for key in [
+        "simulation_df", "simulations_ready", "contest_field_df",
+        "contest_field_count", "contest_field_ready", "candidates_df",
+        "candidates_ready", "contest_results_df", "portfolio_df",
+        "portfolio_count_used", "portfolio_metric_used",
+        "final_lineups", "dk_player_ids"
+    ]:
+        st.session_state.pop(key, None)
+    st.session_state["slate_signature"] = slate_signature
+
 # ================================
 # SIMULATION
 # ================================
