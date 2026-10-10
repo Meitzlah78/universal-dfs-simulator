@@ -2285,14 +2285,14 @@ try:
             # Exclude cash-game formats; keep tournament/GPP contests only.
             cash_game_pattern = r"\\b(50/50|double[- ]?up|head[- ]?to[- ]?head|h2h|cash game|winner[- ]?take[- ]?all)\\b"
             lobby_mask &= ~lobby_names.str.contains(cash_game_pattern, case=False, regex=True, na=False)
-            # Restrict contests to the selected slate/game instead of requiring a salary upload.
-            if selected_dk_draft_group_id and "dg" in lobby_df.columns:
-                lobby_mask &= lobby_df["dg"].astype(str).str.replace(r"\\.0$", "", regex=True).eq(selected_dk_draft_group_id)
         else:
             lobby_mask = ~(
                 lobby_names.str.contains("showdown", case=False, regex=False)
                 | lobby_df.get("gameType", pd.Series("", index=lobby_df.index)).fillna("").astype(str).str.contains("showdown", case=False, regex=False)
             )
+        # Keep the contest dropdown aligned with the selected slate in both modes.
+        if selected_dk_draft_group_id and "dg" in lobby_df.columns:
+            lobby_mask &= lobby_df["dg"].astype(str).str.replace(r"\.0$", "", regex=True).eq(selected_dk_draft_group_id)
         # Apply full-game filtering to every DraftKings slate mode, not just Showdown.
         lobby_mask &= lobby_names.apply(is_full_game_contest_name)
         lobby_matches = lobby_df.loc[lobby_mask].copy()
