@@ -1121,9 +1121,19 @@ if platform == "DraftKings" and lineup_mode == "Classic":
 # ================================
 
 def run_game_simulations(players_df, platform="DraftKings"):
+    # Final safety check: Out players must never enter simulations, even if
+    # this function is called from a different slate builder or stale UI state.
+    eligible_players = players_df.copy()
+    if "Injury Status" in eligible_players.columns:
+        eligible_players = eligible_players[
+            eligible_players["Injury Status"].astype(str).str.strip().str.casefold() != "out"
+        ].copy()
+    if eligible_players.empty:
+        st.error("No eligible players remain. Change at least one player from Out to Active or Questionable.")
+        st.stop()
     # Simulate stat lines first, then calculate fantasy points with site scoring.
     rng = np.random.default_rng()
-    return _simulate_scored_player_outcomes(players_df, platform, rng)
+    return _simulate_scored_player_outcomes(eligible_players, platform, rng)
 
 # ================================
 # PLAYER DISPLAY
