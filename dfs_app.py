@@ -1798,6 +1798,26 @@ else:
     ]:
         player_display[column] = np.nan
 
+# Make the main simulated average easy to spot in the Player Pool.
+# "Sim Pts" is the average fantasy score across the 10,000 simulated outcomes.
+player_display = player_display.rename(columns={
+    "SimMean": "Sim Pts",
+    "SimP10": "Sim P10",
+    "SimP25": "Sim P25",
+    "SimP50": "Sim P50",
+    "SimP75": "Sim P75",
+    "SimP90": "Sim P90",
+    "SimP95": "Sim P95",
+    "SimP99": "Sim P99",
+})
+for sim_column in [
+    "Sim Pts", "Sim P10", "Sim P25", "Sim P50",
+    "Sim P75", "Sim P90", "Sim P95", "Sim P99"
+]:
+    player_display[sim_column] = pd.to_numeric(
+        player_display[sim_column], errors="coerce"
+    ).round(1)
+
 # Show editable player settings in their own block, separate from player stats.
 existing_control_values = st.session_state.get("control_values")
 if existing_control_values is not None:
