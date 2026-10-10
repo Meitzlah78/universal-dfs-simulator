@@ -1498,7 +1498,23 @@ if platform == "DraftKings" and lineup_mode == "Classic":
                 st.error("Could not create valid opponent lineups. Check the player pool and salary range.")
     classic_results = st.session_state.get("classic_lineups")
     if classic_results is not None:
-        st.write(f"Built {len(classic_results)} valid Classic lineups.")
+        # Never display old lineups that contain a player now marked Out,
+        # faded, or otherwise removed from the current eligible pool.
+        current_eligible_names = set(classic_pool["Name"].astype(str))
+        export_slots = ["QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "FLEX", "DST"]
+        if all(slot in classic_results.columns for slot in export_slots):
+            valid_rows = classic_results[export_slots].apply(
+                lambda row: all(str(name) in current_eligible_names for name in row),
+                axis=1
+            )
+            if not valid_rows.all():
+                classic_results = classic_results.loc[valid_rows].reset_index(drop=True)
+                st.session_state["classic_lineups"] = classic_results
+                st.session_state.pop("classic_contest_field_df", None)
+                st.session_state.pop("classic_contest_comparison_df", None)
+                st.warning("Removed saved lineups containing players no longer eligible. Click BUILD to create replacement lineups.")
+        if not classic_results.empty:
+            st.write(f"Built {len(classic_results)} valid Classic lineups.")
         st.dataframe(
             classic_results.drop(columns=["Score"], errors="ignore"),
             use_container_width=True,
