@@ -2060,15 +2060,48 @@ if entry_file is not None:
         try:
             entry_df = pd.read_csv(entry_file)
         except pd.errors.ParserError:
-            # Some DK exports have inconsistent quoting/extra commas in a few rows.
-            # Use the Python parser as a fallback so a malformed row does not crash the app.
+            # Repair rows with unquoted commas in Contest Name instead of silently skipping entries.
             entry_file.seek(0)
-            entry_df = pd.read_csv(entry_file, engine="python", on_bad_lines="warn")
+            import csv
+            header = next(csv.reader([entry_file.readline().decode("utf-8-sig", errors="replace")]))
+            expected_fields = len(header)
+
+            def repair_dk_entry_row(fields):
+                if len(fields) == expected_fields:
+                    return fields
+                if len(fields) > expected_fields and expected_fields >= 3:
+                    # DraftKings entry exports start with Entry ID, Contest Name, Contest ID.
+                    # Keep the first field and final columns in place, folding overflow into Contest Name.
+                    overflow = len(fields) - expected_fields
+                    repaired = list(fields[:2 + overflow])
+                    repaired[1] = ",".join(str(x) for x in repaired[1:])
+                    repaired.extend(fields[2 + overflow:])
+                    if len(repaired) == expected_fields:
+                        return repaired
+                # Do not silently discard malformed rows; stop and ask for a clean source file.
+                raise ValueError(
+                    "A row in the DraftKings entry CSV could not be repaired safely. "
+                    "Please re-download the CSV from DraftKings My Contests."
+                )
+
+            entry_file.seek(0)
+            try:
+                entry_df = pd.read_csv(
+                    entry_file,
+                    engine="python",
+                    on_bad_lines=repair_dk_entry_row
+                )
+            except Exception as parse_error:
+                st.error(
+                    "Could not safely repair the DraftKings contest entry CSV. "
+                    "Please re-download it from DraftKings My Contests and upload it again. "
+                    f"Details: {parse_error}"
+                )
+                st.stop()
             st.warning(
-                "The DraftKings CSV has rows with inconsistent column counts. "
-                "The app used a fallback reader and may have skipped malformed rows. "
-                "Check the selected contest's entry count against DraftKings before exporting. "
-                "For safest results, re-download the CSV from DraftKings My Contests."
+                "The CSV had extra commas in one or more contest-name fields. "
+                "The app repaired those rows instead of skipping entries. "
+                "Confirm the entry count matches DraftKings before exporting."
             )
         entry_df.columns = [str(c).strip() for c in entry_df.columns]
         required_entry_columns = {"Contest Name", "Contest ID"}
