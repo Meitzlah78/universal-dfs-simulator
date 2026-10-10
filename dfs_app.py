@@ -2073,46 +2073,59 @@ if entry_file is not None:
             # Repair rows with unquoted commas in Contest Name instead of silently skipping entries.
             entry_file.seek(0)
             import csv
-            header = next(csv.reader([entry_file.readline().decode("utf-8-sig", errors="replace")]))
-            expected_fields = len(header)
-
-            def repair_dk_entry_row(fields):
-                if len(fields) == expected_fields:
-                    return fields
-                if len(fields) > expected_fields and expected_fields >= 3:
-                    # DraftKings entry exports start with Entry ID, Contest Name, Contest ID.
-                    # Keep the first field and final columns in place, folding overflow into Contest Name.
-                    overflow = len(fields) - expected_fields
-                    repaired = list(fields[:2 + overflow])
-                    repaired[1] = ",".join(str(x) for x in repaired[1:])
-                    repaired.extend(fields[2 + overflow:])
-                    if len(repaired) == expected_fields:
-                        return repaired
-                # Do not silently discard malformed rows; stop and ask for a clean source file.
-                raise ValueError(
-                    "A row in the DraftKings entry CSV could not be repaired safely. "
-                    "Please re-download the CSV from DraftKings My Contests."
-                )
+            import io
 
             entry_file.seek(0)
             try:
-                entry_df = pd.read_csv(
-                    entry_file,
-                    engine="python",
-                    on_bad_lines=repair_dk_entry_row
-                )
+                raw_entry_text = entry_file.getvalue().decode("utf-8-sig", errors="replace")
+                parsed_rows = list(csv.reader(io.StringIO(raw_entry_text)))
+                if not parsed_rows:
+                    raise ValueError("The uploaded CSV is empty.")
+                header = [str(col).strip() for col in parsed_rows[0]]
+                expected_fields = len(header)
+                repaired_rows = []
+                repaired_count = 0
+
+                for row_number, fields in enumerate(parsed_rows[1:], start=2):
+                    if not fields or all(not str(value).strip() for value in fields):
+                        continue
+                    if len(fields) == expected_fields:
+                        repaired_rows.append(fields)
+                        continue
+                    if len(fields) > expected_fields and expected_fields >= 3:
+                        # Only merge overflow into the contest-name column. Preserve
+                        # the entry ID at column 1 and all trailing fields, including
+                        # Contest ID and roster slots, in their original positions.
+                        overflow = len(fields) - expected_fields
+                        repaired = [
+                            fields[0],
+                            ",".join(str(value) for value in fields[1:2 + overflow]),
+                            *fields[2 + overflow:],
+                        ]
+                        if len(repaired) == expected_fields:
+                            repaired_rows.append(repaired)
+                            repaired_count += 1
+                            continue
+                    raise ValueError(
+                        f"CSV row {row_number} has {len(fields)} fields; expected {expected_fields}. "
+                        "The app could not safely identify the missing or extra data."
+                    )
+
+                entry_df = pd.DataFrame(repaired_rows, columns=header)
             except Exception as parse_error:
                 st.error(
-                    "Could not safely repair the DraftKings contest entry CSV. "
-                    "Please re-download it from DraftKings My Contests and upload it again. "
-                    f"Details: {parse_error}"
+                    "Could not safely read the DraftKings contest entry CSV. "
+                    "No entries were discarded. Please check that this is the original CSV "
+                    "downloaded from DraftKings My Contests. Details: "
+                    f"{parse_error}"
                 )
                 st.stop()
-            st.warning(
-                "The CSV had extra commas in one or more contest-name fields. "
-                "The app repaired those rows instead of skipping entries. "
-                "Confirm the entry count matches DraftKings before exporting."
-            )
+            if repaired_count:
+                st.warning(
+                    f"Repaired {repaired_count} CSV row(s) with extra commas in contest names. "
+                    "Entry IDs, contest IDs, and roster columns were kept in place. "
+                    "Confirm the entry count matches DraftKings before exporting."
+                )
         entry_df.columns = [str(c).strip() for c in entry_df.columns]
         required_entry_columns = {"Contest Name", "Contest ID"}
         if required_entry_columns.issubset(entry_df.columns):
