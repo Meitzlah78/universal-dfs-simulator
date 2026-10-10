@@ -3,6 +3,7 @@ import re
 import streamlit as st
 import pandas as pd
 import numpy as np
+from zoneinfo import ZoneInfo
 
 st.set_page_config(
     page_title="Universal DFS Simulator",
@@ -240,9 +241,30 @@ def apply_injury_statuses(frame, key_prefix):
         },
         key=key_prefix + "_" + str(len(status_df)) + "_" + str(status_df["Name"].astype(str).head(3).tolist())
     )
+    newly_out = []
     for _, row in edited_statuses.iterrows():
-        saved_statuses[str(row["Name"]).strip().casefold()] = row["Injury Status"]
+        player_key = str(row["Name"]).strip().casefold()
+        new_status = str(row["Injury Status"]).strip().title()
+        old_status = str(saved_statuses.get(player_key, "Active")).strip().title()
+        saved_statuses[player_key] = new_status
+        if new_status == "Out" and old_status != "Out":
+            newly_out.append(str(row["Name"]).strip())
     st.session_state["player_injury_statuses"] = saved_statuses
+    # A newly-Out player invalidates every cached build/simulation so stale lineups
+    # cannot keep showing that player. Injury status table is retained separately.
+    if newly_out:
+        stale_build_keys = [
+            key for key in list(st.session_state.keys())
+            if any(token in str(key).lower() for token in (
+                "lineup", "portfolio", "simulation", "contest_field", "contest_results",
+                "candidate", "exposure", "saved_build", "classic_pool_signature",
+                "final_lineups", "build_ready"
+            ))
+            and key not in {"player_injury_statuses"}
+        ]
+        for key in stale_build_keys:
+            st.session_state.pop(key, None)
+        st.warning("Cleared saved builds because these players were marked Out: " + ", ".join(newly_out) + ". Rebuild lineups to exclude them.")
 
     result = frame.copy()
     result["Injury Status"] = result["Name"].astype(str).map(
@@ -307,7 +329,7 @@ def show_projection_refresh_status(source_files, key_prefix):
     if current_signature != st.session_state.get(signature_key):
         st.session_state[signature_key] = current_signature
         if any(digest is not None for _, digest in signatures):
-            st.session_state[time_key] = datetime.now().astimezone().strftime("%Y-%m-%d %I:%M:%S %p %Z")
+            st.session_state[time_key] = datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %I:%M:%S %p %Z")
 
     left, right = st.columns([1, 2])
     with left:
