@@ -491,8 +491,8 @@ if platform == "FanDuel":
         )
         results = []
         seen = set()
-        target_lineups = 5000 if lineup_mode == "Single Game" else 20
-        max_attempts = 250000 if lineup_mode == "Single Game" else 30000
+        target_lineups = 5000
+        max_attempts = 500000
 
         for _ in range(max_attempts):
             chosen = {}
@@ -1587,14 +1587,15 @@ if platform == "DraftKings" and lineup_mode == "Classic":
             if control_map.get(name, {}).get("Lock", False)
         ]
         ranked_names = list(dict.fromkeys(
-            sorted(rankings, key=rankings.get, reverse=True)[:45]
+            sorted(rankings, key=rankings.get, reverse=True)
             + classic_locked_players
         ))
         classic_pool = classic_pool[classic_pool["Name"].isin(ranked_names)].copy()
         player_rows = classic_pool.set_index("Name").to_dict("index")
         candidate_lineups = []
         seen = set()
-        max_attempts = 5000
+        max_attempts = 500000
+        target_lineups = 5000
 
         for attempt in range(max_attempts):
             chosen = {}
@@ -1644,7 +1645,7 @@ if platform == "DraftKings" and lineup_mode == "Classic":
                 "ProjectedPoints": projected_points,
                 "Score": sum(rankings.get(name, 0.01) for name in chosen.values())
             })
-            if len(candidate_lineups) >= 20:
+            if len(candidate_lineups) >= target_lineups:
                 break
 
         if not candidate_lineups:
@@ -2037,7 +2038,7 @@ search_pool = list(dict.fromkeys(
 # CANDIDATE SETTINGS
 # ============================================
 
-LINEUP_COUNT = 20
+LINEUP_COUNT = 5000
 CANDIDATE_COUNT = 5000
 
 # BUILD CANDIDATES
