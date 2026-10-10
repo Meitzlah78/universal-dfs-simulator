@@ -591,7 +591,7 @@ if salary_file is not None:
                             def __init__(self):
                                 super().__init__()
                                 self.tables = []
-                                self.in_table = False
+                                self.table_depth = 0
                                 self.in_row = False
                                 self.in_cell = False
                                 self.current_table = []
@@ -600,31 +600,32 @@ if salary_file is not None:
 
                             def handle_starttag(self, tag, attrs):
                                 if tag == "table":
-                                    self.in_table = True
-                                    self.current_table = []
-                                elif self.in_table and tag == "tr":
+                                    self.table_depth += 1
+                                    if self.table_depth == 1:
+                                        self.current_table = []
+                                elif self.table_depth == 1 and tag == "tr":
                                     self.in_row = True
                                     self.current_row = []
-                                elif self.in_row and tag in ("td", "th"):
+                                elif self.table_depth == 1 and self.in_row and tag in ("td", "th"):
                                     self.in_cell = True
                                     self.current_cell = []
 
                             def handle_data(self, data):
-                                if self.in_cell:
+                                if self.table_depth == 1 and self.in_cell:
                                     self.current_cell.append(data)
 
                             def handle_endtag(self, tag):
-                                if self.in_cell and tag in ("td", "th"):
-                                    self.current_row.append(re.sub(r"\s+", " ", "".join(self.current_cell)).strip())
+                                if self.table_depth == 1 and self.in_cell and tag in ("td", "th"):
+                                    self.current_row.append(re.sub(r"\\s+", " ", "".join(self.current_cell)).strip())
                                     self.in_cell = False
-                                elif self.in_row and tag == "tr":
+                                elif self.table_depth == 1 and self.in_row and tag == "tr":
                                     if self.current_row:
                                         self.current_table.append(self.current_row)
                                     self.in_row = False
-                                elif self.in_table and tag == "table":
-                                    if self.current_table:
+                                elif tag == "table" and self.table_depth > 0:
+                                    if self.table_depth == 1 and self.current_table:
                                         self.tables.append(self.current_table)
-                                    self.in_table = False
+                                    self.table_depth -= 1
 
                         table_parser = DraftEdgeTableParser()
                         table_parser.feed(de_response.text)
