@@ -1424,6 +1424,11 @@ if entry_file is not None:
         st.error(f"Could not read the DraftKings contest entry file: {exc}")
 st.write("### Projection Sources")
 
+# Optional uploaded projection files; automatic public-source refresh is handled
+# by apply_external_projection_sources when these are not supplied.
+dff_projection_file = None
+draftedge_projection_file = None
+
 if salary_file is not None:
     try:
         # DraftKings lineup templates have instructions before the player table.
