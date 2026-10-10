@@ -120,12 +120,10 @@ def show_projection_refresh_status(source_files, key_prefix):
             st.caption("No DFF or DraftEdge projection file uploaded yet.")
 
     if refresh_clicked:
-        if not any(uploaded_file is not None for _, uploaded_file in source_files):
-            st.warning("Upload a DFF or DraftEdge CSV first. Automatic source downloads are not configured yet.")
-        else:
-            st.session_state[time_key] = datetime.now().astimezone().strftime("%Y-%m-%d %I:%M:%S %p %Z")
-            st.success("Projection files re-read from the current uploads.")
-            st.rerun()
+        download_public_projection_table.clear()
+        st.session_state[time_key] = datetime.now().astimezone().strftime("%Y-%m-%d %I:%M:%S %p %Z")
+        st.success("Projection refresh requested. Uploaded CSVs take priority; public projection pages will also be checked.")
+        st.rerun()
 
 
 def normalize_projection_player_name(name):
@@ -177,11 +175,53 @@ def read_projection_csv(uploaded_file, source_label):
         return {}
 
 
-def apply_external_projection_sources(players_frame, dff_file, draftedge_file):
+@st.cache_data(show_spinner=False, ttl=1800)
+def download_public_projection_table(source_name, platform_name):
+    """Try to download public projections; cache successful or empty results for 30 minutes."""
+    import io
+    import requests
+    platform_key = str(platform_name).casefold()
+    if source_name == "DFF":
+        url = "https://www.dailyfantasyfuel.com/nfl/projections/fanduel/" if "fanduel" in platform_key else "https://www.dailyfantasyfuel.com/nfl/projections/"
+    elif source_name == "DraftEdge":
+        url = "https://draftedge.com/nfl/"
+    else:
+        return {}
+    try:
+        response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=(5, 12))
+        response.raise_for_status()
+        tables = pd.read_html(io.StringIO(response.text))
+    except Exception:
+        return {}
+    for table in tables:
+        table.columns = [str(c).strip() for c in table.columns]
+        lookup = {str(c).strip().casefold(): c for c in table.columns}
+        name_col = next((lookup[k] for k in ("player", "name", "player name", "nickname") if k in lookup), None)
+        proj_col = next((lookup[k] for k in ("proj pts", "proj", "projection", "projected points", "my proj", "fpts", "projected fantasy points") if k in lookup), None)
+        if name_col is None or proj_col is None:
+            continue
+        result = {}
+        for _, row in table.iterrows():
+            key = normalize_projection_player_name(row.get(name_col, ""))
+            value = pd.to_numeric(str(row.get(proj_col, "")).replace(",", "").replace("$", ""), errors="coerce")
+            if key and pd.notna(value) and np.isfinite(float(value)) and float(value) > 0:
+                result[key] = float(value)
+        if result:
+            return result
+    return {}
+
+def get_projection_source_data(uploaded_file, source_name, platform_name):
+    uploaded = read_projection_csv(uploaded_file, source_name)
+    if uploaded:
+        return uploaded, "uploaded CSV"
+    downloaded = download_public_projection_table(source_name, platform_name)
+    return downloaded, "automatic download" if downloaded else "unavailable"
+
+def apply_external_projection_sources(players_frame, dff_file, draftedge_file, platform_name='DraftKings'):
     """Average DFF and DraftEdge where both match; otherwise use whichever exists."""
     result = players_frame.copy()
-    dff = read_projection_csv(dff_file, "DFF")
-    draftedge = read_projection_csv(draftedge_file, "DraftEdge")
+    dff, dff_status = get_projection_source_data(dff_file, "DFF", platform_name)
+    draftedge, draftedge_status = get_projection_source_data(draftedge_file, "DraftEdge", platform_name)
     internal = pd.to_numeric(result.get("Projection", pd.Series(np.nan, index=result.index)), errors="coerce")
     projections, sources = [], []
     dff_matches = draftedge_matches = averages = 0
@@ -402,7 +442,7 @@ if platform == "FanDuel":
         st.error(f"Could not read that FanDuel CSV: {exc}")
         st.stop()
 
-    fd_players = apply_external_projection_sources(fd_players, fd_dff_projection_file, fd_draftedge_projection_file)
+    fd_players = apply_external_projection_sources(fd_players, fd_dff_projection_file, fd_draftedge_projection_file, platform_name="FanDuel")
     fd_players = exclude_zero_projection_players(fd_players, "FanDuel " + lineup_mode)
     fd_players = apply_injury_statuses(fd_players, "injury_status_fd_" + lineup_mode.replace(" ", "_").lower())
     # Remove stale saved builds as soon as an Out player is excluded.
@@ -1349,7 +1389,7 @@ MIN_LINEUP_SALARY, MAX_LINEUP_SALARY = dk_salary_range
 
 # Internal estimates fill gaps; uploaded DFF/DraftEdge projections take priority.
 players_df["Projection"] = build_internal_projection_means(players_df, platform=platform)
-players_df = apply_external_projection_sources(players_df, dff_projection_file, draftedge_projection_file)
+players_df = apply_external_projection_sources(players_df, dff_projection_file, draftedge_projection_file, platform_name="DraftKings")
 
 def internal_slate_key(frame):
     """Stable identity for an uploaded slate, independent of external projections."""
