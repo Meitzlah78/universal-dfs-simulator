@@ -348,10 +348,8 @@ if platform == "FanDuel":
         key="fd_salary_file"
     )
     st.write("### Projection Sources")
-    st.caption("Upload DFF and/or DraftEdge projection CSVs for FanDuel.")
-    fd_dff_projection_file = st.file_uploader("Upload DFF projections CSV", type=["csv"], key="fd_dff_projection_file")
-    fd_draftedge_projection_file = st.file_uploader("Upload DraftEdge projections CSV", type=["csv"], key="fd_draftedge_projection_file")
-    show_projection_refresh_status([("DFF", fd_dff_projection_file), ("DraftEdge", fd_draftedge_projection_file)], "fd_" + lineup_mode.replace(" ", "_").lower())
+    fd_dff_projection_file = None
+    fd_draftedge_projection_file = None
 
     if fd_file is None:
         st.info("Upload your FanDuel salary CSV to build FanDuel lineups.")
