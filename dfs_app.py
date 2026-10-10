@@ -619,18 +619,106 @@ if salary_file is not None:
 
                 dff_projections = {}
                 dff_error = None
+                dff_source_label = "automatic DFF download"
+
+                # An uploaded DFF CSV overrides the automatic download.
+                dff_df = None
                 if dff_file is not None:
                     try:
                         dff_file.seek(0)
                         dff_df = pd.read_csv(dff_file)
+                        dff_source_label = "uploaded DFF CSV"
+                    except Exception as exc:
+                        dff_error = "Could not read uploaded DFF CSV: " + str(exc)
+
+                # Otherwise, download the public DraftKings NFL projections CSV from DFF.
+                if dff_df is None and dff_file is None:
+                    try:
+                        from html.parser import HTMLParser
+                        from urllib.parse import urljoin
+
+                        dff_page_url = "https://www.dailyfantasyfuel.com/nfl/projections/"
+                        dff_page_response = requests.get(
+                            dff_page_url,
+                            timeout=20,
+                            headers={"User-Agent": "Mozilla/5.0 UniversalDFS-Simulator"}
+                        )
+                        dff_page_response.raise_for_status()
+
+                        class DFFDownloadLinkParser(HTMLParser):
+                            def __init__(self):
+                                super().__init__()
+                                self.links = []
+                                self._href = None
+                                self._text = []
+
+                            def handle_starttag(self, tag, attrs):
+                                if tag.lower() == "a":
+                                    attrs_map = dict(attrs)
+                                    self._href = attrs_map.get("href")
+                                    self._text = []
+
+                            def handle_data(self, data):
+                                if self._href is not None:
+                                    self._text.append(data)
+
+                            def handle_endtag(self, tag):
+                                if tag.lower() == "a" and self._href is not None:
+                                    label = " ".join(self._text).strip().lower()
+                                    href = self._href
+                                    if (
+                                        "csv" in href.lower()
+                                        or "download" in href.lower()
+                                        or "download projections" in label
+                                        or ("projection" in label and "csv" in label)
+                                    ):
+                                        self.links.append(urljoin(dff_page_url, href))
+                                    self._href = None
+                                    self._text = []
+
+                        dff_link_parser = DFFDownloadLinkParser()
+                        dff_link_parser.feed(dff_page_response.text)
+                        dff_csv_url = next(
+                            (url for url in dff_link_parser.links if "csv" in url.lower()),
+                            dff_link_parser.links[0] if dff_link_parser.links else None
+                        )
+                        if not dff_csv_url:
+                            raise ValueError(
+                                "DFF's CSV download link was not found on its projections page."
+                            )
+
+                        dff_csv_response = requests.get(
+                            dff_csv_url,
+                            timeout=20,
+                            headers={"User-Agent": "Mozilla/5.0 UniversalDFS-Simulator"}
+                        )
+                        dff_csv_response.raise_for_status()
+                        if not dff_csv_response.text.strip() or "<html" in dff_csv_response.text[:500].lower():
+                            raise ValueError(
+                                "DFF returned a webpage instead of a projections CSV."
+                            )
+                        dff_df = pd.read_csv(StringIO(dff_csv_response.text))
+                    except Exception as exc:
+                        dff_error = "Automatic DFF download failed: " + str(exc)
+
+                if dff_df is not None:
+                    try:
                         dff_df.columns = [str(c).strip() for c in dff_df.columns]
-                        dff_name_col = find_column(dff_df, ["Name", "Player", "Player Name", "Nickname"])
-                        dff_proj_col = find_column(dff_df, [
-                            "Projection", "Projected Points", "Proj", "FPTS",
-                            "Fantasy Points", "DK Points", "Points", "Fpts"
-                        ])
+                        dff_name_col = find_column(
+                            dff_df, ["Name", "Player", "Player Name", "Nickname", "Player Name + ID"]
+                        )
+                        dff_proj_col = find_column(
+                            dff_df, [
+                                "Projection", "Projected Points", "Proj", "FPTS",
+                                "Fantasy Points", "DK Points", "Points", "Fpts",
+                                "FPTS Proj", "FP Projection", "Proj. FPTS"
+                            ]
+                        )
                         if dff_name_col is None or dff_proj_col is None:
-                            raise ValueError("DFF CSV needs a player-name column and a projection/points column.")
+                            raise ValueError(
+                                "The downloaded DFF CSV did not contain recognizable player-name and projection columns. "
+                                "Columns found: " + ", ".join(map(str, dff_df.columns))
+                            )
                         dff_df["_projection"] = pd.to_numeric(
                             dff_df[dff_proj_col].astype(str).str.replace(",", "", regex=False),
                             errors="coerce"
@@ -640,8 +728,11 @@ if salary_file is not None:
                             dff_value = dff_row["_projection"]
                             if dff_name and dff_name.lower() != "nan" and pd.notna(dff_value):
                                 dff_projections[normalize_projection_name(dff_name)] = float(dff_value)
+                        if not dff_projections:
+                            raise ValueError("No usable player projections were found in the DFF data.")
                     except Exception as exc:
-                        dff_error = str(exc)
+                        dff_error = "Could not read DFF projections: " + str(exc)
+                        dff_projections = {}
 
                 slate_signature = hashlib.sha256(salary_file.getvalue()).hexdigest()
                 cache_key = "draftedge_cache_" + slate_signature
