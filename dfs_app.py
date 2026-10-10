@@ -1769,6 +1769,12 @@ try:
                 lobby_names.str.contains("showdown", case=False, regex=False)
                 | lobby_df.get("gameType", pd.Series("", index=lobby_df.index)).fillna("").astype(str).str.contains("showdown", case=False, regex=False)
             )
+            # Keep only full-game, pregame contests; exclude period-specific and live/in-game contests.
+            partial_game_pattern = r"\\b(1st|2nd|3rd|4th|first|second|third|fourth)\\s*(quarter|qtr|half)\\b|\\b(first half|second half|1st half|2nd half|in[- ]?game|live contest|live scoring|quarter contest|half contest)\\b"
+            lobby_mask &= ~lobby_names.str.contains(partial_game_pattern, case=False, regex=True, na=False)
+            # Exclude cash-game formats; keep tournament/GPP contests only.
+            cash_game_pattern = r"\\b(50/50|double[- ]?up|head[- ]?to[- ]?head|h2h|cash game|winner[- ]?take[- ]?all)\\b"
+            lobby_mask &= ~lobby_names.str.contains(cash_game_pattern, case=False, regex=True, na=False)
             # For single-game slates, restrict contests to the matchup in the uploaded salary file.
             uploaded_slate_teams = set()
             if salary_file is not None:
@@ -1815,8 +1821,10 @@ try:
             size_col = next((c for c in ["s", "entries", "entryCount", "numEntries", "fieldSize", "contestSize"] if c in lobby_matches.columns), None)
             lobby_matches["id"] = lobby_matches["id"].astype(str).str.replace(r"\\.0$", "", regex=True)
             lobby_matches["_field_size"] = pd.to_numeric(lobby_matches[size_col], errors="coerce") if size_col else np.nan
-            # Remove repeated lobby records, then prioritize the requested contest types.
+            # Remove duplicate API records by contest ID, then duplicate contest names.
             lobby_matches = lobby_matches.drop_duplicates(subset=["id"], keep="first").copy()
+            lobby_matches["_normalized_name"] = lobby_matches["n"].fillna("").astype(str).str.strip().str.casefold()
+            lobby_matches = lobby_matches.drop_duplicates(subset=["_normalized_name"], keep="first").copy()
             lobby_matches["_priority"] = 3
             lobby_matches.loc[lobby_matches["n"].astype(str).str.contains("jukebox", case=False, regex=False), "_priority"] = 0
             lobby_matches.loc[lobby_matches["n"].astype(str).str.contains("first down", case=False, regex=False), "_priority"] = 1
