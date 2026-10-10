@@ -89,7 +89,7 @@ if salary_file is not None:
         name_col = find_column(uploaded_df, ["Name", "Name + ID", "Player", "Player Name"])
         salary_col = find_column(uploaded_df, ["Salary"])
         team_col = find_column(uploaded_df, ["TeamAbbrev", "Team", "Team Abbrev", "Team Abbreviation"])
-        position_col = find_column(uploaded_df, ["Roster Position", "Position", "RosterPosition"])
+        position_col = find_column(uploaded_df, ["Position", "Roster Position", "RosterPosition"])
         projection_col = find_column(uploaded_df, ["Projection", "Projected Points", "Fpts", "FPPG", "AvgPointsPerGame", "Avg Points Per Game"])
 
         missing = []
@@ -105,7 +105,7 @@ if salary_file is not None:
         else:
             loaded_players = pd.DataFrame()
             loaded_players["Name"] = uploaded_df[name_col].astype(str).str.strip()
-            loaded_players["Name"] = loaded_players["Name"].str.replace(r"\\s*\\(\\d+\\)\\s*$", "", regex=True)
+            loaded_players["Name"] = loaded_players["Name"].str.replace(r"\s*\(\d+\)\s*$", "", regex=True)
             loaded_players["Salary"] = pd.to_numeric(
                 uploaded_df[salary_col].astype(str).str.replace(r"[$,]", "", regex=True),
                 errors="coerce"
