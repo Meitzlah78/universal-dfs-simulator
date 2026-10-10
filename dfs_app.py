@@ -716,7 +716,7 @@ if platform == "FanDuel":
             if fd_name_col is None or fd_id_col is None:
                 st.error("This CSV needs Contest Name and Contest ID columns for the contest selector.")
             else:
-                fd_entry_df[fd_id_col] = fd_entry_df[fd_id_col].astype(str).str.replace(r"\\.0$", "", regex=True)
+                fd_entry_df[fd_id_col] = fd_entry_df[fd_id_col].astype(str).str.replace(r"\.0$", "", regex=True)
                 fd_group_columns = [fd_id_col, fd_name_col]
                 fd_agg = {
                     "Entries": (fd_entries_col, "count") if fd_entries_col else (fd_id_col, "size"),
