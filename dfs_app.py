@@ -423,8 +423,14 @@ salary_file = st.file_uploader(
     type=["csv"],
     help="Upload the salary CSV for the slate. If you do not upload one, the sample player pool below is used."
 )
+dff_file = st.file_uploader(
+    "Upload Daily Fantasy Fuel (DFF) projections CSV",
+    type=["csv"],
+    key="dff_projection_file",
+    help="Download projections from Daily Fantasy Fuel and upload that CSV here. DFF projections take priority over DraftEdge."
+)
 
-st.write("### DraftEdge Projection Controls")
+st.write("### Projection Controls")
 st.caption("Use this button to pull the latest projections for the uploaded slate.")
 refresh_clicked = st.button("🔄 REFRESH DRAFTEDGE PROJECTIONS NOW", key="refresh_draftedge", type="primary", use_container_width=True)
 if "draftedge_last_updated" in st.session_state:
@@ -525,14 +531,44 @@ if salary_file is not None:
             else:
                 players_df = loaded_players.reset_index(drop=True)
 
-                # DraftEdge is the first-choice source. Cache by uploaded slate so
-                # ordinary Streamlit reruns do not pretend to refresh projections.
+                # Projection priority: DFF first, DraftEdge fills gaps, salary CSV last.
                 import hashlib
                 import re
                 import requests
                 from io import StringIO
                 from html import unescape
                 from datetime import datetime
+
+                def normalize_projection_name(name):
+                    value = str(name).casefold().strip()
+                    value = re.sub(r"\s+(jr|sr|ii|iii|iv|v)\.?$", "", value)
+                    return re.sub(r"[^a-z0-9]", "", value)
+
+                dff_projections = {}
+                dff_error = None
+                if dff_file is not None:
+                    try:
+                        dff_file.seek(0)
+                        dff_df = pd.read_csv(dff_file)
+                        dff_df.columns = [str(c).strip() for c in dff_df.columns]
+                        dff_name_col = find_column(dff_df, ["Name", "Player", "Player Name", "Nickname"])
+                        dff_proj_col = find_column(dff_df, [
+                            "Projection", "Projected Points", "Proj", "FPTS",
+                            "Fantasy Points", "DK Points", "Points", "Fpts"
+                        ])
+                        if dff_name_col is None or dff_proj_col is None:
+                            raise ValueError("DFF CSV needs a player-name column and a projection/points column.")
+                        dff_df["_projection"] = pd.to_numeric(
+                            dff_df[dff_proj_col].astype(str).str.replace(",", "", regex=False),
+                            errors="coerce"
+                        )
+                        for _, dff_row in dff_df.iterrows():
+                            dff_name = str(dff_row[dff_name_col]).strip()
+                            dff_value = dff_row["_projection"]
+                            if dff_name and dff_name.lower() != "nan" and pd.notna(dff_value):
+                                dff_projections[normalize_projection_name(dff_name)] = float(dff_value)
+                    except Exception as exc:
+                        dff_error = str(exc)
 
                 slate_signature = hashlib.sha256(salary_file.getvalue()).hexdigest()
                 cache_key = "draftedge_cache_" + slate_signature
@@ -696,22 +732,36 @@ if salary_file is not None:
 
                 active_cache = st.session_state.get(cache_key, {"projections": {}, "updated_at": None, "error": None})
                 draftedge_projections = active_cache.get("projections", {})
-                matched = players_df["Name"].map(
-                    lambda name: draftedge_projections.get(normalize_player_name(name))
-                    if "normalize_player_name" in locals() else draftedge_projections.get(
-                        re.sub(r"[^a-z0-9]", "", re.sub(r"\s+(jr|sr|ii|iii|iv|v)\.?$", "", str(name).casefold().strip()))
-                    )
+                dff_matched = players_df["Name"].map(
+                    lambda name: dff_projections.get(normalize_projection_name(name))
                 )
-                found = matched.notna()
-                if found.any():
-                    players_df.loc[found, "Projection"] = matched.loc[found].astype(float)
-                players_df["ProjectionSource"] = np.where(found, "DraftEdge", "Salary CSV")
-                draftedge_count = int(found.sum())
+                dff_found = dff_matched.notna()
+                if dff_found.any():
+                    players_df.loc[dff_found, "Projection"] = dff_matched.loc[dff_found].astype(float)
+
+                draftedge_matched = players_df["Name"].map(
+                    lambda name: draftedge_projections.get(normalize_projection_name(name))
+                )
+                draftedge_found = draftedge_matched.notna() & ~dff_found
+                if draftedge_found.any():
+                    players_df.loc[draftedge_found, "Projection"] = draftedge_matched.loc[draftedge_found].astype(float)
+
+                players_df["ProjectionSource"] = "Salary CSV"
+                players_df.loc[draftedge_found, "ProjectionSource"] = "DraftEdge"
+                players_df.loc[dff_found, "ProjectionSource"] = "DFF"
+                found = dff_found | draftedge_found
+                draftedge_count = int(draftedge_found.sum())
+                dff_count = int(dff_found.sum())
                 draftedge_error = active_cache.get("error")
 
+                if dff_file is not None:
+                    if dff_error:
+                        st.error("Could not read the DFF projections file: " + dff_error)
+                    else:
+                        st.success(f"DFF projections matched for {dff_count} players (first choice).")
                 if active_cache.get("updated_at"):
                     st.session_state["draftedge_last_updated"] = active_cache["updated_at"]
-                    st.success(f"DraftEdge projections loaded for {draftedge_count} players.")
+                    st.success(f"DraftEdge projections filled gaps for {draftedge_count} players.")
                 elif draftedge_error:
                     st.error("DraftEdge refresh failed. Last successful update time has not changed.")
                     st.caption("Refresh detail: " + str(draftedge_error))
@@ -720,10 +770,10 @@ if salary_file is not None:
 
 
                 st.success(f"Loaded {len(players_df)} players from the salary file.")
-                if draftedge_count:
-                    st.success(f"Applied DraftEdge projections to {draftedge_count} players (first-choice source).")
+                if dff_count + draftedge_count:
+                    st.success(f"Applied projections to {dff_count + draftedge_count} players: DFF first, then DraftEdge.")
                 else:
-                    st.warning("DraftEdge projections could not be matched. Check the matchup/date in the uploaded salary CSV before building lineups.")
+                    st.warning("No DFF or DraftEdge projections matched. Check the uploaded files and matchup/date before building lineups.")
                     if draftedge_error:
                         st.caption(f"DraftEdge refresh detail: {draftedge_error}")
                 if is_showdown_template:
@@ -732,8 +782,11 @@ if salary_file is not None:
                     st.info("Lineup template detected. Player rows were kept without applying Showdown-only filtering.")
                 st.caption("Check the player names, teams, salaries, and projections before building lineups.")
                 with st.expander("DraftEdge matching details"):
+                    st.write(f"DFF projections loaded: {len(dff_projections)}")
+                    st.write(f"DFF players matched: {dff_count}")
                     st.write(f"DraftEdge player rows parsed: {active_cache.get('parsed_rows', 'unknown')}")
                     st.write(f"Usable DraftEdge projections: {len(draftedge_projections)}")
+                    st.write(f"DraftEdge players used after DFF priority: {draftedge_count}")
                     unmatched_names = players_df.loc[~found, "Name"].astype(str).tolist()
                     st.write("Salary-file players not matched:")
                     st.write(", ".join(unmatched_names) if unmatched_names else "All players matched.")
