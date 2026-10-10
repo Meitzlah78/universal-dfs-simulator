@@ -1152,15 +1152,78 @@ def score_nfl_stat_line(stats, platform):
 
 
 def _simulate_scored_player_outcomes(players_df, platform, rng):
-    """Simulate player stats and score them with the selected site's rules."""
+    """Simulate player outcomes from historical distributions and shared game scripts.
+
+    Projections are deliberately not used to scale simulated scores. Game scripts
+    create shared game-level conditions so teammates and opponents move together.
+    """
     historical = load_nfl_historical_player_stats()
-    means = build_internal_projection_means(players_df, platform=platform, include_history=True)
     simulations = {}
     n = SIMULATIONS
+
+    # Build one shared script per matchup so players in the same game are correlated.
+    team_col = "Team" if "Team" in players_df.columns else None
+    opponent_col = "Opponent" if "Opponent" in players_df.columns else None
+    teams = (
+        players_df[team_col].astype(str).str.upper().str.strip().unique().tolist()
+        if team_col else []
+    )
+    team_scripts = {}
+    if teams:
+        team_opponents = {}
+        for team in teams:
+            opponent = ""
+            if opponent_col:
+                rows = players_df[
+                    players_df[team_col].astype(str).str.upper().str.strip() == team
+                ]
+                values = rows[opponent_col].astype(str).str.upper().str.strip()
+                values = values[~values.isin(["", "—", "-", "NAN", "NONE"])]
+                if not values.empty:
+                    opponent = values.iloc[0]
+            team_opponents[team] = opponent
+
+        handled = set()
+        for team in teams:
+            if team in handled:
+                continue
+            opponent = team_opponents.get(team, "")
+            if opponent and opponent in teams and opponent != team:
+                # Each simulated game has a shared scoring environment and a
+                # random leader. The trailing team tends to pass more; the
+                # leading team tends to run more.
+                game_environment = np.clip(rng.normal(1.0, 0.12, n), 0.72, 1.30)
+                margin = np.abs(rng.normal(0.0, 1.0, n))
+                team_a_leads = rng.random(n) < 0.5
+                a_leading = np.where(team_a_leads, margin, -margin)
+                b_leading = -a_leading
+                for side, lead_state in ((team, a_leading), (opponent, b_leading)):
+                    team_scripts[side] = {
+                        "scoring": np.clip(game_environment * rng.normal(1.0, 0.07, n), 0.70, 1.35),
+                        "leading": lead_state > 0.35,
+                        "trailing": lead_state < -0.35,
+                    }
+                handled.add(team)
+                handled.add(opponent)
+            else:
+                # If opponent data is unavailable, retain a modest standalone
+                # game environment instead of pretending to know the matchup.
+                team_scripts[team] = {
+                    "scoring": np.clip(rng.normal(1.0, 0.14, n), 0.70, 1.35),
+                    "leading": rng.random(n) < 0.35,
+                    "trailing": rng.random(n) < 0.35,
+                }
+
     for index, (_, row) in enumerate(players_df.iterrows()):
         name = str(row["Name"])
         positions = set(str(row.get("Position", "")).upper().replace(" ", "").split("/"))
-        target_mean = float(means[index])
+        team = str(row.get("Team", "")).upper().strip()
+        script = team_scripts.get(team, {
+            "scoring": np.ones(n),
+            "leading": np.zeros(n, dtype=bool),
+            "trailing": np.zeros(n, dtype=bool),
+        })
+
         if "QB" in positions:
             stats = {
                 "passing_yards": np.maximum(0, rng.normal(225, 65, n)),
@@ -1170,6 +1233,7 @@ def _simulate_scored_player_outcomes(players_df, platform, rng):
                 "rushing_tds": rng.binomial(1, 0.12, n),
                 "fumbles_lost": rng.binomial(1, 0.08, n),
             }
+            position_type = "QB"
         elif "RB" in positions:
             stats = {
                 "rushing_yards": np.maximum(0, rng.normal(55, 30, n)),
@@ -1179,6 +1243,7 @@ def _simulate_scored_player_outcomes(players_df, platform, rng):
                 "receptions": rng.poisson(2.5, n),
                 "fumbles_lost": rng.binomial(1, 0.04, n),
             }
+            position_type = "RB"
         elif "WR" in positions:
             stats = {
                 "receiving_yards": np.maximum(0, rng.normal(55, 35, n)),
@@ -1187,6 +1252,7 @@ def _simulate_scored_player_outcomes(players_df, platform, rng):
                 "rushing_yards": np.maximum(0, rng.normal(2, 5, n)),
                 "fumbles_lost": rng.binomial(1, 0.02, n),
             }
+            position_type = "WR"
         elif "TE" in positions:
             stats = {
                 "receiving_yards": np.maximum(0, rng.normal(34, 24, n)),
@@ -1194,6 +1260,7 @@ def _simulate_scored_player_outcomes(players_df, platform, rng):
                 "receptions": rng.poisson(2.7, n),
                 "fumbles_lost": rng.binomial(1, 0.02, n),
             }
+            position_type = "TE"
         elif "K" in positions:
             stats = {
                 "fg_under_40": rng.poisson(1.0, n),
@@ -1201,6 +1268,7 @@ def _simulate_scored_player_outcomes(players_df, platform, rng):
                 "fg_50_plus": rng.poisson(0.25, n),
                 "extra_points_made": rng.poisson(2.0, n),
             }
+            position_type = "K"
         else:
             stats = {
                 "sacks": rng.poisson(2.3, n),
@@ -1213,36 +1281,46 @@ def _simulate_scored_player_outcomes(players_df, platform, rng):
                 "yards_allowed": np.clip(rng.normal(350, 80, n), 0, 650),
                 "is_defense": 1,
             }
+            position_type = "DST"
+
         scores = np.asarray(score_nfl_stat_line(stats, platform), dtype=float)
-        # Adjust simulated opportunity volume by salary so higher-priced players
-        # tend to have more opportunity, while retaining site-specific scoring differences.
-        # When weekly historical scores are available, resample that player's
-        # own recent results. This makes both the outcome distribution and
-        # projection responsive to the player's actual history instead of
-        # relying only on generic position-level stat distributions.
+
+        # Historical scores provide the player's own distribution. Do not
+        # force the samples to match projections or a salary-based average.
         historical_result = _historical_player_average(
             name, next(iter(positions), ""), platform, historical, return_scores=True
         )
         if historical_result is not None:
             historical_points, recency_weights = historical_result
-            recency_probabilities = recency_weights / recency_weights.sum()
+            probabilities = recency_weights / recency_weights.sum()
             scores = rng.choice(
-                historical_points, size=n, replace=True, p=recency_probabilities
+                historical_points, size=n, replace=True, p=probabilities
             ).astype(float)
-            historical_mean = float(np.average(historical_points, weights=recency_weights))
-            if historical_mean > 0 and np.isfinite(target_mean) and target_mean > 0:
-                scores = scores * (target_mean / historical_mean)
-            else:
-                scores = np.full(n, max(target_mean, 0.0))
+
+        # Shared game script adjusts the sampled outcome modestly. Trailing teams
+        # throw more; leading teams lean more on their running backs. This is a
+        # game-context adjustment, not a projection calibration.
+        scoring_factor = script["scoring"]
+        if position_type in ("QB", "WR", "TE"):
+            script_factor = (
+                scoring_factor
+                + script["trailing"].astype(float) * 0.12
+                - script["leading"].astype(float) * 0.06
+            )
+        elif position_type == "RB":
+            script_factor = (
+                scoring_factor
+                + script["leading"].astype(float) * 0.10
+                - script["trailing"].astype(float) * 0.08
+            )
+        elif position_type == "DST":
+            script_factor = 2.0 - scoring_factor
         else:
-            actual_mean = float(np.mean(scores))
-            if actual_mean > 0 and np.isfinite(target_mean) and target_mean > 0:
-                # Calibrate fallback stat-line simulations to the internal
-                # salary/position baseline when player history is unavailable.
-                scores = scores * (target_mean / actual_mean)
-            else:
-                scores = np.full(n, max(target_mean, 0.0) if np.isfinite(target_mean) else 0.0)
-        simulations[name] = np.maximum(scores, 0)
+            script_factor = scoring_factor
+
+        script_factor = np.clip(script_factor, 0.70, 1.35)
+        simulations[name] = np.maximum(scores * script_factor, 0.0)
+
     return pd.DataFrame(simulations)
 
 # ================================
