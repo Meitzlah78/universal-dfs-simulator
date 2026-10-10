@@ -341,10 +341,8 @@ if platform == "FanDuel":
         fd_pos_col = fd_find_column(
             fd_raw, ["Position", "Roster Position", "RosterPosition"]
         )
-        fd_proj_col = fd_find_column(
-            fd_raw, ["Projection", "Projected Points", "FPPG", "Fpts",
-                     "AvgPointsPerGame", "Avg Points Per Game"]
-        )
+        # Never use FanDuel's salary-file fantasy average as a projection.
+        fd_proj_col = None
         fd_id_col = fd_find_column(
             fd_raw, ["Id", "ID", "Player ID", "FDP_ID", "PlayerId"]
         )
@@ -376,10 +374,16 @@ if platform == "FanDuel":
         fd_opponents = build_opponent_map(fd_raw, fd_players["Team"])
         fd_players["Opponent"] = fd_players["Team"].map(fd_opponents).fillna("—")
         fd_players["Position"] = fd_raw[fd_pos_col].astype(str).str.strip().str.upper()
-        fd_players["Projection"] = (
-            pd.to_numeric(fd_raw[fd_proj_col], errors="coerce").fillna(0.0)
-            if fd_proj_col is not None else 0.0
-        )
+        # Create a basic salary/position estimate instead of using FanDuel average fantasy points.
+        fd_rate = {"QB": 2.00, "RB": 1.75, "WR": 1.70, "TE": 1.50, "K": 1.35, "DST": 1.35, "D": 1.35, "DEF": 1.35}
+        fd_salary_numeric = pd.to_numeric(fd_players["Salary"], errors="coerce").fillna(0)
+        fd_players["Projection"] = [
+            max(0.0, (salary / 1000.0) * max(
+                [fd_rate.get(pos.strip(), 1.60) for pos in str(position).split("/")],
+                default=1.60
+            ))
+            for salary, position in zip(fd_salary_numeric, fd_players["Position"])
+        ]
         if fd_id_col is not None:
             fd_players["FD_ID"] = fd_raw[fd_id_col].astype(str).str.strip()
 
@@ -1145,7 +1149,8 @@ if salary_file is not None:
         salary_col = find_column(uploaded_df, ["Salary"])
         team_col = find_column(uploaded_df, ["TeamAbbrev", "Team", "Team Abbrev", "Team Abbreviation"])
         position_col = find_column(uploaded_df, ["Position", "Roster Position", "RosterPosition"])
-        projection_col = find_column(uploaded_df, ["Projection", "Projected Points", "Fpts", "FPPG", "AvgPointsPerGame", "Avg Points Per Game"])
+        # Do not use DraftKings salary-file fantasy averages as projections.
+        projection_col = None
         id_col = find_column(uploaded_df, ["ID", "Player ID", "DK ID"])
 
         missing = []
