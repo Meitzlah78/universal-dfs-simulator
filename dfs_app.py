@@ -1128,11 +1128,8 @@ players_df["CaptainSalary"] = (
 
 # Save results by player pool instead of deleting them when the slate changes.
 # This lets a user return to a previously loaded slate and recover its last build.
-slate_signature = tuple(
-    players_df[["Name", "Team", "Salary", "Projection"]]
-    .astype(str)
-    .itertuples(index=False, name=None)
-)
+# Stable slate identity: generated projections must not make the slate look new.
+slate_signature = internal_key
 BUILD_STATE_KEYS = [
     "simulation_df", "simulations_ready", "contest_field_df",
     "contest_field_count", "contest_field_ready", "candidates_df",
