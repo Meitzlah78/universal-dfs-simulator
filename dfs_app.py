@@ -388,6 +388,13 @@ for idx in control_values.index:
 st.session_state["control_values"] = control_values
 edited_controls = control_values.copy()
 
+# Build control lookup before any button handlers use it.
+control_map = edited_controls.set_index("Name").to_dict("index")
+available_players = [
+    p for p in players_df["Name"]
+    if p in control_map and not control_map[p]["Fade"]
+]
+
 # ============================================
 # SALARY MAPS
 # ============================================
@@ -411,12 +418,23 @@ if "simulation_df" in st.session_state:
     simulation_df = st.session_state["simulation_df"]
 
     for player in players_df["Name"]:
-        values = simulation_df[player]
+        if player in simulation_df.columns:
+            values = simulation_df[player]
+            player_sim[player] = {
+                "Mean": values.mean(),
+                "P95": values.quantile(0.95),
+                "P99": values.quantile(0.99)
+            }
 
+# Safe fallback so the page can render before the first simulation.
+for _, player_row in players_df.iterrows():
+    player = player_row["Name"]
+    if player not in player_sim:
+        projection = max(float(player_row["Projection"]), 0.01)
         player_sim[player] = {
-            "Mean": values.mean(),
-            "P95": values.quantile(0.95),
-            "P99": values.quantile(0.99)
+            "Mean": projection,
+            "P95": projection * 1.8,
+            "P99": projection * 2.3
         }
 
 # ============================================
@@ -452,15 +470,11 @@ contest_sim_clicked = st.button(
 
 if contest_sim_clicked:
     contest_field = []
-
-    available_players = [
-        p for p in players_df["Name"]
-        if not control_map[p]["Fade"]
-    ]
-
     rng = np.random.default_rng(123)
 
-    if "simulation_df" in st.session_state:
+    if len(available_players) < 6:
+        st.error("At least 6 non-faded players are required for Contest Sim.")
+    elif "simulation_df" in st.session_state:
         simulation_df = st.session_state["simulation_df"]
 
         player_weights = simulation_df.mean(axis=0).reindex(
@@ -533,12 +547,8 @@ if contest_sim_clicked:
         st.warning("Run SIM or BUILD first.")
 
 # ============================================
-# PLAYER CONTROLS
+# BUILD ACTION
 # ============================================
-
-control_map = edited_controls.set_index(
-    "Name"
-).to_dict("index")
 
 if build_clicked:
     with st.spinner("Running 10,000 game simulations..."):
@@ -547,10 +557,15 @@ if build_clicked:
     st.session_state["simulation_df"] = simulation_df
     st.session_state["simulations_ready"] = True
 
-    available_players = [
-        p for p in players_df["Name"]
-        if not control_map[p]["Fade"]
-    ]
+    # Refresh rankings with the simulations created by this BUILD click.
+    player_sim = {}
+    for player in players_df["Name"]:
+        values = simulation_df[player]
+        player_sim[player] = {
+            "Mean": values.mean(),
+            "P95": values.quantile(0.95),
+            "P99": values.quantile(0.99)
+        }
 
 locked_players = [
     p for p in available_players
