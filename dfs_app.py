@@ -526,6 +526,156 @@ for _, player_row in players_df.iterrows():
         }
 
 # ============================================
+# DRAFTKINGS CLASSIC BUILDER
+# ============================================
+
+if platform == "DraftKings" and lineup_mode == "Classic":
+    st.write("### DraftKings Classic Lineups")
+    st.caption(
+        "Classic roster: QB, 2 RB, 3 WR, TE, FLEX (RB/WR/TE), DST. "
+        "Salary cap: $50,000."
+    )
+
+    def classic_positions(value):
+        raw = str(value).upper().replace(" ", "")
+        return set(raw.split("/"))
+
+    classic_pool = players_df.copy()
+    classic_pool["Eligible"] = classic_pool["Position"].apply(classic_positions)
+    classic_pool = classic_pool[
+        classic_pool["Name"].isin(available_players)
+        & (classic_pool["Salary"] > 0)
+    ].copy()
+
+    roster_slots = [
+        ("QB", {"QB"}), ("RB1", {"RB"}), ("RB2", {"RB"}),
+        ("WR1", {"WR"}), ("WR2", {"WR"}), ("WR3", {"WR"}),
+        ("TE", {"TE"}), ("FLEX", {"RB", "WR", "TE"}), ("DST", {"DST"})
+    ]
+
+    if st.button("BUILD CLASSIC LINEUPS", type="primary"):
+        rng = np.random.default_rng()
+        rankings = {}
+        for _, row in classic_pool.iterrows():
+            player = row["Name"]
+            rankings[player] = (
+                player_sim.get(player, {}).get("P95", row["Projection"]) * 0.50
+                + player_sim.get(player, {}).get("P99", row["Projection"] * 2.3) * 0.25
+                + player_sim.get(player, {}).get("Mean", row["Projection"]) * 0.25
+            )
+
+        # Use the best projected players while keeping enough depth for each slot.
+        ranked_names = sorted(rankings, key=rankings.get, reverse=True)[:60]
+        classic_pool = classic_pool[classic_pool["Name"].isin(ranked_names)].copy()
+        player_rows = classic_pool.set_index("Name").to_dict("index")
+        candidate_lineups = []
+        seen = set()
+        max_attempts = 50000
+
+        for attempt in range(max_attempts):
+            chosen = {}
+            used = set()
+            salary = 0
+            slots = list(roster_slots)
+            # Fill the most restrictive positions first; FLEX is last.
+            for slot, eligible in slots:
+                choices = [
+                    name for name in ranked_names
+                    if name in player_rows
+                    and name not in used
+                    and player_rows[name]["Eligible"] & eligible
+                    and salary + float(player_rows[name]["Salary"]) <= 50000
+                ]
+                if not choices:
+                    break
+                weights = np.array([
+                    max(rankings.get(name, 0.01), 0.01) for name in choices
+                ], dtype=float)
+                weights /= weights.sum()
+                # Mix projection-weighted choices with random choices for lineup variety.
+                if rng.random() < 0.25:
+                    picked = str(rng.choice(choices))
+                else:
+                    picked = str(rng.choice(choices, p=weights))
+                chosen[slot] = picked
+                used.add(picked)
+                salary += int(player_rows[picked]["Salary"])
+
+            if len(chosen) != len(roster_slots) or salary > 50000:
+                continue
+            if not all(name in chosen.values() for name in locked_players):
+                continue
+
+            key = tuple(chosen[slot] for slot, _ in roster_slots)
+            if key in seen:
+                continue
+            seen.add(key)
+            projected_points = sum(
+                float(player_sim.get(name, {}).get("Mean", player_rows[name]["Projection"]))
+                for name in chosen.values()
+            )
+            candidate_lineups.append({
+                **chosen,
+                "Salary": salary,
+                "ProjectedPoints": projected_points,
+                "Score": sum(rankings.get(name, 0.01) for name in chosen.values())
+            })
+            if len(candidate_lineups) >= 20:
+                break
+
+        if not candidate_lineups:
+            st.error(
+                "No valid Classic lineups found. Check player positions, salaries, "
+                "locks, fades, and the uploaded salary file."
+            )
+        else:
+            classic_results = pd.DataFrame(candidate_lineups).sort_values(
+                "Score", ascending=False
+            ).reset_index(drop=True)
+            st.session_state["classic_lineups"] = classic_results
+            st.session_state["classic_pool_signature"] = slate_signature
+
+    classic_results = st.session_state.get("classic_lineups")
+    if classic_results is not None:
+        st.write(f"Built {len(classic_results)} valid Classic lineups.")
+        st.dataframe(
+            classic_results.drop(columns=["Score"], errors="ignore"),
+            use_container_width=True,
+            hide_index=True
+        )
+
+        id_column = "DK_ID" if "DK_ID" in classic_pool.columns else None
+        if id_column:
+            ids = dict(zip(classic_pool["Name"], classic_pool[id_column].astype(str)))
+            export_slots = ["QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "FLEX", "DST"]
+            export_data = []
+            missing = []
+            for _, lineup in classic_results.iterrows():
+                row_ids = []
+                for slot in export_slots:
+                    player_name = lineup[slot]
+                    player_id = ids.get(player_name, "")
+                    if not player_id or player_id.lower() == "nan":
+                        missing.append(player_name)
+                    row_ids.append(player_id)
+                export_data.append(row_ids)
+            if missing:
+                st.warning("Some player IDs are missing. Upload the DraftKings lineup template to enable export.")
+            else:
+                export_df = pd.DataFrame(export_data, columns=export_slots)
+                st.download_button(
+                    "EXPORT DRAFTKINGS CLASSIC CSV",
+                    export_df.to_csv(index=False).encode("utf-8"),
+                    file_name="DraftKings_Classic_Lineups.csv",
+                    mime="text/csv"
+                )
+        else:
+            st.info("Upload a DraftKings salary/template CSV containing player IDs to enable lineup export.")
+
+    st.stop()
+
+
+# ============================================
 # BUILD LINEUPS
 # ============================================
 
