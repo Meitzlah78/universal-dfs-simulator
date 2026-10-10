@@ -827,6 +827,8 @@ if platform == "DraftKings" and lineup_mode == "Classic":
 
 def run_game_simulations(players_df):
     # Generate independent outcomes from the simulator's own salary/position model.
+    # Keep the model mean intact by scaling each player's simulation results back
+    # to the intended salary/position estimate.
     rng = np.random.default_rng()
     means = build_internal_projection_means(players_df)
     n = float(DISPERSION)
@@ -836,6 +838,14 @@ def run_game_simulations(players_df):
         p=p,
         size=(SIMULATIONS, len(players_df))
     ).astype(float)
+    sampled_means = sims.mean(axis=0)
+    scale = np.divide(
+        means,
+        sampled_means,
+        out=np.ones_like(means, dtype=float),
+        where=sampled_means > 0
+    )
+    sims *= scale
     return pd.DataFrame(sims, columns=players_df["Name"].tolist())
 
 # ================================
