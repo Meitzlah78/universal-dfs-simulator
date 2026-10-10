@@ -909,29 +909,49 @@ if salary_file is not None:
     except Exception as exc:
         st.error(f"Could not read that CSV: {exc}. The sample player pool is still being used.")
 
-def load_nfl_historical_player_stats():
-    """Load recent weekly NFL player stats from the free nflverse CSV releases."""
-    cache_key = "nfl_historical_weekly_stats_2022_2025"
-    if cache_key in st.session_state:
-        return st.session_state[cache_key]
+@st.cache_data(show_spinner=False, ttl=86400)
+def _download_nfl_historical_player_stats():
+    """Download historical NFL stats once per cache period, with a network timeout."""
+    import io
+    import requests
+
     frames = []
+    loaded_seasons = []
     errors = []
     for season in [2022, 2023, 2024, 2025]:
         url = f"https://github.com/nflverse/nflverse-data/releases/download/player_stats/stats_player_week_{season}.csv"
         try:
-            frame = pd.read_csv(url, low_memory=False)
+            response = requests.get(url, timeout=(8, 25))
+            response.raise_for_status()
+            frame = pd.read_csv(io.BytesIO(response.content), low_memory=False)
             if not frame.empty:
                 frame["season"] = season
                 frames.append(frame)
+                loaded_seasons.append(season)
         except Exception as exc:
             errors.append(f"{season}: {exc}")
     historical = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
-    st.session_state[cache_key] = historical
-    st.session_state["nfl_historical_stats_status"] = (
-        f"Loaded historical weekly stats for {len(frames)} season(s): "
-        + ", ".join(str(year) for year in [2022, 2023, 2024, 2025][:len(frames)])
-        if frames else "Historical NFL data could not be downloaded; using salary/position estimates."
-    )
+    return historical, loaded_seasons, errors
+
+
+def load_nfl_historical_player_stats():
+    """Use Streamlit's shared cache so reruns reuse data instead of downloading it again."""
+    try:
+        historical, loaded_seasons, errors = _download_nfl_historical_player_stats()
+    except Exception as exc:
+        historical, loaded_seasons, errors = pd.DataFrame(), [], [str(exc)]
+    if loaded_seasons:
+        st.session_state["nfl_historical_stats_status"] = (
+            "Historical NFL data cached for reuse. Loaded seasons: "
+            + ", ".join(str(year) for year in loaded_seasons)
+            + ". Cache refreshes every 24 hours."
+        )
+    else:
+        detail = (" " + "; ".join(errors[:2])) if errors else ""
+        st.session_state["nfl_historical_stats_status"] = (
+            "Historical NFL data could not be downloaded; using salary/position estimates."
+            + detail
+        )
     return historical
 
 
