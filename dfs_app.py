@@ -225,7 +225,8 @@ BUILD_STATE_KEYS = [
     "contest_field_count", "contest_field_ready", "candidates_df",
     "candidates_ready", "contest_results_df", "portfolio_df",
     "portfolio_count_used", "portfolio_metric_used",
-    "final_lineups", "dk_player_ids"
+    "final_lineups", "dk_player_ids",
+    "classic_lineups", "classic_pool_signature"
 ]
 if "saved_builds_by_slate" not in st.session_state:
     st.session_state["saved_builds_by_slate"] = {}
