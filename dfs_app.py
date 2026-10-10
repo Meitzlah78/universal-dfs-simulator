@@ -194,7 +194,12 @@ def download_public_projection_table(source_name, platform_name):
 
     if source_name == "DFF":
         if is_single_game:
-            url = f"https://www.dailyfantasyfuel.com/nfl/showdown-single-game-projections/{site}/"
+            # This is the working Colab route; DraftKings is the default view.
+            url = (
+                "https://www.dailyfantasyfuel.com/nfl/showdown-single-game-projections/"
+                if site == "draftkings"
+                else "https://www.dailyfantasyfuel.com/nfl/showdown-single-game-projections/fanduel/"
+            )
         else:
             url = "https://www.dailyfantasyfuel.com/nfl/projections/fanduel/" if site == "fanduel" else "https://www.dailyfantasyfuel.com/nfl/projections/"
     elif source_name == "DraftEdge":
@@ -221,6 +226,57 @@ def download_public_projection_table(source_name, platform_name):
         tables = pd.read_html(io.StringIO(response.text))
     except Exception:
         tables = []
+
+    # DFF's working table has two-level headers and three non-player rows.
+    # Flatten it the same way as the tested Colab loader before generic parsing.
+    if source_name == "DFF":
+        for table in tables:
+            dff_table = table.copy()
+            if isinstance(dff_table.columns, pd.MultiIndex):
+                dff_table = dff_table.iloc[3:].copy()
+                dff_table.columns = [
+                    str(col[-1]).strip() if isinstance(col, tuple) else str(col).strip()
+                    for col in dff_table.columns
+                ]
+            else:
+                dff_table.columns = [str(col).strip() for col in dff_table.columns]
+
+            normalized_columns = {
+                re.sub(r"[^a-z0-9]+", " ", str(col).casefold()).strip(): col
+                for col in dff_table.columns
+            }
+            name_col = next(
+                (col for key, col in normalized_columns.items()
+                 if key in ("name", "player", "player name", "nickname") or key.endswith(" name")),
+                None
+            )
+            site_prefix = "fd" if site == "fanduel" else "dk"
+            proj_col = next(
+                (col for key, col in normalized_columns.items()
+                 if ("project" in key or "proj" in key)
+                 and (site_prefix in key or "fantasy points" in key)),
+                None
+            )
+            if proj_col is None:
+                proj_col = next(
+                    (col for key, col in normalized_columns.items()
+                     if key in ("dk fp projected", "fd fp projected", "ppg projection", "projection")),
+                    None
+                )
+            if name_col is None or proj_col is None:
+                continue
+
+            dff_result = {}
+            for _, row in dff_table.iterrows():
+                key = normalize_projection_player_name(row.get(name_col, ""))
+                value = pd.to_numeric(
+                    str(row.get(proj_col, "")).replace(",", "").replace("$", ""),
+                    errors="coerce"
+                )
+                if key and pd.notna(value) and np.isfinite(float(value)) and float(value) > 0:
+                    dff_result[key] = float(value)
+            if dff_result:
+                return dff_result
 
     for table in tables:
         table.columns = [str(c).strip() for c in table.columns]
