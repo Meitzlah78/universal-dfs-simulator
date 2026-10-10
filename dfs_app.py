@@ -253,21 +253,31 @@ def apply_injury_statuses(frame, key_prefix):
     # A newly-Out player invalidates every cached build/simulation so stale lineups
     # cannot keep showing that player. Injury status table is retained separately.
     if newly_out:
+        # Clear every current and archived lineup/build cache. In particular, DK
+        # stores builds inside saved_builds_by_slate, and both sites can restore
+        # archived portfolios after the injury editor runs.
+        preserve_tokens = (
+            "dropdown", "injury_status", "player_injury_statuses", "lineup_mode",
+            "platform", "slate_selector"
+        )
+        clear_tokens = (
+            "lineup", "portfolio", "simulation", "contest_field", "contest_results",
+            "candidate", "exposure", "saved_build", "classic_pool_signature",
+            "build_ready", "latest_field_ownership", "active_slate_signature",
+            "fd_active_signature", "fd_saved_builds", "fd_lineups"
+        )
         stale_build_keys = [
             key for key in list(st.session_state.keys())
-            if any(token in str(key).lower() for token in (
-                "lineups", "portfolio", "simulation", "contest_field", "contest_results",
-                "candidate", "exposure", "saved_build", "classic_pool_signature",
-                "final_lineups", "build_ready", "latest_field_ownership"
-            ))
-            and not any(token in str(key).lower() for token in (
-                "dropdown", "injury_status", "player_injury_statuses", "lineup_mode",
-                "platform", "slate_selector"
-            ))
+            if any(token in str(key).lower() for token in clear_tokens)
+            and not any(token in str(key).lower() for token in preserve_tokens)
         ]
         for key in stale_build_keys:
             st.session_state.pop(key, None)
-        st.warning("Cleared saved builds because these players were marked Out: " + ", ".join(newly_out) + ". Rebuild lineups to exclude them.")
+        st.warning(
+            "Removed saved lineups and simulations because these players were marked Out: "
+            + ", ".join(newly_out)
+            + ". Build new lineups; Out players are excluded."
+        )
 
     result = frame.copy()
     result["Injury Status"] = result["Name"].astype(str).map(
