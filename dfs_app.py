@@ -598,13 +598,14 @@ def score_nfl_stat_line(stats, platform):
          points_allowed <= 20, points_allowed <= 27, points_allowed <= 34],
         [10, 7, 4, 1, 0, -1], default=-4
     ) * np.asarray(stats.get("is_defense", 0), dtype=float)
-    yards_allowed = arr("yards_allowed")
-    score = score + np.select(
-        [yards_allowed <= 100, yards_allowed <= 199, yards_allowed <= 299,
-         yards_allowed <= 349, yards_allowed <= 399, yards_allowed <= 449,
-         yards_allowed <= 499],
-        [3, 2, 1, 0, -1, -3, -5], default=-7
-    ) * np.asarray(stats.get("is_defense", 0), dtype=float)
+    if not str(platform).lower().startswith("fanduel"):
+        yards_allowed = arr("yards_allowed")
+        score = score + np.select(
+            [yards_allowed <= 100, yards_allowed <= 199, yards_allowed <= 299,
+             yards_allowed <= 349, yards_allowed <= 399, yards_allowed <= 449,
+             yards_allowed <= 499],
+            [3, 2, 1, 0, -1, -3, -5], default=-7
+        ) * np.asarray(stats.get("is_defense", 0), dtype=float)
     return score
 
 
