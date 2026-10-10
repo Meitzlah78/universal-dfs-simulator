@@ -595,7 +595,7 @@ if salary_file is not None:
 
                         table_parser = DraftEdgeTableParser()
                         table_parser.feed(de_response.text)
-                        de_table = None
+                        de_records = []
                         for raw_table in table_parser.tables:
                             header_index = next(
                                 (i for i, row in enumerate(raw_table)
@@ -608,23 +608,20 @@ if salary_file is not None:
                                 continue
                             headers = [cell.strip() for cell in raw_table[header_index]]
                             header_lookup = {name.casefold(): i for i, name in enumerate(headers)}
-                            records = []
+                            required_index = max(
+                                header_lookup["team"], header_lookup["player"], header_lookup["proj"]
+                            )
                             for row in raw_table[header_index + 1:]:
-                                required_index = max(
-                                    header_lookup["team"], header_lookup["player"], header_lookup["proj"]
-                                )
                                 if len(row) <= required_index:
                                     continue
-                                records.append({
+                                de_records.append({
                                     "Team": row[header_lookup["team"]],
                                     "Player": row[header_lookup["player"]],
                                     "Proj": row[header_lookup["proj"]]
                                 })
-                            if records:
-                                de_table = pd.DataFrame(records)
-                                break
-                        if de_table is None:
+                        if not de_records:
                             raise ValueError("DraftEdge page did not contain the expected Team/Player/Proj table.")
+                        de_table = pd.DataFrame(de_records)
 
                         de_table["Player"] = de_table["Player"].astype(str).map(
                             lambda name: re.sub(r"\s+", " ", unescape(name)).strip()
