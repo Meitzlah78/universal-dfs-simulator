@@ -130,6 +130,42 @@ def show_field_ownership(field_df, slots, title, captain_slot=None):
         st.dataframe(ownership_df, use_container_width=True, hide_index=True)
 
 
+def add_lineup_field_ownership(portfolio_df):
+    """Add a lineup ownership score based on player ownership in the simulated field."""
+    ownership_df = st.session_state.get("latest_field_ownership")
+    if not isinstance(ownership_df, pd.DataFrame) or ownership_df.empty or "Name" not in ownership_df.columns:
+        return portfolio_df
+
+    field_ownership = dict(zip(
+        ownership_df["Name"].astype(str),
+        pd.to_numeric(ownership_df["Ownership %"], errors="coerce").fillna(0.0)
+    ))
+    captain_series = ownership_df["Captain/MVP Ownership %"] if "Captain/MVP Ownership %" in ownership_df.columns else pd.Series(0.0, index=ownership_df.index)
+    captain_ownership = dict(zip(
+        ownership_df["Name"].astype(str),
+        pd.to_numeric(captain_series, errors="coerce").fillna(0.0)
+    ))
+    slots = [slot for slot in ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5", "QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "FLEX", "DST", "MVP"] if slot in portfolio_df.columns]
+    if not slots:
+        return portfolio_df
+
+    result = portfolio_df.copy()
+    def score_lineup(row):
+        total = 0.0
+        for slot in slots:
+            player = str(row.get(slot, "")).strip()
+            if not player or player.lower() in {"nan", "none"}:
+                continue
+            if slot in {"Captain", "MVP"} and captain_ownership.get(player, 0.0) > 0:
+                total += captain_ownership[player]
+            else:
+                total += field_ownership.get(player, 0.0)
+        return round(total, 2)
+
+    result["Lineup Ownership Score (%)"] = result.apply(score_lineup, axis=1)
+    return result
+
+
 def build_showdown_opponent_field(available_players, simulation_df, players_df,
                                   salary_map, captain_salary_map, salary_cap, target):
     """Build Showdown opponents with cached NumPy arrays to avoid repeated pandas work."""
@@ -3718,6 +3754,7 @@ if "contest_results_df" in st.session_state:
         st.session_state["portfolio_control_signature"] = current_control_signature
 
     portfolio_df = st.session_state["portfolio_df"].copy()
+    portfolio_df = add_lineup_field_ownership(portfolio_df)
 
     # Add each lineup's total salary to the portfolio display and export.
     portfolio_df["Salary"] = portfolio_df.apply(
@@ -3758,6 +3795,8 @@ if "contest_results_df" in st.session_state:
     st.write(
         f"Portfolio: {len(portfolio_df)} lineups"
     )
+    if "Lineup Ownership Score (%)" in portfolio_df.columns:
+        st.caption("Lineup Ownership Score is the sum of each player's simulated ownership in the contest field. Lower scores generally mean a less popular lineup; this is a score, not the chance the exact lineup appears.")
 
     display_columns = [
         "Captain",
@@ -3773,6 +3812,7 @@ if "contest_results_df" in st.session_state:
         "Flex5",
         "Flex5 Sim Pts",
         "Total Sim Pts",
+        "Lineup Ownership Score (%)",
         "Salary",
         "ContestScore",
         "WinRate",
@@ -3861,7 +3901,7 @@ if "contest_results_df" in st.session_state:
         "Captain", "Captain Sim Pts", "Flex1", "Flex1 Sim Pts",
         "Flex2", "Flex2 Sim Pts", "Flex3", "Flex3 Sim Pts",
         "Flex4", "Flex4 Sim Pts", "Flex5", "Flex5 Sim Pts",
-        "Salary", "ContestScore", "WinRate", "Top1", "Top5",
+        "Salary", "Lineup Ownership Score (%)", "ContestScore", "WinRate", "Top1", "Top5",
         "Top10", "CashRate"
     ]
     portfolio_export_df = portfolio_df[
