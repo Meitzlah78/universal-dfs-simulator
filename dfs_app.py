@@ -384,14 +384,16 @@ players_df = pd.DataFrame([
 # ================================
 
 st.divider()
+st.write("### DraftEdge Projection Controls")
+st.caption("Use this button to pull the latest projections for the uploaded slate.")
+refresh_clicked = st.button("🔄 REFRESH DRAFTEDGE PROJECTIONS NOW", key="refresh_draftedge", type="primary", use_container_width=True)
+
 st.write("### Upload DraftKings Salary File")
 salary_file = st.file_uploader(
     "Upload a DraftKings player CSV",
     type=["csv"],
     help="Upload the salary CSV for the slate. If you do not upload one, the sample player pool below is used."
 )
-
-refresh_clicked = st.button("REFRESH PROJECTIONS", key="refresh_draftedge")
 if "draftedge_last_updated" in st.session_state:
     st.caption("Last successful DraftEdge update: " + st.session_state["draftedge_last_updated"])
 else:
