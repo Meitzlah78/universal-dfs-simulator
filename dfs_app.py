@@ -14,17 +14,20 @@ st.title("Universal DFS Simulator")
 
 
 def apply_injury_statuses(frame, key_prefix):
-    """Let the user mark players Active, Questionable, or Out across all slate types."""
+    """Keep Active and Questionable players; exclude only players marked Out."""
     if "player_injury_statuses" not in st.session_state:
         st.session_state["player_injury_statuses"] = {}
     saved_statuses = st.session_state["player_injury_statuses"]
 
+    def status_key(name):
+        return " ".join(str(name).split()).casefold()
+
     status_df = frame[[c for c in ["Name", "Position", "Team"] if c in frame.columns]].copy()
     status_df["Injury Status"] = status_df["Name"].astype(str).map(
-        lambda name: saved_statuses.get(name.strip().casefold(), "Active")
+        lambda name: saved_statuses.get(status_key(name), "Active")
     )
     st.write("### Player Injury Status")
-    st.caption("Set each player to Active, Questionable, or Out. Players marked Out are removed from lineup building. Status choices carry across slates when the player name matches.")
+    st.caption("Questionable players stay eligible. Only players marked Out are removed from the player pool and new lineups. Status choices carry across slates when the player name matches.")
     edited_statuses = st.data_editor(
         status_df,
         use_container_width=True,
@@ -41,12 +44,12 @@ def apply_injury_statuses(frame, key_prefix):
         key=key_prefix + "_" + str(len(status_df)) + "_" + str(status_df["Name"].astype(str).head(3).tolist())
     )
     for _, row in edited_statuses.iterrows():
-        saved_statuses[str(row["Name"]).strip().casefold()] = row["Injury Status"]
+        saved_statuses[status_key(row["Name"])] = row["Injury Status"]
     st.session_state["player_injury_statuses"] = saved_statuses
 
     result = frame.copy()
     result["Injury Status"] = result["Name"].astype(str).map(
-        lambda name: str(saved_statuses.get(name.strip().casefold(), "Active")).strip().title()
+        lambda name: str(saved_statuses.get(status_key(name), "Active")).strip().title()
     )
     excluded = result[result["Injury Status"].str.casefold() == "out"]["Name"].astype(str).tolist()
     if excluded:
