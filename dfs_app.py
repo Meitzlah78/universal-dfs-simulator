@@ -443,7 +443,7 @@ if entry_file is not None:
         entry_df.columns = [str(c).strip() for c in entry_df.columns]
         required_entry_columns = {"Contest Name", "Contest ID"}
         if required_entry_columns.issubset(entry_df.columns):
-            entry_df["Contest ID"] = entry_df["Contest ID"].astype(str).str.replace(r"\\.0$", "", regex=True)
+            entry_df["Contest ID"] = entry_df["Contest ID"].astype(str).str.replace(r"\.0$", "", regex=True)
             contest_summary = (
                 entry_df.groupby(["Contest ID", "Contest Name"], dropna=False)
                 .agg(
