@@ -497,10 +497,10 @@ if entry_file is not None:
     except Exception as exc:
         st.error(f"Could not read the DraftKings contest entry file: {exc}")
 dff_file = st.file_uploader(
-    "Upload Daily Fantasy Fuel (DFF) projections CSV",
+    "Optional: Upload DFF projections CSV (otherwise downloaded automatically)",
     type=["csv"],
     key="dff_projection_file",
-    help="Download projections from Daily Fantasy Fuel and upload that CSV here. DFF projections take priority over DraftEdge."
+    help="Normally, the app downloads DFF projections automatically when you upload a DraftKings salary/template CSV. Upload a DFF CSV here only if you want to override the automatic download."
 )
 
 st.write("### Projection Controls")
