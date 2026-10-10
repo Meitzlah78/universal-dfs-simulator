@@ -57,6 +57,46 @@ def apply_injury_statuses(frame, key_prefix):
         st.stop()
     return result
 
+def show_projection_refresh_status(source_files, key_prefix):
+    """Show manual refresh control and the time projection files were last uploaded/refreshed."""
+    import hashlib
+    from datetime import datetime
+
+    signatures = []
+    for label, uploaded_file in source_files:
+        if uploaded_file is None:
+            signatures.append((label, None))
+        else:
+            digest = hashlib.sha256(uploaded_file.getvalue()).hexdigest()
+            signatures.append((label, digest))
+
+    signature_key = key_prefix + "_projection_signature"
+    time_key = key_prefix + "_projection_updated_at"
+    current_signature = tuple(signatures)
+    if current_signature != st.session_state.get(signature_key):
+        st.session_state[signature_key] = current_signature
+        if any(digest is not None for _, digest in signatures):
+            st.session_state[time_key] = datetime.now().astimezone().strftime("%Y-%m-%d %I:%M:%S %p %Z")
+
+    left, right = st.columns([1, 2])
+    with left:
+        refresh_clicked = st.button("REFRESH PROJECTIONS", key=key_prefix + "_refresh_projections")
+    with right:
+        updated_at = st.session_state.get(time_key)
+        if updated_at:
+            st.caption("Projection files last uploaded/refreshed: " + updated_at)
+        else:
+            st.caption("No DFF or DraftEdge projection file uploaded yet.")
+
+    if refresh_clicked:
+        if not any(uploaded_file is not None for _, uploaded_file in source_files):
+            st.warning("Upload a DFF or DraftEdge CSV first. Automatic source downloads are not configured yet.")
+        else:
+            st.session_state[time_key] = datetime.now().astimezone().strftime("%Y-%m-%d %I:%M:%S %p %Z")
+            st.success("Projection files re-read from the current uploads.")
+            st.rerun()
+
+
 def normalize_projection_player_name(name):
     """Normalize names so projection CSVs match the uploaded slate."""
     import re
@@ -213,6 +253,7 @@ if platform == "FanDuel":
     st.caption("Upload DFF and/or DraftEdge projection CSVs for FanDuel.")
     fd_dff_projection_file = st.file_uploader("Upload DFF projections CSV", type=["csv"], key="fd_dff_projection_file")
     fd_draftedge_projection_file = st.file_uploader("Upload DraftEdge projections CSV", type=["csv"], key="fd_draftedge_projection_file")
+    show_projection_refresh_status([("DFF", fd_dff_projection_file), ("DraftEdge", fd_draftedge_projection_file)], "fd_" + lineup_mode.replace(" ", "_").lower())
 
     if fd_file is None:
         st.info("Upload your FanDuel salary CSV to build FanDuel lineups.")
@@ -1015,6 +1056,7 @@ st.write("### Projection Sources")
 st.caption("Upload DFF and/or DraftEdge projection CSVs for this slate. Matching players are averaged when both sources are available.")
 dff_projection_file = st.file_uploader("Upload DFF projections CSV", type=["csv"], key="dk_dff_projection_file")
 draftedge_projection_file = st.file_uploader("Upload DraftEdge projections CSV", type=["csv"], key="dk_draftedge_projection_file")
+show_projection_refresh_status([("DFF", dff_projection_file), ("DraftEdge", draftedge_projection_file)], "dk_" + lineup_mode.replace(" ", "_").lower())
 
 if salary_file is not None:
     try:
