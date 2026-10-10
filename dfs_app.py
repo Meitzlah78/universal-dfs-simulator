@@ -57,6 +57,37 @@ def apply_injury_statuses(frame, key_prefix):
         st.stop()
     return result
 
+
+def exclude_zero_projection_players(frame, slate_label):
+    """Remove players with missing, invalid, or zero projections before lineup building."""
+    if "Projection" not in frame.columns:
+        st.error(f"{slate_label}: projection column is missing, so players cannot be safely ranked.")
+        st.stop()
+    result = frame.copy()
+    result["Projection"] = pd.to_numeric(result["Projection"], errors="coerce")
+    excluded = result[
+        result["Projection"].isna() |
+        ~np.isfinite(result["Projection"]) |
+        (result["Projection"] <= 0)
+    ]
+    if not excluded.empty:
+        names = excluded["Name"].astype(str).tolist() if "Name" in excluded.columns else []
+        st.warning(
+            f"{slate_label}: excluded {len(excluded)} player(s) with zero or missing projections"
+            + (": " + ", ".join(names[:20]) if names else "")
+            + (" ..." if len(names) > 20 else "")
+        )
+    result = result[
+        result["Projection"].notna() &
+        np.isfinite(result["Projection"]) &
+        (result["Projection"] > 0)
+    ].reset_index(drop=True)
+    if result.empty:
+        st.error(f"{slate_label}: no players have projections above zero. Check your projection sources.")
+        st.stop()
+    return result
+
+
 def show_projection_refresh_status(source_files, key_prefix):
     """Show manual refresh control and the time projection files were last uploaded/refreshed."""
     import hashlib
@@ -346,8 +377,8 @@ if platform == "FanDuel":
         fd_players["Opponent"] = fd_players["Team"].map(fd_opponents).fillna("—")
         fd_players["Position"] = fd_raw[fd_pos_col].astype(str).str.strip().str.upper()
         fd_players["Projection"] = (
-            pd.to_numeric(fd_raw[fd_proj_col], errors="coerce").fillna(0.01)
-            if fd_proj_col is not None else 0.01
+            pd.to_numeric(fd_raw[fd_proj_col], errors="coerce").fillna(0.0)
+            if fd_proj_col is not None else 0.0
         )
         if fd_id_col is not None:
             fd_players["FD_ID"] = fd_raw[fd_id_col].astype(str).str.strip()
@@ -368,6 +399,7 @@ if platform == "FanDuel":
         st.stop()
 
     fd_players = apply_external_projection_sources(fd_players, fd_dff_projection_file, fd_draftedge_projection_file)
+    fd_players = exclude_zero_projection_players(fd_players, "FanDuel " + lineup_mode)
     fd_players = apply_injury_statuses(fd_players, "injury_status_fd_" + lineup_mode.replace(" ", "_").lower())
     # Remove stale saved builds as soon as an Out player is excluded.
     fd_allowed_names = set(fd_players["Name"].astype(str))
@@ -1330,6 +1362,7 @@ if saved_internal_projections:
     players_df.loc[internal_mask, "Projection"] = saved_values.loc[internal_mask].fillna(
         players_df.loc[internal_mask, "Projection"]
     )
+players_df = exclude_zero_projection_players(players_df, "DraftKings " + lineup_mode)
 st.caption("Projection values use the DFF/DraftEdge average when both are available, otherwise the single available source. Unmatched players use internal estimates.")
 if st.session_state.get("nfl_historical_stats_status"):
     st.caption(st.session_state["nfl_historical_stats_status"])
