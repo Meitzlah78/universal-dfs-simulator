@@ -1324,11 +1324,54 @@ if contest_sim_clicked:
 # ============================================
 
 if build_clicked:
+    # One-click workflow: simulate players, build a contest field, then
+    # continue below to create and score candidate lineups.
     with st.spinner("Running 10,000 game simulations..."):
         simulation_df = run_game_simulations(players_df)
 
     st.session_state["simulation_df"] = simulation_df
     st.session_state["simulations_ready"] = True
+
+    # Build the 10,000-lineup contest field automatically for this run.
+    with st.spinner("Building the simulated contest field..."):
+        contest_field = []
+        rng = np.random.default_rng(123)
+        if len(available_players) >= 6:
+            player_weights = simulation_df.mean(axis=0).reindex(
+                available_players
+            ).clip(lower=0.01)
+            player_weights = player_weights / player_weights.sum()
+            attempts = 0
+            while len(contest_field) < 10000 and attempts < 200000:
+                attempts += 1
+                selected = rng.choice(
+                    available_players, size=6, replace=False,
+                    p=player_weights.to_numpy()
+                )
+                captain = selected[
+                    np.argmax([simulation_df[p].mean() for p in selected])
+                ]
+                flex = [p for p in selected if p != captain]
+                total_salary = (
+                    captain_salary_map[captain]
+                    + sum(salary_map[p] for p in flex)
+                )
+                if total_salary > SALARY_CAP:
+                    continue
+                lineup_teams = set(
+                    players_df.loc[players_df["Name"].isin(selected), "Team"]
+                )
+                if len(lineup_teams) < 2:
+                    continue
+                contest_field.append({
+                    "Captain": captain, "Flex1": flex[0], "Flex2": flex[1],
+                    "Flex3": flex[2], "Flex4": flex[3], "Flex5": flex[4],
+                    "Salary": total_salary
+                })
+        contest_field_df = pd.DataFrame(contest_field)
+        st.session_state["contest_field_df"] = contest_field_df
+        st.session_state["contest_field_count"] = len(contest_field_df)
+        st.session_state["contest_field_ready"] = len(contest_field_df) == 10000
 
     # Refresh rankings with the simulations created by this BUILD click.
     player_sim = {}
