@@ -2027,6 +2027,19 @@ player_display = player_display[
 st.write("### Player Pool")
 st.dataframe(player_display, use_container_width=True, hide_index=True)
 
+# Copy/paste-ready player pool export for sharing analysis in ChatGPT.
+with st.expander("Copy Player Info to ChatGPT"):
+    st.caption("Copy the text below and paste it into ChatGPT. It includes player details, simulation stats, and Captain/Flex exposure when available.")
+    copy_columns = [
+        "Name", "Position", "Team", "Opponent", "Salary", "Injury Status",
+        "Projection", "Sim Pts", "Sim P10", "Sim P50", "Sim P90",
+        "Captain Exp %", "Flex Exp %"
+    ]
+    copy_columns = [column for column in copy_columns if column in player_display.columns]
+    copy_df = player_display[copy_columns].copy()
+    copy_text = copy_df.to_csv(index=False, sep="\\t", na_rep="")
+    st.code(copy_text, language=None)
+
 # Keep the Lock/Fade selections from the Player Pool editor and preserve
 # the existing exposure controls internally at their saved/default values.
 existing_controls = st.session_state.get("control_values")
