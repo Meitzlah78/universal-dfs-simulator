@@ -1133,8 +1133,8 @@ if platform == "FanDuel":
         if len(fd_pool) < len(fd_slots):
             st.error(f"At least {len(fd_slots)} eligible players are required for FanDuel Contest Sim.")
         else:
-            with st.spinner("Building 10,000 simulated FanDuel contest entries..."):
-                while len(opponent_rows) < 10000 and attempts < 300000:
+            with st.spinner("Building 20,000 simulated FanDuel contest entries..."):
+                while len(opponent_rows) < 20000 and attempts < 300000:
                     attempts += 1
                     chosen = {}
                     used = set()
@@ -2436,7 +2436,7 @@ if platform == "DraftKings" and lineup_mode == "Classic":
         elif st.session_state.get("classic_lineups") is None:
             st.warning("Click BUILD first so CONTEST SIM can test your lineups.")
         else:
-            with st.spinner("Testing your lineups against 10,000 simulated contest entries..."):
+            with st.spinner("Testing your lineups against 20,000 simulated contest entries..."):
                 rng = np.random.default_rng()
                 sim_df = st.session_state["simulation_df"]
                 mean_scores = sim_df.mean(axis=0).to_dict()
@@ -2451,7 +2451,7 @@ if platform == "DraftKings" and lineup_mode == "Classic":
                 rows = []
                 seen_contest = set()
                 attempts = 0
-                while len(rows) < 10000 and attempts < 250000:
+                while len(rows) < 20000 and attempts < 250000:
                     attempts += 1
                     chosen = {}
                     used = set()
@@ -2627,7 +2627,7 @@ if contest_sim_clicked:
 
         attempts = 0
 
-        while len(contest_field) < 10000 and attempts < 200000:
+        while len(contest_field) < 20000 and attempts < 200000:
             attempts += 1
 
             selected = rng.choice(
@@ -2679,7 +2679,7 @@ if contest_sim_clicked:
         st.session_state["contest_field_df"] = contest_field_df
         st.session_state["contest_field_count"] = len(contest_field_df)
         st.session_state["contest_field_ready"] = (
-            len(contest_field_df) == 10000
+            len(contest_field_df) == 20000
         )
 
         show_field_ownership(contest_field_df, ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"], "Simulated Field Player Ownership", captain_slot="Captain")
@@ -2709,7 +2709,7 @@ if build_clicked:
 
     st.session_state["simulation_df"] = simulation_df
     st.session_state["simulations_ready"] = True
-    # Build the 10,000-lineup contest field automatically for this run.
+    # Build the 20,000-lineup contest field automatically for this run.
     with st.spinner("Building the simulated contest field..."):
         contest_field = []
         rng = np.random.default_rng(123)
@@ -2719,7 +2719,7 @@ if build_clicked:
             ).clip(lower=0.01)
             player_weights = player_weights / player_weights.sum()
             attempts = 0
-            while len(contest_field) < 10000 and attempts < 200000:
+            while len(contest_field) < 20000 and attempts < 200000:
                 attempts += 1
                 selected = rng.choice(
                     available_players, size=6, replace=False,
@@ -2749,7 +2749,7 @@ if build_clicked:
         show_field_ownership(contest_field_df, ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"], "Simulated Field Player Ownership", captain_slot="Captain")
         st.session_state["contest_field_df"] = contest_field_df
         st.session_state["contest_field_count"] = len(contest_field_df)
-        st.session_state["contest_field_ready"] = len(contest_field_df) == 10000
+        st.session_state["contest_field_ready"] = len(contest_field_df) == 20000
 
     selected_contest = st.session_state.get("selected_dk_contest")
     if selected_contest:
@@ -2757,7 +2757,7 @@ if build_clicked:
             f"Contest selected from your entry CSV: {selected_contest['name']} "
             f"(ID {selected_contest['id']}). Your uploaded file has "
             f"{selected_contest['your_entries']} of your entries in this contest. "
-            "The 10,000 opponents are simulated; the entry CSV does not contain "
+            "The 20,000 opponents are simulated; the entry CSV does not contain "
             "the actual opponent field or payout table."
         )
 
