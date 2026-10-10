@@ -2417,7 +2417,19 @@ try:
                         or lobby_name_normalized in entry_name_normalized
                     )
                     matchup_matches = entry_matchup is not None and lobby_matchup == entry_matchup
-                    if name_matches or (matchup_matches and " ".join(str(selected_contest_name).lower().split()) in " ".join(lobby_name.lower().split())):
+                    # Contest names can differ slightly between the entry CSV and lobby.
+                    # If the game matches and the core contest name overlaps, prefer it.
+                    core_entry = re.sub(r"\\([^)]*\\)", "", str(selected_contest_name)).lower()
+                    core_entry = re.sub(r"[^a-z0-9]+", "", core_entry)
+                    core_lobby = re.sub(r"\\([^)]*\\)", "", lobby_name).lower()
+                    core_lobby = re.sub(r"[^a-z0-9]+", "", core_lobby)
+                    core_matches = (
+                        core_entry in core_lobby
+                        or core_lobby in core_entry
+                        or (len(core_entry) >= 5 and core_entry[:8] in core_lobby)
+                        or (len(core_lobby) >= 5 and core_lobby[:8] in core_entry)
+                    )
+                    if name_matches or (matchup_matches and core_matches):
                         default_index = i
                         break
 
