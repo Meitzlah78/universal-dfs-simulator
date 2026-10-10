@@ -876,11 +876,47 @@ if platform == "FanDuel":
     st.success(f"Loaded {len(fd_players)} FanDuel players after injury-status filtering.")
     if fd_proj_col is None:
         st.warning("No projection column found. All players currently have a placeholder projection of 0.01.")
-    st.dataframe(
-        fd_players.drop(columns=["FD_ID"], errors="ignore"),
-        use_container_width=True,
-        hide_index=True
-    )
+    fd_player_display = fd_players.drop(columns=["FD_ID"], errors="ignore").copy()
+    # Realized exposure from the currently saved FanDuel build, when available.
+    fd_exposure_candidates = [
+        value.get("lineups") for value in st.session_state.get("fd_saved_builds", {}).values()
+        if isinstance(value, dict) and isinstance(value.get("lineups"), pd.DataFrame)
+    ]
+    for saved_key in [
+        "fd_lineups_single_game", "fd_lineups_full_roster"
+    ]:
+        saved_value = st.session_state.get(saved_key)
+        if isinstance(saved_value, pd.DataFrame) and not saved_value.empty:
+            fd_exposure_candidates.append(saved_value)
+    fd_current_lineups = fd_exposure_candidates[-1] if fd_exposure_candidates else None
+    if isinstance(fd_current_lineups, pd.DataFrame) and not fd_current_lineups.empty:
+        fd_slot_columns = [c for c in fd_current_lineups.columns
+                           if c.upper() in {"MVP", "FLEX", "FLEX1", "FLEX2", "FLEX3", "FLEX4",
+                                            "QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "D"}]
+        fd_total = len(fd_current_lineups)
+        fd_player_display["Exposure %"] = fd_player_display["Name"].astype(str).str.strip().map(
+            lambda name: round(100 * sum(
+                fd_current_lineups[c].astype(str).str.strip().eq(name).sum()
+                for c in fd_slot_columns
+            ) / fd_total, 1)
+        )
+        special_slot = "MVP" if lineup_mode == "Single Game" else None
+        if special_slot and special_slot in fd_current_lineups.columns:
+            fd_player_display["MVP Exp %"] = fd_player_display["Name"].astype(str).str.strip().map(
+                lambda name: round(100 * fd_current_lineups[special_slot].astype(str).str.strip().eq(name).sum() / fd_total, 1)
+            )
+        elif lineup_mode == "Single Game":
+            fd_player_display["MVP Exp %"] = 0.0
+        else:
+            fd_player_display["MVP Exp %"] = np.nan
+    else:
+        fd_player_display["Exposure %"] = np.nan
+        fd_player_display["MVP Exp %"] = np.nan
+
+    st.dataframe(fd_player_display, use_container_width=True, hide_index=True)
+    with st.expander("Copy Player Info to ChatGPT"):
+        st.caption("Copy all player columns shown in this FanDuel player table and paste them into ChatGPT.")
+        st.code(fd_player_display.to_csv(index=False, sep="\\t", na_rep=""), language=None)
 
     fd_signature = (
         "FanDuel",
