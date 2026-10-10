@@ -1626,6 +1626,19 @@ if "contest_results_df" in st.session_state:
 
     portfolio_df = st.session_state["portfolio_df"].copy()
 
+    # Add each lineup's total salary to the portfolio display and export.
+    portfolio_df["Salary"] = portfolio_df.apply(
+        lambda row: int(
+            captain_salary_map.get(str(row["Captain"]), 0)
+            + sum(
+                salary_map.get(str(row[col]), 0)
+                for col in ["Flex1", "Flex2", "Flex3", "Flex4", "Flex5"]
+            )
+        ),
+        axis=1
+    )
+    st.session_state["portfolio_df"] = portfolio_df
+
     st.write(
         f"Portfolio: {len(portfolio_df)} lineups"
     )
@@ -1637,6 +1650,7 @@ if "contest_results_df" in st.session_state:
         "Flex3",
         "Flex4",
         "Flex5",
+        "Salary",
         "ContestScore",
         "WinRate",
         "Top1",
@@ -1665,6 +1679,26 @@ if "contest_results_df" in st.session_state:
         display_df,
         use_container_width=True,
         hide_index=True
+    )
+
+    export_columns = [
+        "Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5",
+        "Salary", "ContestScore", "WinRate", "Top1", "Top5",
+        "Top10", "CashRate"
+    ]
+    portfolio_export_df = portfolio_df[
+        [col for col in export_columns if col in portfolio_df.columns]
+    ].copy()
+    for col in ["WinRate", "Top1", "Top5", "Top10", "CashRate"]:
+        if col in portfolio_export_df.columns:
+            portfolio_export_df[col] = portfolio_export_df[col] * 100
+
+    st.download_button(
+        label="EXPORT PORTFOLIO CSV",
+        data=portfolio_export_df.to_csv(index=False).encode("utf-8"),
+        file_name="DFS_Portfolio.csv",
+        mime="text/csv",
+        use_container_width=True
     )
 
     st.write("### Portfolio Controls")
