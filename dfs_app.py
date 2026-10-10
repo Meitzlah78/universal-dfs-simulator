@@ -13,6 +13,21 @@ st.set_page_config(
 
 st.title("Universal DFS Simulator")
 
+# Quick links to the two DraftKings upload pages.
+contest_link_col, player_link_col = st.columns(2)
+with contest_link_col:
+    st.link_button(
+        "CONTEST",
+        "https://www.draftkings.com/lineup/upload",
+        use_container_width=True,
+    )
+with player_link_col:
+    st.link_button(
+        "PLAYER",
+        "https://www.draftkings.com/entry/upload#",
+        use_container_width=True,
+    )
+
 
 def is_full_game_contest_name(value):
     """Reject partial-game/live contests but allow both full-game and single-game formats."""
