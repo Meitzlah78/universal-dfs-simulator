@@ -484,75 +484,114 @@ if salary_file is not None:
             else:
                 players_df = loaded_players.reset_index(drop=True)
 
-                # Pull current DraftKings Showdown projections from Daily Fantasy Fuel (DFF),
-                # matching the same source and parsing method used in the Colab notebook.
-                dff_count = 0
-                dff_error = None
+                # DraftEdge is the first-choice projection source for every slate.
+                # Build the game URL from DraftKings Game Info, then match by player name.
+                draftedge_count = 0
+                draftedge_error = None
                 try:
                     import re
                     import requests
+                    from io import StringIO
                     from html import unescape
 
-                    dff_url = "https://www.dailyfantasyfuel.com/nfl/showdown-single-game-projections/draftkings"
-                    dff_response = requests.get(
-                        dff_url,
-                        headers={"User-Agent": "Mozilla/5.0"},
-                        timeout=15
+                    game_info_col = find_column(uploaded_df, ["Game Info", "GameInfo"])
+                    game_info_values = (
+                        uploaded_df[game_info_col].dropna().astype(str).tolist()
+                        if game_info_col is not None else []
                     )
-                    dff_response.raise_for_status()
-                    dff_rows = re.findall(
-                        r'data-ppg_proj="([^"]+)"'
-                        r'.*?data-player_id="[^"]+"'
-                        r'.*?<div class="bold">\s*([^<]+)',
-                        dff_response.text,
-                        flags=re.S
-                    )
-                    dff_aliases = {
-                        "J. Williams": "Javonte Williams",
-                        "J. Daniels": "Jalon Daniels",
-                        "G. Pickens": "George Pickens",
-                        "B. Irving": "Bucky Irving",
-                        "B. Aubrey": "Brandon Aubrey",
-                        "E. Egbuka": "Emeka Egbuka",
-                        "C. Godwin Jr.": "Chris Godwin Jr.",
-                        "C. McLaughlin": "Chase McLaughlin",
-                        "K. Gainwell": "Kenny Gainwell",
-                        "T. Goodson": "Tyler Goodson",
-                        "K. Turpin": "KaVontae Turpin",
-                    }
-                    dff_projections = {}
-                    for raw_projection, raw_name in dff_rows:
-                        try:
-                            value = float(raw_projection)
-                        except (TypeError, ValueError):
-                            continue
-                        name = re.sub(r"\s+", " ", unescape(raw_name)).strip()
-                        name = dff_aliases.get(name, name)
-                        if value > 0 and name:
-                            dff_projections[name.casefold()] = value
-
-                    if dff_projections:
-                        matched = players_df["Name"].map(
-                            lambda name: dff_projections.get(str(name).strip().casefold())
+                    game_match = None
+                    for game_info in game_info_values:
+                        game_match = re.search(
+                            r"([A-Z]{2,3})\\s*@\\s*([A-Z]{2,3}).*?(\\d{1,2}/\\d{1,2}/\\d{4})",
+                            game_info.upper()
                         )
-                        found = matched.notna()
-                        if found.any():
-                            players_df.loc[found, "Projection"] = matched.loc[found].astype(float)
-                            players_df["ProjectionSource"] = np.where(found, "Daily Fantasy Fuel (DFF)", "Salary CSV")
-                            dff_count = int(found.sum())
+                        if game_match:
+                            break
+
+                    # DraftEdge uses its own short team names in game URLs.
+                    team_slug = {
+                        "ARI": "ari", "ATL": "atl", "BAL": "bal", "BUF": "buf",
+                        "CAR": "car", "CHI": "chi", "CIN": "cin", "CLE": "cle",
+                        "DAL": "dal", "DEN": "den", "DET": "det", "GB": "gb",
+                        "HOU": "hou", "IND": "ind", "JAX": "jax", "KC": "kc",
+                        "LV": "lv", "LAC": "lac", "LAR": "la", "MIA": "mia",
+                        "MIN": "min", "NE": "ne", "NO": "no", "NYG": "nyg",
+                        "NYJ": "nyj", "PHI": "phi", "PIT": "pit", "SEA": "sea",
+                        "SF": "sf", "TB": "tb", "TEN": "ten", "WAS": "was",
+                        "WSH": "was"
+                    }
+                    if not game_match:
+                        raise ValueError("Could not find matchup and date in the salary CSV's Game Info column.")
+
+                    away, home, date_text = game_match.groups()
+                    if away not in team_slug or home not in team_slug:
+                        raise ValueError(f"DraftEdge URL mapping is missing for {away} or {home}.")
+                    game_date = pd.to_datetime(date_text, format="%m/%d/%Y")
+                    draftedge_url = (
+                        f"https://draftedge.com/nfl/game/"
+                        f"{team_slug[away]}-{team_slug[home]}-{game_date:%Y-%m-%d}/"
+                    )
+                    de_response = requests.get(
+                        draftedge_url,
+                        headers={"User-Agent": "Mozilla/5.0"},
+                        timeout=20
+                    )
+                    de_response.raise_for_status()
+                    de_tables = pd.read_html(StringIO(de_response.text))
+                    de_table = None
+                    for table in de_tables:
+                        cols = {str(col).strip().casefold() for col in table.columns}
+                        if {"team", "player", "proj"}.issubset(cols):
+                            de_table = table.copy()
+                            break
+                    if de_table is None:
+                        raise ValueError("DraftEdge page did not contain the expected Team/Player/Proj table.")
+
+                    de_table.columns = [str(col).strip() for col in de_table.columns]
+                    de_table["Player"] = de_table["Player"].astype(str).map(
+                        lambda name: re.sub(r"\\s+", " ", unescape(name)).strip()
+                    )
+                    de_table["Proj"] = pd.to_numeric(
+                        de_table["Proj"].astype(str).str.replace(",", "", regex=False),
+                        errors="coerce"
+                    )
+                    # Normalize common suffixes and punctuation while matching names.
+                    def normalize_player_name(name):
+                        value = unescape(str(name)).casefold().strip()
+                        value = re.sub(r"\\b(jr|sr|ii|iii|iv|v)\\.?\\b", "", value)
+                        return re.sub(r"[^a-z0-9]", "", value)
+
+                    de_projections = {}
+                    for _, row in de_table.iterrows():
+                        player_name = str(row["Player"]).strip()
+                        projection_value = row["Proj"]
+                        if player_name and pd.notna(projection_value) and projection_value >= 0:
+                            de_projections[normalize_player_name(player_name)] = float(projection_value)
+
+                    matched = players_df["Name"].map(
+                        lambda name: de_projections.get(normalize_player_name(name))
+                    )
+                    found = matched.notna()
+                    if found.any():
+                        players_df.loc[found, "Projection"] = matched.loc[found].astype(float)
+                        players_df["ProjectionSource"] = np.where(
+                            found, "DraftEdge", "Salary CSV"
+                        )
+                        draftedge_count = int(found.sum())
+                    if draftedge_count == 0:
+                        raise ValueError(
+                            f"DraftEdge loaded but no player names matched. URL checked: {draftedge_url}"
+                        )
                 except Exception as exc:
-                    dff_error = str(exc)
+                    draftedge_error = str(exc)
 
                 st.success(f"Loaded {len(players_df)} players from the salary file.")
-                if dff_count:
-                    st.success(f"Applied current DFF projections to {dff_count} players.")
-                elif projection_col is None:
-                    st.warning(
-                        "DFF projections could not be matched to this slate. "
-                        "The simulator will not pretend the 0.01 placeholders are real projections."
-                    )
-                    if dff_error:
-                        st.caption(f"DFF refresh detail: {dff_error}")
+                if draftedge_count:
+                    st.success(f"Applied DraftEdge projections to {draftedge_count} players (first-choice source).")
+                else:
+                    st.warning("DraftEdge projections could not be matched. Check the matchup/date in the uploaded salary CSV before building lineups.")
+                    if draftedge_error:
+                        st.caption(f"DraftEdge refresh detail: {draftedge_error}")
                 if is_showdown_template:
                     st.info("DraftKings Showdown template detected. FLEX rows are used for player salaries; CPT rows are ignored to avoid duplicate players.")
                 elif is_lineup_template:
@@ -571,7 +610,7 @@ missing_projection_count = int(players_df["Projection"].isna().sum())
 if missing_projection_count:
     st.warning(
         f"{missing_projection_count} players still have no valid projection. "
-        "Upload a CSV with projections or use a slate for which DFF projections are available before building lineups."
+        "Upload a CSV with projections or wait until DraftEdge projections are available for this slate before building lineups."
     )
     players_df["Projection"] = players_df["Projection"].fillna(0.0)
 
