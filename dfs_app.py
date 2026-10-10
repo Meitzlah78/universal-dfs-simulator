@@ -21,21 +21,22 @@ def calculate_field_ownership(field_df, slots, captain_slot=None):
     total_lineups = len(field_df)
     if not valid_slots or total_lineups == 0:
         return pd.DataFrame(columns=["Name", "Ownership %", "Captain/MVP Ownership %"])
-    counts = {}
+    # Vectorized counting avoids iterating over every row for large contest fields.
+    slot_values = field_df[valid_slots].astype("string").apply(lambda col: col.str.strip())
+    slot_values = slot_values.replace({"": pd.NA, "nan": pd.NA, "None": pd.NA})
+    stacked = slot_values.stack().reset_index(level=1, drop=True)
+    counts = stacked.groupby(stacked.index).first() if False else stacked.value_counts().to_dict()
+    if len(valid_slots) > 1:
+        row_ids = np.repeat(np.arange(len(slot_values)), len(valid_slots))
+        flat_names = slot_values.to_numpy(dtype=object).ravel()
+        valid = pd.notna(flat_names) & ~np.isin(flat_names, ["", "nan", "None", "<NA>"])
+        pairs = pd.DataFrame({"row": row_ids[valid], "name": flat_names[valid]}).drop_duplicates()
+        counts = pairs["name"].value_counts().to_dict()
     captain_counts = {}
-    for _, row in field_df[valid_slots].iterrows():
-        seen = set()
-        for slot in valid_slots:
-            name = str(row.get(slot, "")).strip()
-            if not name or name.lower() in {"nan", "none"}:
-                continue
-            if name not in seen:
-                counts[name] = counts.get(name, 0) + 1
-                seen.add(name)
-        if captain_slot and captain_slot in valid_slots:
-            captain = str(row.get(captain_slot, "")).strip()
-            if captain and captain.lower() not in {"nan", "none"}:
-                captain_counts[captain] = captain_counts.get(captain, 0) + 1
+    if captain_slot and captain_slot in valid_slots:
+        captain_values = slot_values[captain_slot].dropna()
+        captain_values = captain_values[~captain_values.isin(["", "nan", "None", "<NA>"])]
+        captain_counts = captain_values.value_counts().to_dict()
     names = sorted(set(counts) | set(captain_counts))
     return pd.DataFrame([{
         "Name": name,
@@ -51,6 +52,45 @@ def show_field_ownership(field_df, slots, title, captain_slot=None):
         st.write("### " + title)
         st.caption(f"Ownership calculated from {len(field_df):,} simulated opponent lineups. Captain/MVP ownership is shown separately where applicable.")
         st.dataframe(ownership_df, use_container_width=True, hide_index=True)
+
+
+def build_showdown_opponent_field(available_players, simulation_df, players_df,
+                                  salary_map, captain_salary_map, salary_cap, target):
+    """Build Showdown opponents with cached NumPy arrays to avoid repeated pandas work."""
+    columns = ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5", "Salary"]
+    if target <= 0 or len(available_players) < 6:
+        return pd.DataFrame(columns=columns)
+
+    names = np.asarray(list(available_players), dtype=object)
+    means = simulation_df.mean(axis=0).reindex(names).fillna(0.01).to_numpy(dtype=float)
+    weights = np.clip(means, 0.01, None)
+    weights /= weights.sum()
+    salaries = np.asarray([int(salary_map.get(name, 0)) for name in names], dtype=np.int64)
+    captain_salaries = np.asarray([int(captain_salary_map.get(name, salary_map.get(name, 0))) for name in names], dtype=np.int64)
+    team_lookup = players_df.drop_duplicates("Name").set_index("Name")["Team"].to_dict()
+    teams = np.asarray([str(team_lookup.get(name, "")) for name in names], dtype=object)
+    rng = np.random.default_rng(123)
+    rows = []
+    attempts = 0
+    max_attempts = max(200000, int(target) * 10)
+
+    while len(rows) < target and attempts < max_attempts:
+        attempts += 1
+        picked = rng.choice(len(names), size=6, replace=False, p=weights)
+        captain_idx = picked[int(np.argmax(means[picked]))]
+        flex_idx = picked[picked != captain_idx]
+        salary = int(captain_salaries[captain_idx] + salaries[flex_idx].sum())
+        if salary > salary_cap:
+            continue
+        if len(set(teams[picked])) < 2:
+            continue
+        rows.append((
+            names[captain_idx],
+            names[flex_idx[0]], names[flex_idx[1]], names[flex_idx[2]],
+            names[flex_idx[3]], names[flex_idx[4]], salary
+        ))
+
+    return pd.DataFrame.from_records(rows, columns=columns)
 
 
 def apply_injury_statuses(frame, key_prefix):
@@ -2838,70 +2878,14 @@ contest_sim_clicked = st.button(
 )
 
 if contest_sim_clicked:
-    contest_field = []
-    rng = np.random.default_rng(123)
-
     if len(available_players) < 6:
         st.error("At least 6 non-faded players are required for Contest Sim.")
     elif "simulation_df" in st.session_state:
         simulation_df = st.session_state["simulation_df"]
-
-        player_weights = simulation_df.mean(axis=0).reindex(
-            available_players
-        ).clip(lower=0.01)
-
-        player_weights = player_weights / player_weights.sum()
-
-        attempts = 0
-
-        while len(contest_field) < dk_opponent_target and attempts < max(200000, dk_opponent_target * 10):
-            attempts += 1
-
-            selected = rng.choice(
-                available_players,
-                size=6,
-                replace=False,
-                p=player_weights.to_numpy()
-            )
-
-            captain = selected[
-                np.argmax([
-                    simulation_df[p].mean()
-                    for p in selected
-                ])
-            ]
-
-            flex = [p for p in selected if p != captain]
-
-            total_salary = (
-                captain_salary_map[captain]
-                + sum(salary_map[p] for p in flex)
-            )
-
-            if total_salary > SALARY_CAP:
-                continue
-
-            lineup_teams = set(
-                players_df.loc[
-                    players_df["Name"].isin(selected),
-                    "Team"
-                ]
-            )
-
-            if len(lineup_teams) < 2:
-                continue
-
-            contest_field.append({
-                "Captain": captain,
-                "Flex1": flex[0],
-                "Flex2": flex[1],
-                "Flex3": flex[2],
-                "Flex4": flex[3],
-                "Flex5": flex[4],
-                "Salary": total_salary
-            })
-
-        contest_field_df = pd.DataFrame(contest_field)
+        contest_field_df = build_showdown_opponent_field(
+            available_players, simulation_df, players_df, salary_map,
+            captain_salary_map, SALARY_CAP, dk_opponent_target
+        )
 
         st.session_state["contest_field_df"] = contest_field_df
         st.session_state["contest_field_count"] = len(contest_field_df)
@@ -2938,41 +2922,10 @@ if build_clicked:
     st.session_state["simulations_ready"] = True
     # Build the contest field using the selected contest's field size.
     with st.spinner(f"Building {dk_opponent_target:,} simulated opponent lineups..."):
-        contest_field = []
-        rng = np.random.default_rng(123)
-        if len(available_players) >= 6:
-            player_weights = simulation_df.mean(axis=0).reindex(
-                available_players
-            ).clip(lower=0.01)
-            player_weights = player_weights / player_weights.sum()
-            attempts = 0
-            while len(contest_field) < dk_opponent_target and attempts < max(200000, dk_opponent_target * 10):
-                attempts += 1
-                selected = rng.choice(
-                    available_players, size=6, replace=False,
-                    p=player_weights.to_numpy()
-                )
-                captain = selected[
-                    np.argmax([simulation_df[p].mean() for p in selected])
-                ]
-                flex = [p for p in selected if p != captain]
-                total_salary = (
-                    captain_salary_map[captain]
-                    + sum(salary_map[p] for p in flex)
-                )
-                if total_salary > SALARY_CAP:
-                    continue
-                lineup_teams = set(
-                    players_df.loc[players_df["Name"].isin(selected), "Team"]
-                )
-                if len(lineup_teams) < 2:
-                    continue
-                contest_field.append({
-                    "Captain": captain, "Flex1": flex[0], "Flex2": flex[1],
-                    "Flex3": flex[2], "Flex4": flex[3], "Flex5": flex[4],
-                    "Salary": total_salary
-                })
-        contest_field_df = pd.DataFrame(contest_field)
+        contest_field_df = build_showdown_opponent_field(
+            available_players, simulation_df, players_df, salary_map,
+            captain_salary_map, SALARY_CAP, dk_opponent_target
+        )
         show_field_ownership(contest_field_df, ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"], "Simulated Field Player Ownership", captain_slot="Captain")
         st.session_state["contest_field_df"] = contest_field_df
         st.session_state["contest_field_count"] = len(contest_field_df)
