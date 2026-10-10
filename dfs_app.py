@@ -2471,6 +2471,10 @@ if platform == "DraftKings" and lineup_mode == "Classic":
             for slot in export_slots:
                 if slot in classic_display.columns:
                     ordered_cols.extend([slot, slot + " Sim Pts"])
+            classic_display["Total Sim Pts"] = classic_display[
+                [slot + " Sim Pts" for slot in export_slots if slot + " Sim Pts" in classic_display.columns]
+            ].apply(pd.to_numeric, errors="coerce").sum(axis=1).round(2)
+            ordered_cols.append("Total Sim Pts")
             ordered_cols.extend(c for c in classic_display.columns if c not in ordered_cols)
             classic_display = classic_display[ordered_cols]
         st.dataframe(
@@ -3253,6 +3257,14 @@ if "contest_results_df" in st.session_state:
             portfolio_df[score_col] = portfolio_df[slot].map(
                 lambda player: round(float(sim_player_means.get(str(player), 0.0)) * multiplier, 2)
             )
+        sim_point_columns = [
+            slot + " Sim Pts"
+            for slot in ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"]
+            if slot + " Sim Pts" in portfolio_df.columns
+        ]
+        portfolio_df["Total Sim Pts"] = portfolio_df[sim_point_columns].apply(
+            pd.to_numeric, errors="coerce"
+        ).sum(axis=1).round(2)
         st.session_state["portfolio_df"] = portfolio_df
 
     st.write(
@@ -3272,6 +3284,7 @@ if "contest_results_df" in st.session_state:
         "Flex4 Sim Pts",
         "Flex5",
         "Flex5 Sim Pts",
+        "Total Sim Pts",
         "Salary",
         "ContestScore",
         "WinRate",
