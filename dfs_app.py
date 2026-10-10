@@ -391,6 +391,12 @@ salary_file = st.file_uploader(
     help="Upload the salary CSV for the slate. If you do not upload one, the sample player pool below is used."
 )
 
+refresh_clicked = st.button("REFRESH PROJECTIONS", key="refresh_draftedge")
+if "draftedge_last_updated" in st.session_state:
+    st.caption("Last successful DraftEdge update: " + st.session_state["draftedge_last_updated"])
+else:
+    st.caption("DraftEdge projections have not been successfully refreshed in this session.")
+
 if salary_file is not None:
     try:
         # DraftKings lineup templates have instructions before the player table.
@@ -484,106 +490,133 @@ if salary_file is not None:
             else:
                 players_df = loaded_players.reset_index(drop=True)
 
-                # DraftEdge is the first-choice projection source for every slate.
-                # Build the game URL from DraftKings Game Info, then match by player name.
-                draftedge_count = 0
+                # DraftEdge is the first-choice source. Cache by uploaded slate so
+                # ordinary Streamlit reruns do not pretend to refresh projections.
+                import hashlib
+                import re
+                import requests
+                from io import StringIO
+                from html import unescape
+                from datetime import datetime
+
+                slate_signature = hashlib.sha256(salary_file.getvalue()).hexdigest()
+                cache_key = "draftedge_cache_" + slate_signature
+                refresh_needed = (
+                    refresh_clicked
+                    or st.session_state.get("draftedge_active_slate") != slate_signature
+                    or cache_key not in st.session_state
+                )
                 draftedge_error = None
-                try:
-                    import re
-                    import requests
-                    from io import StringIO
-                    from html import unescape
-
-                    game_info_col = find_column(uploaded_df, ["Game Info", "GameInfo"])
-                    game_info_values = (
-                        uploaded_df[game_info_col].dropna().astype(str).tolist()
-                        if game_info_col is not None else []
-                    )
-                    game_match = None
-                    for game_info in game_info_values:
-                        game_match = re.search(
-                            r"([A-Z]{2,3})\s*@\s*([A-Z]{2,3}).*?(\d{1,2}/\d{1,2}/\d{4})",
-                            game_info.upper()
+                if refresh_needed:
+                    fresh_cache = {"projections": {}, "updated_at": None, "error": None}
+                    try:
+                        game_info_col = find_column(uploaded_df, ["Game Info", "GameInfo"])
+                        game_info_values = (
+                            uploaded_df[game_info_col].dropna().astype(str).tolist()
+                            if game_info_col is not None else []
                         )
-                        if game_match:
-                            break
+                        game_match = None
+                        for game_info in game_info_values:
+                            game_match = re.search(
+                                r"([A-Z]{2,3})\s*@\s*([A-Z]{2,3}).*?(\d{1,2}/\d{1,2}/\d{4})",
+                                game_info.upper()
+                            )
+                            if game_match:
+                                break
 
-                    # DraftEdge uses its own short team names in game URLs.
-                    team_slug = {
-                        "ARI": "ari", "ATL": "atl", "BAL": "bal", "BUF": "buf",
-                        "CAR": "car", "CHI": "chi", "CIN": "cin", "CLE": "cle",
-                        "DAL": "dal", "DEN": "den", "DET": "det", "GB": "gb",
-                        "HOU": "hou", "IND": "ind", "JAX": "jax", "KC": "kc",
-                        "LV": "lv", "LAC": "lac", "LAR": "la", "MIA": "mia",
-                        "MIN": "min", "NE": "ne", "NO": "no", "NYG": "nyg",
-                        "NYJ": "nyj", "PHI": "phi", "PIT": "pit", "SEA": "sea",
-                        "SF": "sf", "TB": "tb", "TEN": "ten", "WAS": "was",
-                        "WSH": "was"
-                    }
-                    if not game_match:
-                        raise ValueError("Could not find matchup and date in the salary CSV's Game Info column.")
-
-                    away, home, date_text = game_match.groups()
-                    if away not in team_slug or home not in team_slug:
-                        raise ValueError(f"DraftEdge URL mapping is missing for {away} or {home}.")
-                    game_date = pd.to_datetime(date_text, format="%m/%d/%Y")
-                    draftedge_url = (
-                        f"https://draftedge.com/nfl/game/"
-                        f"{team_slug[away]}-{team_slug[home]}-{game_date:%Y-%m-%d}/"
-                    )
-                    de_response = requests.get(
-                        draftedge_url,
-                        headers={"User-Agent": "Mozilla/5.0"},
-                        timeout=20
-                    )
-                    de_response.raise_for_status()
-                    de_tables = pd.read_html(StringIO(de_response.text))
-                    de_table = None
-                    for table in de_tables:
-                        cols = {str(col).strip().casefold() for col in table.columns}
-                        if {"team", "player", "proj"}.issubset(cols):
-                            de_table = table.copy()
-                            break
-                    if de_table is None:
-                        raise ValueError("DraftEdge page did not contain the expected Team/Player/Proj table.")
-
-                    de_table.columns = [str(col).strip() for col in de_table.columns]
-                    de_table["Player"] = de_table["Player"].astype(str).map(
-                        lambda name: re.sub(r"\s+", " ", unescape(name)).strip()
-                    )
-                    de_table["Proj"] = pd.to_numeric(
-                        de_table["Proj"].astype(str).str.replace(",", "", regex=False),
-                        errors="coerce"
-                    )
-                    # Normalize common suffixes and punctuation while matching names.
-                    def normalize_player_name(name):
-                        value = unescape(str(name)).casefold().strip()
-                        value = re.sub(r"\b(jr|sr|ii|iii|iv|v)\\.?\b", "", value)
-                        return re.sub(r"[^a-z0-9]", "", value)
-
-                    de_projections = {}
-                    for _, row in de_table.iterrows():
-                        player_name = str(row["Player"]).strip()
-                        projection_value = row["Proj"]
-                        if player_name and pd.notna(projection_value) and projection_value >= 0:
-                            de_projections[normalize_player_name(player_name)] = float(projection_value)
-
-                    matched = players_df["Name"].map(
-                        lambda name: de_projections.get(normalize_player_name(name))
-                    )
-                    found = matched.notna()
-                    if found.any():
-                        players_df.loc[found, "Projection"] = matched.loc[found].astype(float)
-                        players_df["ProjectionSource"] = np.where(
-                            found, "DraftEdge", "Salary CSV"
+                        team_slug = {
+                            "ARI": "ari", "ATL": "atl", "BAL": "bal", "BUF": "buf",
+                            "CAR": "car", "CHI": "chi", "CIN": "cin", "CLE": "cle",
+                            "DAL": "dal", "DEN": "den", "DET": "det", "GB": "gb",
+                            "HOU": "hou", "IND": "ind", "JAX": "jax", "KC": "kc",
+                            "LV": "lv", "LAC": "lac", "LAR": "la", "MIA": "mia",
+                            "MIN": "min", "NE": "ne", "NO": "no", "NYG": "nyg",
+                            "NYJ": "nyj", "PHI": "phi", "PIT": "pit", "SEA": "sea",
+                            "SF": "sf", "TB": "tb", "TEN": "ten", "WAS": "was",
+                            "WSH": "was"
+                        }
+                        if not game_match:
+                            raise ValueError("Could not find matchup/date in the salary CSV's Game Info column.")
+                        away, home, date_text = game_match.groups()
+                        if away not in team_slug or home not in team_slug:
+                            raise ValueError(f"DraftEdge URL mapping is missing for {away} or {home}.")
+                        game_date = pd.to_datetime(date_text, format="%m/%d/%Y")
+                        draftedge_url = (
+                            f"https://draftedge.com/nfl/game/"
+                            f"{team_slug[away]}-{team_slug[home]}-{game_date:%Y-%m-%d}/"
                         )
-                        draftedge_count = int(found.sum())
-                    if draftedge_count == 0:
-                        raise ValueError(
-                            f"DraftEdge loaded but no player names matched. URL checked: {draftedge_url}"
+                        de_response = requests.get(
+                            draftedge_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=20
                         )
-                except Exception as exc:
-                    draftedge_error = str(exc)
+                        de_response.raise_for_status()
+                        de_tables = pd.read_html(StringIO(de_response.text))
+                        de_table = None
+                        for table in de_tables:
+                            cols = {str(col).strip().casefold() for col in table.columns}
+                            if {"team", "player", "proj"}.issubset(cols):
+                                de_table = table.copy()
+                                break
+                        if de_table is None:
+                            raise ValueError("DraftEdge page did not contain the expected Team/Player/Proj table.")
+
+                        de_table.columns = [str(col).strip() for col in de_table.columns]
+                        de_table["Player"] = de_table["Player"].astype(str).map(
+                            lambda name: re.sub(r"\s+", " ", unescape(name)).strip()
+                        )
+                        de_table["Proj"] = pd.to_numeric(
+                            de_table["Proj"].astype(str).str.replace(",", "", regex=False),
+                            errors="coerce"
+                        )
+
+                        def normalize_player_name(name):
+                            value = unescape(str(name)).casefold().strip()
+                            value = re.sub(r"\s+(jr|sr|ii|iii|iv|v)\.?$", "", value)
+                            return re.sub(r"[^a-z0-9]", "", value)
+
+                        for _, row in de_table.iterrows():
+                            player_name = str(row["Player"]).strip()
+                            projection_value = row["Proj"]
+                            if player_name and pd.notna(projection_value) and projection_value >= 0:
+                                fresh_cache["projections"][normalize_player_name(player_name)] = float(projection_value)
+
+                        matched_count = sum(
+                            normalize_player_name(name) in fresh_cache["projections"]
+                            for name in players_df["Name"]
+                        )
+                        if matched_count == 0:
+                            raise ValueError(f"No player names matched. URL checked: {draftedge_url}")
+
+                        fresh_cache["updated_at"] = datetime.now().astimezone().strftime("%b %d, %Y %I:%M:%S %p %Z")
+                    except Exception as exc:
+                        fresh_cache["error"] = str(exc)
+
+                    st.session_state[cache_key] = fresh_cache
+                    st.session_state["draftedge_active_slate"] = slate_signature
+
+                active_cache = st.session_state.get(cache_key, {"projections": {}, "updated_at": None, "error": None})
+                draftedge_projections = active_cache.get("projections", {})
+                matched = players_df["Name"].map(
+                    lambda name: draftedge_projections.get(normalize_player_name(name))
+                    if "normalize_player_name" in locals() else draftedge_projections.get(
+                        re.sub(r"[^a-z0-9]", "", re.sub(r"\s+(jr|sr|ii|iii|iv|v)\.?$", "", str(name).casefold().strip()))
+                    )
+                )
+                found = matched.notna()
+                if found.any():
+                    players_df.loc[found, "Projection"] = matched.loc[found].astype(float)
+                players_df["ProjectionSource"] = np.where(found, "DraftEdge", "Salary CSV")
+                draftedge_count = int(found.sum())
+                draftedge_error = active_cache.get("error")
+
+                if active_cache.get("updated_at"):
+                    st.session_state["draftedge_last_updated"] = active_cache["updated_at"]
+                    st.success(f"DraftEdge projections loaded for {draftedge_count} players.")
+                elif draftedge_error:
+                    st.error("DraftEdge refresh failed. Last successful update time has not changed.")
+                    st.caption("Refresh detail: " + str(draftedge_error))
+                else:
+                    st.warning("DraftEdge projections are not available yet. Click REFRESH PROJECTIONS to try again.")
+
 
                 st.success(f"Loaded {len(players_df)} players from the salary file.")
                 if draftedge_count:
