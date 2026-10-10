@@ -127,7 +127,7 @@ if salary_file is not None:
         else:
             loaded_players = pd.DataFrame()
             loaded_players["Name"] = uploaded_df[name_col].astype(str).str.strip()
-            loaded_players["Name"] = loaded_players["Name"].str.replace(r"\\s*\\(\\d+\\)\\s*$", "", regex=True)
+            loaded_players["Name"] = loaded_players["Name"].str.replace(r"\s*\(\d+\)\s*$", "", regex=True)
             loaded_players["Salary"] = pd.to_numeric(
                 uploaded_df[salary_col].astype(str).str.replace(r"[$,]", "", regex=True),
                 errors="coerce"
@@ -163,10 +163,18 @@ if salary_file is not None:
     except Exception as exc:
         st.error(f"Could not read that CSV: {exc}. The sample player pool is still being used.")
 
-players_df["Opponent"] = players_df["Team"].map({
-    "DAL": "TB",
-    "TB": "DAL"
-})
+# Infer the opposing team from the teams present in the uploaded slate.
+teams_in_slate = [
+    team for team in players_df["Team"].dropna().astype(str).unique()
+    if team.strip()
+]
+opponent_map = {}
+if len(teams_in_slate) == 2:
+    opponent_map = {
+        teams_in_slate[0]: teams_in_slate[1],
+        teams_in_slate[1]: teams_in_slate[0],
+    }
+players_df["Opponent"] = players_df["Team"].map(opponent_map)
 
 players_df["CaptainSalary"] = (
     players_df["Salary"] * 1.5
