@@ -14,20 +14,17 @@ st.title("Universal DFS Simulator")
 
 
 def apply_injury_statuses(frame, key_prefix):
-    """Keep Active and Questionable players; exclude only players marked Out."""
+    """Let the user mark players Active, Questionable, or Out across all slate types."""
     if "player_injury_statuses" not in st.session_state:
         st.session_state["player_injury_statuses"] = {}
     saved_statuses = st.session_state["player_injury_statuses"]
 
-    def status_key(name):
-        return " ".join(str(name).split()).casefold()
-
     status_df = frame[[c for c in ["Name", "Position", "Team"] if c in frame.columns]].copy()
     status_df["Injury Status"] = status_df["Name"].astype(str).map(
-        lambda name: saved_statuses.get(status_key(name), "Active")
+        lambda name: saved_statuses.get(name.strip().casefold(), "Active")
     )
     st.write("### Player Injury Status")
-    st.caption("Questionable players stay eligible. Only players marked Out are removed from the player pool and new lineups. Status choices carry across slates when the player name matches.")
+    st.caption("Set each player to Active, Questionable, or Out. Players marked Out are removed from lineup building. Status choices carry across slates when the player name matches.")
     edited_statuses = st.data_editor(
         status_df,
         use_container_width=True,
@@ -44,12 +41,12 @@ def apply_injury_statuses(frame, key_prefix):
         key=key_prefix + "_" + str(len(status_df)) + "_" + str(status_df["Name"].astype(str).head(3).tolist())
     )
     for _, row in edited_statuses.iterrows():
-        saved_statuses[status_key(row["Name"])] = row["Injury Status"]
+        saved_statuses[str(row["Name"]).strip().casefold()] = row["Injury Status"]
     st.session_state["player_injury_statuses"] = saved_statuses
 
     result = frame.copy()
     result["Injury Status"] = result["Name"].astype(str).map(
-        lambda name: str(saved_statuses.get(status_key(name), "Active")).strip().title()
+        lambda name: str(saved_statuses.get(name.strip().casefold(), "Active")).strip().title()
     )
     excluded = result[result["Injury Status"].str.casefold() == "out"]["Name"].astype(str).tolist()
     if excluded:
@@ -223,25 +220,25 @@ def download_public_projection_table(source_name, platform_name):
             return result
 
     # DFF player rows are rendered as text elements, not standard HTML tables.
-    # Use only the Python standard library here; the app does not install bs4.
+    # Parse the same row layout on Classic and single-game pages.
     if source_name == "DFF":
         import re
         from html import unescape
-        page_text = unescape(re.sub(r"<[^>]*>", " ", response.text))
-        page_text = re.sub(r"\s+", " ", page_text)
+        from bs4 import BeautifulSoup
+        page_text = unescape(BeautifulSoup(response.text, "html.parser").get_text(" ", strip=True))
         if "Sort" in page_text:
             page_text = page_text.split("Sort", 1)[1]
         row_pattern = re.compile(
-            r"\b(?:QB|WR|RB|TE|FLX|DST|K)\s*\|\s*(?:Image\s+)?(.+?)\s*\|\s*"
-            r"\$[\d,.]+k\s*\|\s*[A-Z]{2,3}\s*\|\s*[A-Z]{2,3}\s*\|\s*"
-            r"\d+\s*\|\s*(\d+(?:\.\d+)?)",
+            r"\\b(?:QB|WR|RB|TE|FLX|DST|K)\\s*\\|\\s*(?:Image\\s+)?(.+?)\\s*\\|\\s*"
+            r"\\$[\\d,.]+k\\s*\\|\\s*[A-Z]{2,3}\\s*\\|\\s*[A-Z]{2,3}\\s*\\|\\s*"
+            r"\\d+\\s*\\|\\s*(\\d+(?:\\.\\d+)?)",
             re.IGNORECASE
         )
         result = {}
         for match in row_pattern.finditer(page_text):
-            player_name = re.sub(r"\s+", " ", match.group(1)).strip()
-            # Keep Questionable players eligible; Q is only a source status marker.
-            player_name = re.sub(r"\s+Q$", "", player_name, flags=re.IGNORECASE)
+            player_name = re.sub(r"\\s+", " ", match.group(1)).strip()
+            # DFF adds a trailing Q for questionable players; it is not part of the name.
+            player_name = re.sub(r"\\s+Q$", "", player_name, flags=re.IGNORECASE)
             key = normalize_projection_player_name(player_name)
             value = pd.to_numeric(match.group(2), errors="coerce")
             if key and pd.notna(value) and np.isfinite(float(value)) and float(value) > 0:
