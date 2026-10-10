@@ -772,6 +772,19 @@ if platform == "FanDuel":
                 )
         except Exception as exc:
             st.error(f"Could not read the FanDuel contest entry file: {exc}")
+
+    if "fd_total_contest_entries" not in st.session_state:
+        fd_own_entries = int((st.session_state.get("selected_fd_contest") or {}).get("your_entries", 0) or 0)
+        st.session_state["fd_total_contest_entries"] = min(200000, 20000 + fd_own_entries)
+    st.number_input(
+        "Total FanDuel contest entries (including yours)",
+        min_value=1, max_value=200000, step=100,
+        key="fd_total_contest_entries",
+        help="Use the total field size shown on the contest page. Your own entries are subtracted automatically."
+    )
+    fd_opponent_target = get_contest_opponent_target("fd")
+    st.caption(f"Simulated FanDuel opponents: {fd_opponent_target:,}")
+
     st.write("### Projection Sources")
     fd_dff_projection_file = None
     fd_draftedge_projection_file = None
@@ -1743,6 +1756,19 @@ if entry_file is not None:
             st.error("This CSV does not appear to be a DraftKings contest entry file. It needs Contest Name and Contest ID columns.")
     except Exception as exc:
         st.error(f"Could not read the DraftKings contest entry file: {exc}")
+
+if "dk_total_contest_entries" not in st.session_state:
+    dk_own_entries = int((st.session_state.get("selected_dk_contest") or {}).get("your_entries", 0) or 0)
+    st.session_state["dk_total_contest_entries"] = min(200000, 20000 + dk_own_entries)
+st.number_input(
+    "Total DraftKings contest entries (including yours)",
+    min_value=1, max_value=200000, step=100,
+    key="dk_total_contest_entries",
+    help="Use the total field size shown on the contest page. Your own entries are subtracted automatically."
+)
+dk_opponent_target = get_contest_opponent_target("dk")
+st.caption(f"Simulated DraftKings opponents: {dk_opponent_target:,}")
+
 st.write("### Projection Sources")
 
 # Optional uploaded projection files; automatic public-source refresh is handled
