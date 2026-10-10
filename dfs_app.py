@@ -1164,10 +1164,6 @@ if entry_file is not None:
     except Exception as exc:
         st.error(f"Could not read the DraftKings contest entry file: {exc}")
 st.write("### Projection Sources")
-st.caption("Upload DFF and/or DraftEdge projection CSVs for this slate. Matching players are averaged when both sources are available.")
-dff_projection_file = st.file_uploader("Upload DFF projections CSV", type=["csv"], key="dk_dff_projection_file")
-draftedge_projection_file = st.file_uploader("Upload DraftEdge projections CSV", type=["csv"], key="dk_draftedge_projection_file")
-show_projection_refresh_status([("DFF", dff_projection_file), ("DraftEdge", draftedge_projection_file)], "dk_" + lineup_mode.replace(" ", "_").lower())
 
 if salary_file is not None:
     try:
