@@ -46,12 +46,12 @@ def apply_injury_statuses(frame, key_prefix):
 
     result = frame.copy()
     result["Injury Status"] = result["Name"].astype(str).map(
-        lambda name: saved_statuses.get(name.strip().casefold(), "Active")
+        lambda name: str(saved_statuses.get(name.strip().casefold(), "Active")).strip().title()
     )
-    excluded = result[result["Injury Status"] == "Out"]["Name"].astype(str).tolist()
+    excluded = result[result["Injury Status"].str.casefold() == "out"]["Name"].astype(str).tolist()
     if excluded:
-        st.warning("Removed players marked Out: " + ", ".join(excluded))
-    result = result[result["Injury Status"] != "Out"].reset_index(drop=True)
+        st.warning("OUT players excluded from the FanDuel/DraftKings player pool and all new builds: " + ", ".join(excluded))
+    result = result[result["Injury Status"].str.casefold() != "out"].reset_index(drop=True)
     if result.empty:
         st.error("All players are marked Out. Change at least one player's injury status to continue.")
         st.stop()
@@ -369,6 +369,16 @@ if platform == "FanDuel":
 
     fd_players = apply_external_projection_sources(fd_players, fd_dff_projection_file, fd_draftedge_projection_file)
     fd_players = apply_injury_statuses(fd_players, "injury_status_fd_" + lineup_mode.replace(" ", "_").lower())
+    # Remove stale saved builds as soon as an Out player is excluded.
+    fd_allowed_names = set(fd_players["Name"].astype(str))
+    for saved_key in list(st.session_state.get("fd_saved_builds", {}).keys()):
+        saved_lineups = st.session_state["fd_saved_builds"][saved_key].get("lineups")
+        if isinstance(saved_lineups, pd.DataFrame):
+            lineup_columns = [c for c in saved_lineups.columns if c not in {"Salary", "ProjectedPoints", "Score"}]
+            if any(saved_lineups[col].astype(str).isin(
+                set(fd_raw[fd_name_col].astype(str).str.replace(r"\\s*\\(\\d+\\)\\s*$", "", regex=True)) - fd_allowed_names
+            ).any() for col in lineup_columns if col in saved_lineups.columns):
+                st.session_state["fd_saved_builds"].pop(saved_key, None)
 
     st.write("### Build Salary Range")
     fd_salary_range = st.slider(
