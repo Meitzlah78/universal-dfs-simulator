@@ -611,7 +611,7 @@ def score_nfl_stat_line(stats, platform):
 
 def _simulate_scored_player_outcomes(players_df, platform, rng):
     """Simulate player stats and score them with the selected site's rules."""
-    means = build_internal_projection_means(players_df)
+    means = build_internal_projection_means(players_df, platform=platform)
     simulations = {}
     n = SIMULATIONS
     for index, (_, row) in enumerate(players_df.iterrows()):
@@ -909,26 +909,111 @@ if salary_file is not None:
     except Exception as exc:
         st.error(f"Could not read that CSV: {exc}. The sample player pool is still being used.")
 
-def build_internal_projection_means(players_df):
-    """Estimate fantasy points internally from salary and position, not outside projections."""
+def load_nfl_historical_player_stats():
+    """Load recent weekly NFL player stats from the free nflverse CSV releases."""
+    cache_key = "nfl_historical_weekly_stats_2022_2025"
+    if cache_key in st.session_state:
+        return st.session_state[cache_key]
+    frames = []
+    errors = []
+    for season in [2022, 2023, 2024, 2025]:
+        url = f"https://github.com/nflverse/nflverse-data/releases/download/player_stats/stats_player_week_{season}.csv"
+        try:
+            frame = pd.read_csv(url, low_memory=False)
+            if not frame.empty:
+                frame["season"] = season
+                frames.append(frame)
+        except Exception as exc:
+            errors.append(f"{season}: {exc}")
+    historical = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
+    st.session_state[cache_key] = historical
+    st.session_state["nfl_historical_stats_status"] = (
+        f"Loaded historical weekly stats for {len(frames)} season(s): "
+        + ", ".join(str(year) for year in [2022, 2023, 2024, 2025][:len(frames)])
+        if frames else "Historical NFL data could not be downloaded; using salary/position estimates."
+    )
+    return historical
+
+
+def _historical_player_average(player_name, position, platform, historical):
+    """Recency-weighted fantasy points per game from historical weekly stats."""
+    if historical.empty:
+        return None
+    name_col = next((col for col in ["player_display_name", "player_name", "name"] if col in historical.columns), None)
+    if name_col is None or "week" not in historical.columns:
+        return None
+    wanted = " ".join(str(player_name).casefold().replace(".", "").replace(",", "").split())
+    names = historical[name_col].astype(str).str.casefold().str.replace(r"[^a-z0-9 ]", "", regex=True).str.replace(r"\s+", " ", regex=True).str.strip()
+    wanted = " ".join(pd.Series([wanted]).str.replace(r"[^a-z0-9 ]", "", regex=True).iloc[0].split())
+    rows = historical[names == wanted].copy()
+    if rows.empty:
+        return None
+    if "position" in rows.columns and position:
+        matching = rows[rows["position"].astype(str).str.upper() == str(position).upper()]
+        if not matching.empty:
+            rows = matching
+    if "season" in rows.columns:
+        rows["season"] = pd.to_numeric(rows["season"], errors="coerce").fillna(0)
+    rows["week"] = pd.to_numeric(rows["week"], errors="coerce").fillna(0)
+    rows = rows.sort_values(["season", "week"]).tail(24)
+    if rows.empty:
+        return None
+    if str(platform).lower().startswith("fanduel"):
+        stats_map = {
+            "passing_yards": "passing_yards", "passing_tds": "passing_tds",
+            "interceptions": "interceptions", "rushing_yards": "rushing_yards",
+            "rushing_tds": "rushing_tds", "receiving_yards": "receiving_yards",
+            "receiving_tds": "receiving_tds", "receptions": "receptions",
+            "fumbles_lost": "sack_fumbles_lost",
+        }
+        scores = []
+        for _, game in rows.iterrows():
+            stat_line = {}
+            for output_col, source_col in stats_map.items():
+                if source_col in rows.columns:
+                    stat_line[output_col] = pd.to_numeric(pd.Series([game[source_col]]), errors="coerce").fillna(0).iloc[0]
+            scores.append(float(score_nfl_stat_line(stat_line, platform)))
+        points = np.asarray(scores, dtype=float)
+    else:
+        points_col = next((col for col in ["fantasy_points_ppr", "fantasy_points"] if col in rows.columns), None)
+        if points_col is None:
+            return None
+        points = pd.to_numeric(rows[points_col], errors="coerce").fillna(0).to_numpy(dtype=float)
+    # More recent games count more, but older games still provide a baseline.
+    weights = np.linspace(0.5, 1.5, len(points))
+    average = float(np.average(points, weights=weights))
+    return max(0.0, average) if np.isfinite(average) else None
+
+
+def build_internal_projection_means(players_df, platform="DraftKings"):
+    """Blend salary/position estimates with recency-weighted historical NFL results."""
     salary = pd.to_numeric(players_df["Salary"], errors="coerce").fillna(0).to_numpy(dtype=float)
     positions = players_df["Position"].astype(str).str.upper().str.split("/")
     position_rates = {
-        "QB": 2.00,
-        "RB": 1.75,
-        "WR": 1.70,
-        "TE": 1.50,
-        "K": 1.35,
-        "DST": 1.35,
-        "D": 1.35,
-        "DEF": 1.35,
+        "QB": 2.00, "RB": 1.75, "WR": 1.70, "TE": 1.50,
+        "K": 1.35, "DST": 1.35, "D": 1.35, "DEF": 1.35,
     }
-    means = []
+    baseline = []
     for pay, eligible_positions in zip(salary, positions):
         rates = [position_rates[pos.strip()] for pos in eligible_positions if pos.strip() in position_rates]
         rate = max(rates) if rates else 1.60
-        means.append(max(0.3, (pay / 1000.0) * rate))
-    return np.asarray(means, dtype=float)
+        baseline.append(max(0.3, (pay / 1000.0) * rate))
+    baseline = np.asarray(baseline, dtype=float)
+    historical = load_nfl_historical_player_stats()
+    blended = []
+    matched = 0
+    for index, (_, row) in enumerate(players_df.iterrows()):
+        pos = str(row.get("Position", "")).upper().split("/")[0].strip()
+        historical_avg = _historical_player_average(row.get("Name", ""), pos, platform, historical)
+        if historical_avg is None:
+            blended.append(baseline[index])
+        else:
+            # Historical performance is informative, but salary-based opportunity
+            # prevents tiny samples from overpowering the estimate.
+            blended.append(max(0.3, 0.65 * historical_avg + 0.35 * baseline[index]))
+            matched += 1
+    st.session_state["nfl_historical_players_matched"] = matched
+    return np.asarray(blended, dtype=float)
 
 
 players_df = apply_injury_statuses(players_df, "injury_status_dk_" + lineup_mode.replace(" ", "_").lower())
@@ -964,7 +1049,7 @@ internal_key = internal_slate_key(players_df)
 saved_internal_projections = st.session_state.get("internal_projections_by_slate", {}).get(internal_key)
 if saved_internal_projections:
     players_df["Projection"] = players_df["Name"].map(saved_internal_projections).fillna(
-        pd.Series(build_internal_projection_means(players_df), index=players_df.index)
+        pd.Series(build_internal_projection_means(players_df, platform=platform), index=players_df.index)
     )
 players_df["ProjectionSource"] = "Internal Simulation"
 
