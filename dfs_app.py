@@ -246,7 +246,8 @@ def apply_external_projection_sources(players_frame, dff_file, draftedge_file, p
     result["ProjectionSource"] = sources
     st.caption(
         f"Projection files matched: DFF {dff_matches} players; DraftEdge {draftedge_matches} players; "
-        f"averaged {averages} players. Players without either source use the simulator's estimate."
+        f"averaged {averages} players. DFF source: {dff_status}; DraftEdge source: {draftedge_status}. "
+        "Players without either source use the simulator estimate."
     )
     return result
 
