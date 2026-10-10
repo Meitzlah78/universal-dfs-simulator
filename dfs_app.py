@@ -898,6 +898,10 @@ if platform == "FanDuel":
     st.caption(f"Simulated FanDuel opponents: {fd_opponent_target:,}")
 
     st.write("### Projection Sources")
+    show_projection_refresh_status(
+        [("DFF", fd_dff_projection_file), ("DraftEdge", fd_draftedge_projection_file)],
+        "fd_" + lineup_mode.replace(" ", "_").lower()
+    )
     fd_dff_projection_file = None
     fd_draftedge_projection_file = None
 
@@ -2077,6 +2081,10 @@ dk_opponent_target = get_contest_opponent_target("dk")
 st.caption(f"Simulated DraftKings opponents: {dk_opponent_target:,}")
 
 st.write("### Projection Sources")
+show_projection_refresh_status(
+    [("DFF", dff_projection_file), ("DraftEdge", draftedge_projection_file)],
+    "dk_" + lineup_mode.replace(" ", "_").lower()
+)
 
 # Optional uploaded projection files; automatic public-source refresh is handled
 # by apply_external_projection_sources when these are not supplied.
