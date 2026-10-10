@@ -3212,17 +3212,38 @@ if "contest_results_df" in st.session_state:
     )
     st.session_state["portfolio_df"] = portfolio_df
 
+    # Show each rostered player's average score across the player simulations.
+    # For the Showdown captain, apply the 1.5x scoring multiplier.
+    sim_scores = st.session_state.get("simulation_df")
+    if isinstance(sim_scores, pd.DataFrame) and not sim_scores.empty:
+        sim_player_means = sim_scores.mean(axis=0, numeric_only=True).to_dict()
+        for slot in ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"]:
+            if slot not in portfolio_df.columns:
+                continue
+            multiplier = 1.5 if slot == "Captain" else 1.0
+            score_col = slot + " Sim Pts"
+            portfolio_df[score_col] = portfolio_df[slot].map(
+                lambda player: round(float(sim_player_means.get(str(player), 0.0)) * multiplier, 2)
+            )
+        st.session_state["portfolio_df"] = portfolio_df
+
     st.write(
         f"Portfolio: {len(portfolio_df)} lineups"
     )
 
     display_columns = [
         "Captain",
+        "Captain Sim Pts",
         "Flex1",
+        "Flex1 Sim Pts",
         "Flex2",
+        "Flex2 Sim Pts",
         "Flex3",
+        "Flex3 Sim Pts",
         "Flex4",
+        "Flex4 Sim Pts",
         "Flex5",
+        "Flex5 Sim Pts",
         "Salary",
         "ContestScore",
         "WinRate",
@@ -3308,7 +3329,9 @@ if "contest_results_df" in st.session_state:
         st.info("Build a portfolio to see player exposure.")
 
     export_columns = [
-        "Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5",
+        "Captain", "Captain Sim Pts", "Flex1", "Flex1 Sim Pts",
+        "Flex2", "Flex2 Sim Pts", "Flex3", "Flex3 Sim Pts",
+        "Flex4", "Flex4 Sim Pts", "Flex5", "Flex5 Sim Pts",
         "Salary", "ContestScore", "WinRate", "Top1", "Top5",
         "Top10", "CashRate"
     ]
