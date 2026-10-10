@@ -223,25 +223,25 @@ def download_public_projection_table(source_name, platform_name):
             return result
 
     # DFF player rows are rendered as text elements, not standard HTML tables.
-    # Parse the same row layout on Classic and single-game pages.
+    # Use only the Python standard library here; the app does not install bs4.
     if source_name == "DFF":
         import re
         from html import unescape
-        from bs4 import BeautifulSoup
-        page_text = unescape(BeautifulSoup(response.text, "html.parser").get_text(" ", strip=True))
+        page_text = unescape(re.sub(r"<[^>]*>", " ", response.text))
+        page_text = re.sub(r"\s+", " ", page_text)
         if "Sort" in page_text:
             page_text = page_text.split("Sort", 1)[1]
         row_pattern = re.compile(
-            r"\\b(?:QB|WR|RB|TE|FLX|DST|K)\\s*\\|\\s*(?:Image\\s+)?(.+?)\\s*\\|\\s*"
-            r"\\$[\\d,.]+k\\s*\\|\\s*[A-Z]{2,3}\\s*\\|\\s*[A-Z]{2,3}\\s*\\|\\s*"
-            r"\\d+\\s*\\|\\s*(\\d+(?:\\.\\d+)?)",
+            r"\b(?:QB|WR|RB|TE|FLX|DST|K)\s*\|\s*(?:Image\s+)?(.+?)\s*\|\s*"
+            r"\$[\d,.]+k\s*\|\s*[A-Z]{2,3}\s*\|\s*[A-Z]{2,3}\s*\|\s*"
+            r"\d+\s*\|\s*(\d+(?:\.\d+)?)",
             re.IGNORECASE
         )
         result = {}
         for match in row_pattern.finditer(page_text):
-            player_name = re.sub(r"\\s+", " ", match.group(1)).strip()
-            # DFF adds a trailing Q for questionable players; it is not part of the name.
-            player_name = re.sub(r"\\s+Q$", "", player_name, flags=re.IGNORECASE)
+            player_name = re.sub(r"\s+", " ", match.group(1)).strip()
+            # Keep Questionable players eligible; Q is only a source status marker.
+            player_name = re.sub(r"\s+Q$", "", player_name, flags=re.IGNORECASE)
             key = normalize_projection_player_name(player_name)
             value = pd.to_numeric(match.group(2), errors="coerce")
             if key and pd.notna(value) and np.isfinite(float(value)) and float(value) > 0:
