@@ -611,7 +611,7 @@ def score_nfl_stat_line(stats, platform):
 
 def _simulate_scored_player_outcomes(players_df, platform, rng):
     """Simulate player stats and score them with the selected site's rules."""
-    means = build_internal_projection_means(players_df, platform=platform)
+    means = build_internal_projection_means(players_df, platform=platform, include_history=True)
     simulations = {}
     n = SIMULATIONS
     for index, (_, row) in enumerate(players_df.iterrows()):
@@ -985,7 +985,7 @@ def _historical_player_average(player_name, position, platform, historical):
     return max(0.0, average) if np.isfinite(average) else None
 
 
-def build_internal_projection_means(players_df, platform="DraftKings"):
+def build_internal_projection_means(players_df, platform="DraftKings", include_history=False):
     """Blend salary/position estimates with recency-weighted historical NFL results."""
     salary = pd.to_numeric(players_df["Salary"], errors="coerce").fillna(0).to_numpy(dtype=float)
     positions = players_df["Position"].astype(str).str.upper().str.split("/")
@@ -999,7 +999,8 @@ def build_internal_projection_means(players_df, platform="DraftKings"):
         rate = max(rates) if rates else 1.60
         baseline.append(max(0.3, (pay / 1000.0) * rate))
     baseline = np.asarray(baseline, dtype=float)
-    historical = load_nfl_historical_player_stats()
+    # Avoid network downloads while the app page is starting up. Load historical data only when a simulation is explicitly run.
+    historical = load_nfl_historical_player_stats() if include_history else pd.DataFrame()
     blended = []
     matched = 0
     for index, (_, row) in enumerate(players_df.iterrows()):
