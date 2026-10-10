@@ -565,7 +565,14 @@ if platform == "DraftKings" and lineup_mode == "Classic":
             )
 
         # Use the best projected players while keeping enough depth for each slot.
-        ranked_names = sorted(rankings, key=rankings.get, reverse=True)[:60]
+        classic_locked_players = [
+            name for name in available_players
+            if control_map.get(name, {}).get("Lock", False)
+        ]
+        ranked_names = list(dict.fromkeys(
+            sorted(rankings, key=rankings.get, reverse=True)[:60]
+            + classic_locked_players
+        ))
         classic_pool = classic_pool[classic_pool["Name"].isin(ranked_names)].copy()
         player_rows = classic_pool.set_index("Name").to_dict("index")
         candidate_lineups = []
@@ -603,10 +610,6 @@ if platform == "DraftKings" and lineup_mode == "Classic":
 
             if len(chosen) != len(roster_slots) or salary > 50000:
                 continue
-            classic_locked_players = [
-                name for name in available_players
-                if control_map.get(name, {}).get("Lock", False)
-            ]
             if not all(name in chosen.values() for name in classic_locked_players):
                 continue
 
@@ -666,7 +669,9 @@ if platform == "DraftKings" and lineup_mode == "Classic":
             if missing:
                 st.warning("Some player IDs are missing. Upload the DraftKings lineup template to enable export.")
             else:
-                export_df = pd.DataFrame(export_data, columns=export_slots)
+                # DraftKings upload templates use repeated roster-slot names.
+                dk_upload_columns = ["QB", "RB", "RB", "WR", "WR", "WR", "TE", "FLEX", "DST"]
+                export_df = pd.DataFrame(export_data, columns=dk_upload_columns)
                 st.download_button(
                     "EXPORT DRAFTKINGS CLASSIC CSV",
                     export_df.to_csv(index=False).encode("utf-8"),
