@@ -2209,20 +2209,15 @@ try:
     if not lobby_df.empty and "id" in lobby_df.columns and "n" in lobby_df.columns:
         lobby_names = lobby_df["n"].fillna("").astype(str)
 
-        # Each Draft Group represents a slate. Showdown groups are single-game slates;
-        # Classic groups are multi-game slates. Keep the salary upload as an optional fallback.
+        # This selector is specifically for DraftKings single-game slates.
+        # Exclude Classic/multi-game contests even when the app's lineup mode changes.
         if "dg" in lobby_df.columns:
             slate_names = lobby_df["n"].fillna("").astype(str)
-            if lineup_mode == "Showdown":
-                slate_mask = (
-                    slate_names.str.contains("showdown", case=False, regex=False)
-                    | lobby_df.get("gameType", pd.Series("", index=lobby_df.index)).fillna("").astype(str).str.contains("showdown", case=False, regex=False)
-                )
-            else:
-                slate_mask = ~(
-                    slate_names.str.contains("showdown", case=False, regex=False)
-                    | lobby_df.get("gameType", pd.Series("", index=lobby_df.index)).fillna("").astype(str).str.contains("showdown", case=False, regex=False)
-                )
+            game_types = lobby_df.get("gameType", pd.Series("", index=lobby_df.index)).fillna("").astype(str)
+            slate_mask = (
+                slate_names.str.contains(r"showdown|single[ -]?game|captain|mvp", case=False, regex=True)
+                | game_types.str.contains(r"showdown|single[ -]?game", case=False, regex=True)
+            )
             slate_rows = lobby_df.loc[slate_mask].copy()
             if not slate_rows.empty:
                 slate_rows["dg"] = slate_rows["dg"].astype(str).str.replace(r"\\.0$", "", regex=True)
@@ -2235,7 +2230,7 @@ try:
                     lambda row: f'{row["SlateName"]} | Slate ID {row["dg"]}', axis=1
                 )
                 chosen_slate_label = st.selectbox(
-                    "Choose a DraftKings " + ("single game" if lineup_mode == "Showdown" else "Classic slate"),
+                    "Choose a DraftKings single-game slate",
                     slate_options["Slate Label"].tolist(),
                     key="dk_auto_slate_" + ("showdown" if lineup_mode == "Showdown" else "classic"),
                 )
