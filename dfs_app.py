@@ -57,6 +57,89 @@ def apply_injury_statuses(frame, key_prefix):
         st.stop()
     return result
 
+def normalize_projection_player_name(name):
+    """Normalize names so projection CSVs match the uploaded slate."""
+    import re
+    value = str(name).casefold().strip()
+    value = re.sub(r"\s*\(\d+\)\s*$", "", value)
+    value = re.sub(r"\s+(jr|sr|ii|iii|iv|v)\.?$", "", value)
+    return re.sub(r"[^a-z0-9]", "", value)
+
+
+def read_projection_csv(uploaded_file, source_label):
+    """Read a DFF or DraftEdge CSV and return normalized player projections."""
+    if uploaded_file is None:
+        return {}
+    import io
+    try:
+        raw = pd.read_csv(io.BytesIO(uploaded_file.getvalue()), engine="python", on_bad_lines="skip")
+        raw.columns = [str(col).strip() for col in raw.columns]
+        lookup = {str(col).strip().casefold(): col for col in raw.columns}
+        name_col = next((lookup[x] for x in [
+            "name", "player", "player name", "nickname", "name + id", "player_name"
+        ] if x in lookup), None)
+        first_col = next((lookup[x] for x in ["first_name", "first name", "firstname"] if x in lookup), None)
+        last_col = next((lookup[x] for x in ["last_name", "last name", "lastname"] if x in lookup), None)
+        if name_col is None and first_col is not None and last_col is not None:
+            names = raw[first_col].astype(str).str.strip() + " " + raw[last_col].astype(str).str.strip()
+        elif name_col is not None:
+            names = raw[name_col].astype(str).str.strip()
+        else:
+            st.warning(f"{source_label}: couldn't find a player-name column in that CSV.")
+            return {}
+        projection_col = next((lookup[x] for x in [
+            "ppg_projection", "projection", "projected points", "projected fantasy points",
+            "fantasy points projection", "fpts", "fppg", "proj", "my proj", "total fpts"
+        ] if x in lookup), None)
+        if projection_col is None:
+            st.warning(f"{source_label}: couldn't find a projection column in that CSV.")
+            return {}
+        values = pd.to_numeric(raw[projection_col].astype(str).str.replace(r"[$,]", "", regex=True), errors="coerce")
+        result = {}
+        for name, value in zip(names, values):
+            key = normalize_projection_player_name(name)
+            if key and pd.notna(value) and np.isfinite(float(value)) and float(value) > 0:
+                result[key] = float(value)
+        return result
+    except Exception as exc:
+        st.warning(f"{source_label}: couldn't read the CSV ({exc}).")
+        return {}
+
+
+def apply_external_projection_sources(players_frame, dff_file, draftedge_file):
+    """Average DFF and DraftEdge where both match; otherwise use whichever exists."""
+    result = players_frame.copy()
+    dff = read_projection_csv(dff_file, "DFF")
+    draftedge = read_projection_csv(draftedge_file, "DraftEdge")
+    internal = pd.to_numeric(result.get("Projection", pd.Series(np.nan, index=result.index)), errors="coerce")
+    projections, sources = [], []
+    dff_matches = draftedge_matches = averages = 0
+    for index, row in result.iterrows():
+        key = normalize_projection_player_name(row.get("Name", ""))
+        dff_value, edge_value = dff.get(key), draftedge.get(key)
+        if dff_value is not None and edge_value is not None:
+            value, source = (dff_value + edge_value) / 2.0, "DFF + DraftEdge average"
+            averages += 1
+        elif dff_value is not None:
+            value, source = dff_value, "DFF"
+        elif edge_value is not None:
+            value, source = edge_value, "DraftEdge"
+        else:
+            value = internal.loc[index] if index in internal.index and pd.notna(internal.loc[index]) else np.nan
+            source = "Internal Simulation"
+        dff_matches += int(dff_value is not None)
+        draftedge_matches += int(edge_value is not None)
+        projections.append(value)
+        sources.append(source)
+    result["Projection"] = pd.to_numeric(pd.Series(projections, index=result.index), errors="coerce")
+    result["ProjectionSource"] = sources
+    st.caption(
+        f"Projection files matched: DFF {dff_matches} players; DraftEdge {draftedge_matches} players; "
+        f"averaged {averages} players. Players without either source use the simulator's estimate."
+    )
+    return result
+
+
 def normalize_simulation_cache_name(name):
     """Normalize player names for session-only simulated projection matching."""
     import re
@@ -126,6 +209,10 @@ if platform == "FanDuel":
         type=["csv"],
         key="fd_salary_file"
     )
+    st.write("### Projection Sources")
+    st.caption("Upload DFF and/or DraftEdge projection CSVs for FanDuel.")
+    fd_dff_projection_file = st.file_uploader("Upload DFF projections CSV", type=["csv"], key="fd_dff_projection_file")
+    fd_draftedge_projection_file = st.file_uploader("Upload DraftEdge projections CSV", type=["csv"], key="fd_draftedge_projection_file")
 
     if fd_file is None:
         st.info("Upload your FanDuel salary CSV to build FanDuel lineups.")
@@ -239,6 +326,7 @@ if platform == "FanDuel":
         st.error(f"Could not read that FanDuel CSV: {exc}")
         st.stop()
 
+    fd_players = apply_external_projection_sources(fd_players, fd_dff_projection_file, fd_draftedge_projection_file)
     fd_players = apply_injury_statuses(fd_players, "injury_status_fd_" + lineup_mode.replace(" ", "_").lower())
 
     st.write("### Build Salary Range")
@@ -807,8 +895,10 @@ if entry_file is not None:
             st.error("This CSV does not appear to be a DraftKings contest entry file. It needs Contest Name and Contest ID columns.")
     except Exception as exc:
         st.error(f"Could not read the DraftKings contest entry file: {exc}")
-st.write("### Projections")
-st.caption("The simulator creates its own projections from player salary and position. DFF and DraftEdge projections are not used.")
+st.write("### Projection Sources")
+st.caption("Upload DFF and/or DraftEdge projection CSVs for this slate. Matching players are averaged when both sources are available.")
+dff_projection_file = st.file_uploader("Upload DFF projections CSV", type=["csv"], key="dk_dff_projection_file")
+draftedge_projection_file = st.file_uploader("Upload DraftEdge projections CSV", type=["csv"], key="dk_draftedge_projection_file")
 
 if salary_file is not None:
     try:
@@ -1052,11 +1142,9 @@ dk_salary_range = st.slider(
 )
 MIN_LINEUP_SALARY, MAX_LINEUP_SALARY = dk_salary_range
 
-# The simulator now creates its own projections from salary and position.
-# Any DFF, DraftEdge, or salary-file projections are ignored by the simulation model.
-if "ProjectionSource" not in players_df.columns:
-    players_df["ProjectionSource"] = "Internal Simulation"
+# Internal estimates fill gaps; uploaded DFF/DraftEdge projections take priority.
 players_df["Projection"] = build_internal_projection_means(players_df, platform=platform)
+players_df = apply_external_projection_sources(players_df, dff_projection_file, draftedge_projection_file)
 
 def internal_slate_key(frame):
     """Stable identity for an uploaded slate, independent of external projections."""
@@ -1072,9 +1160,7 @@ if saved_internal_projections:
     players_df["Projection"] = players_df["Name"].map(saved_internal_projections).fillna(
         pd.Series(build_internal_projection_means(players_df, platform=platform), index=players_df.index)
     )
-players_df["ProjectionSource"] = "Internal Simulation"
-
-st.caption("Projection source: Internal Simulation blended with recent historical NFL game results when player history is available; salary and position estimates are used when history is missing.")
+st.caption("Projection values use the DFF/DraftEdge average when both are available, otherwise the single available source. Unmatched players use internal estimates.")
 if st.session_state.get("nfl_historical_stats_status"):
     st.caption(st.session_state["nfl_historical_stats_status"])
     if st.session_state.get("nfl_historical_players_matched") is not None:
