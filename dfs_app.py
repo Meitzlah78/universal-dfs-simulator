@@ -678,7 +678,7 @@ if platform == "FanDuel":
         key="fd_build_salary_range_" + lineup_mode.replace(" ", "_").lower(),
         help="Only build lineups whose total salary falls inside this range."
     )
-        if st.button("SIM", type="primary", key="fd_sim_" + lineup_mode.replace(" ", "_").lower()):
+    if st.button("SIM", type="primary", key="fd_sim_" + lineup_mode.replace(" ", "_").lower()):
         with st.spinner("Running 10,000 FanDuel scoring simulations..."):
             rng = np.random.default_rng()
             position_rates = {
