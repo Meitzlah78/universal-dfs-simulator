@@ -12,6 +12,14 @@ st.set_page_config(
 
 st.title("Universal DFS Simulator")
 
+def normalize_simulation_cache_name(name):
+    """Normalize player names for session-only simulated projection matching."""
+    import re
+    value = str(name).casefold().strip()
+    value = re.sub(r"\\s+(jr|sr|ii|iii|iv|v)\\.?$", "", value)
+    return re.sub(r"[^a-z0-9]", "", value)
+
+
 def build_opponent_map(source_df, team_values):
     """Map each NFL team to its opponent using matchup data when available."""
     import re
@@ -1011,7 +1019,7 @@ if salary_file is not None:
                 missing_before_sim_backup = players_df["Projection"].isna()
                 simulation_matched = players_df["Name"].map(
                     lambda name: simulation_projection_cache.get(
-                        normalize_projection_name(name)
+                        normalize_simulation_cache_name(name)
                     )
                 )
                 simulation_found = missing_before_sim_backup & simulation_matched.notna()
@@ -1523,7 +1531,7 @@ if simulate_clicked:
     for player_name in simulation_df.columns:
         projection_mean = float(simulation_df[player_name].mean())
         if np.isfinite(projection_mean) and projection_mean > 0:
-            simulation_projection_cache[normalize_projection_name(player_name)] = projection_mean
+            simulation_projection_cache[normalize_simulation_cache_name(player_name)] = projection_mean
 
     st.success("10,000 game simulations completed.")
 
