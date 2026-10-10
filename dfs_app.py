@@ -76,8 +76,29 @@ salary_file = st.file_uploader(
 
 if salary_file is not None:
     try:
-        uploaded_df = pd.read_csv(salary_file)
-        uploaded_df.columns = [str(c).strip() for c in uploaded_df.columns]
+        # DraftKings lineup templates have instructions before the player table.
+        # Detect that format and skip those rows; ordinary salary CSVs load normally.
+        salary_file.seek(0)
+        first_lines = salary_file.getvalue().decode("utf-8-sig", errors="replace").splitlines()
+        is_lineup_template = (
+            len(first_lines) > 7
+            and "Roster Position" in first_lines[7]
+            and "AvgPointsPerGame" in first_lines[7]
+        )
+
+        salary_file.seek(0)
+        if is_lineup_template:
+            uploaded_df = pd.read_csv(salary_file, skiprows=7)
+            uploaded_df.columns = [str(c).strip() for c in uploaded_df.columns]
+            # Keep FLEX rows so each player appears once at the regular salary.
+            roster_col = "Roster Position" if "Roster Position" in uploaded_df.columns else None
+            if roster_col:
+                uploaded_df = uploaded_df[
+                    uploaded_df[roster_col].astype(str).str.upper().eq("FLEX")
+                ].copy()
+        else:
+            uploaded_df = pd.read_csv(salary_file)
+            uploaded_df.columns = [str(c).strip() for c in uploaded_df.columns]
 
         def find_column(frame, choices):
             lookup = {str(c).strip().lower(): c for c in frame.columns}
@@ -91,6 +112,7 @@ if salary_file is not None:
         team_col = find_column(uploaded_df, ["TeamAbbrev", "Team", "Team Abbrev", "Team Abbreviation"])
         position_col = find_column(uploaded_df, ["Position", "Roster Position", "RosterPosition"])
         projection_col = find_column(uploaded_df, ["Projection", "Projected Points", "Fpts", "FPPG", "AvgPointsPerGame", "Avg Points Per Game"])
+        id_col = find_column(uploaded_df, ["ID", "Player ID", "DK ID"])
 
         missing = []
         if name_col is None:
@@ -105,20 +127,22 @@ if salary_file is not None:
         else:
             loaded_players = pd.DataFrame()
             loaded_players["Name"] = uploaded_df[name_col].astype(str).str.strip()
-            loaded_players["Name"] = loaded_players["Name"].str.replace(r"\s*\(\d+\)\s*$", "", regex=True)
+            loaded_players["Name"] = loaded_players["Name"].str.replace(r"\\s*\\(\\d+\\)\\s*$", "", regex=True)
             loaded_players["Salary"] = pd.to_numeric(
                 uploaded_df[salary_col].astype(str).str.replace(r"[$,]", "", regex=True),
                 errors="coerce"
             )
             loaded_players["Team"] = uploaded_df[team_col].astype(str).str.strip().str.upper()
             loaded_players["Position"] = (
-                uploaded_df[position_col].astype(str).str.split("/").str[0].str.strip()
+                uploaded_df[position_col].astype(str).str.strip()
                 if position_col is not None else "FLEX"
             )
             loaded_players["Projection"] = (
                 pd.to_numeric(uploaded_df[projection_col], errors="coerce").fillna(0.01)
                 if projection_col is not None else 0.01
             )
+            if id_col is not None:
+                loaded_players["DK_ID"] = uploaded_df[id_col].astype(str).str.strip()
             loaded_players = loaded_players.dropna(subset=["Name", "Salary"])
             loaded_players = loaded_players[
                 (loaded_players["Name"] != "") &
@@ -133,6 +157,8 @@ if salary_file is not None:
                 st.success(f"Loaded {len(players_df)} players from the salary file.")
                 if projection_col is None:
                     st.warning("No projection column was found. Projections are set to 0.01 until projections are added.")
+                if is_lineup_template:
+                    st.info("DraftKings lineup template detected. FLEX rows are used for player salaries; CPT rows are ignored to avoid duplicate players.")
                 st.caption("Check the player names, teams, salaries, and projections before building lineups.")
     except Exception as exc:
         st.error(f"Could not read that CSV: {exc}. The sample player pool is still being used.")
