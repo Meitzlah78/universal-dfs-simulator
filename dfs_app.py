@@ -12,6 +12,51 @@ st.set_page_config(
 
 st.title("Universal DFS Simulator")
 
+
+def apply_injury_statuses(frame, key_prefix):
+    """Let the user mark players Active, Questionable, or Out across all slate types."""
+    if "player_injury_statuses" not in st.session_state:
+        st.session_state["player_injury_statuses"] = {}
+    saved_statuses = st.session_state["player_injury_statuses"]
+
+    status_df = frame[[c for c in ["Name", "Position", "Team"] if c in frame.columns]].copy()
+    status_df["Injury Status"] = status_df["Name"].astype(str).map(
+        lambda name: saved_statuses.get(name.strip().casefold(), "Active")
+    )
+    st.write("### Player Injury Status")
+    st.caption("Set each player to Active, Questionable, or Out. Players marked Out are removed from lineup building. Status choices carry across slates when the player name matches.")
+    edited_statuses = st.data_editor(
+        status_df,
+        use_container_width=True,
+        hide_index=True,
+        disabled=[c for c in ["Name", "Position", "Team"] if c in status_df.columns],
+        column_config={
+            "Injury Status": st.column_config.SelectboxColumn(
+                "Injury Status",
+                options=["Active", "Questionable", "Out"],
+                required=True,
+                help="Choose Out to exclude the player from the player pool and lineups."
+            )
+        },
+        key=key_prefix + "_" + str(len(status_df)) + "_" + str(status_df["Name"].astype(str).head(3).tolist())
+    )
+    for _, row in edited_statuses.iterrows():
+        saved_statuses[str(row["Name"]).strip().casefold()] = row["Injury Status"]
+    st.session_state["player_injury_statuses"] = saved_statuses
+
+    result = frame.copy()
+    result["Injury Status"] = result["Name"].astype(str).map(
+        lambda name: saved_statuses.get(name.strip().casefold(), "Active")
+    )
+    excluded = result[result["Injury Status"] == "Out"]["Name"].astype(str).tolist()
+    if excluded:
+        st.warning("Removed players marked Out: " + ", ".join(excluded))
+    result = result[result["Injury Status"] != "Out"].reset_index(drop=True)
+    if result.empty:
+        st.error("All players are marked Out. Change at least one player's injury status to continue.")
+        st.stop()
+    return result
+
 def normalize_simulation_cache_name(name):
     """Normalize player names for session-only simulated projection matching."""
     import re
@@ -194,7 +239,8 @@ if platform == "FanDuel":
         st.error(f"Could not read that FanDuel CSV: {exc}")
         st.stop()
 
-    st.success(f"Loaded {len(fd_players)} FanDuel players.")
+    fd_players = apply_injury_statuses(fd_players, "injury_status_fd_" + lineup_mode.replace(" ", "_").lower())
+    st.success(f"Loaded {len(fd_players)} FanDuel players after injury-status filtering.")
     if fd_proj_col is None:
         st.warning("No projection column found. All players currently have a placeholder projection of 0.01.")
     st.dataframe(
@@ -627,6 +673,8 @@ def build_internal_projection_means(players_df):
         means.append(max(0.3, (pay / 1000.0) * rate))
     return np.asarray(means, dtype=float)
 
+
+players_df = apply_injury_statuses(players_df, "injury_status_dk_" + lineup_mode.replace(" ", "_").lower())
 
 # The simulator now creates its own projections from salary and position.
 # Any DFF, DraftEdge, or salary-file projections are ignored by the simulation model.
