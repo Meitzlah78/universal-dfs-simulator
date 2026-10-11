@@ -2346,12 +2346,11 @@ if platform == "FanDuel":
                 else:
                     scores = rng.normal(projection, target_std, size=n)
 
-                # Fantasy scores cannot be negative. Re-center after clipping so
-                # the final simulated average remains close to the supplied projection.
+                # Fantasy scores cannot be negative. Keep the minimum absolute
+                # volatility floor for low-projection players; multiplicative mean
+                # rescaling here would collapse their upside toward zero. The final
+                # shift-and-clip calibration below matches the projection instead.
                 scores = np.maximum(scores, 0.0)
-                calibrated_mean = float(np.mean(scores)) if len(scores) else 0.0
-                if calibrated_mean > 0 and np.isfinite(calibrated_mean):
-                    scores = scores * (projection / calibrated_mean)
             # Shared game script adjusts the sampled outcome modestly. Trailing teams
             # throw more; leading teams lean more on their running backs.
             # Scale shared game-script effects with the user's single-game slider.
@@ -2747,12 +2746,11 @@ else:
                 else:
                     scores = rng.normal(projection, target_std, size=n)
 
-                # Fantasy scores cannot be negative. Re-center after clipping so
-                # the final simulated average remains close to the supplied projection.
+                # Fantasy scores cannot be negative. Keep the minimum absolute
+                # volatility floor for low-projection players; multiplicative mean
+                # rescaling here would collapse their upside toward zero. The final
+                # shift-and-clip calibration below matches the projection instead.
                 scores = np.maximum(scores, 0.0)
-                calibrated_mean = float(np.mean(scores)) if len(scores) else 0.0
-                if calibrated_mean > 0 and np.isfinite(calibrated_mean):
-                    scores = scores * (projection / calibrated_mean)
             # Shared game script adjusts the sampled outcome modestly. Trailing teams
             # throw more; leading teams lean more on their running backs.
             # Scale shared game-script effects with the user's single-game slider.
