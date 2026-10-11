@@ -3616,14 +3616,12 @@ if (
     candidates_df = st.session_state["candidates_df"]
     simulation_df = st.session_state["simulation_df"]
 
-    lineup_cols = [
-        "Captain",
-        "Flex1",
-        "Flex2",
-        "Flex3",
-        "Flex4",
-        "Flex5"
-    ]
+    if platform == "DraftKings" and lineup_mode == "Classic":
+        lineup_cols = ["QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "FLEX", "DST"]
+        scoring_multiplier = 1.0
+    else:
+        lineup_cols = ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"]
+        scoring_multiplier = 1.5
 
     player_index = {
         player: i
@@ -3667,15 +3665,12 @@ if (
             dtype=np.float32
         )
 
-        cand_scores = (
-            values[candidate_idx[:, 0]] * 1.5
-            + values[candidate_idx[:, 1:]].sum(axis=1)
-        )
+        cand_scores = values[candidate_idx].sum(axis=1)
+        field_scores = values[contest_idx].sum(axis=1)
 
-        field_scores = (
-            values[contest_idx[:, 0]] * 1.5
-            + values[contest_idx[:, 1:]].sum(axis=1)
-        )
+        if scoring_multiplier != 1.0:
+            cand_scores += values[candidate_idx[:, 0]] * (scoring_multiplier - 1.0)
+            field_scores += values[contest_idx[:, 0]] * (scoring_multiplier - 1.0)
 
         sorted_field = np.sort(field_scores)
 
