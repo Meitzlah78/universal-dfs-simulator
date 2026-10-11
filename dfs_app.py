@@ -1213,6 +1213,141 @@ selected_format = st.selectbox(
     list(format_options.keys()),
     key="dfs_format",
 )
+
+# Historical projection accuracy report. This uses pre-game projection snapshots
+# matched to actual fantasy points; the volatility check below is not a projection backtest.
+with st.expander("Projection Accuracy Report", expanded=False):
+    st.caption(
+        "Upload a CSV containing saved pre-game projections and actual fantasy points. "
+        "The report measures projection accuracy; it does not judge the simulation distribution."
+    )
+    accuracy_template = pd.DataFrame(columns=[
+        "GameDate", "Name", "Position", "Team", "ProjectionSource",
+        "Projection", "ActualPoints"
+    ])
+    st.download_button(
+        "Download Accuracy CSV Template",
+        data=accuracy_template.to_csv(index=False).encode("utf-8"),
+        file_name="projection_accuracy_template.csv",
+        mime="text/csv",
+        key="projection_accuracy_template_download",
+    )
+    accuracy_file = st.file_uploader(
+        "Upload historical projection results CSV",
+        type=["csv"],
+        key="projection_accuracy_history_upload",
+        help=(
+            "Required columns: Name, Position, Projection, ActualPoints. "
+            "ProjectionSource and GameDate are recommended."
+        ),
+    )
+    if accuracy_file is not None:
+        try:
+            accuracy_df = pd.read_csv(accuracy_file)
+            accuracy_df.columns = [str(c).strip() for c in accuracy_df.columns]
+            accuracy_lookup = {str(c).strip().casefold(): c for c in accuracy_df.columns}
+            required_accuracy = ["name", "position", "projection", "actualpoints"]
+            missing_accuracy = [c for c in required_accuracy if c not in accuracy_lookup]
+            if missing_accuracy:
+                st.error(
+                    "The uploaded file is missing required columns: "
+                    + ", ".join(missing_accuracy)
+                    + ". Use the template above and include actual DraftKings points."
+                )
+            else:
+                accuracy_df = accuracy_df.rename(columns={
+                    accuracy_lookup["name"]: "Name",
+                    accuracy_lookup["position"]: "Position",
+                    accuracy_lookup["projection"]: "Projection",
+                    accuracy_lookup["actualpoints"]: "ActualPoints",
+                })
+                if "ProjectionSource" not in accuracy_df.columns:
+                    source_col = accuracy_lookup.get("projectionsource")
+                    accuracy_df["ProjectionSource"] = (
+                        accuracy_df[source_col] if source_col else "Unknown"
+                    )
+                accuracy_df["Projection"] = pd.to_numeric(
+                    accuracy_df["Projection"], errors="coerce"
+                )
+                accuracy_df["ActualPoints"] = pd.to_numeric(
+                    accuracy_df["ActualPoints"], errors="coerce"
+                )
+                accuracy_df = accuracy_df.dropna(
+                    subset=["Name", "Position", "Projection", "ActualPoints"]
+                ).copy()
+                accuracy_df = accuracy_df[
+                    np.isfinite(accuracy_df["Projection"])
+                    & np.isfinite(accuracy_df["ActualPoints"])
+                ].copy()
+                if accuracy_df.empty:
+                    st.warning("No usable projection/actual-point rows were found in that file.")
+                else:
+                    accuracy_df["Error"] = accuracy_df["ActualPoints"] - accuracy_df["Projection"]
+                    accuracy_df["Absolute Error"] = accuracy_df["Error"].abs()
+                    accuracy_df["Squared Error"] = accuracy_df["Error"] ** 2
+                    mae = float(accuracy_df["Absolute Error"].mean())
+                    rmse = float(np.sqrt(accuracy_df["Squared Error"].mean()))
+                    bias = float(accuracy_df["Error"].mean())
+                    metric_cols = st.columns(4)
+                    metric_cols[0].metric("Player-games", f"{len(accuracy_df):,}")
+                    metric_cols[1].metric("MAE", f"{mae:.2f} pts")
+                    metric_cols[2].metric("RMSE", f"{rmse:.2f} pts")
+                    metric_cols[3].metric("Average bias", f"{bias:+.2f} pts")
+                    st.caption("Positive bias means actual scores were higher than projected; negative means projections ran high.")
+                    accuracy_df["ProjectionSource"] = (
+                        accuracy_df["ProjectionSource"].fillna("Unknown").astype(str)
+                    )
+                    accuracy_df["Projection band"] = pd.cut(
+                        accuracy_df["Projection"],
+                        bins=[-np.inf, 5, 10, 15, 20, 25, np.inf],
+                        labels=["Under 5", "5–10", "10–15", "15–20", "20–25", "25+"],
+                        right=False,
+                    )
+                    summary_rows = []
+                    for group_name, group in [
+                        ("By position", accuracy_df.groupby("Position", dropna=False)),
+                        ("By source", accuracy_df.groupby("ProjectionSource", dropna=False)),
+                        ("By projection range", accuracy_df.groupby("Projection band", dropna=False, observed=False)),
+                    ]:
+                        summary = group.agg(
+                            PlayerGames=("Error", "size"),
+                            AverageError=("Error", "mean"),
+                            MAE=("Absolute Error", "mean"),
+                            MeanSquaredError=("Squared Error", "mean"),
+                        ).reset_index()
+                        summary["RMSE"] = np.sqrt(summary.pop("MeanSquaredError"))
+                        summary.insert(0, "Breakdown", group_name)
+                        summary_rows.append(summary.rename(columns={summary.columns[1]: "Group"}))
+                    summary_df = pd.concat(summary_rows, ignore_index=True, sort=False)
+                    summary_df = summary_df.rename(columns={
+                        "AverageError": "Average Bias",
+                        "PlayerGames": "Player-Games",
+                    })
+                    for col in ["Average Bias", "MAE", "RMSE"]:
+                        summary_df[col] = pd.to_numeric(summary_df[col], errors="coerce").round(2)
+                    st.write("#### Accuracy breakdown")
+                    st.dataframe(summary_df, use_container_width=True, hide_index=True)
+                    st.write("#### Largest projection misses")
+                    misses = accuracy_df.sort_values("Absolute Error", ascending=False).head(20)
+                    st.dataframe(
+                        misses[[
+                            c for c in [
+                                "GameDate", "Name", "Position", "ProjectionSource",
+                                "Projection", "ActualPoints", "Error", "Absolute Error"
+                            ] if c in misses.columns
+                        ]].round(2),
+                        use_container_width=True,
+                        hide_index=True,
+                    )
+                    st.download_button(
+                        "Download Accuracy Results",
+                        data=accuracy_df.to_csv(index=False).encode("utf-8"),
+                        file_name="projection_accuracy_results.csv",
+                        mime="text/csv",
+                        key="projection_accuracy_results_download",
+                    )
+        except Exception as exc:
+            st.error(f"Could not read the projection accuracy file: {exc}")
 platform, lineup_mode = format_options[selected_format]
 automatic_projection_refresh(selected_format)
 # Keep the derived values in session state for existing format-specific logic.
