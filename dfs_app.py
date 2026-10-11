@@ -1787,7 +1787,7 @@ if platform == "FanDuel":
 
         st.success(f"Loaded {len(fd_players)} FanDuel players after injury-status filtering.")
         if fd_proj_col is None:
-            st.warning("No projection column found. All players currently have a placeholder projection of 0.01.")
+            st.caption("FanDuel salary-file averages are ignored. A temporary salary-based estimate is used until external projections are available.")
         fd_player_display = fd_players.drop(columns=["FD_ID"], errors="ignore").copy()
         # Show exposure from the active FanDuel slate only.
         fd_build_key = "fd_lineups_" + lineup_mode.replace(" ", "_").lower()
