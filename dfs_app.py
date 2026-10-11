@@ -3901,24 +3901,19 @@ PORTFOLIO_METRICS = {
 }
 
 
-def build_portfolio(results_df, lineup_count, metric):
-    """Build a high-ranked portfolio while enforcing player exposure controls."""
+def build_portfolio(results_df, lineup_count, metric, lineup_columns=None):
+    """Build a ranked portfolio for either Classic or Showdown."""
     if lineup_count < 1:
         raise ValueError("Lineup count must be at least 1.")
     if metric not in results_df.columns:
         raise ValueError(f"Ranking metric not found: {metric}")
-
-    lineup_columns = ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"]
-    # Simulation can generate the same roster more than once. Keep only the
-    # highest-ranked copy so one lineup is never selected for multiple entries.
-    ranked = (
-        results_df
-        .drop_duplicates(subset=lineup_columns, keep="first")
-        .sort_values(metric, ascending=False)
-    )
-    player_counts = {}
-    captain_counts = {}
-    selected_rows = []
+    if lineup_columns is None:
+        lineup_columns = ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"]
+    lineup_columns = [col for col in lineup_columns if col in results_df.columns]
+    if not lineup_columns:
+        raise ValueError("Could not identify lineup roster columns.")
+    ranked = results_df.drop_duplicates(subset=lineup_columns, keep="first").sort_values(metric, ascending=False)
+    player_counts, captain_counts, selected_rows = {}, {}, []
 
     def exposure_limit(player, setting, default=100):
         settings = control_map.get(str(player), {})
@@ -3930,35 +3925,28 @@ def build_portfolio(results_df, lineup_count, metric):
             return 0
         return max(1, int(np.ceil(lineup_count * min(100.0, percent) / 100.0)))
 
+    captain_col = "Captain" if "Captain" in lineup_columns else None
     for _, row in ranked.iterrows():
         if len(selected_rows) >= lineup_count:
             break
         names = [str(row[col]) for col in lineup_columns]
-        captain = str(row["Captain"])
-        if any(
-            player_counts.get(name, 0) >= exposure_limit(name, "Max Exposure %")
-            for name in names
-        ):
+        if any(player_counts.get(name, 0) >= exposure_limit(name, "Max Exposure %") for name in names):
             continue
-        if captain_counts.get(captain, 0) >= exposure_limit(captain, "Captain Max %"):
+        captain = str(row[captain_col]) if captain_col else None
+        if captain_col and captain_counts.get(captain, 0) >= exposure_limit(captain, "Captain Max %"):
             continue
         selected_rows.append(row.copy())
         for name in set(names):
             player_counts[name] = player_counts.get(name, 0) + 1
-        captain_counts[captain] = captain_counts.get(captain, 0) + 1
+        if captain_col:
+            captain_counts[captain] = captain_counts.get(captain, 0) + 1
 
     if not selected_rows:
-        raise ValueError(
-            "No lineups fit the current exposure limits. Increase Max Exp % or Captain Max % and try again."
-        )
-
+        raise ValueError("No lineups fit the current exposure limits. Increase Max Exposure % and try again.")
     portfolio = pd.DataFrame(selected_rows).reset_index(drop=True)
     portfolio["Locked"] = False
     if len(portfolio) < lineup_count:
-        st.warning(
-            f"Exposure limits allowed {len(portfolio)} of {lineup_count} requested lineups. "
-            "Raise some Max Exp % or Captain Max % limits to allow more."
-        )
+        st.warning(f"Exposure limits allowed {len(portfolio)} of {lineup_count} requested lineups. Raise some Max Exposure % limits to allow more.")
     return portfolio
 
 def lock_portfolio_lineup(portfolio_df, lineup_index):
@@ -3976,7 +3964,8 @@ def delete_and_replace_portfolio_lineup(
     portfolio_df,
     results_df,
     lineup_index,
-    metric
+    metric,
+    lineup_columns=None
 ):
     """Delete one unlocked lineup and replace it with the next ranked lineup."""
 
@@ -3988,14 +3977,11 @@ def delete_and_replace_portfolio_lineup(
     if bool(portfolio_df.loc[lineup_index, "Locked"]):
         return portfolio_df
 
-    lineup_columns = [
-        "Captain",
-        "Flex1",
-        "Flex2",
-        "Flex3",
-        "Flex4",
-        "Flex5"
-    ]
+    if lineup_columns is None:
+        lineup_columns = ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"]
+    lineup_columns = [col for col in lineup_columns if col in portfolio_df.columns and col in results_df.columns]
+    if not lineup_columns:
+        return portfolio_df.reset_index(drop=True)
 
     deleted_key = tuple(
         portfolio_df.loc[
@@ -4055,6 +4041,13 @@ st.write("## Portfolio")
 if "contest_results_df" in st.session_state:
 
     results_df = st.session_state["contest_results_df"]
+    classic_mode = platform == "DraftKings" and lineup_mode == "Classic"
+    portfolio_lineup_columns = (
+        ["QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "FLEX", "DST"]
+        if classic_mode else ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"]
+    )
+    portfolio_lineup_columns = [col for col in portfolio_lineup_columns if col in results_df.columns]
+    st.caption("Choose how to rank your lineups, then the table below will show your top 20 by default.")
 
     portfolio_count = st.number_input(
         "Number of lineups",
@@ -4104,14 +4097,7 @@ if "contest_results_df" in st.session_state:
                 int(portfolio_count) - len(locked_df)
             )
 
-            lineup_columns = [
-                "Captain",
-                "Flex1",
-                "Flex2",
-                "Flex3",
-                "Flex4",
-                "Flex5"
-            ]
+            lineup_columns = portfolio_lineup_columns
             ranked_df = (
                 results_df
                 .drop_duplicates(subset=lineup_columns, keep="first")
@@ -4122,14 +4108,7 @@ if "contest_results_df" in st.session_state:
                 .copy()
             )
 
-            lineup_columns = [
-                "Captain",
-                "Flex1",
-                "Flex2",
-                "Flex3",
-                "Flex4",
-                "Flex5"
-            ]
+            lineup_columns = portfolio_lineup_columns
 
             locked_keys = set(
                 tuple(row)
@@ -4170,7 +4149,8 @@ if "contest_results_df" in st.session_state:
             portfolio_df = build_portfolio(
                 results_df,
                 int(portfolio_count),
-                portfolio_metric
+                portfolio_metric,
+                portfolio_lineup_columns
             )
 
         st.session_state["portfolio_df"] = portfolio_df
@@ -4199,7 +4179,7 @@ if "contest_results_df" in st.session_state:
     sim_scores = st.session_state.get("simulation_df")
     if isinstance(sim_scores, pd.DataFrame) and not sim_scores.empty:
         sim_player_means = sim_scores.mean(axis=0, numeric_only=True).to_dict()
-        for slot in ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"]:
+        for slot in portfolio_lineup_columns:
             if slot not in portfolio_df.columns:
                 continue
             multiplier = 1.5 if slot == "Captain" else 1.0
@@ -4209,7 +4189,7 @@ if "contest_results_df" in st.session_state:
             )
         sim_point_columns = [
             slot + " Sim Pts"
-            for slot in ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"]
+            for slot in portfolio_lineup_columns
             if slot + " Sim Pts" in portfolio_df.columns
         ]
         portfolio_df["Total Sim Pts"] = portfolio_df[sim_point_columns].apply(
@@ -4223,30 +4203,19 @@ if "contest_results_df" in st.session_state:
     if "Lineup Ownership Score (%)" in portfolio_df.columns:
         st.caption("Lineup Ownership Score is the sum of each player's simulated ownership in the contest field. Lower scores generally mean a less popular lineup; this is a score, not the chance the exact lineup appears.")
 
-    display_columns = [
-        "Captain",
-        "Captain Sim Pts",
-        "Flex1",
-        "Flex1 Sim Pts",
-        "Flex2",
-        "Flex2 Sim Pts",
-        "Flex3",
-        "Flex3 Sim Pts",
-        "Flex4",
-        "Flex4 Sim Pts",
-        "Flex5",
-        "Flex5 Sim Pts",
-        "Total Sim Pts",
-        "Lineup Ownership Score (%)",
-        "Salary",
-        "ContestScore",
-        "WinRate",
-        "Top1",
-        "Top5",
-        "Top10",
-        "CashRate",
-        "Locked"
-    ]
+    if classic_mode:
+        display_columns = portfolio_lineup_columns + [
+            "Total Sim Pts", "Lineup Ownership Score (%)", "Salary",
+            "ContestScore", "WinRate", "Top1", "Top5", "Top10", "CashRate", "Locked"
+        ]
+    else:
+        display_columns = [
+            "Captain", "Captain Sim Pts", "Flex1", "Flex1 Sim Pts",
+            "Flex2", "Flex2 Sim Pts", "Flex3", "Flex3 Sim Pts",
+            "Flex4", "Flex4 Sim Pts", "Flex5", "Flex5 Sim Pts",
+            "Total Sim Pts", "Lineup Ownership Score (%)", "Salary",
+            "ContestScore", "WinRate", "Top1", "Top5", "Top10", "CashRate", "Locked"
+        ]
 
     display_df = portfolio_df[
         [c for c in display_columns if c in portfolio_df.columns]
@@ -4270,10 +4239,7 @@ if "contest_results_df" in st.session_state:
     )
 
     # Show realized exposure in the final portfolio after Contest Sim.
-    lineup_columns = [
-        col for col in ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"]
-        if col in portfolio_df.columns
-    ]
+    lineup_columns = [col for col in portfolio_lineup_columns if col in portfolio_df.columns]
     captain_count = (
         portfolio_df["Captain"].value_counts()
         if "Captain" in portfolio_df.columns else pd.Series(dtype=int)
@@ -4333,7 +4299,7 @@ if "contest_results_df" in st.session_state:
     ]
     portfolio_df = remove_out_players_from_lineups(
         portfolio_df,
-        ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5", "QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "FLEX", "DST", "MVP", "D"],
+        portfolio_lineup_columns,
         "portfolio export"
     )
     st.session_state["portfolio_df"] = portfolio_df
@@ -4399,7 +4365,8 @@ if "contest_results_df" in st.session_state:
                     portfolio_df,
                     results_df,
                     idx,
-                    portfolio_metric
+                    portfolio_metric,
+                    portfolio_lineup_columns
                 )
 
                 st.session_state["portfolio_df"] = portfolio_df
