@@ -1200,21 +1200,22 @@ def get_contest_opponent_target(platform_key, default=MAX_SIMULATED_OPPONENTS):
     return default
 
 
-platform = st.selectbox(
-    "DFS Site",
-    ["DraftKings", "FanDuel"],
-    key="dfs_platform"
-)
-mode_options = {
-    "DraftKings": ["Showdown", "Classic"],
-    "FanDuel": ["Single Game", "Full Roster"],
+format_options = {
+    "DraftKings Classic": ("DraftKings", "Classic"),
+    "DraftKings Showdown": ("DraftKings", "Showdown"),
+    "FanDuel Full Roster": ("FanDuel", "Full Roster"),
+    "FanDuel Single Game": ("FanDuel", "Single Game"),
 }
-lineup_mode = st.selectbox(
-    "Contest Type",
-    mode_options[platform],
-    key="lineup_mode_" + platform
+selected_format = st.selectbox(
+    "Format",
+    list(format_options.keys()),
+    key="dfs_format",
 )
-st.subheader(platform + " " + lineup_mode)
+platform, lineup_mode = format_options[selected_format]
+# Keep the derived values in session state for existing format-specific logic.
+st.session_state["dfs_platform"] = platform
+st.session_state["lineup_mode_" + platform] = lineup_mode
+st.subheader(selected_format)
 
 # Game-level correlation control is relevant to single-game formats. Full-slate
 # formats keep the current default behavior and do not show this control.
