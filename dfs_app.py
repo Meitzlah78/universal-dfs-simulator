@@ -1,5 +1,6 @@
 import itertools
 import re
+import requests
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -364,6 +365,42 @@ def remove_out_players_from_lineups(lineups, slot_columns, label="export"):
     return lineups
 
 
+@st.cache_data(ttl=600, show_spinner=False)
+def fetch_nfl_injury_statuses():
+    """Fetch the latest league-wide NFL injury designations from ESPN; cache for 10 minutes."""
+    url = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/injuries"
+    try:
+        response = requests.get(
+            url,
+            headers={"User-Agent": "Mozilla/5.0 UniversalDFSInjurySync/1.0"},
+            timeout=12,
+        )
+        response.raise_for_status()
+        payload = response.json()
+    except Exception:
+        return {}, "Could not reach the injury feed. Showing saved/manual statuses."
+
+    statuses = {}
+    for team_block in payload.get("injuries", []):
+        team = str(team_block.get("team", {}).get("abbreviation", "")).strip().upper()
+        for injury in team_block.get("injuries", []):
+            athlete = injury.get("athlete", {}) or {}
+            name = str(athlete.get("fullName", "")).strip()
+            raw_status = str(injury.get("status", "")).strip().casefold()
+            if not name or not team or not raw_status:
+                continue
+            if any(word in raw_status for word in ("out", "injured reserve", "reserve/injured", "physically unable to perform")):
+                status = "Out"
+            elif "doubtful" in raw_status or "questionable" in raw_status or "day-to-day" in raw_status:
+                status = "Questionable"
+            elif "probable" in raw_status:
+                status = "Questionable"
+            else:
+                continue
+            statuses[(name.casefold(), team)] = status
+    return statuses, "ESPN NFL injury feed"
+
+
 def apply_injury_statuses(frame, key_prefix):
     """Let the user mark players Active, Questionable, or Out across all slate types."""
     if "player_injury_statuses" not in st.session_state:
@@ -371,21 +408,24 @@ def apply_injury_statuses(frame, key_prefix):
     saved_statuses = st.session_state["player_injury_statuses"]
 
     status_df = frame[[c for c in ["Name", "Position", "Team"] if c in frame.columns]].copy()
-
-    # Current confirmed NFL injury update for the BUF-LAR Showdown slate:
-    # Joshua Palmer was ruled OUT for the October 12, 2026 game.
-    # Apply this slate-specific correction even if an earlier Active status was saved.
+    live_injuries, injury_source = fetch_nfl_injury_statuses()
     if "Team" in status_df.columns:
-        palmer_mask = (
-            status_df["Name"].astype(str).str.strip().str.casefold().eq("joshua palmer")
-            & status_df["Team"].astype(str).str.strip().str.upper().eq("BUF")
-        )
-        if palmer_mask.any():
-            saved_statuses["joshua palmer"] = "Out"
+        # Apply the latest feed designation by player name AND team to avoid
+        # accidentally matching players with similar names on different teams.
+        for _, player_row in status_df.iterrows():
+            player_name = str(player_row.get("Name", "")).strip()
+            player_team = str(player_row.get("Team", "")).strip().upper()
+            feed_status = live_injuries.get((player_name.casefold(), player_team))
+            if feed_status:
+                saved_statuses[player_name.casefold()] = feed_status
 
     status_df["Injury Status"] = status_df["Name"].astype(str).map(
         lambda name: saved_statuses.get(name.strip().casefold(), "Active")
     )
+    st.caption(f"Injury source: {injury_source}. Feed is cached for up to 10 minutes.")
+    if st.button("SYNC INJURY NEWS NOW", key=key_prefix + "_sync_injury_news"):
+        fetch_nfl_injury_statuses.clear()
+        st.rerun()
     st.write("### Player Injury Status")
     st.caption("Set each player to Active, Questionable, or Out. Players marked Out are removed from lineup building. Status choices carry across slates when the player name matches.")
     edited_statuses = st.data_editor(
