@@ -3830,11 +3830,7 @@ if (
             cash_rates += batch_cash
             avg_percentiles += batch_percentiles
             completed_batches += 1
-            completed_sims = sum(
-                end_range - start_range
-                for start_range, end_range in futures.values()
-                if start_range < 0
-            ) if False else min(completed_batches * batch_size, n_sims)
+            completed_sims = min(completed_batches * batch_size, n_sims)
             progress.progress(completed_batches / len(batch_ranges))
             scoring_status.caption(
                 f"Scoring contest: {completed_sims:,} of {n_sims:,} simulations complete "
