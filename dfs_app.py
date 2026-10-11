@@ -3750,7 +3750,10 @@ if (
         "This step can take a while for large contests; watch the progress bar below."
     )
     scoring_status = st.empty()
-    scoring_status.caption("Starting contest scoring...")
+    scoring_status.caption(
+        f"Preparing contest scoring arrays for {n_candidates:,} lineups and "
+        f"{total_field:,} opponents..."
+    )
 
     win_rates = np.zeros(n_candidates)
     top1_rates = np.zeros(n_candidates)
@@ -3764,7 +3767,12 @@ if (
     # This avoids 10,000 repeated pandas row lookups while keeping all 10,000
     # simulations and the full opponent field.
     simulation_values = simulation_df.to_numpy(dtype=np.float32, copy=False)
-    batch_size = 256
+    # Keep each batch manageable and update progress after every batch.
+    # This does not reduce the total number of simulations or opponents.
+    batch_size = 128
+    scoring_status.caption(
+        f"Scoring is starting: {n_sims:,} simulations, batches of {batch_size}..."
+    )
 
     for batch_start in range(0, n_sims, batch_size):
         batch_end = min(batch_start + batch_size, n_sims)
@@ -3794,7 +3802,7 @@ if (
             avg_percentiles += percentile
 
         completed = batch_end
-        if batch_start == 0 or completed % 100 == 0 or completed == n_sims:
+        if True:
             progress.progress(completed / n_sims)
             scoring_status.caption(
                 f"Scoring contest: {completed:,} of {n_sims:,} simulations complete "
