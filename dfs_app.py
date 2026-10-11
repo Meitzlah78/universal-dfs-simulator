@@ -1563,16 +1563,9 @@ if platform == "FanDuel":
         fd_opponents = build_opponent_map(fd_raw, fd_players["Team"])
         fd_players["Opponent"] = fd_players["Team"].map(fd_opponents).fillna("—")
         fd_players["Position"] = fd_raw[fd_pos_col].astype(str).str.strip().str.upper()
-        # Create a basic salary/position estimate instead of using FanDuel average fantasy points.
-        fd_rate = {"QB": 2.00, "RB": 1.75, "WR": 1.70, "TE": 1.50, "K": 1.35, "DST": 1.35, "D": 1.35, "DEF": 1.35}
-        fd_salary_numeric = pd.to_numeric(fd_players["Salary"], errors="coerce").fillna(0)
-        fd_players["Projection"] = [
-            max(0.0, (salary / 1000.0) * max(
-                [fd_rate.get(pos.strip(), 1.60) for pos in str(position).split("/")],
-                default=1.60
-            ))
-            for salary, position in zip(fd_salary_numeric, fd_players["Position"])
-        ]
+        # Do not invent projections from salary. The external-source loader below
+        # fills this column with DFF/DraftEdge values or NaN if neither source matches.
+        fd_players["Projection"] = np.nan
         if fd_id_col is not None:
             fd_players["FD_ID"] = fd_raw[fd_id_col].astype(str).str.strip()
 
