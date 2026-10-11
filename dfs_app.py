@@ -1739,9 +1739,31 @@ if platform == "FanDuel":
                                            [10, 7, 4, 1, 0, -1], default=-4)
                         score += np.select([ya <= 100, ya <= 199, ya <= 299, ya <= 349, ya <= 399, ya <= 449, ya <= 499],
                                            [3, 2, 1, 0, -1, -3, -5], default=-7)
-                    # Keep the generated outcomes unscaled; do not force them to
-                    # match salary-based estimates or external projections.
-                    simulated_scores[:, index] = np.asarray(score, dtype=float)
+                    # Use each player's projection as the center of the outcomes,
+                    # while retaining the position-specific shape and volatility.
+                    # This prevents every QB/WR/etc. from receiving nearly the same
+                    # distribution just because they share a position.
+                    raw_scores = np.asarray(score, dtype=float)
+                    raw_mean = float(np.mean(raw_scores))
+                    raw_std = float(np.std(raw_scores))
+                    target_mean = float(pd.to_numeric(
+                        pd.Series([player_row.get("Projection", 0.01)]),
+                        errors="coerce"
+                    ).fillna(0.01).iloc[0])
+                    cv_by_position = {
+                        "QB": 0.35, "RB": 0.45, "WR": 0.55, "TE": 0.60,
+                        "K": 0.45, "D": 0.65, "DST": 0.65, "DEF": 0.65
+                    }
+                    main_position = next(
+                        (p for p in ("QB", "RB", "WR", "TE", "K", "D", "DST", "DEF") if p in positions),
+                        "WR"
+                    )
+                    target_std = max(1.5, abs(target_mean) * cv_by_position[main_position])
+                    if raw_std > 1e-8:
+                        adjusted_scores = (raw_scores - raw_mean) * (target_std / raw_std) + target_mean
+                    else:
+                        adjusted_scores = np.full(n, target_mean, dtype=float)
+                    simulated_scores[:, index] = adjusted_scores
 
                 # FanDuel's build stage uses the same distribution summaries as DraftKings.
                 # Keep them in this branch because FanDuel's UI exits before the shared DK engine.
