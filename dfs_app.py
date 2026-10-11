@@ -4211,10 +4211,15 @@ if "contest_results_df" in st.session_state:
         st.caption("Lineup Ownership Score is the sum of each player's simulated ownership in the contest field. Lower scores generally mean a less popular lineup; this is a score, not the chance the exact lineup appears.")
 
     if classic_mode:
-        display_columns = portfolio_lineup_columns + [
+        # Show each Classic roster slot beside that player's simulated points,
+        # matching the player-by-player layout used for Showdown.
+        display_columns = []
+        for slot in portfolio_lineup_columns:
+            display_columns.extend([slot, slot + " Sim Pts"])
+        display_columns.extend([
             "Total Sim Pts", "Lineup Ownership Score (%)", "Salary",
             "ContestScore", "WinRate", "Top1", "Top5", "Top10", "CashRate", "Locked"
-        ]
+        ])
     else:
         display_columns = [
             "Captain", "Captain Sim Pts", "Flex1", "Flex1 Sim Pts",
