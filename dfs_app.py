@@ -4523,7 +4523,8 @@ if "contest_results_df" in st.session_state:
             display_columns.extend([slot, slot + " Sim Pts"])
         display_columns.extend([
             "Total Sim Pts", "Lineup Ownership Score (%)", "Salary",
-            "ContestScore", "WinRate", "Top1", "Top5", "Top10", "CashRate", "Locked"
+            "ContestScore", "WinRate", "Top1", "Top5", "Top10", "CashRate",
+            "AvgPercentile", "Locked"
         ])
     else:
         display_columns = [
@@ -4531,13 +4532,16 @@ if "contest_results_df" in st.session_state:
             "Flex2", "Flex2 Sim Pts", "Flex3", "Flex3 Sim Pts",
             "Flex4", "Flex4 Sim Pts", "Flex5", "Flex5 Sim Pts",
             "Total Sim Pts", "Lineup Ownership Score (%)", "Salary",
-            "ContestScore", "WinRate", "Top1", "Top5", "Top10", "CashRate", "Locked"
+            "ContestScore", "WinRate", "Top1", "Top5", "Top10", "CashRate",
+            "AvgPercentile", "Locked"
         ]
 
     display_df = portfolio_df[
         [c for c in display_columns if c in portfolio_df.columns]
     ].copy()
 
+    # Show every ranking option as a column in the actual portfolio, not just
+    # the metric currently selected in the ranking dropdown.
     for col in [
         "ContestScore",
         "WinRate",
@@ -4548,6 +4552,16 @@ if "contest_results_df" in st.session_state:
     ]:
         if col in display_df.columns:
             display_df[col] = display_df[col] * 100
+
+    display_df = display_df.rename(columns={
+        "ContestScore": "Contest Score",
+        "WinRate": "Win %",
+        "Top1": "Top 1%",
+        "Top5": "Top 5%",
+        "Top10": "Top 10%",
+        "CashRate": "Cash %",
+        "AvgPercentile": "Average Percentile",
+    })
 
     st.dataframe(
         display_df,
