@@ -1048,18 +1048,21 @@ def get_projection_source_data(uploaded_file, source_name, platform_name, target
     return downloaded, "automatic download" if downloaded else "unavailable"
 
 def apply_external_projection_sources(players_frame, dff_file, draftedge_file, platform_name='DraftKings'):
-    """Use external-site projections only for players those sites actually list."""
+    """Apply DFF/DraftEdge projections when matched, otherwise keep internal estimates."""
     result = players_frame.copy()
     target_names = result["Name"].astype(str).tolist() if "Name" in result.columns else []
     dff, dff_status = get_projection_source_data(dff_file, "DFF", platform_name, target_names)
     draftedge, draftedge_status = get_projection_source_data(draftedge_file, "DraftEdge", platform_name, target_names)
-    external_available = bool(dff or draftedge)
     projections, sources = [], []
-    dff_matches = draftedge_matches = averages = 0
-    keep_indices = []
-    for index, row in result.iterrows():
+    dff_matches = draftedge_matches = averages = internal_fallbacks = 0
+
+    for _, row in result.iterrows():
         key = normalize_projection_player_name(row.get("Name", ""))
         dff_value, edge_value = dff.get(key), draftedge.get(key)
+        internal_value = pd.to_numeric(
+            pd.Series([row.get("Projection", np.nan)]), errors="coerce"
+        ).iloc[0]
+
         if dff_value is not None and edge_value is not None:
             value, source = (dff_value + edge_value) / 2.0, "DFF + DraftEdge average"
             averages += 1
@@ -1067,27 +1070,30 @@ def apply_external_projection_sources(players_frame, dff_file, draftedge_file, p
             value, source = dff_value, "DFF"
         elif edge_value is not None:
             value, source = edge_value, "DraftEdge"
-        elif external_available:
-            # If at least one external source loaded, do not invent a projection
-            # for players absent from both projection lists.
-            continue
+        elif pd.notna(internal_value) and np.isfinite(float(internal_value)) and float(internal_value) > 0:
+            value, source = float(internal_value), "Internal estimate"
+            internal_fallbacks += 1
         else:
-            # If both websites fail to load, keep the player row but leave its
-            # projection blank; the zero/missing projection filter removes it.
-            value, source = np.nan, "Not listed / source unavailable"
-        keep_indices.append(index)
+            # Never silently remove a salary-file player just because an external
+            # projection site does not list them. Keep the row with a missing score;
+            # the existing zero/missing projection filter can handle it explicitly.
+            value, source = np.nan, "No projection available"
+
         projections.append(value)
         sources.append(source)
         dff_matches += int(dff_value is not None)
         draftedge_matches += int(edge_value is not None)
 
-    result = result.loc[keep_indices].copy()
-    result["Projection"] = pd.to_numeric(pd.Series(projections, index=result.index), errors="coerce")
+    result["Projection"] = pd.to_numeric(
+        pd.Series(projections, index=result.index), errors="coerce"
+    )
     result["ProjectionSource"] = sources
     st.caption(
         f"Projection files matched: DFF {dff_matches} players; DraftEdge {draftedge_matches} players; "
-        f"averaged {averages} players. DFF source: {dff_status}; DraftEdge source: {draftedge_status}. "
-        "Players absent from both loaded projection lists are excluded; no internal projection is created for them."
+        f"averaged {averages} players; internal estimates used for {internal_fallbacks} players. "
+        f"DFF source: {dff_status}; DraftEdge source: {draftedge_status}. "
+        "All platforms use the same rules: average both sources when available, use a single source when only one matches, "
+        "and keep an internal estimate for players missing from both sources."
     )
     return result
 
