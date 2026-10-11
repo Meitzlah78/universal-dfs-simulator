@@ -1702,8 +1702,26 @@ if platform == "FanDuel":
                                            [3, 2, 1, 0, -1, -3, -5], default=-7)
                     # Keep the generated outcomes unscaled; do not force them to
                     # match salary-based estimates or external projections.
-                    simulated_scores[:, index] = np.maximum(score, 0)
-            st.session_state["fd_simulation_ready_" + lineup_mode.replace(" ", "_").lower()] = True
+                    simulated_scores[:, index] = np.asarray(score, dtype=float)
+
+                # FanDuel's build stage uses the same distribution summaries as DraftKings.
+                # Keep them in this branch because FanDuel's UI exits before the shared DK engine.
+                player_sim = {}
+                for sim_index, sim_name in enumerate(fd_players["Name"].astype(str)):
+                    values = simulated_scores[:, sim_index]
+                    player_sim[sim_name] = {
+                        "Mean": float(np.mean(values)),
+                        "P10": float(np.quantile(values, 0.10)),
+                        "P25": float(np.quantile(values, 0.25)),
+                        "P50": float(np.quantile(values, 0.50)),
+                        "P75": float(np.quantile(values, 0.75)),
+                        "P90": float(np.quantile(values, 0.90)),
+                        "P95": float(np.quantile(values, 0.95)),
+                        "P99": float(np.quantile(values, 0.99)),
+                        "StdDev": float(np.std(values)),
+                    }
+                st.session_state["fd_player_sim_" + lineup_mode.replace(" ", "_").lower()] = player_sim
+                st.session_state["fd_simulation_ready_" + lineup_mode.replace(" ", "_").lower()] = True
 
         st.success(f"Loaded {len(fd_players)} FanDuel players after injury-status filtering.")
         if fd_proj_col is None:
