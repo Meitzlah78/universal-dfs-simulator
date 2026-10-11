@@ -4321,6 +4321,12 @@ if platform == "DraftKings" and lineup_mode == "Showdown":
                             use_container_width=True,
                             key="dk_showdown_unified_export"
                         )
+                        st.link_button(
+                            "OPEN DRAFTKINGS MY LINEUPS / EDIT ENTRIES",
+                            "https://www.draftkings.com/lineup",
+                            use_container_width=True
+                        )
+                        st.caption("On DraftKings, open My Lineups and choose Edit Entries to upload the downloaded replacement CSV.")
                 else:
                     # Always target existing contest entries; don't offer a new-entry upload path.
                     st.warning(
