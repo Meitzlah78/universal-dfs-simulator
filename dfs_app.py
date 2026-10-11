@@ -3804,11 +3804,13 @@ if (
         sim_rows = np.arange(batch_count)[:, None]
 
         while np.any(low < high):
-            mid = (low + high) // 2
+            active = low < high
+            mid = np.minimum((low + high) // 2, total_field - 1)
             mid_values = sorted_field[sim_rows, mid]
-            move_right = mid_values <= batch_candidate_scores
+            move_right = (mid_values <= batch_candidate_scores) & active
+            move_left = (mid_values > batch_candidate_scores) & active
             low = np.where(move_right, mid + 1, low)
-            high = np.where(move_right, high, mid)
+            high = np.where(move_left, mid, high)
 
         count_greater = total_field - low
         percentiles = 1.0 - (count_greater / total_field)
