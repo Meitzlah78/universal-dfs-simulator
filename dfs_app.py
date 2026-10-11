@@ -4193,7 +4193,7 @@ if platform == "DraftKings" and lineup_mode == "Showdown":
                     )
                     if export_df is not None:
                         st.download_button(
-                            label="EXPORT SHOWDOWN LINEUPS",
+                            label="EXPORT LINEUPS TO DRAFTKINGS",
                             data=export_df.to_csv(index=False).encode("utf-8"),
                             file_name="DraftKings_Showdown_Contest_Entries.csv",
                             mime="text/csv",
@@ -4205,12 +4205,12 @@ if platform == "DraftKings" and lineup_mode == "Showdown":
                     # Replacing existing entries requires the DraftKings My Contests CSV.
                     basic_export = lineup_ids_df.copy()
                     st.warning(
-                        "BASIC LINEUP FILE ONLY: This file contains player IDs, but no contest or entry IDs. "
+                        "New entries export: this file contains player IDs only. To replace existing entries, upload your DraftKings My Contests CSV and select the contest. "
                         "It will NOT replace your existing contest entries. To replace those entries, upload "
                         "your DraftKings My Contests CSV and select the contest first."
                     )
                     st.download_button(
-                        label="EXPORT BASIC LINEUPS — NEW ENTRIES ONLY",
+                        label="EXPORT LINEUPS TO DRAFTKINGS",
                         data=basic_export.to_csv(index=False).encode("utf-8"),
                         file_name="DraftKings_Showdown_Lineups.csv",
                         mime="text/csv",
