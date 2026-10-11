@@ -3493,6 +3493,11 @@ if platform == "DraftKings" and lineup_mode == "Classic":
         else:
             st.info("Upload a DraftKings salary/template CSV containing player IDs to enable lineup export.")
 
+    # Player Pool is rendered before the SIM button handler. After a fresh
+    # simulation/build, rerun once so its Sim Pts and percentile columns read the
+    # newly saved simulation_df instead of the previous run.
+    if classic_run_all:
+        st.rerun()
     st.stop()
 
 
@@ -4499,3 +4504,8 @@ if platform == "DraftKings" and lineup_mode == "Showdown":
                     )
     else:
         st.info("Run CONTEST SIM and build your final portfolio first.")
+
+# Player Pool appears above the SIM handler, so refresh it after a completed
+# Showdown simulation/build to show the newly generated player attributes.
+if build_clicked:
+    st.rerun()
