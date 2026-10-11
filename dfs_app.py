@@ -619,8 +619,8 @@ def exclude_zero_projection_players(frame, slate_label):
     return result
 
 
-def show_projection_refresh_status(source_files, key_prefix):
-    """Show manual refresh control and the time projection files were last uploaded/refreshed."""
+def show_projection_refresh_status(source_files, key_prefix=None):
+    """Show one shared refresh control and timestamp across all sites, slates, and formats."""
     import hashlib
     from datetime import datetime
 
@@ -632,8 +632,9 @@ def show_projection_refresh_status(source_files, key_prefix):
             digest = hashlib.sha256(uploaded_file.getvalue()).hexdigest()
             signatures.append((label, digest))
 
-    signature_key = key_prefix + "_projection_signature"
-    time_key = key_prefix + "_projection_updated_at"
+    # Shared keys prevent separate refresh buttons/timestamps for each format.
+    signature_key = "shared_projection_signature"
+    time_key = "shared_projection_updated_at"
     current_signature = tuple(signatures)
     if current_signature != st.session_state.get(signature_key):
         st.session_state[signature_key] = current_signature
@@ -642,19 +643,19 @@ def show_projection_refresh_status(source_files, key_prefix):
 
     left, right = st.columns([1, 2])
     with left:
-        refresh_clicked = st.button("REFRESH PROJECTIONS", key=key_prefix + "_refresh_projections")
+        refresh_clicked = st.button("REFRESH PROJECTIONS", key="shared_refresh_projections")
     with right:
         updated_at = st.session_state.get(time_key)
         if updated_at:
-            st.caption("Projection files last uploaded/refreshed: " + updated_at)
+            st.caption("Last projection refresh: " + updated_at)
         else:
-            st.caption("No DFF or DraftEdge projection file uploaded yet.")
+            st.caption("Projection sources have not been refreshed manually yet.")
 
     if refresh_clicked:
         download_public_projection_table.clear()
         st.session_state["projection_updates_found"] = False
-        st.session_state[time_key] = datetime.now().astimezone().strftime("%Y-%m-%d %I:%M:%S %p %Z")
-        st.success("Projection refresh requested. Uploaded CSVs take priority; public projection pages will also be checked.")
+        st.session_state[time_key] = datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %I:%M:%S %p %Z")
+        st.success("Refreshing projections for the selected slate. Uploaded CSVs take priority; public projection sources will also be checked.")
         st.rerun()
 
 
