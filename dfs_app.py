@@ -3218,64 +3218,13 @@ if platform == "DraftKings" and lineup_mode == "Classic":
 # BUILD LINEUPS
 # ============================================
 
-simulate_clicked = st.button(
+# One-click workflow: SIM runs player simulations, builds the opponent field,
+# then builds and scores the user's lineups below.
+build_clicked = st.button(
     "SIM",
     type="primary",
     use_container_width=False
 )
-
-if simulate_clicked:
-    with st.spinner("Creating internal projections and running 10,000 game simulations..."):
-        simulation_df = run_game_simulations(players_df, platform=platform)
-
-    st.session_state["simulation_df"] = simulation_df
-    st.session_state["simulations_ready"] = True
-    st.success("10,000 simulations completed. Player projections now use the simulator’s own results.")
-    # Rerun so the Player Pool immediately displays the newly calculated simulation stats.
-    st.rerun()
-
-build_clicked = st.button(
-    "BUILD",
-    type="primary",
-    use_container_width=False
-)
-
-contest_sim_clicked = st.button(
-    "CONTEST SIM",
-    type="primary",
-    use_container_width=False
-)
-
-if contest_sim_clicked:
-    if len(available_players) < 6:
-        st.error("At least 6 non-faded players are required for Contest Sim.")
-    elif "simulation_df" in st.session_state:
-        simulation_df = st.session_state["simulation_df"]
-        contest_field_df = build_showdown_opponent_field(
-            available_players, simulation_df, players_df, salary_map,
-            captain_salary_map, SALARY_CAP, dk_opponent_target
-        )
-
-        st.session_state["contest_field_df"] = contest_field_df
-        st.session_state["contest_field_count"] = len(contest_field_df)
-        st.session_state["contest_field_ready"] = (
-            dk_opponent_target > 0 and len(contest_field_df) >= dk_opponent_target
-        )
-
-        show_field_ownership(contest_field_df, ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"], "Simulated Field Player Ownership", captain_slot="Captain")
-
-        contest_details = st.session_state.get("selected_dk_contest")
-        if contest_details:
-            st.success(
-                f"Simulated contest field created for {contest_details['name']} "
-                f"(ID {contest_details['id']}): {len(contest_field_df):,} simulated opponent lineups."
-            )
-        else:
-            st.success(
-                f"Contest field created: {len(contest_field_df):,} simulated opponent lineups."
-            )
-    else:
-        st.warning("Run SIM or BUILD first.")
 
 # ============================================
 # BUILD ACTION
