@@ -3274,13 +3274,40 @@ else:
             rows = historical[names == wanted].copy()
         if rows.empty:
             return None
+        # Use regular-season records only when the source identifies game type.
+        # Playoff and preseason usage can differ substantially from normal weekly roles.
+        if "season_type" in rows.columns:
+            season_type = rows["season_type"].astype(str).str.strip().str.upper()
+            rows = rows[season_type.isin(["REG", "REGULAR", "REGULAR_SEASON"])].copy()
+        if rows.empty:
+            return None
+
+        # Do not silently use records from another position when a position match
+        # is available in the source. Ambiguous or mismatched history is safer to skip.
         if "position" in rows.columns and position:
-            matching = rows[rows["position"].astype(str).str.upper() == str(position).upper()]
-            if not matching.empty:
-                rows = matching
+            matching = rows[rows["position"].astype(str).str.upper().str.strip() == str(position).upper().strip()]
+            if matching.empty:
+                return None
+            rows = matching.copy()
+
         if "season" in rows.columns:
-            rows["season"] = pd.to_numeric(rows["season"], errors="coerce").fillna(0)
-        rows["week"] = pd.to_numeric(rows["week"], errors="coerce").fillna(0)
+            rows["season"] = pd.to_numeric(rows["season"], errors="coerce")
+        else:
+            rows["season"] = 0
+        rows["week"] = pd.to_numeric(rows["week"], errors="coerce")
+        rows = rows[rows["week"].between(1, 18, inclusive="both")].copy()
+        rows = rows.dropna(subset=["week"])
+        if rows.empty:
+            return None
+
+        # A player should contribute at most one record per game. Remove duplicate
+        # player/game rows if the source contains them.
+        dedupe_cols = [col for col in ["player_id", "game_id"] if col in rows.columns]
+        if len(dedupe_cols) == 2:
+            rows = rows.drop_duplicates(subset=dedupe_cols, keep="last")
+        elif "game_id" in rows.columns:
+            rows = rows.drop_duplicates(subset=["game_id"], keep="last")
+
         rows = rows.sort_values(["season", "week"]).tail(24)
         if rows.empty:
             return None
