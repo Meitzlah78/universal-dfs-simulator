@@ -7,8 +7,8 @@ import numpy as np
 from zoneinfo import ZoneInfo
 
 # Lower defaults keep the simulator responsive while retaining useful variation.
-SIMULATION_COUNT = 3000
-MAX_SIMULATED_OPPONENTS = 5000
+SIMULATION_COUNT = 10000
+MAX_SIMULATED_OPPONENTS = 10000
 
 st.set_page_config(
     page_title="Universal DFS Simulator",
