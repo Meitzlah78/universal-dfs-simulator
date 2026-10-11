@@ -379,9 +379,56 @@ def remove_out_players_from_lineups(lineups, slot_columns, label="export"):
     return lineups
 
 
+def normalize_injury_player_name(value):
+    """Normalize names so injury-feed names match DFS salary-file names."""
+    import re
+    return re.sub(r"[^a-z0-9]", "", str(value or "").casefold())
+
+
+def normalize_injury_team(value):
+    """Normalize team abbreviations and full team names from different DFS files."""
+    import re
+    raw = re.sub(r"[^a-z0-9]", "", str(value or "").casefold())
+    aliases = {
+        "arizona": "ari", "arizonacardinals": "ari",
+        "atlanta": "atl", "atlantafalcons": "atl",
+        "baltimore": "bal", "baltimoreravens": "bal",
+        "buffalo": "buf", "buffalobills": "buf",
+        "carolina": "car", "carolinapanthers": "car",
+        "chicago": "chi", "chicagobears": "chi",
+        "cincinnati": "cin", "cincinnatibengals": "cin",
+        "cleveland": "cle", "clevelandbrowns": "cle",
+        "dallas": "dal", "dallascowboys": "dal",
+        "denver": "den", "denverbroncos": "den",
+        "detroit": "det", "detroitlions": "det",
+        "greenbay": "gb", "greenbaypackers": "gb",
+        "houston": "hou", "houstontexans": "hou",
+        "indianapolis": "ind", "indianapoliscolts": "ind",
+        "jacksonville": "jax", "jacksonvillejaguars": "jax",
+        "kansascity": "kc", "kansascitychiefs": "kc",
+        "lasvegas": "lv", "lasvegasraiders": "lv",
+        "chargers": "lac", "losangeleschargers": "lac",
+        "losangelesrams": "lar", "rams": "lar",
+        "miami": "mia", "miamidolphins": "mia",
+        "minnesota": "min", "minnesotavikings": "min",
+        "newengland": "ne", "newenglandpatriots": "ne",
+        "neworleans": "no", "neworleanssaints": "no",
+        "newyorkgiants": "nyg", "giants": "nyg",
+        "newyorkjets": "nyj", "jets": "nyj",
+        "philadelphia": "phi", "philadelphiaeagles": "phi",
+        "pittsburgh": "pit", "pittsburghsteelers": "pit",
+        "sanfrancisco": "sf", "sanfrancisco49ers": "sf",
+        "seattle": "sea", "seattleseahawks": "sea",
+        "tampa": "tb", "tampabay": "tb", "tampabaybuccaneers": "tb",
+        "tennessee": "ten", "tennesseetitans": "ten",
+        "washington": "wsh", "washingtoncommanders": "wsh",
+    }
+    return aliases.get(raw, raw.upper())
+
+
 @st.cache_data(ttl=600, show_spinner=False)
 def fetch_nfl_injury_statuses():
-    """Fetch the latest league-wide NFL injury designations from ESPN; cache for 10 minutes."""
+    """Fetch current NFL injury designations from ESPN; cache for 10 minutes."""
     url = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/injuries"
     try:
         response = requests.get(
@@ -391,160 +438,108 @@ def fetch_nfl_injury_statuses():
         )
         response.raise_for_status()
         payload = response.json()
-    except Exception:
-        return {}, "Could not reach the injury feed. Showing saved/manual statuses."
+        if not isinstance(payload.get("injuries"), list):
+            return {}, "ESPN injury feed returned an unexpected response"
+    except Exception as exc:
+        return {}, "ESPN injury feed unavailable: " + str(exc)[:140]
 
     statuses = {}
     for team_block in payload.get("injuries", []):
-        team = str(team_block.get("team", {}).get("abbreviation", "")).strip().upper()
-        for injury in team_block.get("injuries", []):
+        team_data = team_block.get("team", {}) or {}
+        team = normalize_injury_team(team_data.get("abbreviation") or team_data.get("displayName") or team_data.get("name"))
+        for injury in team_block.get("injuries", []) or []:
             athlete = injury.get("athlete", {}) or {}
-            name = str(athlete.get("fullName", "")).strip()
-            raw_status = str(injury.get("status", "")).strip().casefold()
+            name = normalize_injury_player_name(athlete.get("fullName") or athlete.get("displayName") or athlete.get("shortName"))
+            raw_status = str(injury.get("status") or injury.get("shortComment") or injury.get("detail") or "").strip().casefold()
             if not name or not team or not raw_status:
                 continue
-            if any(word in raw_status for word in ("out", "injured reserve", "reserve/injured", "physically unable to perform")):
+            if any(word in raw_status for word in ("injured reserve", "reserve/injured", "physically unable to perform", "out", "suspended")):
                 status = "Out"
-            elif "doubtful" in raw_status or "questionable" in raw_status or "day-to-day" in raw_status:
-                status = "Questionable"
-            elif "probable" in raw_status:
+            elif any(word in raw_status for word in ("doubtful", "questionable", "day-to-day", "probable")):
                 status = "Questionable"
             else:
                 continue
-            statuses[(name.casefold(), team)] = status
+            statuses[(name, team)] = status
     return statuses, "ESPN NFL injury feed"
 
 
 def apply_injury_statuses(frame, key_prefix):
-    """Let the user mark players Active, Questionable, or Out across all slate types."""
+    """Automatically sync NFL injury statuses and remove Out players from all slate types."""
+    from datetime import datetime
     if "player_injury_statuses" not in st.session_state:
         st.session_state["player_injury_statuses"] = {}
     saved_statuses = st.session_state["player_injury_statuses"]
-
-    status_df = frame[[c for c in ["Name", "Position", "Team"] if c in frame.columns]].copy()
     live_injuries, injury_source = fetch_nfl_injury_statuses()
-    from datetime import datetime
-    injury_snapshot = tuple(sorted(
-        (str(name), str(team), str(status))
-        for (name, team), status in live_injuries.items()
-    ))
+
+    injury_snapshot = tuple(sorted((name, team, status) for (name, team), status in live_injuries.items()))
     previous_injury_snapshot = st.session_state.get("injury_feed_snapshot_previous")
     if previous_injury_snapshot is not None and injury_snapshot != previous_injury_snapshot:
         st.session_state["injury_updates_found"] = True
         st.session_state["injury_updates_found_at"] = datetime.now().astimezone().strftime("%Y-%m-%d %I:%M:%S %p %Z")
     st.session_state["injury_feed_snapshot_previous"] = injury_snapshot
-    if "Team" in status_df.columns:
-        # Apply the latest feed designation by player name AND team to avoid
-        # accidentally matching players with similar names on different teams.
-        for _, player_row in status_df.iterrows():
-            player_name = str(player_row.get("Name", "")).strip()
-            player_team = str(player_row.get("Team", "")).strip().upper()
-            feed_status = live_injuries.get((player_name.casefold(), player_team))
-            if feed_status:
-                saved_statuses[player_name.casefold()] = feed_status
 
-    status_df["Injury Status"] = status_df["Name"].astype(str).map(
-        lambda name: saved_statuses.get(name.strip().casefold(), "Active")
-    )
-    st.caption(f"Injury source: {injury_source}. Feed is cached for up to 10 minutes.")
+    result = frame.copy()
+    if "Team" not in result.columns:
+        result["Team"] = ""
+    result["_injury_name_key"] = result["Name"].map(normalize_injury_player_name)
+    result["_injury_team_key"] = result["Team"].map(normalize_injury_team)
+    feed_statuses = []
+    for _, player_row in result.iterrows():
+        feed_statuses.append(live_injuries.get((player_row["_injury_name_key"], player_row["_injury_team_key"])))
+    # The live feed is authoritative: a player no longer listed as injured returns to Active.
+    result["Injury Status"] = [status or "Active" for status in feed_statuses]
+    result.drop(columns=["_injury_name_key", "_injury_team_key"], inplace=True)
+
+    st.caption(f"Injury status updates: {injury_source}. Automatically checks ESPN; data is cached for up to 10 minutes.")
     if st.session_state.get("injury_updates_found"):
-        st.warning("NEW INJURY NEWS FOUND — review the Player Injury Status table before building lineups.")
+        st.warning("NEW INJURY NEWS FOUND — current statuses were refreshed automatically.")
+    if not live_injuries and "unavailable" in injury_source.casefold() or not live_injuries and "unexpected" in injury_source.casefold():
+        st.warning("Live injury statuses could not be loaded. Do not assume every player is healthy; try syncing again.")
     if st.button("SYNC INJURY NEWS NOW", key=key_prefix + "_sync_injury_news"):
         st.session_state["injury_updates_found"] = False
         fetch_nfl_injury_statuses.clear()
         st.rerun()
-    st.write("### Player Injury Status")
-    st.caption("Set each player to Active, Questionable, or Out. Players marked Out are removed from lineup building. Status choices carry across slates when the player name matches.")
-    edited_statuses = st.data_editor(
-        status_df,
-        use_container_width=True,
-        hide_index=True,
-        disabled=[c for c in ["Name", "Position", "Team"] if c in status_df.columns],
-        column_config={
-            "Injury Status": st.column_config.SelectboxColumn(
-                "Injury Status",
-                options=["Active", "Questionable", "Out"],
-                required=True,
-                help="Choose Out to exclude the player from the player pool and lineups."
-            )
-        },
-        key=key_prefix + "_" + str(len(status_df)) + "_" + str(status_df["Name"].astype(str).head(3).tolist())
-    )
-    newly_out = []
-    for _, row in edited_statuses.iterrows():
-        player_key = str(row["Name"]).strip().casefold()
-        new_status = str(row["Injury Status"]).strip().title()
-        old_status = str(saved_statuses.get(player_key, "Active")).strip().title()
-        saved_statuses[player_key] = new_status
-        if new_status == "Out" and old_status != "Out":
-            newly_out.append(str(row["Name"]).strip())
-    st.session_state["player_injury_statuses"] = saved_statuses
-    # If a player is Out, clear caches only when that player's name is actually
-    # present in a saved lineup/build. This also catches Out statuses saved earlier.
-    out_names = {
-        str(row["Name"]).strip().casefold()
-        for _, row in edited_statuses.iterrows()
-        if str(row["Injury Status"]).strip().casefold() == "out"
-    }
 
-    def cache_contains_out_player(value):
-        if isinstance(value, pd.DataFrame):
-            return any(
-                value[column].astype(str).str.strip().str.casefold().isin(out_names).any()
-                for column in value.columns
-            )
-        if isinstance(value, dict):
-            return any(cache_contains_out_player(item) for item in value.values())
-        if isinstance(value, (list, tuple, set)):
-            return any(cache_contains_out_player(item) for item in value)
-        return isinstance(value, str) and value.strip().casefold() in out_names
-
+    out_names = set(result.loc[result["Injury Status"].str.casefold() == "out", "Name"].astype(str).str.strip().str.casefold())
     cache_tokens = (
         "lineup", "portfolio", "simulation", "contest_field", "contest_results",
         "candidate", "exposure", "saved_build", "classic_pool_signature",
         "build_ready", "latest_field_ownership", "fd_active_signature",
         "fd_saved_builds", "fd_lineups"
     )
+    def cache_contains_out_player(value):
+        if isinstance(value, pd.DataFrame):
+            return any(value[column].astype(str).str.strip().str.casefold().isin(out_names).any() for column in value.columns)
+        if isinstance(value, dict):
+            return any(cache_contains_out_player(item) for item in value.values())
+        if isinstance(value, (list, tuple, set)):
+            return any(cache_contains_out_player(item) for item in value)
+        return isinstance(value, str) and value.strip().casefold() in out_names
+
     stale_cache_found = any(
         any(token in str(key).lower() for token in cache_tokens)
         and cache_contains_out_player(value)
         for key, value in list(st.session_state.items())
     )
-    if newly_out or stale_cache_found:
-        # Clear every current and archived lineup/build cache so archived slate
-        # state cannot restore a lineup containing an Out player.
-        preserve_tokens = (
-            "dropdown", "injury_status", "player_injury_statuses", "lineup_mode",
-            "platform", "slate_selector"
-        )
+    if out_names and stale_cache_found:
         clear_tokens = cache_tokens + ("active_slate_signature",)
-        stale_build_keys = [
-            key for key in list(st.session_state.keys())
-            if any(token in str(key).lower() for token in clear_tokens)
-            and not any(token in str(key).lower() for token in preserve_tokens)
-        ]
-        for key in stale_build_keys:
-            st.session_state.pop(key, None)
-        if newly_out:
-            changed_names = newly_out
-        else:
-            changed_names = sorted(out_names)
-        st.warning(
-            "Removed saved lineups and simulations containing Out players: "
-            + ", ".join(changed_names)
-            + ". Build new lineups; Out players are excluded."
-        )
+        preserve_tokens = ("dropdown", "injury_status", "player_injury_statuses", "lineup_mode", "platform", "slate_selector")
+        for key in list(st.session_state.keys()):
+            if any(token in str(key).lower() for token in clear_tokens) and not any(token in str(key).lower() for token in preserve_tokens):
+                st.session_state.pop(key, None)
+        st.warning("Saved lineups containing Out players were cleared. Run SIM again to rebuild safely.")
 
-    result = frame.copy()
-    result["Injury Status"] = result["Name"].astype(str).map(
-        lambda name: str(saved_statuses.get(name.strip().casefold(), "Active")).strip().title()
-    )
-    excluded = result[result["Injury Status"].str.casefold() == "out"]["Name"].astype(str).tolist()
+    questionable = result.loc[result["Injury Status"].str.casefold() == "questionable", "Name"].astype(str).tolist()
+    excluded = result.loc[result["Injury Status"].str.casefold() == "out", "Name"].astype(str).tolist()
+    st.write("### Automatic Injury Statuses")
+    st.caption(f"Out: {len(excluded)} | Questionable: {len(questionable)}. Players listed as Out are automatically removed from the player pool.")
+    if questionable:
+        st.warning("QUESTIONABLE: " + ", ".join(questionable))
     if excluded:
-        st.warning("OUT players excluded from the FanDuel/DraftKings player pool and all new builds: " + ", ".join(excluded))
+        st.warning("OUT — automatically excluded: " + ", ".join(excluded))
     result = result[result["Injury Status"].str.casefold() != "out"].reset_index(drop=True)
     if result.empty:
-        st.error("All players are marked Out. Change at least one player's injury status to continue.")
+        st.error("All players are marked Out. Check the injury feed and player file before continuing.")
         st.stop()
     return result
 
