@@ -3432,14 +3432,31 @@ else:
     if "simulation_df" in st.session_state:
         simulation_df = st.session_state["simulation_df"]
 
-        player_display["SimMean"] = simulation_df.mean(axis=0).values
-        player_display["SimP10"] = simulation_df.quantile(0.10, axis=0).values
-        player_display["SimP25"] = simulation_df.quantile(0.25, axis=0).values
-        player_display["SimP50"] = simulation_df.quantile(0.50, axis=0).values
-        player_display["SimP75"] = simulation_df.quantile(0.75, axis=0).values
-        player_display["SimP90"] = simulation_df.quantile(0.90, axis=0).values
-        player_display["SimP95"] = simulation_df.quantile(0.95, axis=0).values
-        player_display["SimP99"] = simulation_df.quantile(0.99, axis=0).values
+        # IMPORTANT: simulation_df can be retained in Streamlit session state while
+        # the user changes slate, site, or player pool. Never assign its columns to
+        # the current player list by position: that can attach one player's outcome
+        # distribution (for example, a high-scoring QB) to a completely different
+        # player. Join every summary by the player name used as the simulation column.
+        if isinstance(simulation_df, pd.DataFrame) and not simulation_df.empty:
+            simulation_means = simulation_df.mean(axis=0)
+            player_display["SimMean"] = player_display["Name"].astype(str).str.strip().map(
+                {str(k).strip(): v for k, v in simulation_means.items()}
+            )
+            for quantile, column in [
+                (0.10, "SimP10"), (0.25, "SimP25"), (0.50, "SimP50"),
+                (0.75, "SimP75"), (0.90, "SimP90"), (0.95, "SimP95"),
+                (0.99, "SimP99")
+            ]:
+                summary = simulation_df.quantile(quantile, axis=0)
+                player_display[column] = player_display["Name"].astype(str).str.strip().map(
+                    {str(k).strip(): v for k, v in summary.items()}
+                )
+        else:
+            for column in [
+                "SimMean", "SimP10", "SimP25", "SimP50",
+                "SimP75", "SimP90", "SimP95", "SimP99"
+            ]:
+                player_display[column] = np.nan
     else:
         for column in [
             "SimMean",
