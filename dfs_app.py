@@ -1663,9 +1663,9 @@ if platform == "FanDuel":
         fd_sim_clicked = fd_run_all_clicked
         fd_build_clicked = fd_run_all_clicked
         fd_contest_clicked = fd_run_all_clicked
-        fd_progress_bar = st.progress(0, text="Ready to run FanDuel simulation.")
+        fd_progress_bar = None
         if fd_run_all_clicked:
-            fd_progress_bar.progress(2, text="Starting FanDuel simulation...")
+            fd_progress_bar = st.progress(2, text="Starting FanDuel simulation...")
         if fd_sim_clicked:
             with st.spinner(f"Running {SIMULATION_COUNT:,} FanDuel scoring simulations..."):
                 rng = np.random.default_rng()
@@ -1783,7 +1783,8 @@ if platform == "FanDuel":
                     }
                 st.session_state["fd_player_sim_" + lineup_mode.replace(" ", "_").lower()] = player_sim
                 st.session_state["fd_simulation_ready_" + lineup_mode.replace(" ", "_").lower()] = True
-            fd_progress_bar.progress(30, text="Simulation complete. Building 5,000 FanDuel lineups...")
+            if fd_run_all_clicked:
+                fd_progress_bar.progress(30, text="Simulation complete. Building 5,000 FanDuel lineups...")
 
         st.success(f"Loaded {len(fd_players)} FanDuel players after injury-status filtering.")
         if fd_proj_col is None:
@@ -1937,9 +1938,16 @@ if platform == "FanDuel":
 
             for build_attempt in range(max_attempts):
                 if fd_run_all_clicked and (build_attempt % 1000 == 0):
+                    build_progress = min(
+                        59,
+                        30 + int(29 * max(
+                            len(results) / max(target_lineups, 1),
+                            build_attempt / max_attempts
+                        ))
+                    )
                     fd_progress_bar.progress(
-                        30 + int(30 * min(len(results) / target_lineups, 1.0)),
-                        text=f"Building FanDuel lineups: {len(results):,} of {target_lineups:,} accepted (attempt {build_attempt:,})..."
+                        build_progress,
+                        text=f"Building FanDuel lineups: {len(results):,} of {target_lineups:,} accepted (attempt {build_attempt:,} of {max_attempts:,})..."
                     )
                 chosen_indices = []
                 chosen = {}
@@ -2025,11 +2033,12 @@ if platform == "FanDuel":
                     "No valid lineups found. Check player positions, salary values, "
                     "and make sure the uploaded slate has enough players for this contest type."
                 )
-            fd_progress_bar.progress(
-                60,
-                text="Lineup build complete. Simulating the contest field..."
-                if results else "Lineup build did not produce valid lineups."
-            )
+            if fd_run_all_clicked:
+                fd_progress_bar.progress(
+                    60,
+                    text="Lineup build complete. Simulating the contest field..."
+                    if results else "Lineup build did not produce valid lineups."
+                )
 
         if fd_contest_clicked:
             fd_pool = fd_players.copy()
@@ -2157,10 +2166,11 @@ if platform == "FanDuel":
                         # Keep the contest results area consistent with DraftKings Classic and Showdown.
                 else:
                     st.error("Could not create valid FanDuel opponent lineups. Check the player pool and salary range.")
-            fd_progress_bar.progress(
-                100,
-                text="FanDuel SIM → BUILD → CONTEST SIM finished."
-            )
+            if fd_run_all_clicked:
+                fd_progress_bar.progress(
+                    100,
+                    text="FanDuel SIM → BUILD → CONTEST SIM finished."
+                )
 
         fd_results = st.session_state.get(fd_build_key)
         if fd_results is not None:
