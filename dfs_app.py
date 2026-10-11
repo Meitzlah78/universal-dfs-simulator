@@ -2111,6 +2111,7 @@ if platform == "FanDuel":
         historical_name_index = _build_historical_name_index(historical)
         simulation_progress.progress(0.05, text="Historical data loaded. Preparing game scripts...")
         simulations = {}
+        cap_hit_percentages = {}
         n = SIMULATIONS
         correlation_strength = float(
             np.clip(st.session_state.get("active_game_correlation_strength", 1.0), 0.0, 1.0)
@@ -2398,6 +2399,11 @@ if platform == "FanDuel":
                         0.0,
                         upper_cap,
                     )
+                    # Record how often outcomes land on the final upper cap.
+                    cap_tolerance = max(0.01, upper_cap * 1e-6)
+                    cap_hit_percentages[name] = round(
+                        100.0 * float(np.mean(final_scores >= upper_cap - cap_tolerance)), 2
+                    )
             simulations[name] = final_scores
             if index == 0 or (index + 1) % 2 == 0 or index + 1 == total_players:
                 progress_value = 0.05 + 0.90 * (index + 1) / total_players
@@ -2407,6 +2413,7 @@ if platform == "FanDuel":
                 )
 
         result = pd.DataFrame(simulations)
+        st.session_state["simulation_cap_hit_pct"] = cap_hit_percentages
         simulation_progress.progress(1.0, text=f"Player simulations complete: {total_players} players")
 
         return result
@@ -2505,6 +2512,7 @@ else:
         historical_name_index = _build_historical_name_index(historical)
         simulation_progress.progress(0.05, text="Historical data loaded. Preparing game scripts...")
         simulations = {}
+        cap_hit_percentages = {}
         n = SIMULATIONS
         correlation_strength = float(
             np.clip(st.session_state.get("active_game_correlation_strength", 1.0), 0.0, 1.0)
@@ -2792,6 +2800,11 @@ else:
                         0.0,
                         upper_cap,
                     )
+                    # Record how often outcomes land on the final upper cap.
+                    cap_tolerance = max(0.01, upper_cap * 1e-6)
+                    cap_hit_percentages[name] = round(
+                        100.0 * float(np.mean(final_scores >= upper_cap - cap_tolerance)), 2
+                    )
             simulations[name] = final_scores
             if index == 0 or (index + 1) % 2 == 0 or index + 1 == total_players:
                 progress_value = 0.05 + 0.90 * (index + 1) / total_players
@@ -2801,6 +2814,7 @@ else:
                 )
 
         result = pd.DataFrame(simulations)
+        st.session_state["simulation_cap_hit_pct"] = cap_hit_percentages
         simulation_progress.progress(1.0, text=f"Player simulations complete: {total_players} players")
 
         return result
@@ -3734,12 +3748,17 @@ else:
                 player_display[column] = player_display["Name"].astype(str).str.strip().map(
                     {str(k).strip(): v for k, v in summary.items()}
                 )
+            cap_hit_map = st.session_state.get("simulation_cap_hit_pct", {})
+            player_display["Cap Hit %"] = player_display["Name"].astype(str).str.strip().map(
+                {str(k).strip(): v for k, v in cap_hit_map.items()}
+            )
         else:
             for column in [
                 "SimMean", "SimP10", "SimP25", "SimP50",
                 "SimP75", "SimP90", "SimP95", "SimP99"
             ]:
                 player_display[column] = np.nan
+            player_display["Cap Hit %"] = np.nan
     else:
         for column in [
             "SimMean",
@@ -3752,6 +3771,7 @@ else:
             "SimP99"
         ]:
             player_display[column] = np.nan
+        player_display["Cap Hit %"] = np.nan
 
     # Make the main simulated average easy to spot in the Player Pool.
     # "Sim Pts" is the average fantasy score across the configured simulated outcomes.
@@ -3767,7 +3787,7 @@ else:
     })
     for sim_column in [
         "Sim Pts", "Sim P10", "Sim P25", "Sim P50",
-        "Sim P75", "Sim P90", "Sim P95", "Sim P99"
+        "Sim P75", "Sim P90", "Sim P95", "Sim P99", "Cap Hit %"
     ]:
         player_display[sim_column] = pd.to_numeric(
             player_display[sim_column], errors="coerce"
