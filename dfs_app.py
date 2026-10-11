@@ -2221,12 +2221,23 @@ if entry_file is not None:
             )
             st.stop()
 
-        # Keep only the entry-table columns. DraftKings may append blank columns,
-        # instructions, and salary/player rows to the same downloaded file.
-        entry_header = raw_header[:10]
+        # Keep the roster headers from the uploaded entry file. DraftKings
+        # Classic and Showdown use different roster layouts, and duplicate slot
+        # names (RB, WR, FLEX) are normal in these CSVs.
+        metadata_headers = ["Entry ID", "Contest Name", "Contest ID", "Entry Fee"]
+        roster_headers = [
+            str(col).strip()
+            for col in raw_header[4:]
+            if str(col).strip() and str(col).strip().casefold() != "instructions"
+        ]
+        if not roster_headers:
+            st.error("Could not find player-slot columns in this DraftKings entry CSV.")
+            st.stop()
+
         parsed_entries = []
         repaired_count = 0
         ignored_rows = 0
+        roster_count = len(roster_headers)
 
         for fields in parsed_rows[1:]:
             if not fields or not str(fields[0]).strip().isdigit():
@@ -2239,7 +2250,7 @@ if entry_file is not None:
                 (i for i in range(2, len(fields)) if str(fields[i]).strip().isdigit()),
                 None
             )
-            if contest_id_index is None or contest_id_index + 7 >= len(fields):
+            if contest_id_index is None or contest_id_index + 1 + roster_count >= len(fields):
                 ignored_rows += 1
                 continue
 
@@ -2250,10 +2261,12 @@ if entry_file is not None:
             contest_name = ",".join(str(v) for v in fields[1:contest_id_index]).strip()
             contest_id = str(fields[contest_id_index]).strip()
             entry_fee = str(fields[contest_id_index + 1]).strip()
-            roster = [str(v).strip() for v in fields[contest_id_index + 2:contest_id_index + 8]]
+            roster = [
+                str(v).strip()
+                for v in fields[contest_id_index + 2:contest_id_index + 2 + roster_count]
+            ]
 
-            # Output the standard DraftKings entry layout and omit appended
-            # instructions/player-pool rows.
+            # Output only the actual roster columns and omit appended instructions/player-pool rows.
             parsed_entries.append([entry_id, contest_name, contest_id, entry_fee, *roster])
 
         if not parsed_entries:
@@ -2263,10 +2276,7 @@ if entry_file is not None:
             )
             st.stop()
 
-        standard_header = [
-            "Entry ID", "Contest Name", "Contest ID", "Entry Fee",
-            "CPT", "FLEX", "FLEX", "FLEX", "FLEX", "FLEX"
-        ]
+        standard_header = metadata_headers + roster_headers
         entry_df = pd.DataFrame(parsed_entries, columns=standard_header)
 
         if repaired_count:
