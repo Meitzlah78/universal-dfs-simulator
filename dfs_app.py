@@ -2069,10 +2069,18 @@ if platform == "FanDuel":
                     while len(opponent_rows) < fd_opponent_target and attempts < max(300000, fd_opponent_target * 15):
                         attempts += 1
                         if attempts % 1000 == 0 and fd_opponent_target > 0:
-                            progress_pct = 60 + int(35 * min(len(opponent_rows) / fd_opponent_target, 1.0))
+                            max_field_attempts = max(300000, fd_opponent_target * 15)
+                            field_progress = max(
+                                len(opponent_rows) / max(fd_opponent_target, 1),
+                                attempts / max_field_attempts
+                            )
+                            progress_pct = 60 + int(35 * min(field_progress, 1.0))
                             fd_progress_bar.progress(
                                 min(progress_pct, 95),
-                                text=f"Simulating contest field: {len(opponent_rows):,} of {fd_opponent_target:,} opponents..."
+                                text=(
+                                    f"Simulating contest field: {len(opponent_rows):,} of "
+                                    f"{fd_opponent_target:,} opponents (attempt {attempts:,})..."
+                                )
                             )
                         chosen = {}
                         used = set()
