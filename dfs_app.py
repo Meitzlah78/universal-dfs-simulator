@@ -2287,11 +2287,27 @@ if platform == "FanDuel":
             # of the sampled historical/statistical mean, and preserve the outcome
             # distribution and shared game-script variation rather than setting every
             # simulation equal to the projection.
-            projection = pd.to_numeric(
-                pd.Series([row.get("Projection", np.nan)]), errors="coerce"
-            ).iloc[0]
+            # Apply the same projection anchor to EVERY player. Salary uploads and
+            # projection feeds use different column names, so check common names rather
+            # than silently skipping the anchor when "Projection" is absent.
+            projection = np.nan
+            for projection_column in (
+                "Projection", "ProjectedPoints", "FinalProjection",
+                "FantasyPoints", "FPTS", "Proj", "Points"
+            ):
+                if projection_column in row.index:
+                    candidate = pd.to_numeric(
+                        pd.Series([row.get(projection_column)]), errors="coerce"
+                    ).iloc[0]
+                    if np.isfinite(candidate) and candidate > 0:
+                        projection = float(candidate)
+                        break
+
             sampled_mean = float(np.mean(scores)) if len(scores) else 0.0
             if np.isfinite(projection) and projection > 0 and np.isfinite(sampled_mean) and sampled_mean > 0:
+                # Keep realistic player-to-player variation, but prevent raw historical
+                # samples from overwhelming the current projection: 75% projection,
+                # 25% sampled historical/statistical average.
                 target_mean = 0.75 * float(projection) + 0.25 * sampled_mean
                 scores = scores * (target_mean / sampled_mean)
 
