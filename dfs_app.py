@@ -2282,15 +2282,9 @@ if platform == "FanDuel":
                     historical_points, size=n, replace=True, p=probabilities
                 ).astype(float)
 
-            # Use the supplied projection as a soft anchor so generic stat estimates
-            # do not give low-projection bench players unrealistic averages. Keep some
-            # of the sampled historical/statistical mean, and preserve the outcome
-            # distribution and shared game-script variation rather than setting every
-            # simulation equal to the projection.
-            # Calibrate every player's sampled distribution to the slate projection.
-            # The prior blend could still leave bench QBs and mismatched historical
-            # records far above their projections. Projection is the center of the
-            # distribution; historical samples determine shape, not an inflated mean.
+            # Anchor the simulated mean to the slate projection and calibrate volatility.
+            # Historical results determine the shape, while position-specific limits prevent
+            # mismatched or sparse history from creating absurdly wide distributions.
             projection = np.nan
             for projection_column in (
                 "Projection", "ProjectedPoints", "FinalProjection",
@@ -2304,12 +2298,41 @@ if platform == "FanDuel":
                         projection = float(candidate)
                         break
 
+            position_cv_limits = {
+                "QB": (0.25, 0.65, 0.45),
+                "RB": (0.25, 0.65, 0.45),
+                "WR": (0.30, 0.75, 0.55),
+                "TE": (0.30, 0.75, 0.55),
+                "K": (0.20, 0.55, 0.35),
+                "DST": (0.35, 0.90, 0.65),
+            }
+            min_cv, max_cv, fallback_cv = position_cv_limits.get(
+                position_type, (0.30, 0.70, 0.50)
+            )
             sampled_mean = float(np.mean(scores)) if len(scores) else 0.0
-            if np.isfinite(projection) and projection > 0 and np.isfinite(sampled_mean) and sampled_mean > 0:
-                # Normalize the full outcome distribution so its mean matches the
-                # projection exactly, while retaining relative boom/bust variation.
-                scores = scores * (float(projection) / sampled_mean)
+            sampled_std = float(np.std(scores, ddof=1)) if len(scores) > 1 else 0.0
 
+            if np.isfinite(projection) and projection > 0:
+                # Use historical coefficient of variation when available, but cap it
+                # to a reasonable range for the player's position.
+                if sampled_mean > 0 and np.isfinite(sampled_std) and sampled_std > 0:
+                    historical_cv = sampled_std / sampled_mean
+                    volatility_cv = float(np.clip(historical_cv, min_cv, max_cv))
+                else:
+                    volatility_cv = fallback_cv
+                target_std = max(0.5, projection * volatility_cv)
+
+                if sampled_std > 1e-6 and np.isfinite(sampled_std):
+                    scores = projection + (scores - sampled_mean) * (target_std / sampled_std)
+                else:
+                    scores = rng.normal(projection, target_std, size=n)
+
+                # Fantasy scores cannot be negative. Re-center after clipping so
+                # the final simulated average remains close to the supplied projection.
+                scores = np.maximum(scores, 0.0)
+                calibrated_mean = float(np.mean(scores)) if len(scores) else 0.0
+                if calibrated_mean > 0 and np.isfinite(calibrated_mean):
+                    scores = scores * (projection / calibrated_mean)
             # Shared game script adjusts the sampled outcome modestly. Trailing teams
             # throw more; leading teams lean more on their running backs.
             # Scale shared game-script effects with the user's single-game slider.
@@ -2610,9 +2633,9 @@ else:
                     historical_points, size=n, replace=True, p=probabilities
                 ).astype(float)
 
-            # Use the slate projection as the center of each player's distribution.
-            # Historical samples shape the floor/ceiling, but cannot inflate the mean
-            # for a low-projection backup such as Tyson Bagent.
+            # Anchor the simulated mean to the slate projection and calibrate volatility.
+            # Historical results determine the shape, while position-specific limits prevent
+            # mismatched or sparse history from creating absurdly wide distributions.
             projection = np.nan
             for projection_column in (
                 "Projection", "ProjectedPoints", "FinalProjection",
@@ -2626,10 +2649,41 @@ else:
                         projection = float(candidate)
                         break
 
+            position_cv_limits = {
+                "QB": (0.25, 0.65, 0.45),
+                "RB": (0.25, 0.65, 0.45),
+                "WR": (0.30, 0.75, 0.55),
+                "TE": (0.30, 0.75, 0.55),
+                "K": (0.20, 0.55, 0.35),
+                "DST": (0.35, 0.90, 0.65),
+            }
+            min_cv, max_cv, fallback_cv = position_cv_limits.get(
+                position_type, (0.30, 0.70, 0.50)
+            )
             sampled_mean = float(np.mean(scores)) if len(scores) else 0.0
-            if np.isfinite(projection) and projection > 0 and np.isfinite(sampled_mean) and sampled_mean > 0:
-                scores = scores * (float(projection) / sampled_mean)
+            sampled_std = float(np.std(scores, ddof=1)) if len(scores) > 1 else 0.0
 
+            if np.isfinite(projection) and projection > 0:
+                # Use historical coefficient of variation when available, but cap it
+                # to a reasonable range for the player's position.
+                if sampled_mean > 0 and np.isfinite(sampled_std) and sampled_std > 0:
+                    historical_cv = sampled_std / sampled_mean
+                    volatility_cv = float(np.clip(historical_cv, min_cv, max_cv))
+                else:
+                    volatility_cv = fallback_cv
+                target_std = max(0.5, projection * volatility_cv)
+
+                if sampled_std > 1e-6 and np.isfinite(sampled_std):
+                    scores = projection + (scores - sampled_mean) * (target_std / sampled_std)
+                else:
+                    scores = rng.normal(projection, target_std, size=n)
+
+                # Fantasy scores cannot be negative. Re-center after clipping so
+                # the final simulated average remains close to the supplied projection.
+                scores = np.maximum(scores, 0.0)
+                calibrated_mean = float(np.mean(scores)) if len(scores) else 0.0
+                if calibrated_mean > 0 and np.isfinite(calibrated_mean):
+                    scores = scores * (projection / calibrated_mean)
             # Shared game script adjusts the sampled outcome modestly. Trailing teams
             # throw more; leading teams lean more on their running backs.
             # Scale shared game-script effects with the user's single-game slider.
