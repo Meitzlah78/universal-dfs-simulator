@@ -2305,10 +2305,10 @@ if platform == "FanDuel":
             # each player's spread, but blending it with a position baseline helps
             # prevent noisy samples from creating extreme tails.
             position_cv_limits = {
-                "QB": (0.25, 0.50, 0.35),
-                "RB": (0.25, 0.50, 0.40),
-                "WR": (0.30, 0.55, 0.45),
-                "TE": (0.30, 0.55, 0.45),
+                "QB": (0.25, 0.55, 0.40),
+                "RB": (0.25, 0.60, 0.45),
+                "WR": (0.30, 0.60, 0.50),
+                "TE": (0.30, 0.60, 0.50),
                 "K": (0.20, 0.40, 0.30),
                 "DST": (0.35, 0.65, 0.50),
             }
@@ -2678,10 +2678,10 @@ else:
             # each player's spread, but blending it with a position baseline helps
             # prevent noisy samples from creating extreme tails.
             position_cv_limits = {
-                "QB": (0.25, 0.50, 0.35),
-                "RB": (0.25, 0.50, 0.40),
-                "WR": (0.30, 0.55, 0.45),
-                "TE": (0.30, 0.55, 0.45),
+                "QB": (0.25, 0.55, 0.40),
+                "RB": (0.25, 0.60, 0.45),
+                "WR": (0.30, 0.60, 0.50),
+                "TE": (0.30, 0.60, 0.50),
                 "K": (0.20, 0.40, 0.30),
                 "DST": (0.35, 0.65, 0.50),
             }
