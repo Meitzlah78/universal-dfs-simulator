@@ -3792,26 +3792,34 @@ if (
             batch_candidate_scores += batch_values[:, candidate_idx[:, 0]] * (scoring_multiplier - 1.0)
             batch_field_scores += batch_values[:, contest_idx[:, 0]] * (scoring_multiplier - 1.0)
 
-        batch_win = np.zeros(n_candidates, dtype=np.float64)
-        batch_top1 = np.zeros(n_candidates, dtype=np.float64)
-        batch_top5 = np.zeros(n_candidates, dtype=np.float64)
-        batch_top10 = np.zeros(n_candidates, dtype=np.float64)
-        batch_cash = np.zeros(n_candidates, dtype=np.float64)
-        batch_percentiles = np.zeros(n_candidates, dtype=np.float64)
+        # Sort every simulation's opponent scores together along the opponent axis.
+        sorted_field = np.sort(batch_field_scores, axis=1)
 
-        for offset in range(batch_end - batch_start):
-            cand_scores = batch_candidate_scores[offset]
-            sorted_field = np.sort(batch_field_scores[offset])
-            count_greater = total_field - np.searchsorted(
-                sorted_field, cand_scores, side="right"
-            )
-            percentile = 1.0 - (count_greater / total_field)
-            batch_win += (count_greater == 0)
-            batch_top1 += (percentile >= 0.99)
-            batch_top5 += (percentile >= 0.95)
-            batch_top10 += (percentile >= 0.90)
-            batch_cash += (percentile >= 0.50)
-            batch_percentiles += percentile
+        # Batched binary search: find each candidate's insertion position in its
+        # simulation's sorted opponent scores. This preserves searchsorted(side="right")
+        # behavior while avoiding a Python loop over every simulation.
+        batch_count = batch_end - batch_start
+        low = np.zeros((batch_count, n_candidates), dtype=np.int32)
+        high = np.full((batch_count, n_candidates), total_field, dtype=np.int32)
+        sim_rows = np.arange(batch_count)[:, None]
+
+        while np.any(low < high):
+            mid = (low + high) // 2
+            mid_values = sorted_field[sim_rows, mid]
+            move_right = mid_values <= batch_candidate_scores
+            low = np.where(move_right, mid + 1, low)
+            high = np.where(move_right, high, mid)
+
+        count_greater = total_field - low
+        percentiles = 1.0 - (count_greater / total_field)
+
+        # Aggregate all simulations in this batch using NumPy array operations.
+        batch_win = np.sum(count_greater == 0, axis=0, dtype=np.float64)
+        batch_top1 = np.sum(percentiles >= 0.99, axis=0, dtype=np.float64)
+        batch_top5 = np.sum(percentiles >= 0.95, axis=0, dtype=np.float64)
+        batch_top10 = np.sum(percentiles >= 0.90, axis=0, dtype=np.float64)
+        batch_cash = np.sum(percentiles >= 0.50, axis=0, dtype=np.float64)
+        batch_percentiles = np.sum(percentiles, axis=0, dtype=np.float64)
 
         return batch_win, batch_top1, batch_top5, batch_top10, batch_cash, batch_percentiles
 
