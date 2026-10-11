@@ -659,7 +659,7 @@ def read_projection_csv(uploaded_file, source_label):
         result = {}
         for name, value in zip(names, values):
             key = normalize_projection_player_name(name)
-            if key and pd.notna(value) and np.isfinite(float(value)) and float(value) > 0:
+            if key and pd.notna(value) and np.isfinite(float(value)) and float(value) >= 0:
                 result[key] = float(value)
         return result
     except Exception as exc:
@@ -769,7 +769,7 @@ def download_public_projection_table(source_name, platform_name, target_names=No
                     str(row.get(proj_col, "")).replace(",", "").replace("$", ""),
                     errors="coerce"
                 )
-                if key and pd.notna(value) and np.isfinite(float(value)) and float(value) > 0:
+                if key and pd.notna(value) and np.isfinite(float(value)) and float(value) >= 0:
                     dff_result[key] = float(value)
             if dff_result and matches_target(dff_result):
                 return dff_result
@@ -796,7 +796,7 @@ def download_public_projection_table(source_name, platform_name, target_names=No
                 str(row.get(proj_col, "")).replace(",", "").replace("$", ""),
                 errors="coerce"
             )
-            if key and pd.notna(value) and np.isfinite(float(value)) and float(value) > 0:
+            if key and pd.notna(value) and np.isfinite(float(value)) and float(value) >= 0:
                 result[key] = float(value)
         if result and matches_target(result):
             return result
@@ -842,7 +842,7 @@ def download_public_projection_table(source_name, platform_name, target_names=No
             )
             key = normalize_projection_player_name(name)
             value = pd.to_numeric(projection, errors="coerce")
-            if key and pd.notna(value) and np.isfinite(float(value)) and float(value) > 0:
+            if key and pd.notna(value) and np.isfinite(float(value)) and float(value) >= 0:
                 result[key] = float(value)
 
         if result and matches_target(result):
@@ -908,7 +908,7 @@ def download_public_projection_table(source_name, platform_name, target_names=No
             projection, name = match.groups()
             key = normalize_projection_player_name(unescape(name).strip())
             value = pd.to_numeric(projection, errors="coerce")
-            if key and pd.notna(value) and np.isfinite(float(value)) and float(value) > 0:
+            if key and pd.notna(value) and np.isfinite(float(value)) and float(value) >= 0:
                 result[key] = float(value)
         if result and matches_target(result):
             return result
@@ -979,7 +979,7 @@ def download_public_projection_table(source_name, platform_name, target_names=No
                         )
                         key = normalize_projection_player_name(name)
                         value = pd.to_numeric(proj, errors="coerce")
-                        if key and pd.notna(value) and np.isfinite(float(value)) and float(value) > 0:
+                        if key and pd.notna(value) and np.isfinite(float(value)) and float(value) >= 0:
                             dated_result[key] = float(value)
                     if dated_result and matches_target(dated_result):
                         return dated_result
@@ -2729,8 +2729,8 @@ def internal_slate_key(frame):
         .itertuples(index=False, name=None)
     )
 
-internal_key = internal_slate_key(players_df)
 players_df = exclude_zero_projection_players(players_df, "DraftKings " + lineup_mode)
+internal_key = internal_slate_key(players_df)
 st.caption("Projection values use the DFF/DraftEdge average when both are available, otherwise the single available source. Unmatched players use internal estimates.")
 if st.session_state.get("nfl_historical_stats_status"):
     st.caption(st.session_state["nfl_historical_stats_status"])
@@ -3763,7 +3763,7 @@ if (
     # This avoids 10,000 repeated pandas row lookups while keeping all 10,000
     # simulations and the full opponent field.
     simulation_values = simulation_df.to_numpy(dtype=np.float32, copy=False)
-    batch_size = 128
+    batch_size = 256
 
     for batch_start in range(0, n_sims, batch_size):
         batch_end = min(batch_start + batch_size, n_sims)
