@@ -3328,15 +3328,22 @@ if platform == "DraftKings" and lineup_mode == "Classic":
             slot: np.asarray([i for i, positions in enumerate(classic_eligible) if positions & eligible], dtype=int)
             for slot, eligible in roster_slots
         }
+        locked_name_set = set(classic_locked_players)
         locked_indices = {
-            i for i, name in enumerate(classic_names) if name in set(classic_locked_players)
+            i for i, name in enumerate(classic_names) if name in locked_name_set
         }
+        name_to_index = {str(name): i for i, name in enumerate(classic_names)}
         candidate_lineups = []
         seen = set()
         classic_build_counts = {str(name): 0 for name in classic_names}
-        max_attempts = 500000
         target_lineups = 5000
-        for _ in range(max_attempts):
+        # The old 500,000-attempt loop could look frozen after player simulation
+        # completed. Unique Classic lineups are normally found much sooner; keep
+        # the full 5,000-lineup target while bounding wasted duplicate/invalid tries.
+        max_attempts = 100000
+        build_progress = st.progress(0, text="Building DraftKings Classic lineups: 0 / 5,000")
+        expected_exposure = max(1.0, target_lineups * len(roster_slots) / max(1, len(classic_names)))
+        for attempt in range(max_attempts):
             chosen = {}
             used = set()
             salary = 0
@@ -3348,13 +3355,16 @@ if platform == "DraftKings" and lineup_mode == "Classic":
                 if not len(choices):
                     break
                 weights = classic_weights[choices].copy()
-                expected_exposure = max(1.0, target_lineups * len(roster_slots) / max(1, len(classic_names)))
                 exposure_penalty = np.asarray([
                     (1.0 + classic_build_counts.get(str(classic_names[i]), 0) / expected_exposure) ** 1.5
                     for i in choices
                 ], dtype=float)
                 weights /= exposure_penalty
-                weights /= weights.sum()
+                weight_total = weights.sum()
+                if not np.isfinite(weight_total) or weight_total <= 0:
+                    weights = np.full(len(choices), 1.0 / len(choices), dtype=float)
+                else:
+                    weights /= weight_total
                 if rng.random() < 0.25:
                     picked = int(rng.choice(choices))
                 else:
@@ -3363,8 +3373,13 @@ if platform == "DraftKings" and lineup_mode == "Classic":
                 used.add(picked)
                 salary += int(classic_salaries[picked])
             if len(chosen) != len(roster_slots) or salary < MIN_LINEUP_SALARY or salary > MAX_LINEUP_SALARY or salary > 50000:
+                if attempt % 250 == 0:
+                    build_progress.progress(
+                        min(0.99, attempt / max_attempts),
+                        text=f"Building DraftKings Classic lineups: {len(candidate_lineups):,} / {target_lineups:,} (checking valid rosters)"
+                    )
                 continue
-            if not all(name in chosen.values() for name in classic_locked_players):
+            if not locked_name_set.issubset(set(chosen.values())):
                 continue
             key = tuple(chosen[slot] for slot, _ in roster_slots)
             if key in seen:
@@ -3372,14 +3387,20 @@ if platform == "DraftKings" and lineup_mode == "Classic":
             seen.add(key)
             for player_name in set(chosen.values()):
                 classic_build_counts[str(player_name)] = classic_build_counts.get(str(player_name), 0) + 1
-            selected_indices = [int(np.where(classic_names == chosen[slot])[0][0]) for slot, _ in roster_slots]
+            selected_indices = [name_to_index[chosen[slot]] for slot, _ in roster_slots]
             projected_points = float(classic_means[selected_indices].sum())
             candidate_lineups.append({
                 **chosen, "Salary": salary, "ProjectedPoints": projected_points,
                 "Score": sum(rankings.get(name, 0.01) for name in chosen.values())
             })
+            if len(candidate_lineups) % 100 == 0 or len(candidate_lineups) >= target_lineups:
+                build_progress.progress(
+                    min(1.0, len(candidate_lineups) / target_lineups),
+                    text=f"Building DraftKings Classic lineups: {len(candidate_lineups):,} / {target_lineups:,}"
+                )
             if len(candidate_lineups) >= target_lineups:
                 break
+        build_progress.empty()
 
         if not candidate_lineups:
             st.error(
