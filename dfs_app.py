@@ -4087,7 +4087,11 @@ if "contest_results_df" in st.session_state:
 
         old_portfolio = st.session_state.get("portfolio_df")
 
-        if old_portfolio is not None and "Locked" in old_portfolio.columns:
+        if (
+            isinstance(old_portfolio, pd.DataFrame)
+            and "Locked" in old_portfolio.columns
+            and all(col in old_portfolio.columns for col in portfolio_lineup_columns)
+        ):
             locked_df = old_portfolio[
                 old_portfolio["Locked"] == True
             ].copy()
@@ -4162,16 +4166,19 @@ if "contest_results_df" in st.session_state:
     portfolio_df = add_lineup_field_ownership(portfolio_df)
 
     # Add each lineup's total salary to the portfolio display and export.
-    portfolio_df["Salary"] = portfolio_df.apply(
-        lambda row: int(
-            captain_salary_map.get(str(row["Captain"]), 0)
-            + sum(
-                salary_map.get(str(row[col]), 0)
-                for col in ["Flex1", "Flex2", "Flex3", "Flex4", "Flex5"]
-            )
-        ),
-        axis=1
-    )
+    if classic_mode:
+        portfolio_df["Salary"] = portfolio_df.apply(
+            lambda row: int(sum(salary_map.get(str(row.get(col, "")), 0) for col in portfolio_lineup_columns)),
+            axis=1
+        )
+    else:
+        portfolio_df["Salary"] = portfolio_df.apply(
+            lambda row: int(
+                captain_salary_map.get(str(row.get("Captain", "")), 0)
+                + sum(salary_map.get(str(row.get(col, "")), 0) for col in ["Flex1", "Flex2", "Flex3", "Flex4", "Flex5"])
+            ),
+            axis=1
+        )
     st.session_state["portfolio_df"] = portfolio_df
 
     # Show each rostered player's average score across the player simulations.
