@@ -2065,6 +2065,33 @@ def _simulate_scored_player_outcomes(players_df, platform, rng):
     simulations = {}
     n = SIMULATIONS
 
+    # Calibrate shared game environments from historical NFL game outcomes when
+    # the downloaded player-week data has game IDs and fantasy-point totals.
+    # The same sampled environment is shared by both teams in a matchup, so
+    # player outcomes remain correlated in every format using this engine.
+    historical_game_factors = np.array([], dtype=float)
+    if not historical.empty and "game_id" in historical.columns:
+        historical_points_col = next(
+            (col for col in ["fantasy_points_ppr", "fantasy_points"] if col in historical.columns),
+            None
+        )
+        if historical_points_col:
+            try:
+                game_totals = pd.to_numeric(
+                    historical[historical_points_col], errors="coerce"
+                ).groupby(historical["game_id"]).sum(min_count=1).dropna()
+                game_totals = game_totals[game_totals > 0].to_numpy(dtype=float)
+                if len(game_totals) >= 20:
+                    # Normalize and trim extreme games to keep the historical
+                    # factor useful without overwhelming player-level outcomes.
+                    center = float(np.median(game_totals))
+                    if np.isfinite(center) and center > 0:
+                        historical_game_factors = np.clip(
+                            game_totals / center, 0.75, 1.25
+                        )
+            except Exception:
+                historical_game_factors = np.array([], dtype=float)
+
     # Build one shared script per matchup so players in the same game are correlated.
     team_col = "Team" if "Team" in players_df.columns else None
     opponent_col = "Opponent" if "Opponent" in players_df.columns else None
@@ -2096,7 +2123,11 @@ def _simulate_scored_player_outcomes(players_df, platform, rng):
                 # Each simulated game has a shared scoring environment and a
                 # random leader. The trailing team tends to pass more; the
                 # leading team tends to run more.
-                game_environment = np.clip(rng.normal(1.0, 0.12, n), 0.72, 1.30)
+                if historical_game_factors.size:
+                    # Bootstrap historical game environments for all formats.
+                    game_environment = rng.choice(historical_game_factors, size=n, replace=True)
+                else:
+                    game_environment = np.clip(rng.normal(1.0, 0.12, n), 0.72, 1.30)
                 margin = np.abs(rng.normal(0.0, 1.0, n))
                 team_a_leads = rng.random(n) < 0.5
                 a_leading = np.where(team_a_leads, margin, -margin)
