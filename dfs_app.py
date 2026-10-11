@@ -3201,11 +3201,10 @@ else:
         frames = []
         loaded_seasons = []
         errors = []
-        # Use the two most recent completed seasons. Downloading four large CSVs
-        # on the first SIM click can make Step 1 appear frozen on hosted Streamlit.
-        # Short per-request timeouts ensure unavailable data falls back promptly to
-        # the simulator's position-based outcome model.
-        for season in [2025, 2024]:
+        # Use three recent completed seasons. This provides more player history while
+        # keeping the download bounded; Streamlit caches the result for 24 hours.
+        # Short per-request timeouts ensure unavailable data falls back promptly.
+        for season in [2025, 2024, 2023]:
             url = f"https://github.com/nflverse/nflverse-data/releases/download/player_stats/stats_player_week_{season}.csv"
             try:
                 response = requests.get(url, timeout=(4, 10))
@@ -3314,15 +3313,25 @@ else:
         if rows.empty:
             return None
 
+        # If the same normalized name maps to multiple NFL player IDs at the same
+        # position, do not blend those players' histories together. A bad match is
+        # worse than falling back to the model's projection-based distribution.
+        if "player_id" in rows.columns:
+            ids = rows["player_id"].dropna().astype(str).str.strip()
+            ids = ids[ids.ne("")]
+            if ids.nunique() > 1:
+                return None
+
         # A player should contribute at most one record per game. Remove duplicate
-        # player/game rows if the source contains them.
+        # player/game rows if the source contains them. Keep a longer recent window
+        # now that three seasons are available.
         dedupe_cols = [col for col in ["player_id", "game_id"] if col in rows.columns]
         if len(dedupe_cols) == 2:
             rows = rows.drop_duplicates(subset=dedupe_cols, keep="last")
         elif "game_id" in rows.columns:
             rows = rows.drop_duplicates(subset=["game_id"], keep="last")
 
-        rows = rows.sort_values(["season", "week"]).tail(24)
+        rows = rows.sort_values(["season", "week"]).tail(30)
         if rows.empty:
             return None
         if str(platform).lower().startswith("fanduel"):
