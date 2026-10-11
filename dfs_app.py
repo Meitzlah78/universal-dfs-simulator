@@ -1961,6 +1961,7 @@ def _simulate_scored_player_outcomes(players_df, platform, rng):
     create shared game-level conditions so teammates and opponents move together.
     """
     historical = load_nfl_historical_player_stats()
+    historical_name_index = _build_historical_name_index(historical)
     simulations = {}
     n = SIMULATIONS
 
@@ -2091,7 +2092,8 @@ def _simulate_scored_player_outcomes(players_df, platform, rng):
         # Historical scores provide the player's own distribution. Do not
         # force the samples to match projections or a salary-based average.
         historical_result = _historical_player_average(
-            name, next(iter(positions), ""), platform, historical, return_scores=True
+            name, next(iter(positions), ""), platform, historical,
+            return_scores=True, historical_name_index=historical_name_index
         )
         if historical_result is not None:
             historical_points, recency_weights = historical_result
@@ -2580,7 +2582,34 @@ def load_nfl_historical_player_stats():
     return historical
 
 
-def _historical_player_average(player_name, position, platform, historical, return_scores=False):
+def _normalize_historical_player_names(values):
+    """Normalize player names once so historical matching does not rescan all rows per player."""
+    return (
+        values.astype(str)
+        .str.casefold()
+        .str.replace(r"[^a-z0-9 ]", "", regex=True)
+        .str.replace(r"\\s+", " ", regex=True)
+        .str.strip()
+    )
+
+
+def _build_historical_name_index(historical):
+    """Build a reusable name-to-rows index for one simulation run."""
+    if historical.empty:
+        return {}
+    name_col = next((col for col in ["player_display_name", "player_name", "name"] if col in historical.columns), None)
+    if name_col is None or "week" not in historical.columns:
+        return {}
+    prepared = historical.copy()
+    prepared["_normalized_player_name"] = _normalize_historical_player_names(prepared[name_col])
+    return {
+        name: group.drop(columns=["_normalized_player_name"])
+        for name, group in prepared.groupby("_normalized_player_name", sort=False)
+        if name
+    }
+
+
+def _historical_player_average(player_name, position, platform, historical, return_scores=False, historical_name_index=None):
     """Return recency-weighted fantasy points, or the recent weekly scores themselves."""
     if historical.empty:
         return None
@@ -2588,9 +2617,15 @@ def _historical_player_average(player_name, position, platform, historical, retu
     if name_col is None or "week" not in historical.columns:
         return None
     wanted = " ".join(str(player_name).casefold().replace(".", "").replace(",", "").split())
-    names = historical[name_col].astype(str).str.casefold().str.replace(r"[^a-z0-9 ]", "", regex=True).str.replace(r"\s+", " ", regex=True).str.strip()
     wanted = " ".join(pd.Series([wanted]).str.replace(r"[^a-z0-9 ]", "", regex=True).iloc[0].split())
-    rows = historical[names == wanted].copy()
+    if historical_name_index is not None:
+        rows = historical_name_index.get(wanted)
+        if rows is None:
+            return None
+        rows = rows.copy()
+    else:
+        names = _normalize_historical_player_names(historical[name_col])
+        rows = historical[names == wanted].copy()
     if rows.empty:
         return None
     if "position" in rows.columns and position:
@@ -2624,13 +2659,11 @@ def _historical_player_average(player_name, position, platform, historical, retu
         if points_col is None:
             return None
         points = pd.to_numeric(rows[points_col], errors="coerce").fillna(0).to_numpy(dtype=float)
-    # More recent games count more, but older games still provide a baseline.
     weights = np.linspace(0.5, 1.5, len(points))
     average = float(np.average(points, weights=weights))
     if return_scores:
         return (points, weights) if len(points) and np.isfinite(points).all() else None
     return max(0.0, average) if np.isfinite(average) else None
-
 
 def build_internal_projection_means(players_df, platform="DraftKings", include_history=False):
     """Blend salary/position estimates with recency-weighted historical NFL results."""
@@ -3730,7 +3763,7 @@ if (
     # This avoids 10,000 repeated pandas row lookups while keeping all 10,000
     # simulations and the full opponent field.
     simulation_values = simulation_df.to_numpy(dtype=np.float32, copy=False)
-    batch_size = 50
+    batch_size = 128
 
     for batch_start in range(0, n_sims, batch_size):
         batch_end = min(batch_start + batch_size, n_sims)
