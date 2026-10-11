@@ -4304,7 +4304,7 @@ if platform == "DraftKings" and lineup_mode == "Showdown":
                     and not entry_df.empty
                 )
                 if has_entry_template:
-                    st.caption("This export replaces your existing contest entries and preserves their Entry IDs and Contest ID.")
+                    st.caption("FOR EXISTING ENTRIES: Download this file, then go to DraftKings → My Lineups → Edit Entries → Upload CSV. Do not upload this file on the regular Upload Lineups page. Entry IDs and Contest ID are preserved.")
                     export_df = build_dk_contest_entry_export(
                         entry_df,
                         selected_contest_id,
@@ -4314,7 +4314,7 @@ if platform == "DraftKings" and lineup_mode == "Showdown":
                     )
                     if export_df is not None:
                         st.download_button(
-                            label="EXPORT LINEUPS TO DRAFTKINGS",
+                            label="DOWNLOAD FILE FOR EDIT ENTRIES",
                             data=export_df.to_csv(index=False).encode("utf-8"),
                             file_name="DraftKings_Showdown_Contest_Entries.csv",
                             mime="text/csv",
@@ -4326,12 +4326,13 @@ if platform == "DraftKings" and lineup_mode == "Showdown":
                     # Replacing existing entries requires the DraftKings My Contests CSV.
                     basic_export = lineup_ids_df.copy()
                     st.warning(
-                        "New entries export: this file contains player IDs only. To replace existing entries, upload your DraftKings My Contests CSV and select the contest. "
-                        "It will NOT replace your existing contest entries. To replace those entries, upload "
-                        "your DraftKings My Contests CSV and select the contest first."
+                        "NEW LINEUPS ONLY: This file contains CPT/FLEX player IDs for DraftKings → Upload Lineups. "
+                        "It does NOT replace existing contest entries. To change entries you already entered, "
+                        "download the entries file from DraftKings My Lineups → Edit Entries, upload that file in this app, "
+                        "then use the separate Edit Entries export above."
                     )
                     st.download_button(
-                        label="EXPORT LINEUPS TO DRAFTKINGS",
+                        label="DOWNLOAD NEW LINEUPS FOR UPLOAD",
                         data=basic_export.to_csv(index=False).encode("utf-8"),
                         file_name="DraftKings_Showdown_Lineups.csv",
                         mime="text/csv",
