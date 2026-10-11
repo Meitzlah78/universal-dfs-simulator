@@ -14,11 +14,19 @@ st.set_page_config(
 st.title("Universal DFS Simulator")
 
 # Quick link to DraftKings lineup upload.
-st.link_button(
-    "CONTEST",
-    "https://www.draftkings.com/entry/upload",
-    use_container_width=True,
-)
+top_buttons = st.columns(2)
+with top_buttons[0]:
+    st.link_button(
+        "CONTEST",
+        "https://www.draftkings.com/entry/upload",
+        use_container_width=True,
+    )
+with top_buttons[1]:
+    st.link_button(
+        "SALARY",
+        "https://www.draftkings.com/lineup/upload",
+        use_container_width=True,
+    )
 
 
 def is_full_game_contest_name(value):
@@ -2146,18 +2154,9 @@ if entry_file is not None:
                 )
                 .reset_index()
             )
-            contest_summary["Contest Label"] = contest_summary.apply(
-                lambda row: f"{row['Contest Name']} | ID {row['Contest ID']} | {int(row['Entries'])} of your entries",
-                axis=1
-            )
-            selected_label = st.selectbox(
-                "Select the contest to simulate against",
-                contest_summary["Contest Label"].tolist(),
-                key="dk_selected_contest"
-            )
-            selected_row = contest_summary.loc[
-                contest_summary["Contest Label"].eq(selected_label)
-            ].iloc[0]
+            # No contest dropdown: use the first unique contest in the uploaded entry CSV.
+            # Users can upload a file containing only the contest they want to target.
+            selected_row = contest_summary.iloc[0]
             selected_contest_id = str(selected_row["Contest ID"])
             selected_contest_name = str(selected_row["Contest Name"])
             selected_contest_entry_count = int(selected_row["Entries"])
@@ -2397,86 +2396,46 @@ try:
                 lambda row: f'{row["n"]} | ID {row["id"]}' + (f' | {int(row["_field_size"]):,} entries' if pd.notna(row["_field_size"]) and row["_field_size"] > 0 else ""),
                 axis=1,
             )
-            # Keep a separate contest choice for each DraftKings slate type.
-            # Prefer the contest from the uploaded entry CSV when it matches this slate;
-            # otherwise preserve the user's last selection for this slate.
+            # No contest dropdown. Keep contest metadata from the uploaded entry CSV.
+            # The lobby is used only to verify slate/game context; its ambiguous size fields
+            # are not treated as a reliable opponent-field count.
             dk_slate_key = "showdown" if lineup_mode == "Showdown" else "classic"
             dk_saved_contests = st.session_state.get("selected_dk_contests_by_slate", {})
             previous_selection = dk_saved_contests.get(dk_slate_key, {})
-            previous_lobby_id = str(previous_selection.get("id", ""))
-            default_index = next((i for i, value in enumerate(lobby_matches["id"].tolist()) if value == previous_lobby_id), 0)
-
+            chosen_lobby = None
             if selected_contest_name:
-                entry_name_normalized = re.sub(r"[^a-z0-9]+", "", str(selected_contest_name).lower())
-                entry_matchup = dk_matchup_from_text(selected_contest_name)
-                for i, lobby_name in enumerate(lobby_matches["n"].astype(str).tolist()):
-                    lobby_name_normalized = re.sub(r"[^a-z0-9]+", "", lobby_name.lower())
-                    lobby_matchup = dk_matchup_from_text(lobby_name)
-                    name_matches = (
-                        entry_name_normalized in lobby_name_normalized
-                        or lobby_name_normalized in entry_name_normalized
-                    )
-                    matchup_matches = entry_matchup is not None and lobby_matchup == entry_matchup
-                    # Contest names can differ slightly between the entry CSV and lobby.
-                    # If the game matches and the core contest name overlaps, prefer it.
-                    core_entry = re.sub(r"\([^)]*\)", "", str(selected_contest_name)).lower()
-                    core_entry = re.sub(r"[^a-z0-9]+", "", core_entry)
-                    core_lobby = re.sub(r"\([^)]*\)", "", lobby_name).lower()
-                    core_lobby = re.sub(r"[^a-z0-9]+", "", core_lobby)
-                    core_matches = (
-                        core_entry in core_lobby
-                        or core_lobby in core_entry
-                        or (len(core_entry) >= 5 and core_entry[:8] in core_lobby)
-                        or (len(core_lobby) >= 5 and core_lobby[:8] in core_entry)
-                    )
-                    if name_matches or (matchup_matches and core_matches):
-                        default_index = i
-                        break
-
-            # Streamlit preserves a selectbox's prior session value even when its index
-            # changes. Explicitly sync it to the uploaded-entry contest match.
-            contest_select_key = f"dk_lobby_contest_dropdown_{dk_slate_key}"
-            if selected_contest_name and 0 <= default_index < len(lobby_matches):
-                matched_name = str(lobby_matches.iloc[default_index]["n"])
-                matched_matchup = dk_matchup_from_text(matched_name)
-                entry_matchup = dk_matchup_from_text(selected_contest_name)
-                entry_norm = re.sub(r"[^a-z0-9]+", "", str(selected_contest_name).lower())
-                matched_norm = re.sub(r"[^a-z0-9]+", "", matched_name.lower())
-                if entry_norm in matched_norm or matched_norm in entry_norm or (
-                    entry_matchup is not None and matched_matchup == entry_matchup
-                    and re.sub(r"[^a-z0-9]+", "", re.sub(r"\([^)]*\)", "", str(selected_contest_name)).lower())[:8]
-                    in re.sub(r"[^a-z0-9]+", "", re.sub(r"\([^)]*\)", "", matched_name).lower())
-                ):
-                    st.session_state[contest_select_key] = lobby_matches.iloc[default_index]["Contest Label"]
-
-            chosen_lobby_label = st.selectbox(
-                f"Select a DraftKings {lineup_mode} contest",
-                lobby_matches["Contest Label"].tolist(),
-                index=default_index,
-                key=f"dk_lobby_contest_dropdown_{dk_slate_key}",
-            )
-            chosen_lobby = lobby_matches.loc[lobby_matches["Contest Label"].eq(chosen_lobby_label)].iloc[0]
-            try:
-                lobby_field_size = int(float(chosen_lobby["_field_size"])) if pd.notna(chosen_lobby["_field_size"]) else None
-            except (TypeError, ValueError):
-                lobby_field_size = None
-            active_dk_selection = {
-                "id": str(chosen_lobby["id"]),
-                "name": str(chosen_lobby["n"]),
-                "your_entries": int(previous_selection.get("your_entries", 0) or 0)
-                    if str(previous_selection.get("id", "")) == str(chosen_lobby["id"]) else 0,
-                "entry_fee": previous_selection.get("entry_fee")
-                    if str(previous_selection.get("id", "")) == str(chosen_lobby["id"]) else None,
-                "field_size": lobby_field_size,
-            }
+                matching_entry_contests = lobby_matches[
+                    lobby_matches["n"].astype(str).str.casefold().eq(str(selected_contest_name).casefold())
+                ]
+                if not matching_entry_contests.empty:
+                    chosen_lobby = matching_entry_contests.iloc[0]
+            if chosen_lobby is None and not lobby_matches.empty:
+                chosen_lobby = lobby_matches.iloc[0]
+            if selected_contest_name:
+                active_dk_selection = {
+                    "id": str(selected_contest_id or ""),
+                    "name": str(selected_contest_name),
+                    "your_entries": int(selected_contest_entry_count or 0),
+                    "entry_fee": (
+                        float(selected_contest_entry_fee)
+                        if selected_contest_entry_fee is not None and pd.notna(selected_contest_entry_fee)
+                        else None
+                    ),
+                    "field_size": None,
+                }
+                st.caption("Using the contest details from your uploaded DraftKings entry CSV. No contest dropdown is needed.")
+            else:
+                active_dk_selection = {
+                    "id": str(previous_selection.get("id", "")),
+                    "name": str(previous_selection.get("name", "")),
+                    "your_entries": int(previous_selection.get("your_entries", 0) or 0),
+                    "entry_fee": previous_selection.get("entry_fee"),
+                    "field_size": None,
+                }
+                st.caption("Upload your DraftKings entry CSV if you want the app to use your contest details.")
             dk_saved_contests[dk_slate_key] = active_dk_selection
             st.session_state["selected_dk_contests_by_slate"] = dk_saved_contests
-            # Keep the active-slate alias for existing contest simulation/export logic.
             st.session_state["selected_dk_contest"] = active_dk_selection
-            if lobby_field_size:
-                st.caption(f"Contest field: {lobby_field_size:,} total entries. Your entries are subtracted when known.")
-            else:
-                st.warning("DraftKings returned contest choices, but its field-size value was not found. The default opponent count will be used.")
         else:
             if lineup_mode == "Showdown" and salary_file is not None:
                 st.warning("No single-game contests matched the two teams in your uploaded salary file. Check that the file is for the correct Showdown slate.")
