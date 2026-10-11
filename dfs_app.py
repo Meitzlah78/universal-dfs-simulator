@@ -1622,7 +1622,7 @@ if platform == "FanDuel":
         if isinstance(saved_lineups, pd.DataFrame):
             lineup_columns = [c for c in saved_lineups.columns if c not in {"Salary", "ProjectedPoints", "Score"}]
             if any(saved_lineups[col].astype(str).isin(
-                set(fd_raw[fd_name_col].astype(str).str.replace(r"\s*\\(\\d+\\)\s*$", "", regex=True)) - fd_allowed_names
+                set(fd_raw[fd_name_col].astype(str).str.replace(r"\s*\(\d+\)\s*$", "", regex=True).str.strip()) - fd_allowed_names
             ).any() for col in lineup_columns if col in saved_lineups.columns):
                 st.session_state["fd_saved_builds"].pop(saved_key, None)
 
