@@ -796,12 +796,12 @@ def download_public_projection_table(source_name, platform_name, target_names=No
                 # DraftEdge player cells can include image text, position, and team
                 # (for example: "Image Jahmyr Gibbs RB · DET"). Strip those labels
                 # before matching against the salary-file player names.
-                raw_name = re.sub(r"^(?:image|img)\\s+", "", raw_name, flags=re.IGNORECASE)
+                raw_name = re.sub(r"^(?:image|img)\s+", "", raw_name, flags=re.IGNORECASE)
                 raw_name = re.sub(
-                    r"\\s+(?:QB|RB|WR|TE|DST|DEF|K)\\s*[·•|/]\\s*[A-Z]{2,4}\\s*$",
+                    r"\s+(?:QB|RB|WR|TE|DST|DEF|K)\s*[·•|/]\s*[A-Z]{2,4}\s*$",
                     "", raw_name, flags=re.IGNORECASE
                 )
-                raw_name = re.sub(r"\\s+(?:QB|RB|WR|TE|DST|DEF|K)\\s*$", "", raw_name, flags=re.IGNORECASE)
+                raw_name = re.sub(r"\s+(?:QB|RB|WR|TE|DST|DEF|K)\s*$", "", raw_name, flags=re.IGNORECASE)
             key = normalize_projection_player_name(raw_name)
             value = pd.to_numeric(
                 str(row.get(proj_col, "")).replace(",", "").replace("$", ""),
@@ -1124,7 +1124,7 @@ def build_opponent_map(source_df, team_values):
         game_info_col = lookup.get("game info") or lookup.get("gameinfo")
         if game_info_col is not None:
             for game_info in source_df[game_info_col].dropna().astype(str):
-                match = re.search(r"([A-Z]{2,3})\\s*@\\s*([A-Z]{2,3})", game_info.upper())
+                match = re.search(r"([A-Z]{2,3})\s*@\s*([A-Z]{2,3})", game_info.upper())
                 if match:
                     away, home = match.groups()
                     opponents[away] = home
@@ -1389,7 +1389,7 @@ if platform == "FanDuel":
         if isinstance(saved_lineups, pd.DataFrame):
             lineup_columns = [c for c in saved_lineups.columns if c not in {"Salary", "ProjectedPoints", "Score"}]
             if any(saved_lineups[col].astype(str).isin(
-                set(fd_raw[fd_name_col].astype(str).str.replace(r"\\s*\\(\\d+\\)\\s*$", "", regex=True)) - fd_allowed_names
+                set(fd_raw[fd_name_col].astype(str).str.replace(r"\s*\\(\\d+\\)\s*$", "", regex=True)) - fd_allowed_names
             ).any() for col in lineup_columns if col in saved_lineups.columns):
                 st.session_state["fd_saved_builds"].pop(saved_key, None)
 
@@ -2460,7 +2460,7 @@ if salary_file is not None:
                     if template_name_col is not None and template_id_col is not None:
                         for _, template_row in uploaded_df.iterrows():
                             template_name = str(template_row[template_name_col]).strip()
-                            template_name = re.sub(r"\\s*\\(\\d+\\)\\s*$", "", template_name)
+                            template_name = re.sub(r"\s*\\(\\d+\\)\s*$", "", template_name)
                             template_slot = str(template_row[roster_col]).upper().strip()
                             template_id = str(template_row[template_id_col]).strip()
                             if template_name and template_name.lower() != "nan" and template_id and template_id.lower() != "nan":
@@ -2591,7 +2591,7 @@ def _normalize_historical_player_names(values):
         values.astype(str)
         .str.casefold()
         .str.replace(r"[^a-z0-9 ]", "", regex=True)
-        .str.replace(r"\\s+", " ", regex=True)
+        .str.replace(r"\s+", " ", regex=True)
         .str.strip()
     )
 
