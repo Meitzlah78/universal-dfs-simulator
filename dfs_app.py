@@ -2299,22 +2299,21 @@ if platform == "FanDuel":
                         break
 
             position_cv_limits = {
-                "QB": (0.25, 0.65, 0.45),
-                "RB": (0.25, 0.65, 0.45),
-                "WR": (0.30, 0.75, 0.55),
-                "TE": (0.30, 0.75, 0.55),
-                "K": (0.20, 0.55, 0.35),
-                "DST": (0.35, 0.90, 0.65),
+                "QB": (0.25, 0.55, 0.40),
+                "RB": (0.25, 0.55, 0.40),
+                "WR": (0.30, 0.60, 0.48),
+                "TE": (0.30, 0.60, 0.48),
+                "K": (0.20, 0.40, 0.30),
+                "DST": (0.35, 0.75, 0.55),
             }
             min_cv, max_cv, fallback_cv = position_cv_limits.get(
-                position_type, (0.30, 0.70, 0.50)
+                position_type, (0.30, 0.60, 0.45)
             )
             sampled_mean = float(np.mean(scores)) if len(scores) else 0.0
             sampled_std = float(np.std(scores, ddof=1)) if len(scores) > 1 else 0.0
 
             if np.isfinite(projection) and projection > 0:
-                # Use historical coefficient of variation when available, but cap it
-                # to a reasonable range for the player's position.
+                # Keep historical variation, but limit volatility by position.
                 if sampled_mean > 0 and np.isfinite(sampled_std) and sampled_std > 0:
                     historical_cv = sampled_std / sampled_mean
                     volatility_cv = float(np.clip(historical_cv, min_cv, max_cv))
@@ -2323,7 +2322,18 @@ if platform == "FanDuel":
                 target_std = max(0.5, projection * volatility_cv)
 
                 if sampled_std > 1e-6 and np.isfinite(sampled_std):
-                    scores = projection + (scores - sampled_mean) * (target_std / sampled_std)
+                    # Limit extreme historical outliers before rescaling. This reduces
+                    # unrealistic P95/P99 values while retaining player-specific shape.
+                    standardized = (scores - sampled_mean) / sampled_std
+                    standardized = np.clip(standardized, -2.25, 2.50)
+                    standardized_mean = float(np.mean(standardized))
+                    standardized_std = float(np.std(standardized, ddof=1))
+                    if standardized_std > 1e-6 and np.isfinite(standardized_std):
+                        standardized = (
+                            (standardized - standardized_mean)
+                            * (target_std / standardized_std)
+                        )
+                    scores = projection + standardized
                 else:
                     scores = rng.normal(projection, target_std, size=n)
 
@@ -2650,22 +2660,21 @@ else:
                         break
 
             position_cv_limits = {
-                "QB": (0.25, 0.65, 0.45),
-                "RB": (0.25, 0.65, 0.45),
-                "WR": (0.30, 0.75, 0.55),
-                "TE": (0.30, 0.75, 0.55),
-                "K": (0.20, 0.55, 0.35),
-                "DST": (0.35, 0.90, 0.65),
+                "QB": (0.25, 0.55, 0.40),
+                "RB": (0.25, 0.55, 0.40),
+                "WR": (0.30, 0.60, 0.48),
+                "TE": (0.30, 0.60, 0.48),
+                "K": (0.20, 0.40, 0.30),
+                "DST": (0.35, 0.75, 0.55),
             }
             min_cv, max_cv, fallback_cv = position_cv_limits.get(
-                position_type, (0.30, 0.70, 0.50)
+                position_type, (0.30, 0.60, 0.45)
             )
             sampled_mean = float(np.mean(scores)) if len(scores) else 0.0
             sampled_std = float(np.std(scores, ddof=1)) if len(scores) > 1 else 0.0
 
             if np.isfinite(projection) and projection > 0:
-                # Use historical coefficient of variation when available, but cap it
-                # to a reasonable range for the player's position.
+                # Keep historical variation, but limit volatility by position.
                 if sampled_mean > 0 and np.isfinite(sampled_std) and sampled_std > 0:
                     historical_cv = sampled_std / sampled_mean
                     volatility_cv = float(np.clip(historical_cv, min_cv, max_cv))
@@ -2674,7 +2683,18 @@ else:
                 target_std = max(0.5, projection * volatility_cv)
 
                 if sampled_std > 1e-6 and np.isfinite(sampled_std):
-                    scores = projection + (scores - sampled_mean) * (target_std / sampled_std)
+                    # Limit extreme historical outliers before rescaling. This reduces
+                    # unrealistic P95/P99 values while retaining player-specific shape.
+                    standardized = (scores - sampled_mean) / sampled_std
+                    standardized = np.clip(standardized, -2.25, 2.50)
+                    standardized_mean = float(np.mean(standardized))
+                    standardized_std = float(np.std(standardized, ddof=1))
+                    if standardized_std > 1e-6 and np.isfinite(standardized_std):
+                        standardized = (
+                            (standardized - standardized_mean)
+                            * (target_std / standardized_std)
+                        )
+                    scores = projection + standardized
                 else:
                     scores = rng.normal(projection, target_std, size=n)
 
