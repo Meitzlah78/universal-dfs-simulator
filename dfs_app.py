@@ -1235,9 +1235,12 @@ aggressiveness = aggressiveness_pct / 100.0
 P95_WEIGHT = 0.60 - 0.30 * aggressiveness
 P99_WEIGHT = 0.10 + 0.45 * aggressiveness
 MEAN_WEIGHT = 1.0 - P95_WEIGHT - P99_WEIGHT
+# At low aggression, penalize volatility; at high aggression, reward it.
+STDDEV_WEIGHT = 0.10 * (2.0 * aggressiveness - 1.0)
 st.caption(
     f"Build style: {aggressiveness_pct}% aggressive "
-    f"(P95 {P95_WEIGHT:.0%} / ceiling P99 {P99_WEIGHT:.0%} / average {MEAN_WEIGHT:.0%})."
+    f"(P95 {P95_WEIGHT:.0%} / ceiling P99 {P99_WEIGHT:.0%} / average {MEAN_WEIGHT:.0%} "
+    f"/ volatility adjustment {STDDEV_WEIGHT:+.0%})."
 )
 
 # Game-level correlation control is relevant to single-game formats. Full-slate
@@ -1686,6 +1689,7 @@ if platform == "FanDuel":
             float(player_sim.get(name, {}).get("P95", projections[i])) * P95_WEIGHT
             + float(player_sim.get(name, {}).get("P99", projections[i] * 2.3)) * P99_WEIGHT
             + sim_means[i] * MEAN_WEIGHT
+            + float(player_sim.get(name, {}).get("StdDev", 0.0)) * STDDEV_WEIGHT
             for i, name in enumerate(names)
         ], dtype=float)
         lineup_scores, fd_ownership_proxy = ownership_adjusted_player_scores(
@@ -3307,7 +3311,8 @@ if "simulation_df" in st.session_state:
             player_sim[player] = {
                 "Mean": values.mean(),
                 "P95": values.quantile(0.95),
-                "P99": values.quantile(0.99)
+                "P99": values.quantile(0.99),
+            "StdDev": values.std(ddof=0)
             }
 
 # Safe fallback so the page can render before the first simulation.
@@ -3318,7 +3323,8 @@ for _, player_row in players_df.iterrows():
         player_sim[player] = {
             "Mean": projection,
             "P95": projection * 1.8,
-            "P99": projection * 2.3
+            "P99": projection * 2.3,
+            "StdDev": 0.0
         }
 
 # ============================================
@@ -3367,6 +3373,7 @@ if platform == "DraftKings" and lineup_mode == "Classic":
                 player_sim.get(player, {}).get("P95", row["Projection"]) * P95_WEIGHT
                 + player_sim.get(player, {}).get("P99", row["Projection"] * 2.3) * P99_WEIGHT
                 + player_sim.get(player, {}).get("Mean", row["Projection"]) * MEAN_WEIGHT
+                + player_sim.get(player, {}).get("StdDev", 0.0) * STDDEV_WEIGHT
             )
         classic_base_scores = np.asarray([rankings.get(str(name), 0.01) for name in classic_pool["Name"]], dtype=float)
         classic_adjusted_scores, classic_ownership_proxy = ownership_adjusted_player_scores(
@@ -3832,7 +3839,8 @@ if build_clicked:
         player_sim[player] = {
             "Mean": values.mean(),
             "P95": values.quantile(0.95),
-            "P99": values.quantile(0.99)
+            "P99": values.quantile(0.99),
+            "StdDev": values.std(ddof=0)
         }
 
 locked_players = [
@@ -3848,6 +3856,7 @@ showdown_base_scores = np.asarray([
     player_sim[p]["P95"] * P95_WEIGHT
     + player_sim[p]["P99"] * P99_WEIGHT
     + player_sim[p]["Mean"] * MEAN_WEIGHT
+    + player_sim[p].get("StdDev", 0.0) * STDDEV_WEIGHT
     for p in available_players
 ], dtype=float)
 showdown_adjusted_scores, showdown_ownership_proxy = ownership_adjusted_player_scores(
@@ -3996,6 +4005,10 @@ for captain_index, captain in enumerate(search_pool):
             total_p95 * P95_WEIGHT
             + total_p99 * P99_WEIGHT
             + total_mean * MEAN_WEIGHT
+            + (
+                player_sim[captain].get("StdDev", 0.0) * 1.5
+                + sum(player_sim[p].get("StdDev", 0.0) for p in flex_players)
+            ) * STDDEV_WEIGHT
         )
         lineup_ownership = (
             showdown_ownership_proxy[ownership_index[captain]] * 1.5
