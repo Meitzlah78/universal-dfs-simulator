@@ -1216,6 +1216,26 @@ lineup_mode = st.selectbox(
 )
 st.subheader(platform + " " + lineup_mode)
 
+# Game-level correlation control is relevant to single-game formats. Full-slate
+# formats keep the current default behavior and do not show this control.
+if lineup_mode in ("Showdown", "Single Game"):
+    correlation_strength = st.slider(
+        "Game Correlation",
+        min_value=0,
+        max_value=100,
+        value=70,
+        step=5,
+        help=(
+            "Controls how strongly shared game conditions connect player outcomes. "
+            "0% minimizes shared game-script effects; 100% uses the full model. "
+            "This changes correlation strength, not the number of simulations."
+        ),
+        key="single_game_correlation_strength",
+    ) / 100.0
+else:
+    correlation_strength = 1.0
+st.session_state["active_game_correlation_strength"] = correlation_strength
+
 if platform == "FanDuel":
     # FanDuel uses its own player upload and lineup rules. This separate path
     # keeps DraftKings controls and saved builds unchanged.
@@ -2064,6 +2084,9 @@ def _simulate_scored_player_outcomes(players_df, platform, rng):
     simulation_progress.progress(0.05, text="Historical data loaded. Preparing game scripts...")
     simulations = {}
     n = SIMULATIONS
+    correlation_strength = float(
+        np.clip(st.session_state.get("active_game_correlation_strength", 1.0), 0.0, 1.0)
+    )
 
     # Calibrate shared game environments from historical NFL game outcomes when
     # the downloaded player-week data has game IDs and fantasy-point totals.
@@ -2249,19 +2272,17 @@ def _simulate_scored_player_outcomes(players_df, platform, rng):
 
         # Shared game script adjusts the sampled outcome modestly. Trailing teams
         # throw more; leading teams lean more on their running backs.
-        scoring_factor = script["scoring"]
+        # Scale shared game-script effects with the user's single-game slider.
+        # At 0%, players still have their own outcome variation, but shared
+        # scoring/lead-trail adjustments are neutralized.
+        raw_scoring_factor = script["scoring"]
+        scoring_factor = 1.0 + (raw_scoring_factor - 1.0) * correlation_strength
+        trailing = script["trailing"].astype(float) * correlation_strength
+        leading = script["leading"].astype(float) * correlation_strength
         if position_type in ("QB", "WR", "TE"):
-            script_factor = (
-                scoring_factor
-                + script["trailing"].astype(float) * 0.12
-                - script["leading"].astype(float) * 0.06
-            )
+            script_factor = scoring_factor + trailing * 0.12 - leading * 0.06
         elif position_type == "RB":
-            script_factor = (
-                scoring_factor
-                + script["leading"].astype(float) * 0.10
-                - script["trailing"].astype(float) * 0.08
-            )
+            script_factor = scoring_factor + leading * 0.10 - trailing * 0.08
         elif position_type == "DST":
             script_factor = 2.0 - scoring_factor
         else:
