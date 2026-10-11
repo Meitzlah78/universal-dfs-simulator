@@ -6,6 +6,10 @@ import pandas as pd
 import numpy as np
 from zoneinfo import ZoneInfo
 
+# Lower defaults keep the simulator responsive while retaining useful variation.
+SIMULATION_COUNT = 3000
+MAX_SIMULATED_OPPONENTS = 5000
+
 st.set_page_config(
     page_title="Universal DFS Simulator",
     page_icon="🏈",
@@ -1121,8 +1125,8 @@ def build_opponent_map(source_df, team_values):
     return opponents
 
 
-def get_contest_opponent_target(platform_key, default=20000):
-    """Use selected contest field size when available; otherwise keep the existing default."""
+def get_contest_opponent_target(platform_key, default=MAX_SIMULATED_OPPONENTS):
+    """Simulate a representative field capped at a practical size for faster results."""
     contest = st.session_state.get(f"selected_{platform_key}_contest") or {}
     try:
         own_entries = max(0, int(contest.get("your_entries", 0) or 0))
@@ -1131,7 +1135,7 @@ def get_contest_opponent_target(platform_key, default=20000):
     field_size = contest.get("field_size")
     try:
         if field_size is not None and pd.notna(field_size):
-            return max(0, int(float(field_size)) - own_entries)
+            return min(default, max(0, int(float(field_size)) - own_entries))
     except (TypeError, ValueError):
         pass
     return default
@@ -1235,7 +1239,7 @@ if platform == "FanDuel":
             st.error(f"Could not read the FanDuel contest entry file: {exc}")
 
     fd_opponent_target = get_contest_opponent_target("fd")
-    st.caption(f"Simulated FanDuel opponents: {fd_opponent_target:,}")
+    st.caption(f"Simulated FanDuel opponents: up to {fd_opponent_target:,} (speed limit)")
 
     st.write("### Projection Sources")
     fd_dff_projection_file = None
@@ -1389,7 +1393,7 @@ if platform == "FanDuel":
     )
     fd_run_all = st.button("SIM", type="primary", use_container_width=True, key="fd_run_all_" + lineup_mode.replace(" ", "_").lower())
     if fd_run_all:
-        with st.spinner("Running 10,000 FanDuel scoring simulations..."):
+        with st.spinner(f"Running {SIMULATION_COUNT:,} FanDuel scoring simulations..."):
             rng = np.random.default_rng()
             position_rates = {
                 "QB": 2.00, "RB": 1.75, "WR": 1.70, "TE": 1.50,
@@ -1397,10 +1401,10 @@ if platform == "FanDuel":
             }
             # FanDuel scoring differs from DraftKings: half-point receptions,
             # -2 lost fumbles, and no 300/100-yard bonuses.
-            simulated_scores = np.zeros((10000, len(fd_players)), dtype=float)
+            simulated_scores = np.zeros((SIMULATION_COUNT, len(fd_players)), dtype=float)
             for index, (_, player_row) in enumerate(fd_players.iterrows()):
                 positions = set(str(player_row["Position"]).upper().replace(" ", "").split("/"))
-                n = 10000
+                n = SIMULATION_COUNT
                 if "QB" in positions:
                     stats = {"passing_yards": np.maximum(0, rng.normal(225, 65, n)),
                              "passing_tds": rng.poisson(1.45, n), "interceptions": rng.poisson(0.65, n),
@@ -1863,7 +1867,7 @@ if platform == "FanDuel":
 # SETTINGS
 # ================================
 
-SIMULATIONS = 10000
+SIMULATIONS = SIMULATION_COUNT
 DISPERSION = 8.0
 SALARY_CAP = 50000
 
@@ -2377,7 +2381,7 @@ st.session_state["selected_dk_contests_by_slate"] = dk_saved_contests
 st.session_state["selected_dk_contest"] = active_dk_selection
 
 dk_opponent_target = get_contest_opponent_target("dk")
-st.caption(f"Simulated DraftKings opponents: {dk_opponent_target:,}")
+st.caption(f"Simulated DraftKings opponents: up to {dk_opponent_target:,} (speed limit)")
 
 st.write("### Projection Sources")
 
@@ -2845,7 +2849,7 @@ else:
         player_display[column] = np.nan
 
 # Make the main simulated average easy to spot in the Player Pool.
-# "Sim Pts" is the average fantasy score across the 10,000 simulated outcomes.
+# "Sim Pts" is the average fantasy score across the configured simulated outcomes.
 player_display = player_display.rename(columns={
     "SimMean": "Sim Pts",
     "SimP10": "Sim P10",
@@ -3054,7 +3058,7 @@ if platform == "DraftKings" and lineup_mode == "Classic":
 
     classic_run_all = st.button("SIM", type="primary", use_container_width=True, key="dk_classic_run_all")
     if classic_run_all:
-        with st.spinner("Step 1 of 3: Running 10,000 player simulations for DraftKings Classic..."):
+        with st.spinner(f"Step 1 of 3: Running {SIMULATION_COUNT:,} player simulations for DraftKings Classic..."):
             classic_simulation_df = run_game_simulations(players_df, platform=platform)
         st.session_state["simulation_df"] = classic_simulation_df
         st.session_state["simulations_ready"] = True
@@ -3376,7 +3380,7 @@ build_clicked = st.button(
 if build_clicked:
     # One-click workflow: simulate players, build a contest field, then
     # continue below to create and score candidate lineups.
-    with st.spinner("Running 10,000 game simulations..."):
+    with st.spinner(f"Running {SIMULATION_COUNT:,} game simulations..."):
         simulation_df = run_game_simulations(players_df, platform=platform)
 
     st.session_state["simulation_df"] = simulation_df
