@@ -3606,12 +3606,12 @@ if build_clicked:
         )
     field_progress.progress(1.0, text=f"Opponent lineups complete: {len(contest_field_df):,} created")
     field_progress.empty()
-        show_field_ownership(contest_field_df, ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"], "Simulated Field Player Ownership", captain_slot="Captain")
-        st.session_state["contest_field_df"] = contest_field_df
-        st.session_state["contest_field_count"] = len(contest_field_df)
-        st.session_state["contest_field_ready"] = (
-            dk_opponent_target > 0 and len(contest_field_df) >= dk_opponent_target
-        )
+    show_field_ownership(contest_field_df, ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"], "Simulated Field Player Ownership", captain_slot="Captain")
+    st.session_state["contest_field_df"] = contest_field_df
+    st.session_state["contest_field_count"] = len(contest_field_df)
+    st.session_state["contest_field_ready"] = (
+        dk_opponent_target > 0 and len(contest_field_df) >= dk_opponent_target
+    )
 
     selected_contest = st.session_state.get("selected_dk_contest")
     if selected_contest:
