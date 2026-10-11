@@ -1217,6 +1217,29 @@ st.session_state["dfs_platform"] = platform
 st.session_state["lineup_mode_" + platform] = lineup_mode
 st.subheader(selected_format)
 
+# Aggressiveness controls how much the lineup builder prioritizes high-end outcomes.
+aggressiveness_pct = st.slider(
+    "Lineup Build Aggressiveness",
+    min_value=0,
+    max_value=100,
+    value=50,
+    step=5,
+    help=(
+        "Conservative favors a steadier P95 score and average points. Aggressive "
+        "puts more weight on P99 ceiling outcomes. This does not change the number "
+        "of simulations or lineups built."
+    ),
+    key="lineup_build_aggressiveness",
+)
+aggressiveness = aggressiveness_pct / 100.0
+P95_WEIGHT = 0.60 - 0.30 * aggressiveness
+P99_WEIGHT = 0.10 + 0.45 * aggressiveness
+MEAN_WEIGHT = 1.0 - P95_WEIGHT - P99_WEIGHT
+st.caption(
+    f"Build style: {aggressiveness_pct}% aggressive "
+    f"(P95 {P95_WEIGHT:.0%} / ceiling P99 {P99_WEIGHT:.0%} / average {MEAN_WEIGHT:.0%})."
+)
+
 # Game-level correlation control is relevant to single-game formats. Full-slate
 # formats keep the current default behavior and do not show this control.
 if lineup_mode in ("Showdown", "Single Game"):
@@ -1660,9 +1683,9 @@ if platform == "FanDuel":
         projections = pd.to_numeric(pool["Projection"], errors="coerce").fillna(0.01).clip(lower=0.01).to_numpy(dtype=float)
         sim_means = np.asarray([float(player_sim.get(name, {}).get("Mean", projections[i])) for i, name in enumerate(names)], dtype=float)
         lineup_scores = np.asarray([
-            float(player_sim.get(name, {}).get("P95", projections[i])) * 0.50
-            + float(player_sim.get(name, {}).get("P99", projections[i] * 2.3)) * 0.25
-            + sim_means[i] * 0.25
+            float(player_sim.get(name, {}).get("P95", projections[i])) * P95_WEIGHT
+            + float(player_sim.get(name, {}).get("P99", projections[i] * 2.3)) * P99_WEIGHT
+            + sim_means[i] * MEAN_WEIGHT
             for i, name in enumerate(names)
         ], dtype=float)
         lineup_scores, fd_ownership_proxy = ownership_adjusted_player_scores(
@@ -3341,9 +3364,9 @@ if platform == "DraftKings" and lineup_mode == "Classic":
         for _, row in classic_pool.iterrows():
             player = row["Name"]
             rankings[player] = (
-                player_sim.get(player, {}).get("P95", row["Projection"]) * 0.50
-                + player_sim.get(player, {}).get("P99", row["Projection"] * 2.3) * 0.25
-                + player_sim.get(player, {}).get("Mean", row["Projection"]) * 0.25
+                player_sim.get(player, {}).get("P95", row["Projection"]) * P95_WEIGHT
+                + player_sim.get(player, {}).get("P99", row["Projection"] * 2.3) * P99_WEIGHT
+                + player_sim.get(player, {}).get("Mean", row["Projection"]) * MEAN_WEIGHT
             )
         classic_base_scores = np.asarray([rankings.get(str(name), 0.01) for name in classic_pool["Name"]], dtype=float)
         classic_adjusted_scores, classic_ownership_proxy = ownership_adjusted_player_scores(
@@ -3822,9 +3845,9 @@ locked_players = [
 # ============================================
 
 showdown_base_scores = np.asarray([
-    player_sim[p]["P95"] * 0.50
-    + player_sim[p]["P99"] * 0.25
-    + player_sim[p]["Mean"] * 0.25
+    player_sim[p]["P95"] * P95_WEIGHT
+    + player_sim[p]["P99"] * P99_WEIGHT
+    + player_sim[p]["Mean"] * MEAN_WEIGHT
     for p in available_players
 ], dtype=float)
 showdown_adjusted_scores, showdown_ownership_proxy = ownership_adjusted_player_scores(
@@ -3970,9 +3993,9 @@ for captain_index, captain in enumerate(search_pool):
         )
 
         raw_score = (
-            total_p95 * 0.50
-            + total_p99 * 0.25
-            + total_mean * 0.25
+            total_p95 * P95_WEIGHT
+            + total_p99 * P99_WEIGHT
+            + total_mean * MEAN_WEIGHT
         )
         lineup_ownership = (
             showdown_ownership_proxy[ownership_index[captain]] * 1.5
