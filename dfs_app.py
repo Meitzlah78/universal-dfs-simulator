@@ -3306,7 +3306,7 @@ else:
         if per_player.empty:
             return pd.DataFrame()
 
-        targets = {"QB": 35, "RB": 40, "WR": 45, "TE": 45, "K": 30, "DST": 50}
+        targets = {"QB": 40, "RB": 45, "WR": 50, "TE": 50, "K": 30, "DST": 50}
         rows = []
         for position, group in per_player.groupby("Position"):
             observed = float(group["Historical CV %"].median())
