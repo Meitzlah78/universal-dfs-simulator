@@ -4322,27 +4322,12 @@ if platform == "DraftKings" and lineup_mode == "Showdown":
                             key="dk_showdown_unified_export"
                         )
                 else:
-                    # This roster-only file is for uploading lineups as new entries.
-                    # Replacing existing entries requires the DraftKings My Contests CSV.
-                    basic_export = lineup_ids_df.copy()
+                    # Always target existing contest entries; don't offer a new-entry upload path.
                     st.warning(
-                        "NEW LINEUPS ONLY: This file contains CPT/FLEX player IDs for DraftKings → Upload Lineups. "
-                        "It does NOT replace existing contest entries. To change entries you already entered, "
-                        "download the entries file from DraftKings My Lineups → Edit Entries, upload that file in this app, "
-                        "then use the separate Edit Entries export above."
+                        "To put these lineups into your existing entries, upload the CSV from DraftKings "
+                        "My Contests / Edit Entries in this app and select the matching contest. "
+                        "Then this app will make one replacement file that preserves Entry IDs and Contest ID. "
+                        "A separate new-lineups export is intentionally disabled."
                     )
-                    st.download_button(
-                        label="DOWNLOAD NEW LINEUPS FOR UPLOAD",
-                        data=basic_export.to_csv(index=False).encode("utf-8"),
-                        file_name="DraftKings_Showdown_Lineups.csv",
-                        mime="text/csv",
-                        use_container_width=True,
-                        key="dk_showdown_unified_export"
-                    )
-                st.link_button(
-                    "UPLOAD TO DRAFTKINGS",
-                    "https://www.draftkings.com/lineup/upload",
-                    use_container_width=True
-                )
     else:
         st.info("Run CONTEST SIM and build your final portfolio first.")
