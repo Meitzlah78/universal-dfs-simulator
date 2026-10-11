@@ -3701,7 +3701,7 @@ if (
             )
 
     progress.empty()
-    scoring_status.success("Contest scoring finished. Preparing your ranked lineups...")
+    scoring_status.caption("Scoring complete. Building the ranked results table...")
 
     results_df = candidates_df.copy()
 
@@ -3722,11 +3722,13 @@ if (
 
     results_df = (
         results_df
-        .sort_values("ContestScore", ascending=False)
+        .sort_values("ContestScore", ascending=False, kind="stable")
         .reset_index(drop=True)
     )
 
+    # Save immediately so the ranked results survive later UI rendering or reruns.
     st.session_state["contest_results_df"] = results_df
+    scoring_status.success(f"Ranking complete — {len(results_df):,} lineups ranked. Loading your portfolio below.")
 
 # ============================================
 
@@ -4124,24 +4126,26 @@ if "contest_results_df" in st.session_state:
     )
     total_lineups = len(portfolio_df)
     exposure_rows = []
-    if total_lineups:
-        for _, player_row in players_df.iterrows():
-            player_name = str(player_row["Name"])
-            appearances = sum(
-                (portfolio_df[col].astype(str) == player_name).sum()
-                for col in lineup_columns
-            )
+    if total_lineups and lineup_columns:
+        # Count portfolio appearances in one pass rather than repeatedly scanning
+        # the portfolio once for every player in the full player pool.
+        flat_portfolio_names = portfolio_df[lineup_columns].astype(str).to_numpy().ravel()
+        appearance_counts = pd.Series(flat_portfolio_names).value_counts().to_dict()
+        player_lookup = players_df.drop_duplicates("Name").set_index("Name", drop=False)
+        for player_name, appearances in appearance_counts.items():
+            if player_name not in player_lookup.index:
+                continue
+            player_row = player_lookup.loc[player_name]
             captain_appearances = int(captain_count.get(player_name, 0))
-            if appearances:
-                exposure_rows.append({
-                    "Player": player_name,
-                    "Team": player_row.get("Team", ""),
-                    "Position": player_row.get("Position", ""),
-                    "Lineups": int(appearances),
-                    "Exposure %": round(100 * appearances / total_lineups, 1),
-                    "Captain Lineups": captain_appearances,
-                    "Captain %": round(100 * captain_appearances / total_lineups, 1)
-                })
+            exposure_rows.append({
+                "Player": player_name,
+                "Team": player_row.get("Team", ""),
+                "Position": player_row.get("Position", ""),
+                "Lineups": int(appearances),
+                "Exposure %": round(100 * appearances / total_lineups, 1),
+                "Captain Lineups": captain_appearances,
+                "Captain %": round(100 * captain_appearances / total_lineups, 1)
+            })
 
     st.write("### Final Portfolio Exposure")
     st.caption(
