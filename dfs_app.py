@@ -1471,7 +1471,7 @@ if platform == "FanDuel":
     with build_cols[0]:
         st.write("### Build Settings")
         fd_salary_range = st.slider(
-        "Allowed lineup salary range",
+            "Allowed lineup salary range",
             min_value=0,
             max_value=60000,
             value=(54000, 60000),
@@ -3343,7 +3343,7 @@ if platform == "FanDuel":
     with build_cols[0]:
         st.write("### Build Settings")
         dk_salary_range = st.slider(
-        "Allowed lineup salary range",
+            "Allowed lineup salary range",
             min_value=0,
             max_value=50000,
             value=(45000, 50000),
@@ -3797,29 +3797,6 @@ if platform == "FanDuel":
 
 # One-click workflow: SIM runs player simulations, builds the opponent field,
 # then builds and scores the user's lineups below.
-st.write("### Build Settings")
-dk_salary_range = st.slider(
-    "Allowed lineup salary range",
-    min_value=0,
-    max_value=50000,
-    value=(45000, 50000),
-    step=100,
-    format="$%d",
-    key="dk_build_salary_range_" + lineup_mode.replace(" ", "_").lower(),
-    help="Only build lineups whose total salary falls inside this range."
-)
-MIN_LINEUP_SALARY, MAX_LINEUP_SALARY = dk_salary_range
-aggressiveness_pct = st.slider(
-    "Lineup Build Aggressiveness", 0, 100, 50, step=5,
-    help="Conservative favors steadier outcomes; aggressive favors ceiling and volatility. Does not change simulation or lineup counts.",
-    key="lineup_build_aggressiveness",
-)
-aggressiveness = aggressiveness_pct / 100.0
-P95_WEIGHT = 0.60 - 0.30 * aggressiveness
-P99_WEIGHT = 0.10 + 0.45 * aggressiveness
-MEAN_WEIGHT = 1.0 - P95_WEIGHT - P99_WEIGHT
-STDDEV_WEIGHT = 0.10 * (2.0 * aggressiveness - 1.0)
-st.caption(f"Build style: {aggressiveness_pct}% aggressive · P95 {P95_WEIGHT:.0%} · P99 {P99_WEIGHT:.0%} · average {MEAN_WEIGHT:.0%} · volatility {STDDEV_WEIGHT:+.0%}.")
 
 build_cols = st.columns([1, 1, 0.65])
 with build_cols[0]:
