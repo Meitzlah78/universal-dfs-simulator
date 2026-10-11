@@ -1653,8 +1653,10 @@ if platform == "FanDuel":
         st.caption(f"Build style: {aggressiveness_pct}% aggressive · P95 {P95_WEIGHT:.0%} · P99 {P99_WEIGHT:.0%} · average {MEAN_WEIGHT:.0%} · volatility {STDDEV_WEIGHT:+.0%}.")
     with build_cols[2]:
         st.write("### Run")
-        fd_run_all = st.button("SIM", type="primary", use_container_width=True, key="fd_run_all_" + lineup_mode.replace(" ", "_").lower())
-        if fd_run_all:
+        fd_sim_clicked = st.button("SIM", type="primary", use_container_width=True, key="fd_sim_" + lineup_mode.replace(" ", "_").lower())
+        fd_build_clicked = st.button("BUILD", use_container_width=True, key="fd_build_" + lineup_mode.replace(" ", "_").lower())
+        fd_contest_clicked = st.button("CONTEST SIM", use_container_width=True, key="fd_contest_sim_" + lineup_mode.replace(" ", "_").lower())
+        if fd_sim_clicked:
             with st.spinner(f"Running {SIMULATION_COUNT:,} FanDuel scoring simulations..."):
                 rng = np.random.default_rng()
                 position_rates = {
@@ -1847,7 +1849,7 @@ if platform == "FanDuel":
             )
             fd_slots = ["QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "FLEX", "D"]
 
-        if fd_run_all:
+        if fd_build_clicked:
             rng = np.random.default_rng()
             pool = fd_players.copy()
             pool["Eligible"] = pool["Position"].apply(
@@ -1980,7 +1982,7 @@ if platform == "FanDuel":
                     "and make sure the uploaded slate has enough players for this contest type."
                 )
 
-        if fd_run_all:
+        if fd_contest_clicked:
             fd_pool = fd_players.copy()
             fd_pool["Eligible"] = fd_pool["Position"].apply(
                 lambda value: set(str(value).upper().replace(" ", "").split("/"))
