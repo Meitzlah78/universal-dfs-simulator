@@ -2409,6 +2409,22 @@ if entry_file is not None:
             st.error("Could not find player-slot columns in this DraftKings entry CSV.")
             st.stop()
 
+        # Validate the uploaded contest-entry template against the selected format.
+        normalized_slots = [str(slot).strip().upper() for slot in roster_headers]
+        entry_is_showdown = any(slot == "CPT" for slot in normalized_slots)
+        if lineup_mode == "Showdown" and not entry_is_showdown:
+            st.error(
+                "This is not a DraftKings Showdown entry file: its roster columns do not include CPT. "
+                "Select DraftKings Classic or upload the correct Showdown entries file."
+            )
+            st.stop()
+        if lineup_mode == "Classic" and entry_is_showdown:
+            st.error(
+                "This is a DraftKings Showdown entry file (CPT/FLEX), but DraftKings Classic is selected. "
+                "Select DraftKings Showdown or upload the correct Classic entries file."
+            )
+            st.stop()
+
         parsed_entries = []
         repaired_count = 0
         ignored_rows = 0
@@ -2704,6 +2720,23 @@ if salary_file is not None:
             if loaded_players.empty:
                 st.error("No usable players were found in that file. The sample player pool is still being used.")
             else:
+                # A Showdown salary file must contain players from exactly one matchup
+                # (two NFL teams); a full-slate salary file must not be accepted.
+                teams_in_file = sorted(
+                    set(loaded_players["Team"].astype(str).str.strip().str.upper())
+                    - {"", "NAN", "NONE"}
+                )
+                if lineup_mode == "Showdown" and len(teams_in_file) != 2:
+                    raise ValueError(
+                        f"Showdown requires a salary file for one game (exactly 2 teams). "
+                        f"This file contains {len(teams_in_file)} teams: {', '.join(teams_in_file[:12])}. "
+                        "Upload the DK Salaries CSV for the specific game."
+                    )
+                if lineup_mode == "Classic" and len(teams_in_file) <= 2:
+                    raise ValueError(
+                        "This salary file contains only one game's teams and looks like a Showdown slate. "
+                        "Select DraftKings Showdown or upload the full-slate Classic salary file."
+                    )
                 players_df = loaded_players.reset_index(drop=True)
             # Ignore any projection column in the uploaded salary CSV.
             players_df["Projection"] = np.nan
