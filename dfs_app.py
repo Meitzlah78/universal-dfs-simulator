@@ -1653,9 +1653,19 @@ if platform == "FanDuel":
         st.caption(f"Build style: {aggressiveness_pct}% aggressive · P95 {P95_WEIGHT:.0%} · P99 {P99_WEIGHT:.0%} · average {MEAN_WEIGHT:.0%} · volatility {STDDEV_WEIGHT:+.0%}.")
     with build_cols[2]:
         st.write("### Run")
-        fd_sim_clicked = st.button("SIM", type="primary", use_container_width=True, key="fd_sim_" + lineup_mode.replace(" ", "_").lower())
-        fd_build_clicked = st.button("BUILD", use_container_width=True, key="fd_build_" + lineup_mode.replace(" ", "_").lower())
-        fd_contest_clicked = st.button("CONTEST SIM", use_container_width=True, key="fd_contest_sim_" + lineup_mode.replace(" ", "_").lower())
+        fd_run_all_clicked = st.button(
+            "RUN SIM → BUILD → CONTEST SIM",
+            type="primary",
+            use_container_width=True,
+            key="fd_run_all_" + lineup_mode.replace(" ", "_").lower(),
+            help="Run all three FanDuel steps in order, with a progress bar."
+        )
+        fd_sim_clicked = fd_run_all_clicked
+        fd_build_clicked = fd_run_all_clicked
+        fd_contest_clicked = fd_run_all_clicked
+        fd_progress_bar = st.progress(0, text="Ready to run FanDuel simulation.")
+        if fd_run_all_clicked:
+            fd_progress_bar.progress(2, text="Starting FanDuel simulation...")
         if fd_sim_clicked:
             with st.spinner(f"Running {SIMULATION_COUNT:,} FanDuel scoring simulations..."):
                 rng = np.random.default_rng()
@@ -1745,6 +1755,7 @@ if platform == "FanDuel":
                     }
                 st.session_state["fd_player_sim_" + lineup_mode.replace(" ", "_").lower()] = player_sim
                 st.session_state["fd_simulation_ready_" + lineup_mode.replace(" ", "_").lower()] = True
+            fd_progress_bar.progress(30, text="Simulation complete. Building 5,000 FanDuel lineups...")
 
         st.success(f"Loaded {len(fd_players)} FanDuel players after injury-status filtering.")
         if fd_proj_col is None:
@@ -1981,6 +1992,11 @@ if platform == "FanDuel":
                     "No valid lineups found. Check player positions, salary values, "
                     "and make sure the uploaded slate has enough players for this contest type."
                 )
+            fd_progress_bar.progress(
+                60,
+                text="Lineup build complete. Simulating the contest field..."
+                if results else "Lineup build did not produce valid lineups."
+            )
 
         if fd_contest_clicked:
             fd_pool = fd_players.copy()
@@ -2003,6 +2019,12 @@ if platform == "FanDuel":
                 with st.spinner(f"Building {fd_opponent_target:,} simulated FanDuel contest entries..."):
                     while len(opponent_rows) < fd_opponent_target and attempts < max(300000, fd_opponent_target * 15):
                         attempts += 1
+                        if attempts % 1000 == 0 and fd_opponent_target > 0:
+                            progress_pct = 60 + int(35 * min(len(opponent_rows) / fd_opponent_target, 1.0))
+                            fd_progress_bar.progress(
+                                min(progress_pct, 95),
+                                text=f"Simulating contest field: {len(opponent_rows):,} of {fd_opponent_target:,} opponents..."
+                            )
                         chosen = {}
                         used = set()
                         salary = 0
@@ -2102,6 +2124,10 @@ if platform == "FanDuel":
                         # Keep the contest results area consistent with DraftKings Classic and Showdown.
                 else:
                     st.error("Could not create valid FanDuel opponent lineups. Check the player pool and salary range.")
+            fd_progress_bar.progress(
+                100,
+                text="FanDuel SIM → BUILD → CONTEST SIM finished."
+            )
 
         fd_results = st.session_state.get(fd_build_key)
         if fd_results is not None:
