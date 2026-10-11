@@ -540,10 +540,7 @@ def apply_injury_statuses(frame, key_prefix):
         st.warning("NEW INJURY NEWS FOUND — current statuses were refreshed automatically.")
     if not live_injuries and "unavailable" in injury_source.casefold() or not live_injuries and "unexpected" in injury_source.casefold():
         st.warning("Live injury statuses could not be loaded. Do not assume every player is healthy; try syncing again.")
-    if st.button("SYNC INJURY NEWS NOW", key=key_prefix + "_sync_injury_news"):
-        st.session_state["injury_updates_found"] = False
-        fetch_nfl_injury_statuses.clear()
-        st.rerun()
+    # Injury news is refreshed together with projections by the shared refresh button.
 
     out_names = set(result.loc[result["Injury Status"].str.casefold() == "out", "Name"].astype(str).str.strip().str.casefold())
     cache_tokens = (
@@ -643,7 +640,7 @@ def show_projection_refresh_status(source_files, key_prefix=None):
 
     left, right = st.columns([1, 2])
     with left:
-        refresh_clicked = st.button("REFRESH PROJECTIONS", key="shared_refresh_projections")
+        refresh_clicked = st.button("REFRESH PROJECTIONS + INJURY NEWS", key="shared_refresh_projections")
     with right:
         updated_at = st.session_state.get(time_key)
         if updated_at:
@@ -653,9 +650,11 @@ def show_projection_refresh_status(source_files, key_prefix=None):
 
     if refresh_clicked:
         download_public_projection_table.clear()
+        fetch_nfl_injury_statuses.clear()
         st.session_state["projection_updates_found"] = False
+        st.session_state["injury_updates_found"] = False
         st.session_state[time_key] = datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %I:%M:%S %p %Z")
-        st.success("Refreshing projections for the selected slate. Uploaded CSVs take priority; public projection sources will also be checked.")
+        st.success("Refreshing projections and NFL injury news. Uploaded projection CSVs still take priority.")
         st.rerun()
 
 
