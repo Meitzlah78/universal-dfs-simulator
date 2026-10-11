@@ -371,6 +371,18 @@ def apply_injury_statuses(frame, key_prefix):
     saved_statuses = st.session_state["player_injury_statuses"]
 
     status_df = frame[[c for c in ["Name", "Position", "Team"] if c in frame.columns]].copy()
+
+    # Current confirmed NFL injury update for the BUF-LAR Showdown slate:
+    # Joshua Palmer was ruled OUT for the October 12, 2026 game.
+    # Apply this slate-specific correction even if an earlier Active status was saved.
+    if "Team" in status_df.columns:
+        palmer_mask = (
+            status_df["Name"].astype(str).str.strip().str.casefold().eq("joshua palmer")
+            & status_df["Team"].astype(str).str.strip().str.upper().eq("BUF")
+        )
+        if palmer_mask.any():
+            saved_statuses["joshua palmer"] = "Out"
+
     status_df["Injury Status"] = status_df["Name"].astype(str).map(
         lambda name: saved_statuses.get(name.strip().casefold(), "Active")
     )
