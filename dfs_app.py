@@ -198,7 +198,8 @@ def add_lineup_field_ownership(portfolio_df):
 
 
 def build_showdown_opponent_field(available_players, simulation_df, players_df,
-                                  salary_map, captain_salary_map, salary_cap, target):
+                                  salary_map, captain_salary_map, salary_cap, target,
+                                  progress_bar=None, progress_text=None):
     """Build Showdown opponents with cached NumPy arrays to avoid repeated pandas work."""
     columns = ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5", "Salary"]
     if target <= 0 or len(available_players) < 6:
@@ -219,6 +220,11 @@ def build_showdown_opponent_field(available_players, simulation_df, players_df,
 
     while len(rows) < target and attempts < max_attempts:
         attempts += 1
+        if progress_bar is not None and (attempts % 1000 == 0 or len(rows) >= target):
+            progress_bar.progress(
+                min(0.99, attempts / max_attempts),
+                text=f"Building opponent lineups: {len(rows):,} of {target:,} accepted (attempt {attempts:,})"
+            )
         picked = rng.choice(len(names), size=6, replace=False, p=weights)
         captain_idx = picked[int(np.argmax(means[picked]))]
         flex_idx = picked[picked != captain_idx]
@@ -1994,8 +2000,10 @@ def _simulate_scored_player_outcomes(players_df, platform, rng):
     Projections are deliberately not used to scale simulated scores. Game scripts
     create shared game-level conditions so teammates and opponents move together.
     """
+    simulation_progress = st.progress(0, text="Preparing player simulations...")
     historical = load_nfl_historical_player_stats()
     historical_name_index = _build_historical_name_index(historical)
+    simulation_progress.progress(0.05, text="Historical data loaded. Preparing game scripts...")
     simulations = {}
     n = SIMULATIONS
 
@@ -2052,6 +2060,7 @@ def _simulate_scored_player_outcomes(players_df, platform, rng):
                     "trailing": rng.random(n) < 0.35,
                 }
 
+    total_players = max(1, len(players_df))
     for index, (_, row) in enumerate(players_df.iterrows()):
         name = str(row["Name"])
         positions = set(str(row.get("Position", "")).upper().replace(" ", "").split("/"))
@@ -2171,8 +2180,17 @@ def _simulate_scored_player_outcomes(players_df, platform, rng):
 
         script_factor = np.clip(script_factor, 0.70, 1.35)
         simulations[name] = np.maximum(scores * script_factor, 0.0)
+        if index == 0 or (index + 1) % 2 == 0 or index + 1 == total_players:
+            progress_value = 0.05 + 0.90 * (index + 1) / total_players
+            simulation_progress.progress(
+                min(0.95, progress_value),
+                text=f"Simulating players: {index + 1} of {total_players} ({(index + 1) / total_players:.0%})"
+            )
 
-    return pd.DataFrame(simulations)
+    result = pd.DataFrame(simulations)
+    simulation_progress.progress(1.0, text=f"Player simulations complete: {total_players} players")
+    simulation_progress.empty()
+    return result
 
 # ================================
 # PLAYER POOL
@@ -3579,11 +3597,15 @@ if build_clicked:
     st.session_state["simulation_df"] = simulation_df
     st.session_state["simulations_ready"] = True
     # Build the contest field using the selected contest's field size.
+    field_progress = st.progress(0, text=f"Building {dk_opponent_target:,} simulated opponent lineups...")
     with st.spinner(f"Building {dk_opponent_target:,} simulated opponent lineups..."):
         contest_field_df = build_showdown_opponent_field(
             available_players, simulation_df, players_df, salary_map,
-            captain_salary_map, SALARY_CAP, dk_opponent_target
+            captain_salary_map, SALARY_CAP, dk_opponent_target,
+            progress_bar=field_progress
         )
+    field_progress.progress(1.0, text=f"Opponent lineups complete: {len(contest_field_df):,} created")
+    field_progress.empty()
         show_field_ownership(contest_field_df, ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"], "Simulated Field Player Ownership", captain_slot="Captain")
         st.session_state["contest_field_df"] = contest_field_df
         st.session_state["contest_field_count"] = len(contest_field_df)
@@ -3665,8 +3687,13 @@ per_captain_candidate_limit = max(
     int(np.ceil(CANDIDATE_COUNT / max(1, len(search_pool))))
 )
 
-for captain in search_pool:
+candidate_progress = st.progress(0, text=f"Building candidate lineups: 0 of {CANDIDATE_COUNT:,}")
+for captain_index, captain in enumerate(search_pool):
     captain_candidates = []
+    candidate_progress.progress(
+        captain_index / max(1, len(search_pool)),
+        text=f"Testing captain {captain_index + 1} of {len(search_pool)}: {captain}"
+    )
 
     if control_map[captain]["Captain Max %"] <= 0:
         continue
@@ -3688,6 +3715,11 @@ for captain in search_pool:
         and len(flex_pool) >= 5
     ):
         captain_attempts += 1
+        if captain_attempts % 100 == 0:
+            candidate_progress.progress(
+                min(0.99, (captain_index + min(0.99, captain_attempts / max(1, max_captain_attempts))) / max(1, len(search_pool))),
+                text=f"Testing {captain}: {len(candidates) + len(captain_candidates):,} candidates accepted"
+            )
         sampled = rng.choice(np.asarray(flex_pool, dtype=object), size=5, replace=False)
         flex_players = tuple(str(p) for p in sampled)
         flex_key = tuple(sorted(flex_players))
@@ -3787,10 +3819,16 @@ for captain in search_pool:
         })
 
     candidates.extend(captain_candidates)
+    candidate_progress.progress(
+        min(0.99, (captain_index + 1) / max(1, len(search_pool))),
+        text=f"Candidate lineups built: {len(candidates):,} of {CANDIDATE_COUNT:,}"
+    )
     if len(candidates) >= CANDIDATE_COUNT:
         break
 
 candidates_df = pd.DataFrame(candidates)
+candidate_progress.progress(1.0, text=f"Candidate lineup search complete: {len(candidates_df):,} found")
+candidate_progress.empty()
 
 st.session_state["candidates_df"] = candidates_df
 st.session_state["candidates_ready"] = True
