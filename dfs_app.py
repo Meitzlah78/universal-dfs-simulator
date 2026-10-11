@@ -4148,10 +4148,10 @@ if platform == "DraftKings" and lineup_mode == "Showdown":
                             key="dk_showdown_unified_export"
                         )
                 else:
+                    # DraftKings lineup uploads require roster-slot headers only.
+                    # Do not add Contest ID or Contest Name columns to this template.
                     basic_export = lineup_ids_df.copy()
-                    basic_export.insert(0, "Contest Name", str(contest_meta.get("name", "")))
-                    basic_export.insert(0, "Contest ID", str(contest_meta.get("id", "")))
-                    st.caption("This creates a standard lineup CSV. To replace entries you already have, upload your DraftKings My Contests CSV and select the contest first.")
+                    st.caption("This file uses DraftKings Showdown roster columns only. To replace existing entries, upload your DraftKings My Contests CSV and select the contest first.")
                     st.download_button(
                         label="EXPORT SHOWDOWN LINEUPS",
                         data=basic_export.to_csv(index=False).encode("utf-8"),
