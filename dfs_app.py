@@ -3685,47 +3685,45 @@ if (
     avg_percentiles = np.zeros(n_candidates)
 
     progress = st.progress(0)
+    # Convert the simulation table once, then score small batches with NumPy.
+    # This avoids 10,000 repeated pandas row lookups while keeping all 10,000
+    # simulations and the full opponent field.
+    simulation_values = simulation_df.to_numpy(dtype=np.float32, copy=False)
+    batch_size = 50
 
-    for sim_idx in range(n_sims):
-
-        values = simulation_df.iloc[sim_idx].to_numpy(
-            dtype=np.float32
-        )
-
-        cand_scores = values[candidate_idx].sum(axis=1)
-        field_scores = values[contest_idx].sum(axis=1)
+    for batch_start in range(0, n_sims, batch_size):
+        batch_end = min(batch_start + batch_size, n_sims)
+        batch_values = simulation_values[batch_start:batch_end]
+        batch_candidate_scores = batch_values[:, candidate_idx].sum(axis=2)
+        batch_field_scores = batch_values[:, contest_idx].sum(axis=2)
 
         if scoring_multiplier != 1.0:
-            cand_scores += values[candidate_idx[:, 0]] * (scoring_multiplier - 1.0)
-            field_scores += values[contest_idx[:, 0]] * (scoring_multiplier - 1.0)
+            batch_candidate_scores += batch_values[:, candidate_idx[:, 0]] * (scoring_multiplier - 1.0)
+            batch_field_scores += batch_values[:, contest_idx[:, 0]] * (scoring_multiplier - 1.0)
 
-        sorted_field = np.sort(field_scores)
+        for offset in range(batch_end - batch_start):
+            cand_scores = batch_candidate_scores[offset]
+            field_scores = batch_field_scores[offset]
+            sorted_field = np.sort(field_scores)
 
-        count_greater = (
-            total_field
-            - np.searchsorted(
-                sorted_field,
-                cand_scores,
-                side="right"
+            count_greater = total_field - np.searchsorted(
+                sorted_field, cand_scores, side="right"
             )
-        )
+            percentile = 1.0 - (count_greater / total_field)
 
-        percentile = 1.0 - (
-            count_greater / total_field
-        )
+            win_rates += (count_greater == 0)
+            top1_rates += (percentile >= 0.99)
+            top5_rates += (percentile >= 0.95)
+            top10_rates += (percentile >= 0.90)
+            cash_rates += (percentile >= 0.50)
+            avg_percentiles += percentile
 
-        win_rates += (count_greater == 0)
-        top1_rates += (percentile >= 0.99)
-        top5_rates += (percentile >= 0.95)
-        top10_rates += (percentile >= 0.90)
-        cash_rates += (percentile >= 0.50)
-        avg_percentiles += percentile
-
-        if (sim_idx == 0 or (sim_idx + 1) % 100 == 0 or sim_idx + 1 == n_sims):
-            progress.progress((sim_idx + 1) / n_sims)
+        completed = batch_end
+        if batch_start == 0 or completed % 100 == 0 or completed == n_sims:
+            progress.progress(completed / n_sims)
             scoring_status.caption(
-                f"Scoring contest: {sim_idx + 1:,} of {n_sims:,} simulations complete "
-                f"({(sim_idx + 1) / n_sims:.0%})."
+                f"Scoring contest: {completed:,} of {n_sims:,} simulations complete "
+                f"({completed / n_sims:.0%})."
             )
 
     progress.empty()
