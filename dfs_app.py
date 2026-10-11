@@ -2301,27 +2301,32 @@ if platform == "FanDuel":
                         projection = float(candidate)
                         break
 
+            # Position-specific volatility targets. Historical data still informs
+            # each player's spread, but blending it with a position baseline helps
+            # prevent noisy samples from creating extreme tails.
             position_cv_limits = {
-                "QB": (0.25, 0.55, 0.40),
-                "RB": (0.25, 0.55, 0.40),
-                "WR": (0.30, 0.60, 0.48),
-                "TE": (0.30, 0.60, 0.48),
+                "QB": (0.25, 0.50, 0.35),
+                "RB": (0.25, 0.50, 0.40),
+                "WR": (0.30, 0.55, 0.45),
+                "TE": (0.30, 0.55, 0.45),
                 "K": (0.20, 0.40, 0.30),
-                "DST": (0.35, 0.75, 0.55),
+                "DST": (0.35, 0.65, 0.50),
             }
-            min_cv, max_cv, fallback_cv = position_cv_limits.get(
-                position_type, (0.30, 0.60, 0.45)
+            min_cv, max_cv, baseline_cv = position_cv_limits.get(
+                position_type, (0.30, 0.55, 0.45)
             )
             sampled_mean = float(np.mean(scores)) if len(scores) else 0.0
             sampled_std = float(np.std(scores, ddof=1)) if len(scores) > 1 else 0.0
 
             if np.isfinite(projection) and projection > 0:
-                # Keep historical variation, but limit volatility by position.
+                # Use half historical volatility and half position baseline, then
+                # cap the result to reduce over-wide P90/P95/P99 outcomes.
                 if sampled_mean > 0 and np.isfinite(sampled_std) and sampled_std > 0:
                     historical_cv = sampled_std / sampled_mean
-                    volatility_cv = float(np.clip(historical_cv, min_cv, max_cv))
+                    blended_cv = 0.50 * historical_cv + 0.50 * baseline_cv
+                    volatility_cv = float(np.clip(blended_cv, min_cv, max_cv))
                 else:
-                    volatility_cv = fallback_cv
+                    volatility_cv = baseline_cv
                 target_std = max(0.5, projection * volatility_cv)
 
                 if sampled_std > 1e-6 and np.isfinite(sampled_std):
@@ -2669,27 +2674,32 @@ else:
                         projection = float(candidate)
                         break
 
+            # Position-specific volatility targets. Historical data still informs
+            # each player's spread, but blending it with a position baseline helps
+            # prevent noisy samples from creating extreme tails.
             position_cv_limits = {
-                "QB": (0.25, 0.55, 0.40),
-                "RB": (0.25, 0.55, 0.40),
-                "WR": (0.30, 0.60, 0.48),
-                "TE": (0.30, 0.60, 0.48),
+                "QB": (0.25, 0.50, 0.35),
+                "RB": (0.25, 0.50, 0.40),
+                "WR": (0.30, 0.55, 0.45),
+                "TE": (0.30, 0.55, 0.45),
                 "K": (0.20, 0.40, 0.30),
-                "DST": (0.35, 0.75, 0.55),
+                "DST": (0.35, 0.65, 0.50),
             }
-            min_cv, max_cv, fallback_cv = position_cv_limits.get(
-                position_type, (0.30, 0.60, 0.45)
+            min_cv, max_cv, baseline_cv = position_cv_limits.get(
+                position_type, (0.30, 0.55, 0.45)
             )
             sampled_mean = float(np.mean(scores)) if len(scores) else 0.0
             sampled_std = float(np.std(scores, ddof=1)) if len(scores) > 1 else 0.0
 
             if np.isfinite(projection) and projection > 0:
-                # Keep historical variation, but limit volatility by position.
+                # Use half historical volatility and half position baseline, then
+                # cap the result to reduce over-wide P90/P95/P99 outcomes.
                 if sampled_mean > 0 and np.isfinite(sampled_std) and sampled_std > 0:
                     historical_cv = sampled_std / sampled_mean
-                    volatility_cv = float(np.clip(historical_cv, min_cv, max_cv))
+                    blended_cv = 0.50 * historical_cv + 0.50 * baseline_cv
+                    volatility_cv = float(np.clip(blended_cv, min_cv, max_cv))
                 else:
-                    volatility_cv = fallback_cv
+                    volatility_cv = baseline_cv
                 target_std = max(0.5, projection * volatility_cv)
 
                 if sampled_std > 1e-6 and np.isfinite(sampled_std):
