@@ -1094,7 +1094,7 @@ def automatic_projection_refresh(platform_name):
     if successful:
         st.caption("Automatic projection check: " + ", ".join(successful) + ". Last checked: " + now)
     else:
-        st.warning("Automatic projection check could not load any public projection tables. It will try again in 15 minutes.")
+        st.warning("Automatic projection check could not load any public projection tables. It will try again in 30 minutes.")
 
 
 
