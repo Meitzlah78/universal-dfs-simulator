@@ -4253,8 +4253,16 @@ def build_portfolio(results_df, lineup_count, metric, lineup_columns=None):
     lineup_columns = [col for col in lineup_columns if col in results_df.columns]
     if not lineup_columns:
         raise ValueError("Could not identify lineup roster columns.")
-    ranked = results_df.drop_duplicates(subset=lineup_columns, keep="first").sort_values(metric, ascending=False)
+    ranked = results_df.drop_duplicates(subset=lineup_columns, keep="first").copy()
+    ranked[metric] = pd.to_numeric(ranked[metric], errors="coerce").fillna(0.0)
+    metric_min = float(ranked[metric].min()) if not ranked.empty else 0.0
+    metric_max = float(ranked[metric].max()) if not ranked.empty else 0.0
+    if metric_max > metric_min:
+        ranked["_portfolio_quality"] = (ranked[metric] - metric_min) / (metric_max - metric_min)
+    else:
+        ranked["_portfolio_quality"] = 1.0
     player_counts, captain_counts, selected_rows = {}, {}, []
+    selected_player_sets = []
 
     def exposure_limit(player, setting, default=100):
         settings = control_map.get(str(player), {})
@@ -4267,20 +4275,44 @@ def build_portfolio(results_df, lineup_count, metric, lineup_columns=None):
         return max(1, int(np.ceil(lineup_count * min(100.0, percent) / 100.0)))
 
     captain_col = "Captain" if "Captain" in lineup_columns else None
-    for _, row in ranked.iterrows():
-        if len(selected_rows) >= lineup_count:
+    # Greedily balance lineup quality with uniqueness. The overlap penalty is
+    # normalized, so it behaves consistently across win-rate and score metrics.
+    remaining = ranked.copy()
+    while len(selected_rows) < lineup_count and not remaining.empty:
+        best_index = None
+        best_value = -float("inf")
+        for idx, row in remaining.iterrows():
+            names = [str(row[col]) for col in lineup_columns]
+            unique_names = set(names)
+            if any(player_counts.get(name, 0) >= exposure_limit(name, "Max Exposure %") for name in unique_names):
+                continue
+            captain = str(row[captain_col]) if captain_col else None
+            if captain_col and captain_counts.get(captain, 0) >= exposure_limit(captain, "Captain Max %"):
+                continue
+            if selected_player_sets:
+                overlap = max(
+                    len(unique_names & prior) / max(1, len(unique_names))
+                    for prior in selected_player_sets
+                )
+            else:
+                overlap = 0.0
+            selection_value = float(row["_portfolio_quality"]) - 0.20 * overlap
+            if selection_value > best_value:
+                best_value = selection_value
+                best_index = idx
+        if best_index is None:
             break
+        row = remaining.loc[best_index]
         names = [str(row[col]) for col in lineup_columns]
-        if any(player_counts.get(name, 0) >= exposure_limit(name, "Max Exposure %") for name in names):
-            continue
+        unique_names = set(names)
         captain = str(row[captain_col]) if captain_col else None
-        if captain_col and captain_counts.get(captain, 0) >= exposure_limit(captain, "Captain Max %"):
-            continue
-        selected_rows.append(row.copy())
-        for name in set(names):
+        selected_rows.append(row.drop(labels=["_portfolio_quality"]).copy())
+        selected_player_sets.append(unique_names)
+        for name in unique_names:
             player_counts[name] = player_counts.get(name, 0) + 1
         if captain_col:
             captain_counts[captain] = captain_counts.get(captain, 0) + 1
+        remaining = remaining.drop(index=best_index)
 
     if not selected_rows:
         raise ValueError("No lineups fit the current exposure limits. Increase Max Exposure % and try again.")
