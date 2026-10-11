@@ -3985,6 +3985,34 @@ else:
     # Captain exposure is only relevant to DraftKings Showdown.
     if platform == "DraftKings" and lineup_mode == "Classic":
         player_display = player_display.drop(columns=["Captain Exp %"], errors="ignore")
+    # Export pre-game projections so they can be matched to actual scores later.
+    with st.expander("Save Pre-Game Projection Snapshot", expanded=False):
+        st.caption(
+            "Download this before kickoff. After the game, add an ActualPoints column "
+            "with each player's fantasy points, then upload the file in Projection Accuracy Report."
+        )
+        snapshot_date = st.date_input(
+            "Game date for this snapshot",
+            value=pd.Timestamp.now(tz=ZoneInfo("America/New_York")).date(),
+            key="projection_snapshot_game_date",
+        )
+        snapshot_columns = [
+            c for c in [
+                "Name", "Position", "Team", "Opponent", "Salary", "DK_ID",
+                "Projection", "ProjectionSource", "Injury Status"
+            ] if c in players_df.columns
+        ]
+        snapshot_df = players_df[snapshot_columns].copy()
+        snapshot_df.insert(0, "GameDate", str(snapshot_date))
+        snapshot_df.insert(1, "Format", selected_format)
+        st.download_button(
+            "Download Pre-Game Projection Snapshot",
+            data=snapshot_df.to_csv(index=False).encode("utf-8"),
+            file_name=f"projection_snapshot_{selected_format.lower().replace(' ', '_')}_{snapshot_date}.csv",
+            mime="text/csv",
+            key="projection_snapshot_download",
+        )
+
     # Copy/paste-ready player pool export for sharing analysis in ChatGPT.
     with st.expander("Copy Player Info to ChatGPT"):
         st.caption("Copy the text below and paste it into ChatGPT. It includes player details, simulation stats, and Captain/Flex exposure when available.")
