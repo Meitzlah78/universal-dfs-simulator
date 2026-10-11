@@ -1044,11 +1044,15 @@ def download_public_projection_table(source_name, platform_name, target_names=No
 
     return {}
 
-def refresh_public_projection_sources():
-    """Warm public projection downloads and record their values for change detection."""
+def refresh_public_projection_sources(platform_names=None):
+    """Check selected format by default to avoid slow multi-format cold starts."""
     status = {}
     snapshots = {}
-    for platform_name in ("DraftKings Classic", "DraftKings Showdown", "FanDuel Full Roster", "FanDuel Single Game"):
+    selected_platforms = tuple(platform_names or (
+        "DraftKings Classic", "DraftKings Showdown",
+        "FanDuel Full Roster", "FanDuel Single Game"
+    ))
+    for platform_name in selected_platforms:
         for source_name in ("DFF", "DraftEdge"):
             values = download_public_projection_table(source_name, platform_name)
             loaded = bool(values)
@@ -1071,10 +1075,10 @@ def refresh_public_projection_sources():
 
 
 @st.fragment(run_every="15m")
-def automatic_projection_refresh():
-    """Check public projections every 15 minutes and alert when values change."""
+def automatic_projection_refresh(platform_name):
+    """Check only the active format every 15 minutes to keep app startup responsive."""
     from datetime import datetime
-    status = refresh_public_projection_sources()
+    status = refresh_public_projection_sources((platform_name,))
     now = datetime.now().astimezone().strftime("%Y-%m-%d %I:%M:%S %p %Z")
     current_snapshot = st.session_state.get("automatic_projection_snapshot_current", {})
     previous_snapshot = st.session_state.get("automatic_projection_snapshot_previous")
@@ -1092,8 +1096,6 @@ def automatic_projection_refresh():
     else:
         st.warning("Automatic projection check could not load any public projection tables. It will try again in 15 minutes.")
 
-
-automatic_projection_refresh()
 
 
 def get_projection_source_data(uploaded_file, source_name, platform_name, target_names=None):
@@ -1212,6 +1214,7 @@ selected_format = st.selectbox(
     key="dfs_format",
 )
 platform, lineup_mode = format_options[selected_format]
+automatic_projection_refresh(selected_format)
 # Keep the derived values in session state for existing format-specific logic.
 st.session_state["dfs_platform"] = platform
 st.session_state["lineup_mode_" + platform] = lineup_mode
