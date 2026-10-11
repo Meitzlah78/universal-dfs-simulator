@@ -4179,10 +4179,18 @@ if platform == "DraftKings" and lineup_mode == "Showdown":
                 showdown_slots = ["CPT", "FLEX", "FLEX", "FLEX", "FLEX", "FLEX"]
                 lineup_ids_df = pd.DataFrame(export_rows, columns=showdown_slots)
                 st.write("#### DraftKings Showdown Export")
-                if entry_file is not None and selected_contest_id:
-                    st.caption("Replace existing entries: preserves Entry ID and Contest ID from your DraftKings My Contests CSV.")
+                contest_meta = st.session_state.get("selected_dk_contest", {})
+                has_entry_template = (
+                    entry_file is not None
+                    and selected_contest_id
+                    and "entry_df" in locals()
+                    and isinstance(entry_df, pd.DataFrame)
+                    and not entry_df.empty
+                )
+                if has_entry_template:
+                    st.caption("This export replaces your existing contest entries and preserves their Entry IDs and Contest ID.")
                     export_df = build_dk_contest_entry_export(
-                        entry_df if "entry_df" in locals() else None,
+                        entry_df,
                         selected_contest_id,
                         lineup_ids_df,
                         showdown_slots,
@@ -4190,28 +4198,26 @@ if platform == "DraftKings" and lineup_mode == "Showdown":
                     )
                     if export_df is not None:
                         st.download_button(
-                            label="EXPORT TO REPLACE EXISTING DK ENTRIES",
+                            label="EXPORT SHOWDOWN LINEUPS",
                             data=export_df.to_csv(index=False).encode("utf-8"),
                             file_name="DraftKings_Showdown_Contest_Entries.csv",
                             mime="text/csv",
                             use_container_width=True,
-                            key="dk_showdown_replace_export"
+                            key="dk_showdown_unified_export"
                         )
                 else:
-                    st.info("For an upload that replaces existing entries, upload the CSV from DraftKings My Contests above.")
-                contest_meta = st.session_state.get("selected_dk_contest", {})
-                basic_export = lineup_ids_df.copy()
-                basic_export.insert(0, "Contest Name", str(contest_meta.get("name", "")))
-                basic_export.insert(0, "Contest ID", str(contest_meta.get("id", "")))
-                st.caption("Basic export includes contest details when available, but does not target or replace existing DraftKings entries.")
-                st.download_button(
-                    "EXPORT BASIC SHOWDOWN LINEUPS (NOT ENTRY REPLACEMENT)",
-                    basic_export.to_csv(index=False).encode("utf-8"),
-                    file_name="DraftKings_Showdown_Basic_Lineups.csv",
-                    mime="text/csv",
-                    use_container_width=True,
-                    key="dk_showdown_basic_export"
-                )
+                    basic_export = lineup_ids_df.copy()
+                    basic_export.insert(0, "Contest Name", str(contest_meta.get("name", "")))
+                    basic_export.insert(0, "Contest ID", str(contest_meta.get("id", "")))
+                    st.caption("This creates a standard lineup CSV. To replace entries you already have, upload your DraftKings My Contests CSV and select the contest first.")
+                    st.download_button(
+                        label="EXPORT SHOWDOWN LINEUPS",
+                        data=basic_export.to_csv(index=False).encode("utf-8"),
+                        file_name="DraftKings_Showdown_Lineups.csv",
+                        mime="text/csv",
+                        use_container_width=True,
+                        key="dk_showdown_unified_export"
+                    )
                 st.link_button(
                     "UPLOAD TO DRAFTKINGS",
                     "https://www.draftkings.com/lineup/upload",
