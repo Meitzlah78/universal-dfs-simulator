@@ -1074,12 +1074,12 @@ def refresh_public_projection_sources(platform_names=None):
     return status
 
 
-@st.fragment(run_every="15m")
+@st.fragment(run_every="30m")
 def automatic_projection_refresh(platform_name):
-    """Check only the active format every 15 minutes to keep app startup responsive."""
+    """Check only the active format every 30 minutes to keep app startup responsive."""
     from datetime import datetime
     status = refresh_public_projection_sources((platform_name,))
-    now = datetime.now().astimezone().strftime("%Y-%m-%d %I:%M:%S %p %Z")
+    now = datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %I:%M:%S %p %Z")
     current_snapshot = st.session_state.get("automatic_projection_snapshot_current", {})
     previous_snapshot = st.session_state.get("automatic_projection_snapshot_previous")
     if previous_snapshot is not None and current_snapshot != previous_snapshot:
@@ -1388,8 +1388,9 @@ if platform == "FanDuel":
     st.write("### Upload FanDuel Salary File")
     st.caption(
         "Upload a FanDuel NFL player CSV. Player names, positions, salaries, "
-        "and IDs are read from the file. If projections are missing, add a "
-        "Projection or FPPG column for useful lineup rankings."
+        "and IDs are read from the file. FanDuel salary-file averages are ignored; "
+        "the app uses matching DFF/DraftEdge projections and excludes players "
+        "without a valid positive external projection."
     )
     fd_file = st.file_uploader(
         "Upload a FanDuel player CSV",
@@ -1788,7 +1789,11 @@ if platform == "FanDuel":
 
         st.success(f"Loaded {len(fd_players)} FanDuel players after injury-status filtering.")
         if fd_proj_col is None:
-            st.caption("FanDuel salary-file averages are ignored. A temporary salary-based estimate is used until external projections are available.")
+            st.caption(
+                "FanDuel salary-file averages are ignored. Check ProjectionSource "
+                "in the player table to see whether DFF or DraftEdge matched. "
+                "Players without a valid positive external projection are excluded."
+            )
         fd_player_display = fd_players.drop(columns=["FD_ID"], errors="ignore").copy()
         # Show exposure from the active FanDuel slate only.
         fd_build_key = "fd_lineups_" + lineup_mode.replace(" ", "_").lower()
