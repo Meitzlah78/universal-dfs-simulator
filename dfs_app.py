@@ -2325,7 +2325,7 @@ if platform == "FanDuel":
                     # Limit extreme historical outliers before rescaling. This reduces
                     # unrealistic P95/P99 values while retaining player-specific shape.
                     standardized = (scores - sampled_mean) / sampled_std
-                    standardized = np.clip(standardized, -2.25, 2.50)
+                    standardized = np.clip(standardized, -2.25, 2.25)
                     standardized_mean = float(np.mean(standardized))
                     standardized_std = float(np.std(standardized, ddof=1))
                     if standardized_std > 1e-6 and np.isfinite(standardized_std):
@@ -2361,8 +2361,15 @@ if platform == "FanDuel":
             else:
                 script_factor = scoring_factor
 
-            script_factor = np.clip(script_factor, 0.70, 1.35)
-            simulations[name] = np.maximum(scores * script_factor, 0.0)
+            script_factor = np.clip(script_factor, 0.80, 1.20)
+            final_scores = np.maximum(scores * script_factor, 0.0)
+            # Game scripts change relative outcomes and correlations, but should not
+            # silently change a player's expected score away from the supplied projection.
+            if np.isfinite(projection) and projection > 0:
+                final_mean = float(np.mean(final_scores)) if len(final_scores) else 0.0
+                if final_mean > 0 and np.isfinite(final_mean):
+                    final_scores = final_scores * (projection / final_mean)
+            simulations[name] = final_scores
             if index == 0 or (index + 1) % 2 == 0 or index + 1 == total_players:
                 progress_value = 0.05 + 0.90 * (index + 1) / total_players
                 simulation_progress.progress(
@@ -2686,7 +2693,7 @@ else:
                     # Limit extreme historical outliers before rescaling. This reduces
                     # unrealistic P95/P99 values while retaining player-specific shape.
                     standardized = (scores - sampled_mean) / sampled_std
-                    standardized = np.clip(standardized, -2.25, 2.50)
+                    standardized = np.clip(standardized, -2.25, 2.25)
                     standardized_mean = float(np.mean(standardized))
                     standardized_std = float(np.std(standardized, ddof=1))
                     if standardized_std > 1e-6 and np.isfinite(standardized_std):
@@ -2722,8 +2729,15 @@ else:
             else:
                 script_factor = scoring_factor
 
-            script_factor = np.clip(script_factor, 0.70, 1.35)
-            simulations[name] = np.maximum(scores * script_factor, 0.0)
+            script_factor = np.clip(script_factor, 0.80, 1.20)
+            final_scores = np.maximum(scores * script_factor, 0.0)
+            # Game scripts change relative outcomes and correlations, but should not
+            # silently change a player's expected score away from the supplied projection.
+            if np.isfinite(projection) and projection > 0:
+                final_mean = float(np.mean(final_scores)) if len(final_scores) else 0.0
+                if final_mean > 0 and np.isfinite(final_mean):
+                    final_scores = final_scores * (projection / final_mean)
+            simulations[name] = final_scores
             if index == 0 or (index + 1) % 2 == 0 or index + 1 == total_players:
                 progress_value = 0.05 + 0.90 * (index + 1) / total_players
                 simulation_progress.progress(
