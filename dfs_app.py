@@ -3534,6 +3534,7 @@ showdown_adjusted_scores, showdown_ownership_proxy = ownership_adjusted_player_s
     players_df[players_df["Name"].isin(available_players)].drop_duplicates("Name"),
     available_players, showdown_base_scores, player_sim
 )
+ownership_index = {name: i for i, name in enumerate(available_players)}
 showdown_rankings = {
     p: float(showdown_adjusted_scores[i]) for i, p in enumerate(available_players)
 }
@@ -3667,8 +3668,8 @@ for captain in search_pool:
             + total_mean * 0.25
         )
         lineup_ownership = (
-            showdown_ownership_proxy[list(available_players).index(captain)] * 1.5
-            + sum(showdown_ownership_proxy[list(available_players).index(p)] for p in flex_players)
+            showdown_ownership_proxy[ownership_index[captain]] * 1.5
+            + sum(showdown_ownership_proxy[ownership_index[p]] for p in flex_players)
         )
         lineup_upside = max(0.0, total_p99 - total_p95)
         ownership_tax = max(0.0, lineup_ownership - 15.0 * 6.5) * 0.06
