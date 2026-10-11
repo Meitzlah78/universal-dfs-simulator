@@ -2215,7 +2215,10 @@ if platform == "FanDuel":
                 key="fd_rank_count_" + lineup_mode.replace(" ", "_").lower()
             )
             st.caption("Run SIM/contest comparison first for field-based estimates. Without a completed comparison, ranking uses the available lineup results as a temporary estimate.")
-            fd_results = fd_rank_source.head(int(fd_rank_count)).copy()
+            # Keep all built lineups for export. The display limit only controls
+            # how many rows are shown on screen, not how many get downloaded.
+            fd_all_ranked = fd_rank_source.copy()
+            fd_results = fd_all_ranked.head(int(fd_rank_count)).copy()
 
             # Use the same player-by-player points layout as the DraftKings Portfolio.
             fd_display = fd_results.copy()
@@ -2257,7 +2260,7 @@ if platform == "FanDuel":
                 )
                 export_data = []
                 missing_ids = []
-                for _, lineup in fd_results.iterrows():
+                for _, lineup in fd_all_ranked.iterrows():
                     row_ids = []
                     for slot in fd_slots:
                         name = lineup[slot]
