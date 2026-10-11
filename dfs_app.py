@@ -290,8 +290,50 @@ def build_dk_contest_entry_export(entry_df, selected_contest_id, lineup_ids_df, 
     count = min(entry_count, lineup_count)
     export_df = entries.iloc[:count].copy().reset_index(drop=True)
     ids = lineup_ids_df.iloc[:count].reset_index(drop=True)
+
+    # DraftKings contest-entry replacement CSVs use "Player Name (PlayerID)"
+    # in roster cells, not the bare numeric IDs used by the basic lineup upload.
+    # Reverse the player map captured from the uploaded DK salary/template CSV.
+    dk_player_ids = st.session_state.get("dk_player_ids", {})
+    id_to_name = {}
+    for player_name, slot_ids in dk_player_ids.items():
+        if isinstance(slot_ids, dict):
+            for slot_name, player_id in slot_ids.items():
+                if player_id:
+                    clean_id = str(player_id).strip().removesuffix(".0")
+                    id_to_name[(clean_id, str(slot_name).strip().upper())] = str(player_name).strip()
+
     for j, col_index in enumerate(roster_column_indices):
-        export_df.iloc[:, col_index] = ids.iloc[:, j].astype(str).to_numpy()
+        slot = str(expected_slots[j]).strip().upper()
+        values = []
+        for player_id in ids.iloc[:, j].astype(str):
+            clean_id = str(player_id).strip().removesuffix(".0")
+            player_name = id_to_name.get((clean_id, slot))
+            if not player_name:
+                # FLEX IDs can be used across repeated FLEX columns; allow any slot mapping.
+                player_name = next(
+                    (name for (mapped_id, _mapped_slot), name in id_to_name.items()
+                     if mapped_id == clean_id),
+                    None,
+                )
+            values.append(f"{player_name} ({clean_id})" if player_name else clean_id)
+        export_df.iloc[:, col_index] = values
+
+    # Warn rather than silently creating an incomplete replacement file.
+    if id_to_name:
+        unresolved = [
+            str(export_df.iloc[row_idx, col_index])
+            for row_idx in range(count)
+            for col_index in roster_column_indices
+            if not re.search(r"\\(\\d+\\)$", str(export_df.iloc[row_idx, col_index]).strip())
+        ]
+        if unresolved:
+            st.error(
+                "Some exported players could not be matched to DraftKings player names. "
+                "Re-upload the correct DraftKings salary/template CSV and export again."
+            )
+            return None
+
     st.success(
         f"Export prepared to replace {count} existing DraftKings {slate_label} entry/entries "
         f"in contest {target_id}. Entry IDs and contest metadata are preserved."
