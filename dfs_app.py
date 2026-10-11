@@ -3885,8 +3885,13 @@ if build_clicked:
             "StdDev": values.std(ddof=0)
         }
 
-# Rebuild the active player list here so this Showdown builder does not
-# depend on variables initialized only in the Classic workflow.
+# The DraftKings builder needs a loaded salary pool and player controls.
+# If the salary/template upload has not supplied them, stop with a clear message
+# instead of crashing with a NameError while the page renders.
+if "players_df" not in locals() or "control_map" not in locals():
+    st.error("Upload the DraftKings salary CSV and wait for the player pool to load before running SIM.")
+    st.stop()
+
 available_players = [
     p for p in players_df["Name"]
     if p in control_map and not control_map[p].get("Fade", False)
