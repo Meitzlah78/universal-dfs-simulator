@@ -1890,6 +1890,12 @@ if platform == "FanDuel":
             fd_slots = ["QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "FLEX", "D"]
 
         if fd_build_clicked:
+            # A new run must replace this mode's previous build, not leave stale
+            # lineups visible if the current build cannot produce valid results.
+            st.session_state.pop(fd_build_key, None)
+            st.session_state.pop("fd_contest_comparison_" + lineup_mode.replace(" ", "_").lower(), None)
+            st.session_state.pop("fd_contest_field_" + lineup_mode.replace(" ", "_").lower(), None)
+            st.session_state.pop("fd_contest_field_ready_" + lineup_mode.replace(" ", "_").lower(), None)
             rng = np.random.default_rng()
             pool = fd_players.copy()
             pool["Eligible"] = pool["Position"].apply(
@@ -2045,7 +2051,8 @@ if platform == "FanDuel":
             fd_pool["Eligible"] = fd_pool["Position"].apply(
                 lambda value: set(str(value).upper().replace(" ", "").split("/"))
             )
-            fd_pool = fd_pool[fd_pool["Name"].isin(available_players)].copy() if "available_players" in globals() else fd_pool.copy()
+            # This is already the filtered FanDuel pool. Never apply a shared
+            # DraftKings available_players list to FanDuel contest opponents.
             fd_pool["Projection"] = pd.to_numeric(fd_pool["Projection"], errors="coerce").fillna(0.01).clip(lower=0.01)
             fd_weights = fd_pool["Projection"].to_numpy(dtype=float)
             fd_weights = fd_weights / fd_weights.sum() if fd_weights.sum() else np.full(len(fd_pool), 1 / max(len(fd_pool), 1))
