@@ -3430,6 +3430,52 @@ if platform == "DraftKings" and lineup_mode == "Classic":
             hide_index=True
         )
 
+        # Classic stops before the shared Showdown portfolio section, so provide
+        # the same top-20 portfolio controls here using Classic lineup results.
+        st.divider()
+        st.write("## Portfolio")
+        st.caption("Choose how to rank your Classic lineups. Your top 20 are shown by default.")
+        classic_portfolio_source = st.session_state.get("classic_contest_comparison_df")
+        if not isinstance(classic_portfolio_source, pd.DataFrame) or classic_portfolio_source.empty:
+            classic_portfolio_source = classic_results.copy()
+        classic_rank_options = [
+            column for column in [
+                "FieldPercentile", "BeatsOpponents", "ProjectedPoints", "Score"
+            ] if column in classic_portfolio_source.columns
+        ]
+        if not classic_rank_options:
+            classic_rank_options = ["ProjectedPoints"]
+        classic_portfolio_count = st.number_input(
+            "Number of lineups to show",
+            min_value=1,
+            max_value=max(1, len(classic_portfolio_source)),
+            value=min(20, max(1, len(classic_portfolio_source))),
+            step=1,
+            key="dk_classic_portfolio_count"
+        )
+        classic_rank_metric = st.selectbox(
+            "Rank Classic lineups by",
+            classic_rank_options,
+            index=0,
+            key="dk_classic_portfolio_metric"
+        )
+        classic_top_portfolio = (
+            classic_portfolio_source
+            .drop_duplicates(
+                subset=[col for col in ["QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "FLEX", "DST"]
+                        if col in classic_portfolio_source.columns],
+                keep="first"
+            )
+            .sort_values(classic_rank_metric, ascending=False)
+            .head(int(classic_portfolio_count))
+            .reset_index(drop=True)
+        )
+        st.caption(
+            "Run CONTEST SIM first to rank by FieldPercentile or BeatsOpponents. "
+            "Otherwise, rank by ProjectedPoints or Score."
+        )
+        st.dataframe(classic_top_portfolio, use_container_width=True, hide_index=True)
+
         classic_results = remove_out_players_from_lineups(
             classic_results, ["QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "FLEX", "DST"], "DraftKings Classic"
         )
