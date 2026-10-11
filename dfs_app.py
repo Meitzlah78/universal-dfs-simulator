@@ -3536,6 +3536,14 @@ if (
     n_sims = len(simulation_df)
     total_field = len(contest_idx)
 
+    st.info(
+        f"Candidate lineups are ready. Now scoring {n_candidates:,} lineups "
+        f"against {total_field:,} simulated opponents across {n_sims:,} simulations. "
+        "This step can take a while for large contests; watch the progress bar below."
+    )
+    scoring_status = st.empty()
+    scoring_status.caption("Starting contest scoring...")
+
     win_rates = np.zeros(n_candidates)
     top1_rates = np.zeros(n_candidates)
     top5_rates = np.zeros(n_candidates)
@@ -3583,12 +3591,15 @@ if (
         cash_rates += (percentile >= 0.50)
         avg_percentiles += percentile
 
-        if (sim_idx + 1) % 500 == 0:
-            progress.progress(
-                (sim_idx + 1) / n_sims
+        if (sim_idx == 0 or (sim_idx + 1) % 100 == 0 or sim_idx + 1 == n_sims):
+            progress.progress((sim_idx + 1) / n_sims)
+            scoring_status.caption(
+                f"Scoring contest: {sim_idx + 1:,} of {n_sims:,} simulations complete "
+                f"({(sim_idx + 1) / n_sims:.0%})."
             )
 
     progress.empty()
+    scoring_status.success("Contest scoring finished. Preparing your ranked lineups...")
 
     results_df = candidates_df.copy()
 
