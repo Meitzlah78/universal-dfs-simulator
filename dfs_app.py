@@ -1261,7 +1261,8 @@ if platform == "FanDuel":
         key="fd_build_salary_range_" + lineup_mode.replace(" ", "_").lower(),
         help="Only build lineups whose total salary falls inside this range."
     )
-    if st.button("SIM", type="primary", key="fd_sim_" + lineup_mode.replace(" ", "_").lower()):
+    fd_run_all = st.button("SIM", type="primary", use_container_width=True, key="fd_run_all_" + lineup_mode.replace(" ", "_").lower())
+    if fd_run_all:
         with st.spinner("Running 10,000 FanDuel scoring simulations..."):
             rng = np.random.default_rng()
             position_rates = {
@@ -1331,8 +1332,7 @@ if platform == "FanDuel":
                 # Keep the generated outcomes unscaled; do not force them to
                 # match salary-based estimates or external projections.
                 simulated_scores[:, index] = np.maximum(score, 0)
-        st.success("FanDuel scoring simulations completed.")
-        st.rerun()
+        st.session_state["fd_simulation_ready_" + lineup_mode.replace(" ", "_").lower()] = True
 
     st.success(f"Loaded {len(fd_players)} FanDuel players after injury-status filtering.")
     if fd_proj_col is None:
@@ -1438,7 +1438,7 @@ if platform == "FanDuel":
         )
         fd_slots = ["QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "FLEX", "D"]
 
-    if st.button("BUILD", type="primary", key="fd_build_" + lineup_mode):
+    if fd_run_all:
         rng = np.random.default_rng()
         pool = fd_players.copy()
         pool["Eligible"] = pool["Position"].apply(
@@ -1570,13 +1570,7 @@ if platform == "FanDuel":
                 "and make sure the uploaded slate has enough players for this contest type."
             )
 
-    fd_contest_sim_clicked = st.button(
-        "CONTEST SIM",
-        type="primary",
-        key="fd_contest_sim_" + lineup_mode.replace(" ", "_").lower()
-    )
-
-    if fd_contest_sim_clicked:
+    if fd_run_all:
         fd_pool = fd_players.copy()
         fd_pool["Eligible"] = fd_pool["Position"].apply(
             lambda value: set(str(value).upper().replace(" ", "").split("/"))
@@ -1681,7 +1675,7 @@ if platform == "FanDuel":
                     )
                 user_lineups = st.session_state.get(fd_build_key)
                 if user_lineups is None or user_lineups.empty:
-                    st.warning("Click BUILD first so CONTEST SIM can compare your lineups against the simulated field.")
+                    st.warning("SIM is running the lineup build and contest comparison together.")
                 else:
                     scores = opponent_df["ProjectedPoints"].to_numpy(dtype=float)
                     compared = add_lineup_field_ownership(user_lineups.copy())
@@ -2914,16 +2908,14 @@ if platform == "DraftKings" and lineup_mode == "Classic":
         ("TE", {"TE"}), ("FLEX", {"RB", "WR", "TE"}), ("DST", {"DST"})
     ]
 
-    if st.button("SIM", type="primary"):
-        with st.spinner("Running 10,000 player simulations for DraftKings Classic..."):
+    classic_run_all = st.button("SIM", type="primary", use_container_width=True, key="dk_classic_run_all")
+    if classic_run_all:
+        with st.spinner("Step 1 of 3: Running 10,000 player simulations for DraftKings Classic..."):
             classic_simulation_df = run_game_simulations(players_df, platform=platform)
         st.session_state["simulation_df"] = classic_simulation_df
         st.session_state["simulations_ready"] = True
-        st.success("Classic player simulations completed.")
-        st.rerun()
 
-    build_clicked = st.button("BUILD", type="primary")
-    contest_sim_clicked = st.button("CONTEST SIM", type="primary")
+    build_clicked = classic_run_all
 
     if build_clicked:
         rng = np.random.default_rng()
@@ -3030,7 +3022,8 @@ if platform == "DraftKings" and lineup_mode == "Classic":
             st.session_state["classic_lineups"] = classic_results
             st.session_state["classic_pool_signature"] = slate_signature
 
-    if contest_sim_clicked:
+    if classic_run_all:
+        st.caption("Step 3 of 3: Simulating the contest field and scoring your lineups.")
         if "simulation_df" not in st.session_state:
             st.warning("Run SIM first, then run CONTEST SIM.")
         elif len(classic_pool) < 9:
