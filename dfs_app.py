@@ -2580,6 +2580,15 @@ show_projection_refresh_status(
 
 if salary_file is not None:
     try:
+        # Block a clearly mislabeled DraftKings format before it can replace the active player pool.
+        uploaded_filename = str(getattr(salary_file, "name", "")).casefold()
+        filename_says_showdown = any(term in uploaded_filename for term in ("showdown", "single game", "single_game"))
+        filename_says_classic = any(term in uploaded_filename for term in ("classic", "full roster", "full_roster"))
+        if lineup_mode == "Classic" and filename_says_showdown:
+            raise ValueError("This filename indicates a DraftKings Showdown CSV, but Classic is selected. Select Showdown or upload the correct Classic CSV. The current player pool was not replaced.")
+        if lineup_mode == "Showdown" and filename_says_classic:
+            raise ValueError("This filename indicates a DraftKings Classic CSV, but Showdown is selected. Select Classic or upload the correct Showdown CSV. The current player pool was not replaced.")
+
         # DraftKings lineup templates have instructions before the player table.
         # Detect that format and skip those rows; ordinary salary CSVs load normally.
         salary_file.seek(0)
@@ -2604,6 +2613,10 @@ if salary_file is not None:
                     uploaded_df[roster_col].astype(str).str.upper().str.strip()
                 )
                 is_showdown_template = "CPT" in roster_values
+                if is_showdown_template and lineup_mode != "Showdown":
+                    raise ValueError("This CSV contains DraftKings Showdown CPT/FLEX slots, but Classic is selected. Select Showdown or upload a Classic salary CSV. The current player pool was not replaced.")
+                if not is_showdown_template and lineup_mode == "Showdown":
+                    raise ValueError("This appears to be a DraftKings Classic lineup template, but Showdown is selected. Select Classic or upload a Showdown salary CSV. The current player pool was not replaced.")
                 # Save separate CPT/FLEX IDs before keeping one FLEX row per player.
                 if is_showdown_template:
                     template_cols = {str(c).strip().lower(): c for c in uploaded_df.columns}
