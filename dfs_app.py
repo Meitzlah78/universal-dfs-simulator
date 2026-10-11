@@ -1217,31 +1217,12 @@ st.session_state["dfs_platform"] = platform
 st.session_state["lineup_mode_" + platform] = lineup_mode
 st.subheader(selected_format)
 
-# Aggressiveness controls how much the lineup builder prioritizes high-end outcomes.
-aggressiveness_pct = st.slider(
-    "Lineup Build Aggressiveness",
-    min_value=0,
-    max_value=100,
-    value=50,
-    step=5,
-    help=(
-        "Conservative favors a steadier P95 score and average points. Aggressive "
-        "puts more weight on P99 ceiling outcomes. This does not change the number "
-        "of simulations or lineups built."
-    ),
-    key="lineup_build_aggressiveness",
-)
-aggressiveness = aggressiveness_pct / 100.0
+# Initialize from the saved slider value; the control itself appears beside SIM.
+aggressiveness = float(st.session_state.get("lineup_build_aggressiveness", 50)) / 100.0
 P95_WEIGHT = 0.60 - 0.30 * aggressiveness
 P99_WEIGHT = 0.10 + 0.45 * aggressiveness
 MEAN_WEIGHT = 1.0 - P95_WEIGHT - P99_WEIGHT
-# At low aggression, penalize volatility; at high aggression, reward it.
 STDDEV_WEIGHT = 0.10 * (2.0 * aggressiveness - 1.0)
-st.caption(
-    f"Build style: {aggressiveness_pct}% aggressive "
-    f"(P95 {P95_WEIGHT:.0%} / ceiling P99 {P99_WEIGHT:.0%} / average {MEAN_WEIGHT:.0%} "
-    f"/ volatility adjustment {STDDEV_WEIGHT:+.0%})."
-)
 
 # Game-level correlation control is relevant to single-game formats. Full-slate
 # formats keep the current default behavior and do not show this control.
@@ -1486,7 +1467,7 @@ if platform == "FanDuel":
                 st.session_state["fd_saved_builds"].pop(saved_key, None)
 
     st.caption("The 5,000-lineup build automatically spreads player exposure while still favoring stronger simulated scores.")
-    st.write("### Build Salary Range")
+    st.write("### Build Settings")
     fd_salary_range = st.slider(
         "Allowed lineup salary range",
         min_value=0,
@@ -1497,6 +1478,17 @@ if platform == "FanDuel":
         key="fd_build_salary_range_" + lineup_mode.replace(" ", "_").lower(),
         help="Only build lineups whose total salary falls inside this range."
     )
+    aggressiveness_pct = st.slider(
+        "Lineup Build Aggressiveness", 0, 100, 50, step=5,
+        help="Conservative favors steadier outcomes; aggressive favors ceiling and volatility. Does not change simulation or lineup counts.",
+        key="lineup_build_aggressiveness",
+    )
+    aggressiveness = aggressiveness_pct / 100.0
+    P95_WEIGHT = 0.60 - 0.30 * aggressiveness
+    P99_WEIGHT = 0.10 + 0.45 * aggressiveness
+    MEAN_WEIGHT = 1.0 - P95_WEIGHT - P99_WEIGHT
+    STDDEV_WEIGHT = 0.10 * (2.0 * aggressiveness - 1.0)
+    st.caption(f"Build style: {aggressiveness_pct}% aggressive · P95 {P95_WEIGHT:.0%} · P99 {P99_WEIGHT:.0%} · average {MEAN_WEIGHT:.0%} · volatility {STDDEV_WEIGHT:+.0%}.")
     fd_run_all = st.button("SIM", type="primary", use_container_width=True, key="fd_run_all_" + lineup_mode.replace(" ", "_").lower())
     if fd_run_all:
         with st.spinner(f"Running {SIMULATION_COUNT:,} FanDuel scoring simulations..."):
@@ -2939,19 +2931,6 @@ def build_internal_projection_means(players_df, platform="DraftKings", include_h
 
 players_df = apply_injury_statuses(players_df, "injury_status_dk_" + lineup_mode.replace(" ", "_").lower())
 
-st.write("### Build Salary Range")
-dk_salary_range = st.slider(
-    "Allowed lineup salary range",
-    min_value=0,
-    max_value=50000,
-    value=(45000, 50000),
-    step=100,
-    format="$%d",
-    key="dk_build_salary_range_" + lineup_mode.replace(" ", "_").lower(),
-    help="Only build lineups whose total salary falls inside this range."
-)
-MIN_LINEUP_SALARY, MAX_LINEUP_SALARY = dk_salary_range
-
 # External projections only: do not calculate or use internal fallback projections.
 players_df["Projection"] = np.nan
 players_df = apply_external_projection_sources(
@@ -3354,6 +3333,30 @@ if platform == "DraftKings" and lineup_mode == "Classic":
         ("WR1", {"WR"}), ("WR2", {"WR"}), ("WR3", {"WR"}),
         ("TE", {"TE"}), ("FLEX", {"RB", "WR", "TE"}), ("DST", {"DST"})
     ]
+
+st.write("### Build Settings")
+dk_salary_range = st.slider(
+    "Allowed lineup salary range",
+    min_value=0,
+    max_value=50000,
+    value=(45000, 50000),
+    step=100,
+    format="$%d",
+    key="dk_build_salary_range_" + lineup_mode.replace(" ", "_").lower(),
+    help="Only build lineups whose total salary falls inside this range."
+)
+MIN_LINEUP_SALARY, MAX_LINEUP_SALARY = dk_salary_range
+aggressiveness_pct = st.slider(
+    "Lineup Build Aggressiveness", 0, 100, 50, step=5,
+    help="Conservative favors steadier outcomes; aggressive favors ceiling and volatility. Does not change simulation or lineup counts.",
+    key="lineup_build_aggressiveness",
+)
+aggressiveness = aggressiveness_pct / 100.0
+P95_WEIGHT = 0.60 - 0.30 * aggressiveness
+P99_WEIGHT = 0.10 + 0.45 * aggressiveness
+MEAN_WEIGHT = 1.0 - P95_WEIGHT - P99_WEIGHT
+STDDEV_WEIGHT = 0.10 * (2.0 * aggressiveness - 1.0)
+st.caption(f"Build style: {aggressiveness_pct}% aggressive · P95 {P95_WEIGHT:.0%} · P99 {P99_WEIGHT:.0%} · average {MEAN_WEIGHT:.0%} · volatility {STDDEV_WEIGHT:+.0%}.")
 
     classic_run_all = st.button("SIM", type="primary", use_container_width=False, key="dk_classic_run_all")
     if classic_run_all:
@@ -3784,6 +3787,30 @@ if platform == "DraftKings" and lineup_mode == "Classic":
 
 # One-click workflow: SIM runs player simulations, builds the opponent field,
 # then builds and scores the user's lineups below.
+st.write("### Build Settings")
+dk_salary_range = st.slider(
+    "Allowed lineup salary range",
+    min_value=0,
+    max_value=50000,
+    value=(45000, 50000),
+    step=100,
+    format="$%d",
+    key="dk_build_salary_range_" + lineup_mode.replace(" ", "_").lower(),
+    help="Only build lineups whose total salary falls inside this range."
+)
+MIN_LINEUP_SALARY, MAX_LINEUP_SALARY = dk_salary_range
+aggressiveness_pct = st.slider(
+    "Lineup Build Aggressiveness", 0, 100, 50, step=5,
+    help="Conservative favors steadier outcomes; aggressive favors ceiling and volatility. Does not change simulation or lineup counts.",
+    key="lineup_build_aggressiveness",
+)
+aggressiveness = aggressiveness_pct / 100.0
+P95_WEIGHT = 0.60 - 0.30 * aggressiveness
+P99_WEIGHT = 0.10 + 0.45 * aggressiveness
+MEAN_WEIGHT = 1.0 - P95_WEIGHT - P99_WEIGHT
+STDDEV_WEIGHT = 0.10 * (2.0 * aggressiveness - 1.0)
+st.caption(f"Build style: {aggressiveness_pct}% aggressive · P95 {P95_WEIGHT:.0%} · P99 {P99_WEIGHT:.0%} · average {MEAN_WEIGHT:.0%} · volatility {STDDEV_WEIGHT:+.0%}.")
+
 build_clicked = st.button(
     "SIM",
     type="primary",
