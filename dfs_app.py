@@ -1,4 +1,6 @@
 import itertools
+import os
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import re
 import requests
 import streamlit as st
@@ -3766,19 +3768,22 @@ if (
     avg_percentiles = np.zeros(n_candidates)
 
     progress = st.progress(0)
-    # Convert the simulation table once, then score small batches with NumPy.
-    # This avoids 10,000 repeated pandas row lookups while keeping all 10,000
-    # simulations and the full opponent field.
+    # Convert once and score independent simulation batches concurrently.
+    # All simulations and opponents are retained; parallelism changes only how
+    # the work is scheduled, not the amount of work performed.
     simulation_values = simulation_df.to_numpy(dtype=np.float32, copy=False)
-    # Keep each batch manageable and update progress after every batch.
-    # This does not reduce the total number of simulations or opponents.
     batch_size = 128
+    batch_ranges = [
+        (batch_start, min(batch_start + batch_size, n_sims))
+        for batch_start in range(0, n_sims, batch_size)
+    ]
+    cpu_count = os.cpu_count() or 2
+    max_workers = max(1, min(cpu_count, 4, len(batch_ranges)))
     scoring_status.caption(
-        f"Scoring is starting: {n_sims:,} simulations, batches of {batch_size}..."
+        f"Scoring {n_sims:,} simulations in parallel using {max_workers} worker threads..."
     )
 
-    for batch_start in range(0, n_sims, batch_size):
-        batch_end = min(batch_start + batch_size, n_sims)
+    def score_batch(batch_start, batch_end):
         batch_values = simulation_values[batch_start:batch_end]
         batch_candidate_scores = batch_values[:, candidate_idx].sum(axis=2)
         batch_field_scores = batch_values[:, contest_idx].sum(axis=2)
@@ -3787,29 +3792,53 @@ if (
             batch_candidate_scores += batch_values[:, candidate_idx[:, 0]] * (scoring_multiplier - 1.0)
             batch_field_scores += batch_values[:, contest_idx[:, 0]] * (scoring_multiplier - 1.0)
 
+        batch_win = np.zeros(n_candidates, dtype=np.float64)
+        batch_top1 = np.zeros(n_candidates, dtype=np.float64)
+        batch_top5 = np.zeros(n_candidates, dtype=np.float64)
+        batch_top10 = np.zeros(n_candidates, dtype=np.float64)
+        batch_cash = np.zeros(n_candidates, dtype=np.float64)
+        batch_percentiles = np.zeros(n_candidates, dtype=np.float64)
+
         for offset in range(batch_end - batch_start):
             cand_scores = batch_candidate_scores[offset]
-            field_scores = batch_field_scores[offset]
-            sorted_field = np.sort(field_scores)
-
+            sorted_field = np.sort(batch_field_scores[offset])
             count_greater = total_field - np.searchsorted(
                 sorted_field, cand_scores, side="right"
             )
             percentile = 1.0 - (count_greater / total_field)
+            batch_win += (count_greater == 0)
+            batch_top1 += (percentile >= 0.99)
+            batch_top5 += (percentile >= 0.95)
+            batch_top10 += (percentile >= 0.90)
+            batch_cash += (percentile >= 0.50)
+            batch_percentiles += percentile
 
-            win_rates += (count_greater == 0)
-            top1_rates += (percentile >= 0.99)
-            top5_rates += (percentile >= 0.95)
-            top10_rates += (percentile >= 0.90)
-            cash_rates += (percentile >= 0.50)
-            avg_percentiles += percentile
+        return batch_win, batch_top1, batch_top5, batch_top10, batch_cash, batch_percentiles
 
-        completed = batch_end
-        if True:
-            progress.progress(completed / n_sims)
+    completed_batches = 0
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {
+            executor.submit(score_batch, batch_start, batch_end): (batch_start, batch_end)
+            for batch_start, batch_end in batch_ranges
+        }
+        for future in as_completed(futures):
+            batch_win, batch_top1, batch_top5, batch_top10, batch_cash, batch_percentiles = future.result()
+            win_rates += batch_win
+            top1_rates += batch_top1
+            top5_rates += batch_top5
+            top10_rates += batch_top10
+            cash_rates += batch_cash
+            avg_percentiles += batch_percentiles
+            completed_batches += 1
+            completed_sims = sum(
+                end_range - start_range
+                for start_range, end_range in futures.values()
+                if start_range < 0
+            ) if False else min(completed_batches * batch_size, n_sims)
+            progress.progress(completed_batches / len(batch_ranges))
             scoring_status.caption(
-                f"Scoring contest: {completed:,} of {n_sims:,} simulations complete "
-                f"({completed / n_sims:.0%})."
+                f"Scoring contest: {completed_sims:,} of {n_sims:,} simulations complete "
+                f"({completed_sims / n_sims:.0%}) using {max_workers} workers."
             )
 
     progress.empty()
