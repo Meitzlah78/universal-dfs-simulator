@@ -20,6 +20,43 @@ st.set_page_config(
 
 st.title("Universal DFS Simulator")
 
+# Shared ranking choices across every supported format.
+PORTFOLIO_METRICS = {
+    "Contest Score": "ContestScore",
+    "Win %": "WinRate",
+    "Top 1%": "Top1",
+    "Top 5%": "Top5",
+    "Top 10%": "Top10",
+    "Cash %": "CashRate",
+    "Average Percentile": "AvgPercentile",
+}
+
+
+def add_field_ranking_metrics(frame, field_scores, score_column="ProjectedPoints"):
+    """Add comparable field-based ranking columns for formats without full outcome scoring."""
+    ranked = frame.copy()
+    scores = pd.to_numeric(ranked.get(score_column, pd.Series(index=ranked.index, dtype=float)), errors="coerce").fillna(0).to_numpy(dtype=float)
+    field = np.asarray(field_scores, dtype=float)
+    if not len(field):
+        field = scores.copy()
+    if not len(field):
+        field = np.array([0.0])
+    percentiles = np.asarray([np.mean(field <= score) for score in scores], dtype=float)
+    win_rates = np.asarray([float(np.mean(field < score) >= 1.0) for score in scores], dtype=float)
+    ranked["WinRate"] = win_rates
+    ranked["Top1"] = (percentiles >= 0.99).astype(float)
+    ranked["Top5"] = (percentiles >= 0.95).astype(float)
+    ranked["Top10"] = (percentiles >= 0.90).astype(float)
+    ranked["CashRate"] = (percentiles >= 0.50).astype(float)
+    ranked["AvgPercentile"] = percentiles
+    ranked["ContestScore"] = (
+        ranked["Top1"] * 0.40 + ranked["Top5"] * 0.25
+        + ranked["Top10"] * 0.20 + ranked["CashRate"] * 0.10
+        + ranked["WinRate"] * 0.05
+    )
+    return ranked
+
+
 # Quick link to DraftKings lineup upload.
 top_buttons = st.columns(2)
 with top_buttons[0]:
@@ -1834,6 +1871,8 @@ if platform == "FanDuel":
                     compared["BeatsOpponents"] = compared["ProjectedPoints"].apply(lambda score: int(np.sum(scores < float(score))))
                     compared["FieldPercentile"] = compared["ProjectedPoints"].apply(lambda score: round(100.0 * np.mean(scores <= float(score)), 1))
                     compared["FieldRank"] = compared["ProjectedPoints"].apply(lambda score: 1 + int(np.sum(scores > float(score))))
+                    compared = add_field_ranking_metrics(compared, scores)
+                    st.session_state["fd_contest_comparison_" + lineup_mode.replace(" ", "_").lower()] = compared
                     st.write("### FanDuel Lineups vs. Simulated Contest Field")
                     st.caption("This is an estimate using projected points, not actual contest results.")
                     st.dataframe(compared, use_container_width=True, hide_index=True)
@@ -1846,6 +1885,25 @@ if platform == "FanDuel":
         fd_results = remove_out_players_from_lineups(fd_results, fd_slots, "FanDuel")
         st.session_state[fd_build_key] = fd_results
         st.write(f"Built {len(fd_results)} FanDuel lineups.")
+
+        # Use the same ranking choices as DraftKings Showdown for both FanDuel formats.
+        fd_comparison_key = "fd_contest_comparison_" + lineup_mode.replace(" ", "_").lower()
+        fd_rank_source = st.session_state.get(fd_comparison_key)
+        if not isinstance(fd_rank_source, pd.DataFrame) or fd_rank_source.empty:
+            fd_rank_source = add_field_ranking_metrics(fd_results, fd_results["ProjectedPoints"].to_numpy(dtype=float))
+        fd_rank_label = st.selectbox(
+            "Rank lineups by", list(PORTFOLIO_METRICS.keys()),
+            key="fd_rank_metric_" + lineup_mode.replace(" ", "_").lower()
+        )
+        fd_rank_column = PORTFOLIO_METRICS[fd_rank_label]
+        fd_rank_source = fd_rank_source.sort_values(fd_rank_column, ascending=False).reset_index(drop=True)
+        fd_rank_count = st.number_input(
+            "Number of lineups to show", min_value=1, max_value=max(1, len(fd_rank_source)),
+            value=min(20, max(1, len(fd_rank_source))), step=1,
+            key="fd_rank_count_" + lineup_mode.replace(" ", "_").lower()
+        )
+        st.caption("Run SIM/contest comparison first for field-based estimates. Without a completed comparison, ranking uses the available lineup results as a temporary estimate.")
+        fd_results = fd_rank_source.head(int(fd_rank_count)).copy()
 
         # Use the same player-by-player points layout as the DraftKings Portfolio.
         fd_display = fd_results.copy()
@@ -3369,6 +3427,7 @@ if platform == "DraftKings" and lineup_mode == "Classic":
                     user_lineups["BeatsOpponents"] = user_lineups["ProjectedPoints"].apply(lambda score: int(np.sum(opponent_scores < float(score))))
                     user_lineups["FieldPercentile"] = user_lineups["ProjectedPoints"].apply(lambda score: round(100.0 * np.mean(opponent_scores <= float(score)), 1))
                     user_lineups["FieldRank"] = user_lineups["ProjectedPoints"].apply(lambda score: 1 + int(np.sum(opponent_scores > float(score))))
+                    user_lineups = add_field_ranking_metrics(user_lineups, opponent_scores)
                 st.session_state["classic_contest_field_df"] = contest_field_df
                 st.session_state["classic_contest_field_ready"] = len(contest_field_df) > 0
                 st.session_state["classic_contest_comparison_df"] = user_lineups
@@ -3456,13 +3515,13 @@ if platform == "DraftKings" and lineup_mode == "Classic":
         classic_portfolio_source = st.session_state.get("classic_contest_comparison_df")
         if not isinstance(classic_portfolio_source, pd.DataFrame) or classic_portfolio_source.empty:
             classic_portfolio_source = classic_results.copy()
-        classic_rank_options = [
-            column for column in [
-                "FieldPercentile", "BeatsOpponents", "ProjectedPoints", "Score"
-            ] if column in classic_portfolio_source.columns
-        ]
-        if not classic_rank_options:
-            classic_rank_options = ["ProjectedPoints"]
+        # Match the Showdown ranking menu across all formats.
+        if not all(metric in classic_portfolio_source.columns for metric in PORTFOLIO_METRICS.values()):
+            classic_portfolio_source = add_field_ranking_metrics(
+                classic_portfolio_source,
+                classic_portfolio_source.get("ProjectedPoints", pd.Series(dtype=float)).to_numpy(dtype=float)
+            )
+        classic_rank_options = list(PORTFOLIO_METRICS.keys())
         classic_portfolio_count = st.number_input(
             "Number of lineups to show",
             min_value=1,
@@ -3471,12 +3530,13 @@ if platform == "DraftKings" and lineup_mode == "Classic":
             step=1,
             key="dk_classic_portfolio_count"
         )
-        classic_rank_metric = st.selectbox(
+        classic_rank_label = st.selectbox(
             "Rank Classic lineups by",
             classic_rank_options,
             index=0,
             key="dk_classic_portfolio_metric"
         )
+        classic_rank_metric = PORTFOLIO_METRICS[classic_rank_label]
         classic_top_portfolio = (
             classic_portfolio_source
             .drop_duplicates(
@@ -3489,8 +3549,7 @@ if platform == "DraftKings" and lineup_mode == "Classic":
             .reset_index(drop=True)
         )
         st.caption(
-            "Run CONTEST SIM first to rank by FieldPercentile or BeatsOpponents. "
-            "Otherwise, rank by ProjectedPoints or Score."
+            "These are estimated field-based rankings. Run CONTEST SIM first for the most useful comparison."
         )
         st.dataframe(classic_top_portfolio, use_container_width=True, hide_index=True)
 
@@ -4026,17 +4085,6 @@ if (
 # ============================================
 # PORTFOLIO FUNCTIONS
 # ============================================
-
-PORTFOLIO_METRICS = {
-    "Contest Score": "ContestScore",
-    "Win %": "WinRate",
-    "Top 1%": "Top1",
-    "Top 5%": "Top5",
-    "Top 10%": "Top10",
-    "Cash %": "CashRate",
-    "Average Percentile": "AvgPercentile"
-}
-
 
 def build_portfolio(results_df, lineup_count, metric, lineup_columns=None):
     """Build a ranked portfolio for either Classic or Showdown."""
