@@ -791,7 +791,18 @@ def download_public_projection_table(source_name, platform_name, target_names=No
 
         result = {}
         for _, row in table.iterrows():
-            key = normalize_projection_player_name(row.get(name_col, ""))
+            raw_name = str(row.get(name_col, "")).strip()
+            if source_name == "DraftEdge":
+                # DraftEdge player cells can include image text, position, and team
+                # (for example: "Image Jahmyr Gibbs RB · DET"). Strip those labels
+                # before matching against the salary-file player names.
+                raw_name = re.sub(r"^(?:image|img)\\s+", "", raw_name, flags=re.IGNORECASE)
+                raw_name = re.sub(
+                    r"\\s+(?:QB|RB|WR|TE|DST|DEF|K)\\s*[·•|/]\\s*[A-Z]{2,4}\\s*$",
+                    "", raw_name, flags=re.IGNORECASE
+                )
+                raw_name = re.sub(r"\\s+(?:QB|RB|WR|TE|DST|DEF|K)\\s*$", "", raw_name, flags=re.IGNORECASE)
+            key = normalize_projection_player_name(raw_name)
             value = pd.to_numeric(
                 str(row.get(proj_col, "")).replace(",", "").replace("$", ""),
                 errors="coerce"
