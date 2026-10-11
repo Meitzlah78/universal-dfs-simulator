@@ -3650,11 +3650,17 @@ def build_portfolio(results_df, lineup_count, metric):
     if metric not in results_df.columns:
         raise ValueError(f"Ranking metric not found: {metric}")
 
-    ranked = results_df.sort_values(metric, ascending=False)
+    lineup_columns = ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"]
+    # Simulation can generate the same roster more than once. Keep only the
+    # highest-ranked copy so one lineup is never selected for multiple entries.
+    ranked = (
+        results_df
+        .drop_duplicates(subset=lineup_columns, keep="first")
+        .sort_values(metric, ascending=False)
+    )
     player_counts = {}
     captain_counts = {}
     selected_rows = []
-    lineup_columns = ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"]
 
     def exposure_limit(player, setting, default=100):
         settings = control_map.get(str(player), {})
@@ -3840,8 +3846,17 @@ if "contest_results_df" in st.session_state:
                 int(portfolio_count) - len(locked_df)
             )
 
+            lineup_columns = [
+                "Captain",
+                "Flex1",
+                "Flex2",
+                "Flex3",
+                "Flex4",
+                "Flex5"
+            ]
             ranked_df = (
                 results_df
+                .drop_duplicates(subset=lineup_columns, keep="first")
                 .sort_values(
                     portfolio_metric,
                     ascending=False
