@@ -2970,11 +2970,16 @@ control_display = player_display.copy()
 for required_column in ["Name", "Position", "Team", "Opponent"]:
     if required_column not in control_display.columns:
         control_display[required_column] = players_df[required_column].values
-for setting, default in [
+display_settings = [
     ("Lock", False), ("Fade", False),
-    ("Min Exposure %", 0), ("Max Exposure %", 100),
-    ("Captain Min %", 0), ("Captain Max %", 100)
-]:
+    ("Min Exposure %", 0), ("Max Exposure %", 100)
+]
+# Captain exposure limits belong only to Showdown formats.
+if not (platform == "DraftKings" and lineup_mode == "Classic"):
+    display_settings.extend([
+        ("Captain Min %", 0), ("Captain Max %", 100)
+    ])
+for setting, default in display_settings:
     if existing_control_values is not None and setting in existing_control_values.columns:
         control_display[setting] = control_display["Name"].map(existing_control_values[setting]).fillna(default)
     else:
@@ -2982,10 +2987,7 @@ for setting, default in [
 
 st.write("### Player Controls & Exposure")
 st.caption("Everything is together here. Review current exposure, then change Min/Max Exp % to guide future builds. Lock includes a player; Fade excludes a player.")
-editable_control_columns = [
-    "Lock", "Fade", "Min Exposure %", "Max Exposure %",
-    "Captain Min %", "Captain Max %"
-]
+editable_control_columns = [setting for setting, _ in display_settings]
 disabled_control_columns = [
     column for column in control_display.columns
     if column not in editable_control_columns
@@ -3057,9 +3059,11 @@ else:
 
 editor_controls = edited_player_controls.set_index("Name")
 for setting in [
-    "Lock", "Fade", "Min Exposure %", "Max Exposure %",
-    "Captain Min %", "Captain Max %"
-]:
+    "Lock", "Fade", "Min Exposure %", "Max Exposure %"
+] + (
+    [] if platform == "DraftKings" and lineup_mode == "Classic"
+    else ["Captain Min %", "Captain Max %"]
+):
     control_values[setting] = control_values["Name"].map(
         editor_controls[setting]
     ).fillna(control_values[setting])
