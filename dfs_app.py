@@ -658,7 +658,7 @@ def read_projection_csv(uploaded_file, source_label):
         return {}
 
 
-@st.cache_data(show_spinner=False, ttl=1800)
+@st.cache_data(show_spinner=False, ttl=900)
 def download_public_projection_table(source_name, platform_name, target_names=None):
     """Download real projections using the same HTML-table/row attributes tested in Colab."""
     import io
@@ -1005,9 +1005,9 @@ def refresh_public_projection_sources():
     return status
 
 
-@st.fragment(run_every="30m")
+@st.fragment(run_every="15m")
 def automatic_projection_refresh():
-    """Check public projections every 30 minutes and alert when values change."""
+    """Check public projections every 15 minutes and alert when values change."""
     from datetime import datetime
     status = refresh_public_projection_sources()
     now = datetime.now().astimezone().strftime("%Y-%m-%d %I:%M:%S %p %Z")
@@ -1025,7 +1025,7 @@ def automatic_projection_refresh():
     if successful:
         st.caption("Automatic projection check: " + ", ".join(successful) + ". Last checked: " + now)
     else:
-        st.warning("Automatic projection check could not load any public projection tables. It will try again in 30 minutes.")
+        st.warning("Automatic projection check could not load any public projection tables. It will try again in 15 minutes.")
 
 
 automatic_projection_refresh()
