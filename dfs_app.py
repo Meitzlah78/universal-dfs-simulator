@@ -409,6 +409,16 @@ def apply_injury_statuses(frame, key_prefix):
 
     status_df = frame[[c for c in ["Name", "Position", "Team"] if c in frame.columns]].copy()
     live_injuries, injury_source = fetch_nfl_injury_statuses()
+    from datetime import datetime
+    injury_snapshot = tuple(sorted(
+        (str(name), str(team), str(status))
+        for (name, team), status in live_injuries.items()
+    ))
+    previous_injury_snapshot = st.session_state.get("injury_feed_snapshot_previous")
+    if previous_injury_snapshot is not None and injury_snapshot != previous_injury_snapshot:
+        st.session_state["injury_updates_found"] = True
+        st.session_state["injury_updates_found_at"] = datetime.now().astimezone().strftime("%Y-%m-%d %I:%M:%S %p %Z")
+    st.session_state["injury_feed_snapshot_previous"] = injury_snapshot
     if "Team" in status_df.columns:
         # Apply the latest feed designation by player name AND team to avoid
         # accidentally matching players with similar names on different teams.
@@ -423,7 +433,10 @@ def apply_injury_statuses(frame, key_prefix):
         lambda name: saved_statuses.get(name.strip().casefold(), "Active")
     )
     st.caption(f"Injury source: {injury_source}. Feed is cached for up to 10 minutes.")
+    if st.session_state.get("injury_updates_found"):
+        st.warning("NEW INJURY NEWS FOUND — review the Player Injury Status table before building lineups.")
     if st.button("SYNC INJURY NEWS NOW", key=key_prefix + "_sync_injury_news"):
+        st.session_state["injury_updates_found"] = False
         fetch_nfl_injury_statuses.clear()
         st.rerun()
     st.write("### Player Injury Status")
@@ -966,12 +979,20 @@ def download_public_projection_table(source_name, platform_name, target_names=No
     return {}
 
 def refresh_public_projection_sources():
-    """Warm all public projection downloads on app start and every 30 minutes."""
+    """Warm public projection downloads and record their values for change detection."""
     status = {}
+    snapshots = {}
     for platform_name in ("DraftKings Classic", "DraftKings Showdown", "FanDuel Full Roster", "FanDuel Single Game"):
         for source_name in ("DFF", "DraftEdge"):
-            loaded = bool(download_public_projection_table(source_name, platform_name))
-            status[f"{source_name} ({platform_name})"] = loaded
+            values = download_public_projection_table(source_name, platform_name)
+            loaded = bool(values)
+            label = f"{source_name} ({platform_name})"
+            status[label] = loaded
+            if loaded:
+                snapshots[label] = tuple(sorted(
+                    (str(player), round(float(points), 3))
+                    for player, points in values.items()
+                ))
             # Streamlit caches empty returns too; clear failed keys so the next
             # rerun can retry immediately instead of preserving a failed fetch.
             if not loaded:
@@ -979,21 +1000,31 @@ def refresh_public_projection_sources():
                     download_public_projection_table.clear(source_name, platform_name)
                 except Exception:
                     pass
+    st.session_state["automatic_projection_snapshot_current"] = snapshots
     return status
 
 
 @st.fragment(run_every="30m")
 def automatic_projection_refresh():
-    """Runs on initial page load and automatically refreshes every 30 minutes."""
+    """Check public projections every 30 minutes and alert when values change."""
     from datetime import datetime
     status = refresh_public_projection_sources()
-    st.session_state["automatic_projection_refresh_time"] = datetime.now().astimezone().strftime("%Y-%m-%d %I:%M:%S %p %Z")
+    now = datetime.now().astimezone().strftime("%Y-%m-%d %I:%M:%S %p %Z")
+    current_snapshot = st.session_state.get("automatic_projection_snapshot_current", {})
+    previous_snapshot = st.session_state.get("automatic_projection_snapshot_previous")
+    if previous_snapshot is not None and current_snapshot != previous_snapshot:
+        st.session_state["projection_updates_found"] = True
+        st.session_state["projection_updates_found_at"] = now
+    st.session_state["automatic_projection_snapshot_previous"] = current_snapshot
+    st.session_state["automatic_projection_refresh_time"] = now
     st.session_state["automatic_projection_refresh_status"] = status
     successful = [name for name, loaded in status.items() if loaded]
+    if st.session_state.get("projection_updates_found"):
+        st.warning("PROJECTION UPDATES FOUND — click REFRESH PROJECTIONS to clear the cache and reload the latest public projections. Uploaded CSVs still take priority.")
     if successful:
-        st.caption("Automatic projection downloads checked for all slate types: " + ", ".join(successful) + ". Last check: " + st.session_state["automatic_projection_refresh_time"])
+        st.caption("Automatic projection check: " + ", ".join(successful) + ". Last checked: " + now)
     else:
-        st.warning("Automatic projection download was checked, but no public projection tables could be loaded. The app will try again in 30 minutes.")
+        st.warning("Automatic projection check could not load any public projection tables. It will try again in 30 minutes.")
 
 
 automatic_projection_refresh()
