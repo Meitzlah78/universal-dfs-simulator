@@ -2379,7 +2379,7 @@ if platform == "FanDuel":
             if np.isfinite(projection) and projection > 0:
                 final_mean = float(np.mean(final_scores)) if len(final_scores) else 0.0
                 if final_mean > 0 and np.isfinite(final_mean):
-                    upper_cap = projection * (1.0 + 2.0 * volatility_cv)
+                    upper_cap = max(3.0, projection * (1.0 + 2.0 * volatility_cv))
                     raw_scores = np.asarray(final_scores, dtype=float)
                     # Find an additive adjustment whose clipped outcomes average to
                     # the projection. The cap remains in force after calibration.
@@ -2780,7 +2780,7 @@ else:
             if np.isfinite(projection) and projection > 0:
                 final_mean = float(np.mean(final_scores)) if len(final_scores) else 0.0
                 if final_mean > 0 and np.isfinite(final_mean):
-                    upper_cap = projection * (1.0 + 2.0 * volatility_cv)
+                    upper_cap = max(3.0, projection * (1.0 + 2.0 * volatility_cv))
                     raw_scores = np.asarray(final_scores, dtype=float)
                     # Find an additive adjustment whose clipped outcomes average to
                     # the projection. The cap remains in force after calibration.
