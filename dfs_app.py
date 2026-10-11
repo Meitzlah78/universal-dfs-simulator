@@ -3852,6 +3852,21 @@ if (
     candidates_df = st.session_state["candidates_df"]
     simulation_df = st.session_state["simulation_df"]
 
+    if candidates_df.empty:
+        st.error(
+            "No valid candidate lineups were found, so contest scoring cannot run. "
+            "Check that enough players have projections, and review any locks, fades, "
+            "exposure limits, and salary constraints. Then click SIM again."
+        )
+        st.stop()
+
+    if contest_field_df.empty:
+        st.error(
+            "No simulated opponent lineups were created, so contest scoring cannot run. "
+            "Check the selected contest and player pool, then click SIM again."
+        )
+        st.stop()
+
     if platform == "DraftKings" and lineup_mode == "Classic":
         lineup_cols = ["QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "FLEX", "DST"]
         scoring_multiplier = 1.0
