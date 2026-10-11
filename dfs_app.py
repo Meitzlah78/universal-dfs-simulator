@@ -2050,15 +2050,14 @@ players_df = pd.DataFrame([
 # ================================
 
 st.divider()
-st.write("### Automatic Player Pool")
-st.caption("The app will try to load players and salaries from the selected DraftKings slate automatically.")
-with st.expander("Optional: upload a DraftKings salary/template CSV instead"):
-    salary_file = st.file_uploader(
-        "Upload a DraftKings player CSV",
-        type=["csv"],
-        help="Optional. Use this only if automatic player loading is unavailable or you want to override the downloaded player list.",
-        key="dk_optional_salary_file",
-    )
+st.write("### DraftKings Salary CSV")
+st.caption("Upload the salary CSV downloaded from DraftKings. The player pool and salaries will be loaded from this file.")
+salary_file = st.file_uploader(
+    "Upload DraftKings Salary CSV",
+    type=["csv"],
+    help="Upload the DraftKings salary CSV for the single game you want to build lineups for.",
+    key="dk_optional_salary_file",
+)
 
 entry_file = st.file_uploader(
     "Upload DraftKings Contest Entry File",
@@ -2190,261 +2189,39 @@ if entry_file is not None:
     except Exception as exc:
         st.error(f"Could not read the DraftKings contest entry file: {exc}")
 
-# Load the DraftKings slate list and allow automatic player/salary loading.
+# DraftKings players and salaries are loaded only from the uploaded salary CSV.
 selected_dk_draft_group_id = None
 auto_draftables_df = None
-st.write("### DraftKings Slate / Game")
-try:
-    import requests
-    lobby_response = requests.get(
-        "https://www.draftkings.com/lobby/getcontests?sport=NFL",
-        headers={"User-Agent": "Mozilla/5.0", "Accept": "application/json"},
-        timeout=20,
-    )
-    lobby_response.raise_for_status()
-    lobby_data = lobby_response.json()
-    lobby_contests = lobby_data.get("Contests", lobby_data.get("contests", []))
-    lobby_df = pd.json_normalize(lobby_contests)
-    if not lobby_df.empty and "id" in lobby_df.columns and "n" in lobby_df.columns:
-        lobby_names = lobby_df["n"].fillna("").astype(str)
 
-        # This selector is specifically for DraftKings single-game slates.
-        # Exclude Classic/multi-game contests even when the app's lineup mode changes.
-        if "dg" in lobby_df.columns:
-            slate_names = lobby_df["n"].fillna("").astype(str)
-            game_types = lobby_df.get("gameType", pd.Series("", index=lobby_df.index)).fillna("").astype(str)
-            slate_mask = (
-                slate_names.str.contains(r"showdown|single[ -]?game|captain|mvp", case=False, regex=True)
-                | game_types.str.contains(r"showdown|single[ -]?game", case=False, regex=True)
-            )
-            slate_rows = lobby_df.loc[slate_mask].copy()
-            if not slate_rows.empty:
-                slate_rows["dg"] = slate_rows["dg"].astype(str).str.replace(r"\\.0$", "", regex=True)
-                slate_options = (
-                    slate_rows.groupby("dg", as_index=False)
-                    .agg(SlateName=("n", "first"))
-                    .sort_values("SlateName", kind="stable")
-                )
-                slate_options["Slate Label"] = slate_options.apply(
-                    lambda row: f'{row["SlateName"]} | Slate ID {row["dg"]}', axis=1
-                )
-                # If a contest-entry CSV was uploaded, default to the game named in that file.
-                def dk_matchup_from_text(value):
-                    match = re.search(r"\b([A-Z]{2,3})\s*[@vV]s?\.?\s*([A-Z]{2,3})\b", str(value).upper())
-                    return tuple(sorted(match.groups())) if match else None
+dk_slate_key = "showdown" if lineup_mode == "Showdown" else "classic"
+dk_saved_contests = st.session_state.get("selected_dk_contests_by_slate", {})
+previous_selection = dk_saved_contests.get(dk_slate_key, {})
+if selected_contest_name:
+    active_dk_selection = {
+        "id": str(selected_contest_id or ""),
+        "name": str(selected_contest_name),
+        "your_entries": int(selected_contest_entry_count or 0),
+        "entry_fee": (
+            float(selected_contest_entry_fee)
+            if selected_contest_entry_fee is not None and pd.notna(selected_contest_entry_fee)
+            else None
+        ),
+        "field_size": None,
+    }
+    st.caption("Using contest details from your uploaded DraftKings entry CSV.")
+else:
+    active_dk_selection = {
+        "id": str(previous_selection.get("id", "")),
+        "name": str(previous_selection.get("name", "")),
+        "your_entries": int(previous_selection.get("your_entries", 0) or 0),
+        "entry_fee": previous_selection.get("entry_fee"),
+        "field_size": None,
+    }
+    st.caption("Upload your DraftKings contest entry CSV if you want to target existing entries.")
 
-                entry_matchup = dk_matchup_from_text(selected_contest_name) if selected_contest_name else None
-                slate_default_index = 0
-                if entry_matchup:
-                    for i, slate_name in enumerate(slate_options["SlateName"].astype(str).tolist()):
-                        if dk_matchup_from_text(slate_name) == entry_matchup:
-                            slate_default_index = i
-                            break
-                chosen_slate_label = st.selectbox(
-                    "Choose a DraftKings single-game slate",
-                    slate_options["Slate Label"].tolist(),
-                    index=slate_default_index,
-                    key="dk_auto_slate_" + ("showdown" if lineup_mode == "Showdown" else "classic"),
-                )
-                selected_dk_draft_group_id = str(
-                    slate_options.loc[slate_options["Slate Label"].eq(chosen_slate_label), "dg"].iloc[0]
-                )
-                try:
-                    dk_headers = {
-                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
-                        "Accept": "application/json, text/plain, */*",
-                        "Accept-Language": "en-US,en;q=0.9",
-                        "Referer": "https://www.draftkings.com/",
-                    }
-                    draftables = []
-                    dk_fetch_errors = []
-                    # Try the documented draftables endpoint first, then the alternate
-                    # available-players endpoint. Both are unofficial and may be blocked.
-                    dk_urls = [
-                        ("json", f"https://api.draftkings.com/draftgroups/v1/draftgroups/{selected_dk_draft_group_id}/draftables?format=json"),
-                        ("json", f"https://www.draftkings.com/lineup/getavailableplayers?draftGroupId={selected_dk_draft_group_id}"),
-                        ("csv", f"https://www.draftkings.com/lineup/getavailableplayerscsv?draftGroupId={selected_dk_draft_group_id}"),
-                    ]
-                    draftables_raw = pd.DataFrame()
-                    for dk_format, dk_url in dk_urls:
-                        try:
-                            dk_response = requests.get(dk_url, headers=dk_headers, timeout=20)
-                            dk_response.raise_for_status()
-                            if dk_format == "csv" or "csv" in dk_response.headers.get("Content-Type", "").lower():
-                                candidate_frame = pd.read_csv(io.StringIO(dk_response.text))
-                                if not candidate_frame.empty:
-                                    draftables_raw = candidate_frame
-                                    break
-                                dk_fetch_errors.append(f"{dk_url}: CSV response had no rows")
-                                continue
-                            dk_json = dk_response.json()
-                            candidates = (
-                                dk_json.get("draftables")
-                                or dk_json.get("Draftables")
-                                or dk_json.get("players")
-                                or dk_json.get("Players")
-                                or dk_json.get("availablePlayers")
-                                or dk_json.get("AvailablePlayers")
-                                or []
-                            )
-                            if isinstance(candidates, dict):
-                                candidates = candidates.get("players", candidates.get("Players", []))
-                            if isinstance(candidates, list) and candidates:
-                                draftables = candidates
-                                draftables_raw = pd.json_normalize(draftables)
-                                break
-                            dk_fetch_errors.append(f"{dk_url}: response had no recognized player list")
-                        except Exception as dk_error:
-                            dk_fetch_errors.append(f"{dk_url}: {dk_error}")
-                    if draftables_raw.empty:
-                        raise RuntimeError("DraftKings player endpoints failed. " + " | ".join(dk_fetch_errors))
-                    if not draftables_raw.empty:
-                        def dk_col(frame, names):
-                            lower = {str(col).strip().lower(): col for col in frame.columns}
-                            return next((lower[name.lower()] for name in names if name.lower() in lower), None)
-
-                        auto_name_col = dk_col(draftables_raw, ["displayName", "playerName", "name"])
-                        auto_salary_col = dk_col(draftables_raw, ["salary", "draftableSalary"])
-                        auto_team_col = dk_col(draftables_raw, ["teamAbbreviation", "teamAbbrev", "team", "teamName"])
-                        auto_position_col = dk_col(draftables_raw, ["position", "rosterPosition", "rosterSlot"])
-                        auto_id_col = dk_col(draftables_raw, ["draftableId", "id", "playerId"])
-                        if auto_name_col and auto_salary_col and auto_team_col:
-                            auto_draftables_df = pd.DataFrame({
-                                "Name": draftables_raw[auto_name_col].astype(str).str.strip(),
-                                "Salary": pd.to_numeric(draftables_raw[auto_salary_col], errors="coerce"),
-                                "TeamAbbrev": draftables_raw[auto_team_col].astype(str).str.strip().str.upper(),
-                                "Roster Position": draftables_raw[auto_position_col].astype(str).str.strip() if auto_position_col else "FLEX",
-                                "Position": draftables_raw[auto_position_col].astype(str).str.strip() if auto_position_col else "FLEX",
-                                "ID": draftables_raw[auto_id_col].astype(str).str.strip() if auto_id_col else "",
-                                "AvgPointsPerGame": 0,
-                            })
-                            auto_draftables_df = auto_draftables_df.dropna(subset=["Salary"])
-                            auto_draftables_df = auto_draftables_df[
-                                auto_draftables_df["Name"].ne("") &
-                                auto_draftables_df["Name"].str.lower().ne("nan") &
-                                auto_draftables_df["Salary"].gt(0)
-                            ].reset_index(drop=True)
-                            if not auto_draftables_df.empty:
-                                st.success(f"Loaded {auto_draftables_df['Name'].nunique()} players automatically for this slate.")
-                            else:
-                                auto_draftables_df = None
-                                st.warning("DraftKings returned a slate, but its player data could not be read. You can upload a salary CSV below.")
-                        else:
-                            st.warning("DraftKings player data did not include the expected name, salary, and team fields. You can upload a salary CSV below.")
-                except Exception as slate_error:
-                    st.warning(f"Could not automatically load players from DraftKings: {slate_error}. You can upload a salary CSV below.")
-        if lineup_mode == "Showdown":
-            lobby_mask = (
-                lobby_names.str.contains("showdown", case=False, regex=False)
-                | lobby_df.get("gameType", pd.Series("", index=lobby_df.index)).fillna("").astype(str).str.contains("showdown", case=False, regex=False)
-            )
-            # Keep only full-game, pregame contests; exclude period-specific and live/in-game contests.
-            partial_game_pattern = r"\\b(1st|2nd|3rd|4th|first|second|third|fourth)\\s*(quarter|qtr|half)\\b|\\b(first half|second half|1st half|2nd half|in[- ]?game|live contest|live scoring|quarter contest|half contest)\\b"
-            lobby_mask &= ~lobby_names.str.contains(partial_game_pattern, case=False, regex=True, na=False)
-            # Exclude cash-game formats; keep tournament/GPP contests only.
-            cash_game_pattern = r"\\b(50/50|double[- ]?up|head[- ]?to[- ]?head|h2h|cash game|winner[- ]?take[- ]?all)\\b"
-            lobby_mask &= ~lobby_names.str.contains(cash_game_pattern, case=False, regex=True, na=False)
-        else:
-            lobby_mask = ~(
-                lobby_names.str.contains("showdown", case=False, regex=False)
-                | lobby_df.get("gameType", pd.Series("", index=lobby_df.index)).fillna("").astype(str).str.contains("showdown", case=False, regex=False)
-            )
-        # Keep the contest dropdown aligned with the selected slate in both modes.
-        if selected_dk_draft_group_id and "dg" in lobby_df.columns:
-            lobby_mask &= lobby_df["dg"].astype(str).str.replace(r"\.0$", "", regex=True).eq(selected_dk_draft_group_id)
-        # Apply full-game filtering to every DraftKings slate mode, not just Showdown.
-        lobby_mask &= lobby_names.apply(is_full_game_contest_name)
-        lobby_matches = lobby_df.loc[lobby_mask].copy()
-        if not lobby_matches.empty:
-            # Do not use the short "s" field: it is not a reliable contest field-size value
-            # and was causing every contest to appear to have only 1 entry.
-            size_aliases = [
-                "fieldSize", "contestSize", "totalEntries", "entryCount",
-                "numEntries", "numberOfEntries", "entries", "size"
-            ]
-            size_col = next((c for c in size_aliases if c in lobby_matches.columns), None)
-            lobby_matches["id"] = lobby_matches["id"].astype(str).str.replace(r"\.0$", "", regex=True)
-            lobby_matches["_field_size"] = (
-                pd.to_numeric(lobby_matches[size_col], errors="coerce")
-                if size_col else np.nan
-            )
-            # If the API does not provide an explicit field-size column, try other
-            # numeric fields only when their values look like contest sizes (> 1).
-            if size_col is None:
-                candidate_cols = [
-                    c for c in lobby_matches.columns
-                    if c not in {"id", "n"} and c.lower() not in {"s", "m", "a"}
-                ]
-                for candidate in candidate_cols:
-                    values = pd.to_numeric(lobby_matches[candidate], errors="coerce")
-                    plausible = values[values > 1]
-                    if not plausible.empty and plausible.median() >= 10:
-                        lobby_matches["_field_size"] = values
-                        break
-            # Remove duplicate API records by contest ID, then duplicate contest names.
-            lobby_matches = lobby_matches.drop_duplicates(subset=["id"], keep="first").copy()
-            lobby_matches["_normalized_name"] = lobby_matches["n"].fillna("").astype(str).str.strip().str.casefold()
-            lobby_matches = lobby_matches.drop_duplicates(subset=["_normalized_name"], keep="first").copy()
-            lobby_matches["_priority"] = 3
-            lobby_matches.loc[lobby_matches["n"].astype(str).str.contains("jukebox", case=False, regex=False), "_priority"] = 0
-            lobby_matches.loc[lobby_matches["n"].astype(str).str.contains("first down", case=False, regex=False), "_priority"] = 1
-            lobby_matches.loc[lobby_matches["n"].astype(str).str.contains("dime package", case=False, regex=False), "_priority"] = 2
-            lobby_matches = lobby_matches.sort_values(
-                ["_priority", "n"], ascending=[True, True], kind="stable"
-            )
-            lobby_matches["Contest Label"] = lobby_matches.apply(
-                lambda row: f'{row["n"]} | ID {row["id"]}' + (f' | {int(row["_field_size"]):,} entries' if pd.notna(row["_field_size"]) and row["_field_size"] > 0 else ""),
-                axis=1,
-            )
-            # No contest dropdown. Keep contest metadata from the uploaded entry CSV.
-            # The lobby is used only to verify slate/game context; its ambiguous size fields
-            # are not treated as a reliable opponent-field count.
-            dk_slate_key = "showdown" if lineup_mode == "Showdown" else "classic"
-            dk_saved_contests = st.session_state.get("selected_dk_contests_by_slate", {})
-            previous_selection = dk_saved_contests.get(dk_slate_key, {})
-            chosen_lobby = None
-            if selected_contest_name:
-                matching_entry_contests = lobby_matches[
-                    lobby_matches["n"].astype(str).str.casefold().eq(str(selected_contest_name).casefold())
-                ]
-                if not matching_entry_contests.empty:
-                    chosen_lobby = matching_entry_contests.iloc[0]
-            if chosen_lobby is None and not lobby_matches.empty:
-                chosen_lobby = lobby_matches.iloc[0]
-            if selected_contest_name:
-                active_dk_selection = {
-                    "id": str(selected_contest_id or ""),
-                    "name": str(selected_contest_name),
-                    "your_entries": int(selected_contest_entry_count or 0),
-                    "entry_fee": (
-                        float(selected_contest_entry_fee)
-                        if selected_contest_entry_fee is not None and pd.notna(selected_contest_entry_fee)
-                        else None
-                    ),
-                    "field_size": None,
-                }
-                st.caption("Using the contest details from your uploaded DraftKings entry CSV. No contest dropdown is needed.")
-            else:
-                active_dk_selection = {
-                    "id": str(previous_selection.get("id", "")),
-                    "name": str(previous_selection.get("name", "")),
-                    "your_entries": int(previous_selection.get("your_entries", 0) or 0),
-                    "entry_fee": previous_selection.get("entry_fee"),
-                    "field_size": None,
-                }
-                st.caption("Upload your DraftKings entry CSV if you want the app to use your contest details.")
-            dk_saved_contests[dk_slate_key] = active_dk_selection
-            st.session_state["selected_dk_contests_by_slate"] = dk_saved_contests
-            st.session_state["selected_dk_contest"] = active_dk_selection
-        else:
-            if lineup_mode == "Showdown" and salary_file is not None:
-                st.warning("No single-game contests matched the two teams in your uploaded salary file. Check that the file is for the correct Showdown slate.")
-            else:
-                st.warning(f"No DraftKings {lineup_mode} contests were found in the lobby response.")
-    else:
-        st.warning("DraftKings lobby response did not contain the expected contest list.")
-except Exception as exc:
-    st.warning(f"Could not load the DraftKings lobby contest dropdown: {exc}")
+dk_saved_contests[dk_slate_key] = active_dk_selection
+st.session_state["selected_dk_contests_by_slate"] = dk_saved_contests
+st.session_state["selected_dk_contest"] = active_dk_selection
 
 dk_opponent_target = get_contest_opponent_target("dk")
 st.caption(f"Simulated DraftKings opponents: {dk_opponent_target:,}")
@@ -2459,13 +2236,6 @@ show_projection_refresh_status(
     [("DFF", dff_projection_file), ("DraftEdge", draftedge_projection_file)],
     "dk_" + lineup_mode.replace(" ", "_").lower()
 )
-
-if salary_file is None and auto_draftables_df is not None:
-    # Feed the automatically loaded DraftKings player pool through the same parser
-    # used for uploaded templates so player IDs and roster slots remain available.
-    import io
-    salary_file = io.BytesIO(auto_draftables_df.to_csv(index=False).encode("utf-8"))
-    st.caption("Automatic DraftKings player loading is active. You can still upload a salary/template CSV to override it.")
 
 if salary_file is not None:
     try:
