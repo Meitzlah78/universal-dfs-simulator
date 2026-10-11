@@ -2371,12 +2371,33 @@ if platform == "FanDuel":
 
             script_factor = np.clip(script_factor, 0.80, 1.20)
             final_scores = np.maximum(scores * script_factor, 0.0)
-            # Game scripts change relative outcomes and correlations, but should not
-            # silently change a player's expected score away from the supplied projection.
+            # Keep the final upper tail controlled AFTER game-script effects.
+            # Use an upper limit of two target standard deviations above projection,
+            # then shift-and-clip (rather than multiply) so the final mean stays close
+            # to the supplied projection without scaling the capped tail back upward.
             if np.isfinite(projection) and projection > 0:
                 final_mean = float(np.mean(final_scores)) if len(final_scores) else 0.0
                 if final_mean > 0 and np.isfinite(final_mean):
-                    final_scores = final_scores * (projection / final_mean)
+                    upper_cap = projection * (1.0 + 2.0 * volatility_cv)
+                    raw_scores = np.asarray(final_scores, dtype=float)
+                    # Find an additive adjustment whose clipped outcomes average to
+                    # the projection. The cap remains in force after calibration.
+                    low_shift = -float(np.max(raw_scores)) - upper_cap
+                    high_shift = upper_cap
+                    for _ in range(50):
+                        mid_shift = (low_shift + high_shift) / 2.0
+                        adjusted_mean = float(np.mean(np.clip(
+                            raw_scores + mid_shift, 0.0, upper_cap
+                        )))
+                        if adjusted_mean < projection:
+                            low_shift = mid_shift
+                        else:
+                            high_shift = mid_shift
+                    final_scores = np.clip(
+                        raw_scores + (low_shift + high_shift) / 2.0,
+                        0.0,
+                        upper_cap,
+                    )
             simulations[name] = final_scores
             if index == 0 or (index + 1) % 2 == 0 or index + 1 == total_players:
                 progress_value = 0.05 + 0.90 * (index + 1) / total_players
@@ -2744,12 +2765,33 @@ else:
 
             script_factor = np.clip(script_factor, 0.80, 1.20)
             final_scores = np.maximum(scores * script_factor, 0.0)
-            # Game scripts change relative outcomes and correlations, but should not
-            # silently change a player's expected score away from the supplied projection.
+            # Keep the final upper tail controlled AFTER game-script effects.
+            # Use an upper limit of two target standard deviations above projection,
+            # then shift-and-clip (rather than multiply) so the final mean stays close
+            # to the supplied projection without scaling the capped tail back upward.
             if np.isfinite(projection) and projection > 0:
                 final_mean = float(np.mean(final_scores)) if len(final_scores) else 0.0
                 if final_mean > 0 and np.isfinite(final_mean):
-                    final_scores = final_scores * (projection / final_mean)
+                    upper_cap = projection * (1.0 + 2.0 * volatility_cv)
+                    raw_scores = np.asarray(final_scores, dtype=float)
+                    # Find an additive adjustment whose clipped outcomes average to
+                    # the projection. The cap remains in force after calibration.
+                    low_shift = -float(np.max(raw_scores)) - upper_cap
+                    high_shift = upper_cap
+                    for _ in range(50):
+                        mid_shift = (low_shift + high_shift) / 2.0
+                        adjusted_mean = float(np.mean(np.clip(
+                            raw_scores + mid_shift, 0.0, upper_cap
+                        )))
+                        if adjusted_mean < projection:
+                            low_shift = mid_shift
+                        else:
+                            high_shift = mid_shift
+                    final_scores = np.clip(
+                        raw_scores + (low_shift + high_shift) / 2.0,
+                        0.0,
+                        upper_cap,
+                    )
             simulations[name] = final_scores
             if index == 0 or (index + 1) % 2 == 0 or index + 1 == total_players:
                 progress_value = 0.05 + 0.90 * (index + 1) / total_players
