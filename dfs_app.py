@@ -2189,7 +2189,7 @@ def _simulate_scored_player_outcomes(players_df, platform, rng):
 
     result = pd.DataFrame(simulations)
     simulation_progress.progress(1.0, text=f"Player simulations complete: {total_players} players")
-    simulation_progress.progress(1.0, text="Step complete") # Keep completed progress visible
+
     return result
 
 # ================================
@@ -3605,7 +3605,7 @@ if build_clicked:
             progress_bar=field_progress
         )
     field_progress.progress(1.0, text=f"Opponent lineups complete: {len(contest_field_df):,} created")
-    field_progress.progress(1.0, text="Step complete") # Keep completed progress visible
+
     show_field_ownership(contest_field_df, ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"], "Simulated Field Player Ownership", captain_slot="Captain")
     st.session_state["contest_field_df"] = contest_field_df
     st.session_state["contest_field_count"] = len(contest_field_df)
@@ -3828,7 +3828,7 @@ for captain_index, captain in enumerate(search_pool):
 
 candidates_df = pd.DataFrame(candidates)
 candidate_progress.progress(1.0, text=f"Candidate lineup search complete: {len(candidates_df):,} found")
-candidate_progress.progress(1.0, text="Step complete") # Keep completed progress visible
+
 
 st.session_state["candidates_df"] = candidates_df
 st.session_state["candidates_ready"] = True
