@@ -2287,9 +2287,10 @@ if platform == "FanDuel":
             # of the sampled historical/statistical mean, and preserve the outcome
             # distribution and shared game-script variation rather than setting every
             # simulation equal to the projection.
-            # Apply the same projection anchor to EVERY player. Salary uploads and
-            # projection feeds use different column names, so check common names rather
-            # than silently skipping the anchor when "Projection" is absent.
+            # Calibrate every player's sampled distribution to the slate projection.
+            # The prior blend could still leave bench QBs and mismatched historical
+            # records far above their projections. Projection is the center of the
+            # distribution; historical samples determine shape, not an inflated mean.
             projection = np.nan
             for projection_column in (
                 "Projection", "ProjectedPoints", "FinalProjection",
@@ -2305,11 +2306,9 @@ if platform == "FanDuel":
 
             sampled_mean = float(np.mean(scores)) if len(scores) else 0.0
             if np.isfinite(projection) and projection > 0 and np.isfinite(sampled_mean) and sampled_mean > 0:
-                # Keep realistic player-to-player variation, but prevent raw historical
-                # samples from overwhelming the current projection: 75% projection,
-                # 25% sampled historical/statistical average.
-                target_mean = 0.75 * float(projection) + 0.25 * sampled_mean
-                scores = scores * (target_mean / sampled_mean)
+                # Normalize the full outcome distribution so its mean matches the
+                # projection exactly, while retaining relative boom/bust variation.
+                scores = scores * (float(projection) / sampled_mean)
 
             # Shared game script adjusts the sampled outcome modestly. Trailing teams
             # throw more; leading teams lean more on their running backs.
