@@ -264,13 +264,23 @@ def build_dk_contest_entry_export(entry_df, selected_contest_id, lineup_ids_df, 
     # Locate roster columns in the original entry template, including pandas' .1/.2
     # suffixes for duplicate headers such as FLEX,FLEX or RB,RB.
     original_columns = list(entries.columns)
-    normalized = [re.sub(r"\.\d+$", "", str(col)).strip().upper() for col in original_columns]
+    normalized = [re.sub(r"\.\d+$", "", str(col).replace("\ufeff", "")).strip().upper() for col in original_columns]
+    # DraftKings templates may use repeated RB/WR headers or RB1/RB2 and WR1/WR2/WR3.
+    roster_aliases = {
+        "RB": {"RB", "RB1", "RB2"},
+        "WR": {"WR", "WR1", "WR2", "WR3"},
+        "QB": {"QB"}, "TE": {"TE"}, "FLEX": {"FLEX"},
+        "DST": {"DST", "D", "DEF"},
+        "CPT": {"CPT", "CAPTAIN"}, "CAPTAIN": {"CPT", "CAPTAIN"},
+        "MVP": {"MVP"}
+    }
     roster_column_indices = []
     used = set()
     for expected in expected_slots:
+        accepted_names = roster_aliases.get(expected.upper(), {expected.upper()})
         found = next(
             (i for i, name in enumerate(normalized)
-             if i not in used and name == expected.upper()),
+             if i not in used and name in accepted_names),
             None
         )
         if found is None:
@@ -3066,7 +3076,7 @@ if platform == "DraftKings" and lineup_mode == "Classic":
         ("TE", {"TE"}), ("FLEX", {"RB", "WR", "TE"}), ("DST", {"DST"})
     ]
 
-    classic_run_all = st.button("SIM", type="primary", use_container_width=True, key="dk_classic_run_all")
+    classic_run_all = st.button("SIM", type="primary", use_container_width=False, key="dk_classic_run_all")
     if classic_run_all:
         with st.spinner(f"Step 1 of 3: Running {SIMULATION_COUNT:,} player simulations for DraftKings Classic..."):
             classic_simulation_df = run_game_simulations(players_df, platform=platform)
@@ -3181,7 +3191,7 @@ if platform == "DraftKings" and lineup_mode == "Classic":
             st.session_state["classic_pool_signature"] = slate_signature
 
     if classic_run_all:
-        st.caption("Step 3 of 3: Simulating the contest field and scoring your lineups.")
+        # Keep the Classic workflow compact, matching the single-button Showdown layout.
         if "simulation_df" not in st.session_state:
             st.warning("Run SIM first, then run CONTEST SIM.")
         elif len(classic_pool) < 9:
@@ -3274,8 +3284,6 @@ if platform == "DraftKings" and lineup_mode == "Classic":
                 st.write("### Your Lineups vs. Contest Field")
                 st.caption("Comparison uses projected average points from the internal player simulations. It is an estimate, not actual contest results.")
                 st.dataframe(user_lineups, use_container_width=True, hide_index=True)
-                st.write("### Top Simulated Opponents")
-                st.dataframe(contest_field_df.sort_values("ProjectedPoints", ascending=False).head(20), use_container_width=True, hide_index=True)
                 st.metric("Simulated opponent lineups", f"{len(contest_field_df):,}")
                 show_field_ownership(contest_field_df, [slot for slot, _ in contest_slots], "Simulated Field Player Ownership")
             else:
@@ -3303,19 +3311,42 @@ if platform == "DraftKings" and lineup_mode == "Classic":
         classic_sim = st.session_state.get("simulation_df")
         if isinstance(classic_sim, pd.DataFrame) and not classic_sim.empty:
             classic_means = classic_sim.mean(axis=0, numeric_only=True).to_dict()
+            classic_floors = classic_sim.quantile(0.10, axis=0).to_dict()
+            classic_ceilings = classic_sim.quantile(0.90, axis=0).to_dict()
             for slot in export_slots:
                 if slot in classic_display.columns:
                     classic_display[slot + " Sim Pts"] = classic_display[slot].map(
                         lambda name: round(float(classic_means.get(str(name), 0.0)), 2)
                     )
+                    classic_display[slot + " Floor (P10)"] = classic_display[slot].map(
+                        lambda name: round(float(classic_floors.get(str(name), 0.0)), 2)
+                    )
+                    classic_display[slot + " Ceiling (P90)"] = classic_display[slot].map(
+                        lambda name: round(float(classic_ceilings.get(str(name), 0.0)), 2)
+                    )
             ordered_cols = []
             for slot in export_slots:
                 if slot in classic_display.columns:
-                    ordered_cols.extend([slot, slot + " Sim Pts"])
+                    ordered_cols.extend([slot, slot + " Sim Pts", slot + " Floor (P10)", slot + " Ceiling (P90)"])
             classic_display["Total Sim Pts"] = classic_display[
                 [slot + " Sim Pts" for slot in export_slots if slot + " Sim Pts" in classic_display.columns]
             ].apply(pd.to_numeric, errors="coerce").sum(axis=1).round(2)
-            ordered_cols.append("Total Sim Pts")
+            # Use combined lineup outcomes to calculate lineup-level floor and ceiling.
+            lineup_floor_values = []
+            lineup_ceiling_values = []
+            for _, lineup_row in classic_display.iterrows():
+                lineup_names = [str(lineup_row[slot]) for slot in export_slots if slot in classic_display.columns]
+                valid_names = [name for name in lineup_names if name in classic_sim.columns]
+                if valid_names:
+                    lineup_outcomes = classic_sim[valid_names].sum(axis=1)
+                    lineup_floor_values.append(round(float(lineup_outcomes.quantile(0.10)), 2))
+                    lineup_ceiling_values.append(round(float(lineup_outcomes.quantile(0.90)), 2))
+                else:
+                    lineup_floor_values.append(0.0)
+                    lineup_ceiling_values.append(0.0)
+            classic_display["Total Floor (P10)"] = lineup_floor_values
+            classic_display["Total Ceiling (P90)"] = lineup_ceiling_values
+            ordered_cols.extend(["Total Sim Pts", "Total Floor (P10)", "Total Ceiling (P90)"])
             ordered_cols.extend(c for c in classic_display.columns if c not in ordered_cols)
             classic_display = classic_display[ordered_cols]
         st.dataframe(
