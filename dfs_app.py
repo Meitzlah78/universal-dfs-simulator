@@ -1677,6 +1677,12 @@ if platform == "FanDuel":
                 # -2 lost fumbles, and no 300/100-yard bonuses.
                 simulated_scores = np.zeros((SIMULATION_COUNT, len(fd_players)), dtype=float)
                 for index, (_, player_row) in enumerate(fd_players.iterrows()):
+                    if fd_run_all_clicked:
+                        sim_pct = 3 + int(25 * (index / max(1, len(fd_players))))
+                        fd_progress_bar.progress(
+                            sim_pct,
+                            text=f"Simulating FanDuel players: {index + 1:,} of {len(fd_players):,}..."
+                        )
                     positions = set(str(player_row["Position"]).upper().replace(" ", "").split("/"))
                     n = SIMULATION_COUNT
                     if "QB" in positions:
@@ -1907,7 +1913,12 @@ if platform == "FanDuel":
                     for slot, eligible in roster
                 }
 
-            for _ in range(max_attempts):
+            for build_attempt in range(max_attempts):
+                if fd_run_all_clicked and (build_attempt % 1000 == 0):
+                    fd_progress_bar.progress(
+                        30 + int(30 * min(len(results) / target_lineups, 1.0)),
+                        text=f"Building FanDuel lineups: {len(results):,} of {target_lineups:,} accepted (attempt {build_attempt:,})..."
+                    )
                 chosen_indices = []
                 chosen = {}
                 used = set()
