@@ -1840,8 +1840,37 @@ if platform == "FanDuel":
         fd_results = remove_out_players_from_lineups(fd_results, fd_slots, "FanDuel")
         st.session_state[fd_build_key] = fd_results
         st.write(f"Built {len(fd_results)} FanDuel lineups.")
+
+        # Use the same player-by-player points layout as the DraftKings Portfolio.
         fd_display = fd_results.copy()
-        st.dataframe(fd_display, use_container_width=True, hide_index=True)
+        fd_player_means = {
+            str(name): float(values.get("Mean", 0.0))
+            for name, values in player_sim.items()
+        }
+        fd_display_columns = []
+        for slot in fd_slots:
+            if slot not in fd_display.columns:
+                continue
+            multiplier = 1.5 if slot in {"MVP"} else 1.0
+            points_col = slot + " Sim Pts"
+            fd_display[points_col] = fd_display[slot].map(
+                lambda player: round(fd_player_means.get(str(player), 0.0) * multiplier, 2)
+            )
+            fd_display_columns.extend([slot, points_col])
+        if "ProjectedPoints" in fd_display.columns:
+            fd_display_columns.append("ProjectedPoints")
+        if "Score" in fd_display.columns:
+            fd_display_columns.append("Score")
+        if "Salary" in fd_display.columns:
+            fd_display_columns.append("Salary")
+        fd_display_columns = list(dict.fromkeys(
+            col for col in fd_display_columns if col in fd_display.columns
+        ))
+        st.dataframe(
+            fd_display[fd_display_columns] if fd_display_columns else fd_display,
+            use_container_width=True,
+            hide_index=True
+        )
 
         if "FD_ID" in fd_players.columns:
             fd_ids = dict(zip(fd_players["Name"], fd_players["FD_ID"].astype(str)))
