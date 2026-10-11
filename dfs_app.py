@@ -2166,15 +2166,14 @@ if entry_file is not None:
             # Users can upload a file containing only the contest they want to target.
             if contest_summary.empty:
                 st.warning("No usable contest rows were found in this entry CSV. Please upload the original DraftKings My Contests CSV.")
-                selected_row = None
+                selected_row = pd.Series({"Contest ID": "", "Contest Name": "", "Entries": len(entry_df), "EntryFee": None})
             else:
                 selected_row = contest_summary.iloc[0]
-            if selected_row is not None:
-                selected_contest_id = str(selected_row["Contest ID"])
-                selected_contest_name = str(selected_row["Contest Name"]).strip()
-                if selected_contest_name.casefold() in {"", "nan", "none"} or set(selected_contest_name) <= {","}:
-                    selected_contest_name = "Contest name not detected — check uploaded CSV format"
-                selected_contest_entry_count = int(selected_row["Entries"])
+            selected_contest_id = str(selected_row["Contest ID"])
+            selected_contest_name = str(selected_row["Contest Name"]).strip()
+            if selected_contest_name.casefold() in {"", "nan", "none"} or set(selected_contest_name) <= {","}:
+                selected_contest_name = "Contest name not detected — check uploaded CSV format"
+            selected_contest_entry_count = int(selected_row["Entries"])
             selected_contest_entry_fee = pd.to_numeric(
                 str(selected_row["EntryFee"]).replace("$", "").replace(",", ""),
                 errors="coerce"
