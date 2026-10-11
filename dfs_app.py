@@ -598,6 +598,7 @@ def show_projection_refresh_status(source_files, key_prefix):
 
     if refresh_clicked:
         download_public_projection_table.clear()
+        st.session_state["projection_updates_found"] = False
         st.session_state[time_key] = datetime.now().astimezone().strftime("%Y-%m-%d %I:%M:%S %p %Z")
         st.success("Projection refresh requested. Uploaded CSVs take priority; public projection pages will also be checked.")
         st.rerun()
