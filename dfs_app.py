@@ -3151,7 +3151,7 @@ if platform == "DraftKings" and lineup_mode == "Classic":
         ("TE", {"TE"}), ("FLEX", {"RB", "WR", "TE"}), ("DST", {"DST"})
     ]
 
-    classic_run_all = st.button("SIM", type="primary", use_container_width=True, key="dk_classic_run_all")
+    classic_run_all = st.button("SIM", type="primary", use_container_width=False, key="dk_classic_run_all")
     if classic_run_all:
         with st.spinner(f"Step 1 of 3: Running {SIMULATION_COUNT:,} player simulations for DraftKings Classic..."):
             classic_simulation_df = run_game_simulations(players_df, platform=platform)
