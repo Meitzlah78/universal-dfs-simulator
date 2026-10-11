@@ -3313,10 +3313,17 @@ if platform == "DraftKings" and lineup_mode == "Classic":
                 dk_upload_columns = ["QB", "RB", "RB", "WR", "WR", "WR", "TE", "FLEX", "DST"]
                 lineup_ids_df = pd.DataFrame(export_data, columns=dk_upload_columns)
                 st.write("#### DraftKings Classic Export")
-                if entry_file is not None and selected_contest_id:
-                    st.caption("Replace existing entries: preserves Entry ID and Contest ID from your DraftKings My Contests CSV.")
+                has_entry_template = (
+                    entry_file is not None
+                    and selected_contest_id
+                    and "entry_df" in locals()
+                    and isinstance(entry_df, pd.DataFrame)
+                    and not entry_df.empty
+                )
+                if has_entry_template:
+                    st.caption("FOR EXISTING ENTRIES: Download this file, then go to DraftKings → My Lineups → Edit Entries → Upload CSV. Do not upload this file on the regular Upload Lineups page. Entry IDs and Contest ID are preserved.")
                     export_df = build_dk_contest_entry_export(
-                        entry_df if "entry_df" in locals() else None,
+                        entry_df,
                         selected_contest_id,
                         lineup_ids_df,
                         dk_upload_columns,
@@ -3324,27 +3331,26 @@ if platform == "DraftKings" and lineup_mode == "Classic":
                     )
                     if export_df is not None:
                         st.download_button(
-                            "EXPORT TO REPLACE EXISTING DK ENTRIES",
-                            export_df.to_csv(index=False).encode("utf-8"),
+                            label="DOWNLOAD FILE FOR EDIT ENTRIES",
+                            data=export_df.to_csv(index=False).encode("utf-8"),
                             file_name="DraftKings_Classic_Contest_Entries.csv",
                             mime="text/csv",
+                            use_container_width=True,
                             key="dk_classic_replace_export"
                         )
+                        st.link_button(
+                            "OPEN DRAFTKINGS MY LINEUPS / EDIT ENTRIES",
+                            "https://www.draftkings.com/lineup",
+                            use_container_width=True
+                        )
+                        st.caption("On DraftKings, open My Lineups and choose Edit Entries to upload the downloaded replacement CSV.")
                 else:
-                    st.info("For an upload that replaces existing entries, upload the CSV from DraftKings My Contests above.")
-                # Basic lineup export is a separate report, not a DraftKings contest-entry replacement file.
-                contest_meta = st.session_state.get("selected_dk_contest", {})
-                basic_export = lineup_ids_df.copy()
-                basic_export.insert(0, "Contest Name", str(contest_meta.get("name", "")))
-                basic_export.insert(0, "Contest ID", str(contest_meta.get("id", "")))
-                st.caption("Basic export includes contest details when available, but does not target or replace existing DraftKings entries.")
-                st.download_button(
-                    "EXPORT BASIC CLASSIC LINEUPS (NOT ENTRY REPLACEMENT)",
-                    basic_export.to_csv(index=False).encode("utf-8"),
-                    file_name="DraftKings_Classic_Basic_Lineups.csv",
-                    mime="text/csv",
-                    key="dk_classic_basic_export"
-                )
+                    st.warning(
+                        "To put these lineups into your existing entries, upload the CSV from DraftKings "
+                        "My Contests / Edit Entries in this app and select the matching contest. "
+                        "Then this app will make one replacement file that preserves Entry IDs and Contest ID. "
+                        "A separate new-lineups export is intentionally disabled."
+                    )
         else:
             st.info("Upload a DraftKings salary/template CSV containing player IDs to enable lineup export.")
 
