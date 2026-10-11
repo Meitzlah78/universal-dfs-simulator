@@ -3193,29 +3193,52 @@ if platform == "DraftKings" and lineup_mode == "Classic":
                     ("WR1", {"WR"}), ("WR2", {"WR"}), ("WR3", {"WR"}),
                     ("TE", {"TE"}), ("FLEX", {"RB", "WR", "TE"}), ("DST", {"DST"})
                 ]
+                # Precompute NumPy arrays once. Avoid rebuilding/filtering a pandas
+                # DataFrame for every slot of every simulated opponent lineup.
+                pool_names = pool["Name"].astype(str).to_numpy(dtype=object)
+                pool_salaries = pd.to_numeric(pool["Salary"], errors="coerce").fillna(0).to_numpy(dtype=np.int64)
+                pool_weights = pd.to_numeric(pool["Weight"], errors="coerce").fillna(0.01).clip(lower=0.01).to_numpy(dtype=float)
+                pool_means = np.asarray([float(mean_scores.get(name, 0.0)) for name in pool_names], dtype=float)
+                slot_indices = {
+                    slot: np.asarray([
+                        i for i, positions in enumerate(pool["Eligible"].tolist())
+                        if positions & eligible
+                    ], dtype=np.int32)
+                    for slot, eligible in contest_slots
+                }
                 rows = []
                 seen_contest = set()
                 attempts = 0
-                while len(rows) < dk_opponent_target and attempts < max(250000, dk_opponent_target * 15):
+                max_opponent_attempts = max(250000, dk_opponent_target * 15)
+                while len(rows) < dk_opponent_target and attempts < max_opponent_attempts:
                     attempts += 1
+                    chosen_indices = []
                     chosen = {}
-                    used = set()
                     salary = 0
-                    for slot, eligible in contest_slots:
-                        choices = pool[
-                            (~pool["Name"].isin(used))
-                            & pool["Eligible"].apply(lambda positions: bool(positions & eligible))
-                            & ((pool["Salary"] + salary) <= MAX_LINEUP_SALARY)
-                        ]
-                        if choices.empty:
+                    used = set()
+                    for slot, _eligible in contest_slots:
+                        base_indices = slot_indices[slot]
+                        if not len(base_indices):
                             break
-                        weights = choices["Weight"].to_numpy(dtype=float)
-                        weights = weights / weights.sum()
-                        picked = choices.iloc[int(rng.choice(len(choices), p=weights))]
-                        chosen[slot] = str(picked["Name"])
-                        used.add(str(picked["Name"]))
-                        salary += int(picked["Salary"])
-                    if len(chosen) != len(contest_slots):
+                        choices = base_indices[
+                            np.asarray([
+                                int(i) not in used and salary + int(pool_salaries[i]) <= MAX_LINEUP_SALARY
+                                for i in base_indices
+                            ], dtype=bool)
+                        ]
+                        if not len(choices):
+                            break
+                        weights = pool_weights[choices]
+                        weight_sum = weights.sum()
+                        if not np.isfinite(weight_sum) or weight_sum <= 0:
+                            picked_idx = int(rng.choice(choices))
+                        else:
+                            picked_idx = int(rng.choice(choices, p=weights / weight_sum))
+                        chosen[slot] = str(pool_names[picked_idx])
+                        chosen_indices.append(picked_idx)
+                        used.add(picked_idx)
+                        salary += int(pool_salaries[picked_idx])
+                    if len(chosen_indices) != len(contest_slots):
                         continue
                     if salary < MIN_LINEUP_SALARY or salary > MAX_LINEUP_SALARY or salary > 50000:
                         continue
@@ -3223,7 +3246,7 @@ if platform == "DraftKings" and lineup_mode == "Classic":
                     if key in seen_contest:
                         continue
                     seen_contest.add(key)
-                    points = sum(float(mean_scores.get(name, 0.0)) for name in chosen.values())
+                    points = float(pool_means[chosen_indices].sum())
                     rows.append({**chosen, "Salary": salary, "ProjectedPoints": round(points, 2)})
                 contest_field_df = pd.DataFrame(rows)
                 user_lineups = st.session_state["classic_lineups"].copy()
