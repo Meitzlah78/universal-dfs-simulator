@@ -2306,7 +2306,7 @@ if platform == "FanDuel":
 
                             header_lookup = {}
                             for i, column in enumerate(fd_template_header):
-                                key_name = re.sub(r"\\.\\d+$", "", str(column)).strip().upper()
+                                key_name = str(column).strip().upper()
                                 header_lookup.setdefault(key_name, []).append(i)
                             if lineup_mode == "Single Game":
                                 slot_aliases = [
@@ -2391,6 +2391,11 @@ if platform == "FanDuel":
                                     player_id = str(fd_ids.get(player_name, "")).strip()
                                     if not player_id or player_id.lower() == "nan":
                                         raise ValueError(f"Missing FanDuel player ID for {player_name}.")
+                                    # FanDuel entry templates use slate-prefixed player IDs
+                                    # (for example, 135282-62239). Add the selected slate prefix
+                                    # when the salary file supplies only the numeric player ID.
+                                    if "-" not in player_id and "-" in target_id:
+                                        player_id = target_id.split("-", 1)[0] + "-" + player_id
                                     row[slot_index] = player_id
                                 fd_template_rows[row_index] = row
 
