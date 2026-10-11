@@ -2327,6 +2327,7 @@ if platform == "FanDuel":
 
         return result
 
+else:
     # ================================
     # PLAYER POOL
     # ================================
@@ -4825,11 +4826,10 @@ if "contest_results_df" in st.session_state:
                 st.session_state["portfolio_df"] = portfolio_df
                 st.rerun()
 
-else:
-
-    st.info(
-        "Run CONTEST SIM before building a portfolio."
-    )
+    else:
+        st.info(
+            "Run CONTEST SIM before building a portfolio."
+        )
 
 
 # ============================================
