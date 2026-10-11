@@ -2137,28 +2137,44 @@ if entry_file is not None:
         required_entry_columns = {"Contest Name", "Contest ID"}
         if required_entry_columns.issubset(entry_df.columns):
             entry_df["Contest ID"] = entry_df["Contest ID"].astype(str).str.replace(r"\.0$", "", regex=True)
-            entry_df = remove_duplicate_entries(
-                entry_df, "Entry ID" if "Entry ID" in entry_df.columns else None
-            )
+            # DraftKings exports can contain blank Entry ID cells when the CSV columns
+            # are shifted or the file is a lineup template. Only deduplicate rows with
+            # a real entry ID; keep rows with missing IDs so the entry count is not
+            # incorrectly reduced to one.
+            if "Entry ID" in entry_df.columns:
+                entry_ids = entry_df["Entry ID"].fillna("").astype(str).str.strip()
+                has_entry_id = entry_ids.ne("") & entry_ids.str.casefold().ne("nan")
+                identified = remove_duplicate_entries(entry_df.loc[has_entry_id].copy(), "Entry ID")
+                unidentified = entry_df.loc[~has_entry_id].copy()
+                entry_df = pd.concat([identified, unidentified], ignore_index=True)
+            else:
+                entry_df = remove_duplicate_entries(entry_df, None)
             entry_df = entry_df[
-                entry_df["Contest Name"].apply(is_full_game_contest_name)
+                entry_df["Contest Name"].fillna("").astype(str).apply(is_full_game_contest_name)
             ].copy()
             if entry_df.empty:
                 st.warning("No full-game DraftKings contests were found in this entry file.")
             contest_summary = (
                 entry_df.groupby(["Contest ID", "Contest Name"], dropna=False)
                 .agg(
-                    Entries=("Entry ID", "count") if "Entry ID" in entry_df.columns else ("Contest ID", "size"),
+                    Entries=("Entry ID", "size") if "Entry ID" in entry_df.columns else ("Contest ID", "size"),
                     EntryFee=("Entry Fee", "first") if "Entry Fee" in entry_df.columns else ("Contest ID", "size")
                 )
                 .reset_index()
             )
             # No contest dropdown: use the first unique contest in the uploaded entry CSV.
             # Users can upload a file containing only the contest they want to target.
-            selected_row = contest_summary.iloc[0]
-            selected_contest_id = str(selected_row["Contest ID"])
-            selected_contest_name = str(selected_row["Contest Name"])
-            selected_contest_entry_count = int(selected_row["Entries"])
+            if contest_summary.empty:
+                st.warning("No usable contest rows were found in this entry CSV. Please upload the original DraftKings My Contests CSV.")
+                selected_row = None
+            else:
+                selected_row = contest_summary.iloc[0]
+            if selected_row is not None:
+                selected_contest_id = str(selected_row["Contest ID"])
+                selected_contest_name = str(selected_row["Contest Name"]).strip()
+                if selected_contest_name.casefold() in {"", "nan", "none"} or set(selected_contest_name) <= {","}:
+                    selected_contest_name = "Contest name not detected — check uploaded CSV format"
+                selected_contest_entry_count = int(selected_row["Entries"])
             selected_contest_entry_fee = pd.to_numeric(
                 str(selected_row["EntryFee"]).replace("$", "").replace(",", ""),
                 errors="coerce"
