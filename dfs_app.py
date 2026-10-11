@@ -3885,6 +3885,13 @@ if build_clicked:
             "StdDev": values.std(ddof=0)
         }
 
+# Rebuild the active player list here so this Showdown builder does not
+# depend on variables initialized only in the Classic workflow.
+available_players = [
+    p for p in players_df["Name"]
+    if p in control_map and not control_map[p].get("Fade", False)
+]
+
 locked_players = [
     p for p in available_players
     if control_map[p]["Lock"]
