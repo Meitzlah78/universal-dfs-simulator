@@ -3254,6 +3254,78 @@ else:
         return historical
 
 
+    def build_historical_volatility_check(historical):
+        """Compare observed weekly score variation with the simulator's position CV targets."""
+        if historical is None or historical.empty or "position" not in historical.columns:
+            return pd.DataFrame()
+
+        score_col = next(
+            (col for col in ["fantasy_points", "fantasy_points_ppr"] if col in historical.columns),
+            None,
+        )
+        name_col = next(
+            (col for col in ["player_id", "player_display_name", "player_name", "name"] if col in historical.columns),
+            None,
+        )
+        if not score_col or not name_col or "week" not in historical.columns:
+            return pd.DataFrame()
+
+        data = historical.copy()
+        data["_score"] = pd.to_numeric(data[score_col], errors="coerce")
+        data["_week"] = pd.to_numeric(data["week"], errors="coerce")
+        data["_position"] = data["position"].astype(str).str.upper().str.strip()
+        data = data[
+            data["_position"].isin(["QB", "RB", "WR", "TE", "K", "DST"])
+            & data["_week"].between(1, 18)
+            & data["_score"].notna()
+        ].copy()
+        if data.empty:
+            return pd.DataFrame()
+
+        # One score per player per season/week; use player IDs when available.
+        dedupe = [c for c in ["season", name_col, "_week"] if c in data.columns]
+        if dedupe:
+            data = data.drop_duplicates(subset=dedupe, keep="last")
+        player_key = (data["season"].astype(str) + ":" if "season" in data.columns else "") + data[name_col].astype(str)
+        data["_player_key"] = player_key
+        player_rows = []
+        for (position, player), group in data.groupby(["_position", "_player_key"], sort=False):
+            scores = group["_score"].astype(float)
+            if len(scores) < 8 or scores.mean() < 5.0:
+                continue
+            mean_score = float(scores.mean())
+            if mean_score <= 0:
+                continue
+            player_rows.append({
+                "Position": position,
+                "Games": len(scores),
+                "Historical Mean": mean_score,
+                "Historical CV %": 100.0 * float(scores.std(ddof=1)) / mean_score,
+            })
+        per_player = pd.DataFrame(player_rows)
+        if per_player.empty:
+            return pd.DataFrame()
+
+        targets = {"QB": 35, "RB": 40, "WR": 45, "TE": 45, "K": 30, "DST": 50}
+        rows = []
+        for position, group in per_player.groupby("Position"):
+            observed = float(group["Historical CV %"].median())
+            target = targets.get(position, 45)
+            rows.append({
+                "Position": position,
+                "Players Tested": len(group),
+                "Median Historical CV %": round(observed, 1),
+                "Current Simulator Target CV %": target,
+                "Difference (points)": round(target - observed, 1),
+                "Initial Read": (
+                    "Target may be too wide" if target - observed >= 10
+                    else "Target may be too narrow" if target - observed <= -10
+                    else "Roughly in range"
+                ),
+            })
+        return pd.DataFrame(rows).sort_values("Position").reset_index(drop=True)
+
+
     def _normalize_historical_player_names(values):
         """Normalize player names once so historical matching does not rescan all rows per player."""
         return (
@@ -3433,6 +3505,23 @@ else:
         if st.session_state.get("nfl_historical_players_matched") is not None:
             st.caption("Historical player matches in current pool: " + str(st.session_state["nfl_historical_players_matched"]))
 
+    volatility_check = st.session_state.get("historical_volatility_check")
+    if isinstance(volatility_check, pd.DataFrame) and not volatility_check.empty:
+        with st.expander("Historical Volatility Check (rough diagnostic)", expanded=False):
+            st.caption(
+                "Compares recent weekly fantasy-score variation by position with the simulator's current target. "
+                "It is a useful warning signal, not a true percentile backtest: archived pregame projections are unavailable, "
+                "and historical scoring may differ from the selected site's scoring rules. Treat small samples cautiously."
+            )
+            st.dataframe(volatility_check, use_container_width=True, hide_index=True)
+            st.download_button(
+                "Download Historical Volatility Check",
+                data=volatility_check.to_csv(index=False).encode("utf-8"),
+                file_name="historical_volatility_check.csv",
+                mime="text/csv",
+                key="download_historical_volatility_check",
+            )
+
     opponent_source = uploaded_df if "uploaded_df" in locals() else None
     opponent_map = build_opponent_map(opponent_source, players_df["Team"])
     players_df["Opponent"] = players_df["Team"].map(opponent_map).fillna("—")
@@ -3507,7 +3596,15 @@ else:
             st.stop()
         # Simulate stat lines first, then calculate fantasy points with site scoring.
         rng = np.random.default_rng()
-        return _simulate_scored_player_outcomes(eligible_players, platform, rng)
+        outcomes = _simulate_scored_player_outcomes(eligible_players, platform, rng)
+        # Store a rough historical volatility diagnostic alongside each completed sim.
+        # This is a proxy check, not a true forecast backtest: historical projection snapshots
+        # are unavailable, and source scoring may not exactly match every DFS format.
+        historical_for_check = load_nfl_historical_player_stats()
+        st.session_state["historical_volatility_check"] = build_historical_volatility_check(
+            historical_for_check
+        )
+        return outcomes
 
     # ================================
     # PLAYER DISPLAY
