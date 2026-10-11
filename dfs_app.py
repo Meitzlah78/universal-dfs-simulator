@@ -2550,10 +2550,14 @@ def _download_nfl_historical_player_stats():
     frames = []
     loaded_seasons = []
     errors = []
-    for season in [2022, 2023, 2024, 2025]:
+    # Use the two most recent completed seasons. Downloading four large CSVs
+    # on the first SIM click can make Step 1 appear frozen on hosted Streamlit.
+    # Short per-request timeouts ensure unavailable data falls back promptly to
+    # the simulator's position-based outcome model.
+    for season in [2025, 2024]:
         url = f"https://github.com/nflverse/nflverse-data/releases/download/player_stats/stats_player_week_{season}.csv"
         try:
-            response = requests.get(url, timeout=(8, 25))
+            response = requests.get(url, timeout=(4, 10))
             response.raise_for_status()
             frame = pd.read_csv(io.BytesIO(response.content), low_memory=False)
             if not frame.empty:
@@ -2561,7 +2565,7 @@ def _download_nfl_historical_player_stats():
                 frames.append(frame)
                 loaded_seasons.append(season)
         except Exception as exc:
-            errors.append(f"{season}: {exc}")
+            errors.append(f"{season}: {str(exc)[:120]}")
     historical = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
     return historical, loaded_seasons, errors
 
@@ -3482,7 +3486,10 @@ build_clicked = st.button(
 if build_clicked:
     # One-click workflow: simulate players, build a contest field, then
     # continue below to create and score candidate lineups.
-    with st.spinner(f"Running {SIMULATION_COUNT:,} game simulations..."):
+    with st.spinner(
+        f"Loading recent historical stats if available, then running "
+        f"{SIMULATION_COUNT:,} game simulations..."
+    ):
         simulation_df = run_game_simulations(players_df, platform=platform)
 
     st.session_state["simulation_df"] = simulation_df
