@@ -1716,8 +1716,7 @@ if platform == "FanDuel":
             fd_total = len(fd_current_lineups)
             fd_slot_columns = [
                 c for c in fd_current_lineups.columns
-                if c.upper() in {"MVP", "FLEX", "FLEX1", "FLEX2", "FLEX3", "FLEX4",
-                                 "FLEX5", "QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "D"}
+                if c.upper() in {"MVP", "FLEX", "FLEX1", "FLEX2", "FLEX3", "FLEX4", "FLEX5", "QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "D"}
             ]
             player_names = fd_player_display["Name"].astype(str).str.strip()
             fd_player_display["Exposure %"] = player_names.map(
@@ -1798,10 +1797,10 @@ if platform == "FanDuel":
 
         if lineup_mode == "Single Game":
             st.caption(
-                "FanDuel Single Game: 1 MVP (1.5x points and salary) plus 4 FLEX players. "
+                "FanDuel Single Game: 1 MVP (1.5x points and salary) plus 5 FLEX players. "
                 "Salary cap: $60,000."
             )
-            fd_slots = ["MVP", "FLEX1", "FLEX2", "FLEX3", "FLEX4"]
+            fd_slots = ["MVP", "FLEX1", "FLEX2", "FLEX3", "FLEX4", "FLEX5"]
         else:
             st.caption(
                 "FanDuel NFL Full Roster: QB, 2 RB, 3 WR, TE, FLEX (RB/WR/TE), D. "
@@ -1838,7 +1837,7 @@ if platform == "FanDuel":
             max_attempts = 500000
             salary_min, salary_max = int(fd_salary_range[0]), min(int(fd_salary_range[1]), 60000)
             if lineup_mode == "Single Game":
-                slots = ["MVP", "FLEX1", "FLEX2", "FLEX3", "FLEX4"]
+                slots = ["MVP", "FLEX1", "FLEX2", "FLEX3", "FLEX4", "FLEX5"]
                 mvp_indices = np.flatnonzero((salaries * 1.5 <= salary_max))
                 mvp_weights = lineup_scores[mvp_indices].copy()
                 if len(mvp_weights):
@@ -1982,7 +1981,7 @@ if platform == "FanDuel":
                             used.add(mvp)
                             salary = int(float(mvp_row["Salary"]) * 1.5)
                             points = float(mvp_row["Projection"]) * 1.5
-                            for slot in ["FLEX1", "FLEX2", "FLEX3", "FLEX4"]:
+                            for slot in ["FLEX1", "FLEX2", "FLEX3", "FLEX4", "FLEX5"]:
                                 choices = fd_pool[
                                     (~fd_pool["Name"].isin(used))
                                     & ((fd_pool["Salary"] + salary) <= fd_salary_range[1])
@@ -2122,7 +2121,7 @@ if platform == "FanDuel":
             if "FD_ID" in fd_players.columns:
                 fd_ids = dict(zip(fd_players["Name"], fd_players["FD_ID"].astype(str)))
                 export_slots = (
-                    ["MVP", "FLEX", "FLEX", "FLEX", "FLEX"]
+                    ["MVP", "FLEX", "FLEX", "FLEX", "FLEX", "FLEX"]
                     if lineup_mode == "Single Game"
                     else ["QB", "RB", "RB", "WR", "WR", "WR", "TE", "FLEX", "D"]
                 )
