@@ -325,7 +325,7 @@ def build_dk_contest_entry_export(entry_df, selected_contest_id, lineup_ids_df, 
             str(export_df.iloc[row_idx, col_index])
             for row_idx in range(count)
             for col_index in roster_column_indices
-            if not re.search(r"\\(\\d+\\)$", str(export_df.iloc[row_idx, col_index]).strip())
+            if not re.search(r"\(\d+\)$", str(export_df.iloc[row_idx, col_index]).strip())
         ]
         if unresolved:
             st.error(
