@@ -2875,7 +2875,7 @@ if platform == "FanDuel":
                     # Limit extreme historical outliers before rescaling. This reduces
                     # unrealistic P95/P99 values while retaining player-specific shape.
                     standardized = (scores - sampled_mean) / sampled_std
-                    standardized = np.clip(standardized, -2.25, 2.25)
+                    standardized = np.clip(standardized, -3.0, 3.0)
                     standardized_mean = float(np.mean(standardized))
                     standardized_std = float(np.std(standardized, ddof=1))
                     if standardized_std > 1e-6 and np.isfinite(standardized_std):
@@ -2918,15 +2918,13 @@ if platform == "FanDuel":
 
             script_factor = np.clip(script_factor, 0.80, 1.20)
             final_scores = np.maximum(scores * script_factor, 0.0)
-            # Defenses benefit from turnovers by the opposing offense.
-            if position_type == "DST":
-                forced_turnovers = np.asarray(script.get("opponent_giveaways", np.zeros(n)), dtype=float)
-                final_scores = final_scores + np.minimum(forced_turnovers, 3.0) * 1.5
+            # Defensive turnover points are already represented in the sampled
+            # defensive outcomes. Do not add opponent giveaways a second time.
             # Limit extreme simulated outcomes without shifting the distribution
             # back to the projection. The projection sets a reasonable ceiling, but
             # historical results and game scripts determine the simulated average.
             if np.isfinite(projection) and projection > 0:
-                upper_cap = max(1.0, projection * (1.0 + 2.0 * volatility_cv))
+                upper_cap = max(1.0, projection * (1.0 + 3.0 * volatility_cv))
                 final_scores = np.minimum(final_scores, upper_cap)
                 cap_tolerance = max(0.01, upper_cap * 1e-6)
                 cap_hit_percentages[name] = round(
@@ -3338,7 +3336,7 @@ else:
                     # Limit extreme historical outliers before rescaling. This reduces
                     # unrealistic P95/P99 values while retaining player-specific shape.
                     standardized = (scores - sampled_mean) / sampled_std
-                    standardized = np.clip(standardized, -2.25, 2.25)
+                    standardized = np.clip(standardized, -3.0, 3.0)
                     standardized_mean = float(np.mean(standardized))
                     standardized_std = float(np.std(standardized, ddof=1))
                     if standardized_std > 1e-6 and np.isfinite(standardized_std):
@@ -3381,15 +3379,13 @@ else:
 
             script_factor = np.clip(script_factor, 0.80, 1.20)
             final_scores = np.maximum(scores * script_factor, 0.0)
-            # Defenses benefit from turnovers by the opposing offense.
-            if position_type == "DST":
-                forced_turnovers = np.asarray(script.get("opponent_giveaways", np.zeros(n)), dtype=float)
-                final_scores = final_scores + np.minimum(forced_turnovers, 3.0) * 1.5
+            # Defensive turnover points are already represented in the sampled
+            # defensive outcomes. Do not add opponent giveaways a second time.
             # Limit extreme simulated outcomes without shifting the distribution
             # back to the projection. The projection sets a reasonable ceiling, but
             # historical results and game scripts determine the simulated average.
             if np.isfinite(projection) and projection > 0:
-                upper_cap = max(1.0, projection * (1.0 + 2.0 * volatility_cv))
+                upper_cap = max(1.0, projection * (1.0 + 3.0 * volatility_cv))
                 final_scores = np.minimum(final_scores, upper_cap)
                 cap_tolerance = max(0.01, upper_cap * 1e-6)
                 cap_hit_percentages[name] = round(
