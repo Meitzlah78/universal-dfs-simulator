@@ -5396,7 +5396,7 @@ if build_clicked:
         # CANDIDATE SETTINGS
         # ============================================
 
-        LINEUP_COUNT = 2000
+        LINEUP_COUNT = 2500
         CANDIDATE_COUNT = 5000
 
         # Rank-based probability curve: all captains retain a chance, but stronger
@@ -5842,6 +5842,16 @@ if (
 
     # Save immediately so the ranked results survive later UI rendering or reruns.
     st.session_state["contest_results_df"] = results_df
+    if build_clicked:
+        # A fresh build must create a fresh user pool instead of carrying over
+        # lineups or exposure state from the previous build.
+        for _key in (
+            "portfolio_df",
+            "portfolio_count_used",
+            "portfolio_metric_used",
+            "portfolio_control_signature",
+        ):
+            st.session_state.pop(_key, None)
     scoring_status.success(f"Ranking complete — {len(results_df):,} lineups ranked. Loading your portfolio below.")
 
 # ============================================
