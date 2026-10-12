@@ -6051,8 +6051,9 @@ if "contest_results_df" in st.session_state and not (platform == "DraftKings" an
     )
 
     portfolio_metric_label = st.selectbox(
-        "Rank lineups by",
+        "Sort pool by",
         list(PORTFOLIO_METRICS.keys()),
+        index=list(PORTFOLIO_METRICS.keys()).index("Top 1%"),
         key="portfolio_metric"
     )
 
@@ -6073,7 +6074,6 @@ if "contest_results_df" in st.session_state and not (platform == "DraftKings" an
     if (
         "portfolio_df" not in st.session_state
         or st.session_state.get("portfolio_count_used") != portfolio_count
-        or st.session_state.get("portfolio_metric_used") != portfolio_metric
         or st.session_state.get("portfolio_control_signature") != current_control_signature
     ):
 
@@ -6154,7 +6154,15 @@ if "contest_results_df" in st.session_state and not (platform == "DraftKings" an
         st.session_state["portfolio_metric_used"] = portfolio_metric
         st.session_state["portfolio_control_signature"] = current_control_signature
 
+    # Changing the sort option must reorder the existing pool, not select a new one.
+    # This keeps the exact same lineups while letting the user inspect a different ranking.
     portfolio_df = st.session_state["portfolio_df"].copy()
+    if portfolio_metric in portfolio_df.columns:
+        portfolio_df = portfolio_df.sort_values(
+            portfolio_metric, ascending=False, kind="stable"
+        ).reset_index(drop=True)
+    st.session_state["portfolio_df"] = portfolio_df.copy()
+    st.session_state["portfolio_metric_used"] = portfolio_metric
     portfolio_df = add_lineup_field_ownership(portfolio_df)
 
     # Add each lineup's total salary to the portfolio display and export.
