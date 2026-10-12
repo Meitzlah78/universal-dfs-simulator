@@ -6322,12 +6322,11 @@ if "contest_results_df" in st.session_state:
         use_container_width=True
     )
 
-    # Individual LOCK/DELETE controls removed to keep large portfolios fast.
 
-    else:
-        st.info(
-            "Run CONTEST SIM before building a portfolio."
-        )
+else:
+    st.info(
+        "Run CONTEST SIM before building a portfolio."
+    )
 
 
 # ============================================
