@@ -4923,8 +4923,9 @@ locked_players = [
 ]
 
 if build_clicked:
-    # One-click workflow: simulate players, build a contest field, then
-    # continue below to create and score candidate lineups.
+    # Show each stage explicitly so the user can see where the workflow stops.
+    workflow_status = st.empty()
+    workflow_status.info(f"Step 1 of 3: Running {SIMULATION_COUNT:,} player simulations...")
     with st.spinner(
         f"Loading recent historical stats if available, then running "
         f"{SIMULATION_COUNT:,} game simulations..."
@@ -4933,15 +4934,26 @@ if build_clicked:
 
     st.session_state["simulation_df"] = simulation_df
     st.session_state["simulations_ready"] = True
-    # Build the contest field using the selected contest's field size.
-    field_progress = st.progress(0, text=f"Building {dk_opponent_target:,} simulated opponent lineups...")
-    with st.spinner(f"Building {dk_opponent_target:,} simulated opponent lineups..."):
+
+    # Step 2: build the simulated contest field.
+    workflow_status.info(f"Step 2 of 3: Building up to {dk_opponent_target:,} simulated opponent lineups...")
+    field_progress = st.progress(0, text=f"Step 2 of 3: Building opponent lineups (0 of {dk_opponent_target:,})...")
+    try:
         contest_field_df = build_showdown_opponent_field(
             available_players, simulation_df, players_df, salary_map,
             captain_salary_map, SALARY_CAP, dk_opponent_target,
             progress_bar=field_progress
         )
-    field_progress.progress(1.0, text=f"Opponent lineups complete: {len(contest_field_df):,} created")
+    except Exception as exc:
+        workflow_status.error(f"Step 2 failed while building opponent lineups: {type(exc).__name__}: {exc}")
+        st.exception(exc)
+        st.stop()
+    field_progress.progress(1.0, text=f"Step 2 complete: {len(contest_field_df):,} opponent lineups created")
+    if contest_field_df.empty:
+        workflow_status.error(
+            "Step 2 could not create any valid opponent lineups. Check the salary cap and eligible player pool."
+        )
+        st.stop()
 
     show_field_ownership(contest_field_df, ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"], "Simulated Field Player Ownership", captain_slot="Captain")
     st.session_state["contest_field_df"] = contest_field_df
