@@ -6137,10 +6137,16 @@ if (
             left_low = np.where(move_right_left, mid_left + 1, left_low)
             left_high = np.where(move_left_left, mid_left, left_high)
 
-        # Estimate full-contest finishing ranks from each sampled-field percentile.
-        # This is an approximation because the opponents are a capped sample.
+        # Estimate full-contest ranks from sampled opponents. Use a midrank for
+        # ties observed in the sample: opponents scoring above the candidate count
+        # ahead, while equal-scoring opponents contribute half a place on average.
+        # Do not scale a sampled tie group to the full contest and then divide prizes
+        # by that invented tie count; a sample with no observed ties must not become
+        # an automatic multi-entry tie.
+        sampled_equal_opponents = low - left_low
+        sampled_rank_equivalent = count_greater + (0.5 * sampled_equal_opponents)
         ranks = 1 + np.rint(
-            (count_greater / total_field) * (estimated_full_field_size - 1)
+            (sampled_rank_equivalent / total_field) * (estimated_full_field_size - 1)
         ).astype(np.int64)
         ranks = np.clip(ranks, 1, estimated_full_field_size)
         batch_win = np.sum(ranks == 1, axis=0, dtype=np.float64)
@@ -6149,9 +6155,9 @@ if (
         batch_top10 = np.sum(ranks <= max(1, int(np.ceil(estimated_full_field_size * 0.10))), axis=0, dtype=np.float64)
         batch_percentiles = np.sum(percentiles, axis=0, dtype=np.float64)
 
-        # Cash and payout ranks now refer to the estimated full contest, not
-        # the smaller opponent sample. Without a contest payout table, retain
-        # the conventional 10% paid estimate.
+        # Cash and prize ranks refer to the estimated full contest. Payouts are
+        # assigned at the estimated midrank; we avoid inventing a full-field tie
+        # count from the sampled tie group, which can badly distort expected ROI.
         paid_positions = (
             min(int(np.count_nonzero(payout_schedule > 0)), estimated_full_field_size)
             if payout_schedule is not None
@@ -6159,25 +6165,12 @@ if (
         )
         batch_cash = np.sum(ranks <= paid_positions, axis=0, dtype=np.float64)
         if payout_schedule is not None:
-            # Approximate tie size by scaling the observed tie group to the full field.
-            sampled_tie_counts = low - left_low + 1
-            tie_counts = np.maximum(
-                1,
-                np.rint(sampled_tie_counts / total_field * estimated_full_field_size).astype(np.int64)
+            prize_indices = np.clip(ranks - 1, 0, len(payout_schedule) - 1)
+            batch_prizes = np.where(
+                ranks <= len(payout_schedule),
+                payout_schedule[prize_indices],
+                0.0
             )
-            batch_prizes = np.zeros((batch_count, n_candidates), dtype=np.float64)
-            max_tie_count = int(np.max(tie_counts)) if tie_counts.size else 1
-            for tie_offset in range(min(max_tie_count, len(payout_schedule))):
-                active_ties = tie_counts > tie_offset
-                tie_ranks = ranks + tie_offset
-                paid = active_ties & (tie_ranks <= len(payout_schedule))
-                if np.any(paid):
-                    prize_indices = np.minimum(tie_ranks - 1, len(payout_schedule) - 1)
-                    batch_prizes += np.where(
-                        paid,
-                        payout_schedule[prize_indices] / tie_counts,
-                        0.0
-                    )
             batch_prize_totals = np.sum(batch_prizes, axis=0, dtype=np.float64)
         else:
             batch_prize_totals = np.zeros(n_candidates, dtype=np.float64)
