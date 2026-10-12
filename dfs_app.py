@@ -6837,86 +6837,86 @@ if "contest_results_df" in st.session_state and not (platform == "DraftKings" an
                         * (scoring_multiplier - 1.0)
                     )
                 # Sort each simulation's opponent scores, then use batched binary
-            # searches instead of building a field-by-entry comparison matrix for
-            # every simulation. This keeps the payout estimate but greatly reduces
-            # the time spent before the lineup table can render.
-            _portfolio_sorted_field = np.sort(_portfolio_field_scores, axis=1)
-            _portfolio_batch_count = _portfolio_batch_end - _portfolio_batch_start
-            _portfolio_sim_rows = np.arange(_portfolio_batch_count)[:, None]
+                # searches instead of building a field-by-entry comparison matrix for
+                # every simulation. This keeps the payout estimate but greatly reduces
+                # the time spent before the lineup table can render.
+                _portfolio_sorted_field = np.sort(_portfolio_field_scores, axis=1)
+                _portfolio_batch_count = _portfolio_batch_end - _portfolio_batch_start
+                _portfolio_sim_rows = np.arange(_portfolio_batch_count)[:, None]
 
-            # Right insertion point = number of field scores <= each user lineup.
-            _portfolio_low = np.zeros(
-                (_portfolio_batch_count, _portfolio_lineup_count), dtype=np.int32
-            )
-            _portfolio_high = np.full_like(_portfolio_low, total_field)
-            while np.any(_portfolio_low < _portfolio_high):
-                _active = _portfolio_low < _portfolio_high
-                _mid = (_portfolio_low + _portfolio_high) // 2
-                _mid_values = _portfolio_sorted_field[_portfolio_sim_rows, np.minimum(_mid, total_field - 1)]
-                _move_right = (_mid_values <= _portfolio_scores) & _active
-                _move_left = (_mid_values > _portfolio_scores) & _active
-                _portfolio_low = np.where(_move_right, _mid + 1, _portfolio_low)
-                _portfolio_high = np.where(_move_left, _mid, _portfolio_high)
+                # Right insertion point = number of field scores <= each user lineup.
+                _portfolio_low = np.zeros(
+                    (_portfolio_batch_count, _portfolio_lineup_count), dtype=np.int32
+                )
+                _portfolio_high = np.full_like(_portfolio_low, total_field)
+                while np.any(_portfolio_low < _portfolio_high):
+                    _active = _portfolio_low < _portfolio_high
+                    _mid = (_portfolio_low + _portfolio_high) // 2
+                    _mid_values = _portfolio_sorted_field[_portfolio_sim_rows, np.minimum(_mid, total_field - 1)]
+                    _move_right = (_mid_values <= _portfolio_scores) & _active
+                    _move_left = (_mid_values > _portfolio_scores) & _active
+                    _portfolio_low = np.where(_move_right, _mid + 1, _portfolio_low)
+                    _portfolio_high = np.where(_move_left, _mid, _portfolio_high)
 
-            # Left insertion point = number of field scores strictly below each lineup.
-            _portfolio_left = np.zeros_like(_portfolio_low)
-            _portfolio_left_high = np.full_like(_portfolio_left, total_field)
-            while np.any(_portfolio_left < _portfolio_left_high):
-                _active_left = _portfolio_left < _portfolio_left_high
-                _mid_left = (_portfolio_left + _portfolio_left_high) // 2
-                _mid_left_values = _portfolio_sorted_field[
-                    _portfolio_sim_rows, np.minimum(_mid_left, total_field - 1)
-                ]
-                _move_right_left = (_mid_left_values < _portfolio_scores) & _active_left
-                _move_left_left = (_mid_left_values >= _portfolio_scores) & _active_left
-                _portfolio_left = np.where(_move_right_left, _mid_left + 1, _portfolio_left)
-                _portfolio_left_high = np.where(_move_left_left, _mid_left, _portfolio_left_high)
+                # Left insertion point = number of field scores strictly below each lineup.
+                _portfolio_left = np.zeros_like(_portfolio_low)
+                _portfolio_left_high = np.full_like(_portfolio_left, total_field)
+                while np.any(_portfolio_left < _portfolio_left_high):
+                    _active_left = _portfolio_left < _portfolio_left_high
+                    _mid_left = (_portfolio_left + _portfolio_left_high) // 2
+                    _mid_left_values = _portfolio_sorted_field[
+                        _portfolio_sim_rows, np.minimum(_mid_left, total_field - 1)
+                    ]
+                    _move_right_left = (_mid_left_values < _portfolio_scores) & _active_left
+                    _move_left_left = (_mid_left_values >= _portfolio_scores) & _active_left
+                    _portfolio_left = np.where(_move_right_left, _mid_left + 1, _portfolio_left)
+                    _portfolio_left_high = np.where(_move_left_left, _mid_left, _portfolio_left_high)
 
-            _greater_field = total_field - _portfolio_low
-            _equal_field = _portfolio_low - _portfolio_left
-            # Compare the user's small portfolio internally; this matrix is only
-            # entries-by-entries, not opponents-by-entries.
-            _greater_own = np.sum(
-                _portfolio_scores[:, None, :] > _portfolio_scores[:, :, None], axis=2
-            )
-            _equal_own = np.sum(
-                _portfolio_scores[:, None, :] == _portfolio_scores[:, :, None], axis=2
-            ) - 1
-            _sampled_greater = _greater_field + _greater_own
-            _sampled_ties = _equal_field + _equal_own
-            _rank_fraction = (_sampled_greater + 0.5 * _sampled_ties + 1.0) / (total_field + 1.0)
-            _estimated_ranks = np.clip(
-                1.0 + _rank_fraction * (_portfolio_full_size - 1),
-                1.0,
-                float(_portfolio_full_size),
-            )
-            _estimated_tie_sizes = np.maximum(
-                1,
-                np.rint(
-                    (_sampled_ties + 1.0) / (total_field + _portfolio_lineup_count + 1.0)
-                    * _portfolio_full_size
-                ).astype(np.int64),
-            )
-            _tie_start = np.maximum(
-                1,
-                np.floor(_estimated_ranks - (_estimated_tie_sizes - 1) / 2.0).astype(np.int64),
-            )
-            _tie_end = np.minimum(
-                _portfolio_full_size,
-                _tie_start + _estimated_tie_sizes - 1,
-            )
-            _safe_start = np.clip(_tie_start - 1, 0, len(_portfolio_cumulative_prizes) - 1)
-            _safe_end = np.clip(_tie_end, 0, len(_portfolio_cumulative_prizes) - 1)
-            _tie_prize_sum = _portfolio_cumulative_prizes[_safe_end] - _portfolio_cumulative_prizes[_safe_start]
-            _portfolio_prize_totals += np.sum(
-                np.divide(
-                    _tie_prize_sum,
-                    _estimated_tie_sizes,
-                    out=np.zeros_like(_tie_prize_sum, dtype=np.float64),
-                    where=_estimated_tie_sizes > 0,
-                ),
-                axis=0,
-            )
+                _greater_field = total_field - _portfolio_low
+                _equal_field = _portfolio_low - _portfolio_left
+                # Compare the user's small portfolio internally; this matrix is only
+                # entries-by-entries, not opponents-by-entries.
+                _greater_own = np.sum(
+                    _portfolio_scores[:, None, :] > _portfolio_scores[:, :, None], axis=2
+                )
+                _equal_own = np.sum(
+                    _portfolio_scores[:, None, :] == _portfolio_scores[:, :, None], axis=2
+                ) - 1
+                _sampled_greater = _greater_field + _greater_own
+                _sampled_ties = _equal_field + _equal_own
+                _rank_fraction = (_sampled_greater + 0.5 * _sampled_ties + 1.0) / (total_field + 1.0)
+                _estimated_ranks = np.clip(
+                    1.0 + _rank_fraction * (_portfolio_full_size - 1),
+                    1.0,
+                    float(_portfolio_full_size),
+                )
+                _estimated_tie_sizes = np.maximum(
+                    1,
+                    np.rint(
+                        (_sampled_ties + 1.0) / (total_field + _portfolio_lineup_count + 1.0)
+                        * _portfolio_full_size
+                    ).astype(np.int64),
+                )
+                _tie_start = np.maximum(
+                    1,
+                    np.floor(_estimated_ranks - (_estimated_tie_sizes - 1) / 2.0).astype(np.int64),
+                )
+                _tie_end = np.minimum(
+                    _portfolio_full_size,
+                    _tie_start + _estimated_tie_sizes - 1,
+                )
+                _safe_start = np.clip(_tie_start - 1, 0, len(_portfolio_cumulative_prizes) - 1)
+                _safe_end = np.clip(_tie_end, 0, len(_portfolio_cumulative_prizes) - 1)
+                _tie_prize_sum = _portfolio_cumulative_prizes[_safe_end] - _portfolio_cumulative_prizes[_safe_start]
+                _portfolio_prize_totals += np.sum(
+                    np.divide(
+                        _tie_prize_sum,
+                        _estimated_tie_sizes,
+                        out=np.zeros_like(_tie_prize_sum, dtype=np.float64),
+                        where=_estimated_tie_sizes > 0,
+                    ),
+                    axis=0,
+                )
             portfolio_df["Expected Prize ($)"] = _portfolio_prize_totals / n_sims
             portfolio_df["Expected Net ($)"] = portfolio_df["Expected Prize ($)"] - float(_portfolio_entry_fee)
             portfolio_df["Expected ROI (%)"] = np.where(
