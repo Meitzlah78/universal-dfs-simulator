@@ -4911,6 +4911,17 @@ with build_cols[2]:
 # BUILD ACTION
 # ============================================
 
+# Prepare the eligible player pool BEFORE the button handler runs. The
+# Showdown SIM handler uses these lists immediately after player simulation.
+available_players = [
+    p for p in players_df["Name"]
+    if p in control_map and not control_map[p].get("Fade", False)
+]
+locked_players = [
+    p for p in available_players
+    if control_map[p].get("Lock", False)
+]
+
 if build_clicked:
     # One-click workflow: simulate players, build a contest field, then
     # continue below to create and score candidate lineups.
@@ -4960,22 +4971,7 @@ if build_clicked:
             "StdDev": values.std(ddof=0)
         }
 
-# The DraftKings builder needs a loaded salary pool and player controls.
-# If the salary/template upload has not supplied them, stop with a clear message
-# instead of crashing with a NameError while the page renders.
-if "players_df" not in locals() or "control_map" not in locals():
-    st.error("Upload the DraftKings salary CSV and wait for the player pool to load before running SIM.")
-    st.stop()
-
-available_players = [
-    p for p in players_df["Name"]
-    if p in control_map and not control_map[p].get("Fade", False)
-]
-
-locked_players = [
-    p for p in available_players
-    if control_map[p]["Lock"]
-]
+# The eligible player pool was prepared before the SIM handler above.
 
 # ============================================
 # RANK PLAYERS
