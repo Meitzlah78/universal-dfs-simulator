@@ -2898,6 +2898,20 @@ if platform == "FanDuel":
 
                 # Fantasy scores cannot be negative.
                 scores = np.maximum(scores, 0.0)
+
+                # Low-projection players often have sparse or discrete history,
+                # which can leave several displayed percentiles identical. Use a
+                # positive, right-skewed distribution for these players so they
+                # retain a realistic chance of zero while keeping the mean anchored
+                # to the supplied projection.
+                if projection <= 3.0:
+                    low_projection_cv = max(volatility_cv, 0.45)
+                    gamma_shape = 1.0 / (low_projection_cv ** 2)
+                    scores = rng.gamma(
+                        shape=gamma_shape,
+                        scale=max(projection, 0.01) / gamma_shape,
+                        size=n,
+                    )
             # Shared game script adjusts the sampled outcome modestly. Trailing teams
             # throw more; leading teams lean more on their running backs.
             # Scale shared game-script effects with the user's single-game slider.
@@ -3359,6 +3373,20 @@ else:
 
                 # Fantasy scores cannot be negative.
                 scores = np.maximum(scores, 0.0)
+
+                # Low-projection players often have sparse or discrete history,
+                # which can leave several displayed percentiles identical. Use a
+                # positive, right-skewed distribution for these players so they
+                # retain a realistic chance of zero while keeping the mean anchored
+                # to the supplied projection.
+                if projection <= 3.0:
+                    low_projection_cv = max(volatility_cv, 0.45)
+                    gamma_shape = 1.0 / (low_projection_cv ** 2)
+                    scores = rng.gamma(
+                        shape=gamma_shape,
+                        scale=max(projection, 0.01) / gamma_shape,
+                        size=n,
+                    )
             # Shared game script adjusts the sampled outcome modestly. Trailing teams
             # throw more; leading teams lean more on their running backs.
             # Scale shared game-script effects with the user's single-game slider.
