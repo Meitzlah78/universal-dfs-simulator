@@ -6075,6 +6075,7 @@ if "contest_results_df" in st.session_state and not (platform == "DraftKings" an
         "portfolio_df" not in st.session_state
         or st.session_state.get("portfolio_count_used") != portfolio_count
         or st.session_state.get("portfolio_control_signature") != current_control_signature
+        or st.session_state.get("portfolio_metric_used") != portfolio_metric
     ):
 
         old_portfolio = st.session_state.get("portfolio_df")
@@ -6141,13 +6142,17 @@ if "contest_results_df" in st.session_state and not (platform == "DraftKings" an
             ).head(int(portfolio_count))
 
         else:
-
-            portfolio_df = build_portfolio(
-                results_df,
-                int(portfolio_count),
-                portfolio_metric,
-                portfolio_lineup_columns
+            # Select the actual top lineups from the full candidate build for the
+            # chosen metric. Do not use the diversity-penalty selector here: the
+            # user's chosen sort metric determines which candidates make the pool.
+            ranked_df = (
+                results_df
+                .drop_duplicates(subset=portfolio_lineup_columns, keep="first")
+                .sort_values(portfolio_metric, ascending=False, kind="stable")
+                .reset_index(drop=True)
             )
+            portfolio_df = ranked_df.head(int(portfolio_count)).copy()
+            portfolio_df["Locked"] = False
 
         st.session_state["portfolio_df"] = portfolio_df
         st.session_state["portfolio_count_used"] = portfolio_count
