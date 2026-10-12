@@ -209,31 +209,44 @@ def ownership_adjusted_player_scores(pool, names, base_scores, player_sim, proje
 
 
 def calculate_field_ownership(field_df, slots, captain_slot=None):
-    """Calculate player ownership percentages from simulated opponent lineups."""
+    """Calculate unique-lineup ownership and Captain/MVP ownership separately."""
+    columns = ["Name", "Ownership %", "Captain/MVP Ownership %"]
     if field_df is None or field_df.empty:
-        return pd.DataFrame(columns=["Name", "Ownership %", "Captain/MVP Ownership %"])
+        return pd.DataFrame(columns=columns)
     valid_slots = [slot for slot in slots if slot in field_df.columns]
     total_lineups = len(field_df)
     if not valid_slots or total_lineups == 0:
-        return pd.DataFrame(columns=["Name", "Ownership %", "Captain/MVP Ownership %"])
-    # Vectorized counting avoids iterating over every row for large contest fields.
+        return pd.DataFrame(columns=columns)
+
+    # Overall ownership counts a player once per lineup, even if a name appears
+    # in more than one slot. Captain/MVP ownership counts only that special slot.
     slot_values = field_df[valid_slots].astype("string").apply(lambda col: col.str.strip())
-    slot_values = slot_values.replace({"": pd.NA, "nan": pd.NA, "None": pd.NA})
-    row_ids = np.repeat(np.arange(len(slot_values)), len(valid_slots))
-    flat_names = slot_values.to_numpy(dtype=object).ravel()
-    valid = pd.notna(flat_names) & ~np.isin(flat_names, ["", "nan", "None", "<NA>"])
-    pairs = pd.DataFrame({"row": row_ids[valid], "name": flat_names[valid]}).drop_duplicates()
-    counts = pairs["name"].value_counts().to_dict()
+    invalid_names = {"", "nan", "none", "<na>"}
+    lineup_counts = {}
+    for row in slot_values.itertuples(index=False, name=None):
+        names_in_lineup = {
+            str(name).strip()
+            for name in row
+            if pd.notna(name) and str(name).strip().casefold() not in invalid_names
+        }
+        for name in names_in_lineup:
+            lineup_counts[name] = lineup_counts.get(name, 0) + 1
+
     captain_counts = {}
     if captain_slot and captain_slot in valid_slots:
-        captain_values = slot_values[captain_slot].dropna()
-        captain_values = captain_values[~captain_values.isin(["", "nan", "None", "<NA>"])]
-        captain_counts = captain_values.value_counts().to_dict()
-    names = sorted(set(counts) | set(captain_counts))
+        for value in slot_values[captain_slot]:
+            if pd.notna(value) and str(value).strip().casefold() not in invalid_names:
+                name = str(value).strip()
+                captain_counts[name] = captain_counts.get(name, 0) + 1
+
+    # Captain/MVP ownership is a subset of overall ownership by definition.
+    names = sorted(set(lineup_counts) | set(captain_counts))
     return pd.DataFrame([{
         "Name": name,
-        "Ownership %": round(100 * counts.get(name, 0) / total_lineups, 2),
-        "Captain/MVP Ownership %": round(100 * captain_counts.get(name, 0) / total_lineups, 2),
+        "Ownership %": round(100 * lineup_counts.get(name, 0) / total_lineups, 2),
+        "Captain/MVP Ownership %": round(
+            100 * min(captain_counts.get(name, 0), lineup_counts.get(name, 0)) / total_lineups, 2
+        ),
     } for name in names]).sort_values("Ownership %", ascending=False).reset_index(drop=True)
 
 
