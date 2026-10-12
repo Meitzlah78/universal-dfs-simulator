@@ -5679,20 +5679,72 @@ if _selected_dk_for_details.get("id"):
             _contest_id_for_api = str(_selected_dk_for_details["id"]).strip()
             if not _contest_id_for_api.isdigit():
                 raise ValueError("Contest ID must contain digits only.")
-            _dk_response = requests.get(
-                f"https://api.draftkings.com/contests/v1/contests/{_contest_id_for_api}?format=json",
-                headers={"User-Agent": "Mozilla/5.0 Universal-DFS-Simulator"},
-                timeout=12,
-            )
-            _dk_response.raise_for_status()
-            _dk_payload = _dk_response.json()
-            _dk_details = _dk_payload.get("contestDetail", _dk_payload)
+            _dk_headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/128.0 Safari/537.36",
+                "Accept": "application/json, text/plain, */*",
+                "Referer": "https://www.draftkings.com/",
+            }
+            _dk_payload = None
+            _dk_source = ""
+            _dk_api_error = None
+
+            # Try the detailed endpoint first. Some deployments return HTTP 403,
+            # so fall back to the public lobby feed rather than stopping immediately.
+            try:
+                _dk_response = requests.get(
+                    f"https://api.draftkings.com/contests/v1/contests/{_contest_id_for_api}?format=json",
+                    headers=_dk_headers,
+                    timeout=8,
+                )
+                _dk_response.raise_for_status()
+                _dk_payload = _dk_response.json()
+                _dk_source = "contest details endpoint"
+            except Exception as _api_exc:
+                _dk_api_error = f"{type(_api_exc).__name__}: {_api_exc}"
+
+            if _dk_payload is None:
+                _dk_lobby_response = requests.get(
+                    "https://www.draftkings.com/lobby/getcontests?sport=NFL",
+                    headers=_dk_headers,
+                    timeout=12,
+                )
+                _dk_lobby_response.raise_for_status()
+                _dk_lobby_payload = _dk_lobby_response.json()
+
+                # Lobby payload shapes vary. Search nested objects for the exact
+                # contest ID and use only that contest's own details.
+                _dk_matches = []
+                def _find_dk_contest(obj):
+                    if isinstance(obj, dict):
+                        _normalized = {str(k).casefold(): v for k, v in obj.items()}
+                        _id_value = next(
+                            (_normalized[k] for k in ("contestid", "contest_id", "id") if k in _normalized),
+                            None,
+                        )
+                        if _id_value is not None and str(_id_value).strip() == _contest_id_for_api:
+                            _dk_matches.append(obj)
+                        for _child in obj.values():
+                            _find_dk_contest(_child)
+                    elif isinstance(obj, list):
+                        for _child in obj:
+                            _find_dk_contest(_child)
+                _find_dk_contest(_dk_lobby_payload)
+                if not _dk_matches:
+                    raise ValueError(
+                        "The detailed endpoint was blocked and the public NFL lobby feed did not contain "
+                        f"contest ID {_contest_id_for_api}. Details endpoint error: {_dk_api_error}"
+                    )
+                _dk_payload = _dk_matches[0]
+                _dk_source = "public NFL lobby feed (fallback)"
+
+            _dk_details = _dk_payload.get("contestDetail", _dk_payload) if isinstance(_dk_payload, dict) else None
             if not isinstance(_dk_details, dict):
                 raise ValueError("DraftKings returned an unexpected contest-details format.")
 
             _dk_summary = {
                 "contest_id": _contest_id_for_api,
                 "fetched_at": _sticky_datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %I:%M:%S %p ET"),
+                "source": _dk_source,
                 "name": _dk_details.get("contestName") or _dk_details.get("name") or _selected_dk_for_details.get("name"),
                 "entry_fee": _dk_details.get("entryFee") or _dk_details.get("entry_fee") or _selected_dk_for_details.get("entry_fee"),
                 "entries": _dk_details.get("entries") or _dk_details.get("currentEntries") or _dk_details.get("current_entries"),
@@ -5769,6 +5821,7 @@ if isinstance(_dk_details_display, dict) and str(_dk_details_display.get("contes
         st.write(_dk_details_display["contest_summary"])
     if _dk_details_display.get("payout_description"):
         st.write("**DraftKings payout description:** " + str(_dk_details_display["payout_description"]))
+    st.caption("Source: " + str(_dk_details_display.get("source", "DraftKings endpoint")))
     st.caption("Last fetched: " + str(_dk_details_display.get("fetched_at", "unknown time")))
 
 payout_file = st.file_uploader(
