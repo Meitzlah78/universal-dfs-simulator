@@ -4452,7 +4452,7 @@ else:
 
     build_clicked = classic_run_all
 
-    if build_clicked:
+    if build_clicked and platform == "DraftKings" and lineup_mode == "Classic":
         rng = np.random.default_rng()
         rankings = {}
         for _, row in classic_pool.iterrows():
