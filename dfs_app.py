@@ -48,7 +48,8 @@ st.markdown(
         width: 100% !important;
         box-sizing: border-box !important;
         padding: 0.45rem 1rem 0.35rem 1rem;
-        background: var(--background-color, #ffffff) !important;
+        background: #000000 !important;
+        color: #ffffff !important;
         border: 1px solid #b8a45a;
         border-radius: 0;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
@@ -64,6 +65,11 @@ st.markdown(
     }
     .st-key-sticky_projection_bar p {
         margin-bottom: 0.15rem;
+        color: #ffffff !important;
+    }
+    .st-key-sticky_projection_bar [data-testid="stCaptionContainer"],
+    .st-key-sticky_projection_bar [data-testid="stMarkdownContainer"] {
+        color: #ffffff !important;
     }
     </style>
     """,
