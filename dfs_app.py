@@ -6007,14 +6007,15 @@ if "contest_results_df" in st.session_state:
         if classic_mode else ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"]
     )
     portfolio_lineup_columns = [col for col in portfolio_lineup_columns if col in results_df.columns]
-    st.caption("Choose how to rank your lineups, then the table below will show your top 20 by default.")
+    st.caption("Choose how many of your generated lineups to show in the final portfolio. Up to 5,000 lineups can be selected and exported.")
 
+    portfolio_limit = min(5000, len(results_df))
     portfolio_count = st.number_input(
         "Number of lineups",
         min_value=1,
-        max_value=min(150, len(results_df)),
-        value=20,
-        step=1,
+        max_value=max(1, portfolio_limit),
+        value=max(1, portfolio_limit),
+        step=100 if portfolio_limit >= 100 else 1,
         key="portfolio_count"
     )
 
