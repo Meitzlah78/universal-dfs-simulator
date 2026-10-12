@@ -6025,6 +6025,14 @@ if (
     n_candidates = len(candidate_idx)
     n_sims = len(simulation_df)
     total_field = len(contest_idx)
+    # The simulated field is a sample. Scale each sampled percentile to the
+    # actual contest size before estimating full-field ranks and payouts.
+    _selected_contest_for_scoring = st.session_state.get("selected_dk_contest", {}) or {}
+    try:
+        estimated_full_field_size = int(_selected_contest_for_scoring.get("field_size") or (total_field + 1))
+    except (TypeError, ValueError):
+        estimated_full_field_size = total_field + 1
+    estimated_full_field_size = max(2, estimated_full_field_size)
 
     if build_clicked:
         workflow_status.info(
@@ -6060,22 +6068,13 @@ if (
     else:
         payout_schedule = None
 
-    # Do not calculate contest cash, prizes, or ROI against a field that is
-    # smaller than the contest's actual paid-rank range. That makes results
-    # misleading because every simulated finish is compared with too few entries.
-    if payout_schedule is not None:
-        paid_positions = int(np.count_nonzero(payout_schedule > 0))
-        simulated_positions = total_field + 1  # opponents plus the lineup being scored
-        if paid_positions > simulated_positions:
-            st.error(
-                f"Contest scoring stopped to prevent misleading results. The selected "
-                f"payout table has {paid_positions:,} paid places, but this run includes "
-                f"only {total_field:,} simulated opponents ({simulated_positions:,} "
-                f"places including the lineup being scored). Cash rate, expected prize, "
-                f"and ROI would be unreliable. Increase the simulated opponent field "
-                f"or select a smaller contest with a matching payout structure."
-            )
-            st.stop()
+    if payout_schedule is not None and len(payout_schedule) < estimated_full_field_size:
+        st.caption(
+            f"Payout estimates use sampled percentiles scaled to an estimated "
+            f"{estimated_full_field_size:,}-entry contest. The simulator scores "
+            f"{total_field:,} opponents per simulation, so winnings and ROI are estimates, "
+            f"not exact full-field results."
+        )
 
     progress = st.progress(0)
     # Convert once and score independent simulation batches concurrently.
@@ -6138,23 +6137,34 @@ if (
             left_low = np.where(move_right_left, mid_left + 1, left_low)
             left_high = np.where(move_left_left, mid_left, left_high)
 
-        # Aggregate all simulations in this batch using NumPy array operations.
-        batch_win = np.sum(count_greater == 0, axis=0, dtype=np.float64)
-        batch_top1 = np.sum(percentiles >= 0.99, axis=0, dtype=np.float64)
-        batch_top5 = np.sum(percentiles >= 0.95, axis=0, dtype=np.float64)
-        batch_top10 = np.sum(percentiles >= 0.90, axis=0, dtype=np.float64)
+        # Estimate full-contest finishing ranks from each sampled-field percentile.
+        # This is an approximation because the opponents are a capped sample.
+        ranks = 1 + np.rint(
+            (count_greater / total_field) * (estimated_full_field_size - 1)
+        ).astype(np.int64)
+        ranks = np.clip(ranks, 1, estimated_full_field_size)
+        batch_win = np.sum(ranks == 1, axis=0, dtype=np.float64)
+        batch_top1 = np.sum(ranks <= max(1, int(np.ceil(estimated_full_field_size * 0.01))), axis=0, dtype=np.float64)
+        batch_top5 = np.sum(ranks <= max(1, int(np.ceil(estimated_full_field_size * 0.05))), axis=0, dtype=np.float64)
+        batch_top10 = np.sum(ranks <= max(1, int(np.ceil(estimated_full_field_size * 0.10))), axis=0, dtype=np.float64)
         batch_percentiles = np.sum(percentiles, axis=0, dtype=np.float64)
-        # "Cash %" must mean finishing in a paid position, not beating half the field.
-        ranks = count_greater + 1
+
+        # Cash and payout ranks now refer to the estimated full contest, not
+        # the smaller opponent sample. Without a contest payout table, retain
+        # the conventional 10% paid estimate.
         paid_positions = (
-            min(len(payout_schedule), total_field + 1)
+            min(len(payout_schedule), estimated_full_field_size)
             if payout_schedule is not None
-            else int(np.ceil(total_field * 0.10))
+            else int(np.ceil(estimated_full_field_size * 0.10))
         )
         batch_cash = np.sum(ranks <= paid_positions, axis=0, dtype=np.float64)
         if payout_schedule is not None:
-            # All equal-scoring entries split the combined prizes for their occupied ranks.
-            tie_counts = low - left_low + 1
+            # Approximate tie size by scaling the observed tie group to the full field.
+            sampled_tie_counts = low - left_low + 1
+            tie_counts = np.maximum(
+                1,
+                np.rint(sampled_tie_counts / total_field * estimated_full_field_size).astype(np.int64)
+            )
             batch_prizes = np.zeros((batch_count, n_candidates), dtype=np.float64)
             max_tie_count = int(np.max(tie_counts)) if tie_counts.size else 1
             for tie_offset in range(min(max_tie_count, len(payout_schedule))):
