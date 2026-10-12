@@ -5007,6 +5007,8 @@ if build_clicked:
         st.stop()
 
 # The eligible player pool was prepared before the SIM handler above.
+# Keep the last successful candidate pool across Streamlit reruns.
+candidates_df = st.session_state.get("candidates_df")
 
 # ============================================
 # RANK PLAYERS
@@ -5214,12 +5216,11 @@ if build_clicked:
         st.stop()
 
 
-st.session_state["candidates_df"] = candidates_df
-st.session_state["candidates_ready"] = True
+    st.session_state["candidates_df"] = candidates_df
+    st.session_state["candidates_ready"] = True
 
-st.write(
-    f"Candidate lineups tested: {len(candidates_df):,}"
-)
+if isinstance(candidates_df, pd.DataFrame):
+    st.write(f"Candidate lineups tested: {len(candidates_df):,}")
 
 if build_clicked:
     # Step 3: build the simulated opponent field after our candidate lineups exist.
