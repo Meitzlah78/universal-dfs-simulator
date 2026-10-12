@@ -2774,19 +2774,21 @@ if platform == "FanDuel":
             )
             sampled_mean = float(np.mean(scores)) if len(scores) else 0.0
             sampled_std = float(np.std(scores, ddof=1)) if len(scores) > 1 else 0.0
-            if (
-                position_type == "K"
-                and np.isfinite(projection) and projection > 0
-                and np.isfinite(sampled_mean) and sampled_mean > 1e-6
-            ):
-                # Kicker history can be sparse or mismatched by name. Calibrate
-                # its sampled distribution to the slate projection so a kicker
-                # projected near 8 points does not simulate near 1 point.
-                scores = np.maximum(
-                    0.0,
-                    scores * (projection / sampled_mean)
-                    + rng.normal(0.0, max(0.25, projection * 0.15), size=n),
-                )
+            if position_type == "K" and np.isfinite(projection) and projection > 0:
+                # Kicker historical samples may be all-zero or mismatched. If
+                # usable, retain their shape while scaling toward the projection;
+                # otherwise generate a projection-centered distribution.
+                if np.isfinite(sampled_mean) and sampled_mean > 1e-6:
+                    scores = np.maximum(
+                        0.0,
+                        scores * (projection / sampled_mean)
+                        + rng.normal(0.0, max(0.25, projection * 0.12), size=n),
+                    )
+                else:
+                    scores = np.maximum(
+                        0.0,
+                        rng.normal(projection, max(1.0, projection * 0.30), size=n),
+                    )
                 sampled_mean = float(np.mean(scores))
                 sampled_std = float(np.std(scores, ddof=1)) if len(scores) > 1 else 0.0
             elif (
@@ -3239,19 +3241,21 @@ else:
             )
             sampled_mean = float(np.mean(scores)) if len(scores) else 0.0
             sampled_std = float(np.std(scores, ddof=1)) if len(scores) > 1 else 0.0
-            if (
-                position_type == "K"
-                and np.isfinite(projection) and projection > 0
-                and np.isfinite(sampled_mean) and sampled_mean > 1e-6
-            ):
-                # Kicker history can be sparse or mismatched by name. Calibrate
-                # its sampled distribution to the slate projection so a kicker
-                # projected near 8 points does not simulate near 1 point.
-                scores = np.maximum(
-                    0.0,
-                    scores * (projection / sampled_mean)
-                    + rng.normal(0.0, max(0.25, projection * 0.15), size=n),
-                )
+            if position_type == "K" and np.isfinite(projection) and projection > 0:
+                # Kicker historical samples may be all-zero or mismatched. If
+                # usable, retain their shape while scaling toward the projection;
+                # otherwise generate a projection-centered distribution.
+                if np.isfinite(sampled_mean) and sampled_mean > 1e-6:
+                    scores = np.maximum(
+                        0.0,
+                        scores * (projection / sampled_mean)
+                        + rng.normal(0.0, max(0.25, projection * 0.12), size=n),
+                    )
+                else:
+                    scores = np.maximum(
+                        0.0,
+                        rng.normal(projection, max(1.0, projection * 0.30), size=n),
+                    )
                 sampled_mean = float(np.mean(scores))
                 sampled_std = float(np.std(scores, ddof=1)) if len(scores) > 1 else 0.0
             elif (
