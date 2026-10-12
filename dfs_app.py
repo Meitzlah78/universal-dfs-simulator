@@ -4039,6 +4039,8 @@ else:
         st.caption(st.session_state["nfl_historical_stats_status"])
         if st.session_state.get("nfl_historical_players_matched") is not None:
             st.caption("Historical player matches in current pool: " + str(st.session_state["nfl_historical_players_matched"]))
+    if st.session_state.get("nfl_pbp_history_status"):
+        st.caption("Play-by-play history: " + st.session_state["nfl_pbp_history_status"])
 
     volatility_check = st.session_state.get("historical_volatility_check")
     if isinstance(volatility_check, pd.DataFrame) and not volatility_check.empty:
