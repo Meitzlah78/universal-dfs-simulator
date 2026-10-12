@@ -5084,7 +5084,8 @@ if build_clicked:
             # which was causing players like Allen and Stafford to appear everywhere.
             seen_flex_groups = set()
             captain_attempts = 0
-            max_captain_attempts = max(1000, per_captain_candidate_limit * 40)
+            # Keep the search bounded on Streamlit Cloud; repeated random samples can otherwise burn CPU for a long time when salary/lock rules reject most lineups.
+            max_captain_attempts = max(500, per_captain_candidate_limit * 8)
             while (
                 len(captain_candidates) < per_captain_candidate_limit
                 and captain_attempts < max_captain_attempts
