@@ -5692,7 +5692,7 @@ if _selected_dk_for_details.get("id"):
 
             _dk_summary = {
                 "contest_id": _contest_id_for_api,
-                "fetched_at": datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %I:%M:%S %p ET"),
+                "fetched_at": _sticky_datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %I:%M:%S %p ET"),
                 "name": _dk_details.get("contestName") or _dk_details.get("name") or _selected_dk_for_details.get("name"),
                 "entry_fee": _dk_details.get("entryFee") or _dk_details.get("entry_fee") or _selected_dk_for_details.get("entry_fee"),
                 "entries": _dk_details.get("entries") or _dk_details.get("currentEntries") or _dk_details.get("current_entries"),
@@ -5737,6 +5737,7 @@ if _selected_dk_for_details.get("id"):
                 _payout_schedule_auto[_payout_df["Rank"].to_numpy(dtype=int) - 1] = _payout_df["Prize"].to_numpy(dtype=float)
                 st.session_state["contest_payout_schedule"] = _payout_schedule_auto
                 st.session_state["contest_payout_source_name"] = "DraftKings contest details API"
+                st.session_state["contest_payout_contest_id"] = _contest_id_for_api
                 st.session_state["contest_payout_auto_loaded"] = True
                 st.success(f"DraftKings returned a structured payout table with {_payout_df['Rank'].nunique():,} ranks.")
             else:
@@ -5753,7 +5754,8 @@ if _selected_dk_for_details.get("id"):
             )
 
 _dk_details_display = st.session_state.get("dk_contest_details")
-if isinstance(_dk_details_display, dict):
+_current_details_contest_id = str(st.session_state.get("selected_dk_contest", {}).get("id", ""))
+if isinstance(_dk_details_display, dict) and str(_dk_details_display.get("contest_id", "")) == _current_details_contest_id:
     _detail_cols = st.columns(4)
     _entry_fee_display = pd.to_numeric(_dk_details_display.get("entry_fee"), errors="coerce")
     _prize_pool_display = pd.to_numeric(_dk_details_display.get("prize_pool"), errors="coerce")
@@ -5801,11 +5803,19 @@ if payout_file is not None:
                 payout_schedule[payout_source["_rank"].to_numpy() - 1] = payout_source["_prize"].to_numpy(dtype=float)
                 st.session_state["contest_payout_schedule"] = payout_schedule
                 st.session_state["contest_payout_source_name"] = getattr(payout_file, "name", "uploaded payout CSV")
+                st.session_state["contest_payout_contest_id"] = str(
+                    st.session_state.get("selected_dk_contest", {}).get("id", "")
+                )
     except Exception as exc:
         st.error(f"Could not read payout table: {type(exc).__name__}: {exc}")
 
 _saved_payouts = st.session_state.get("contest_payout_schedule")
-if isinstance(_saved_payouts, np.ndarray) and len(_saved_payouts):
+_current_payout_contest_id = str(st.session_state.get("selected_dk_contest", {}).get("id", ""))
+_payout_matches_selected_contest = (
+    bool(_current_payout_contest_id)
+    and str(st.session_state.get("contest_payout_contest_id", "")) == _current_payout_contest_id
+)
+if _payout_matches_selected_contest and isinstance(_saved_payouts, np.ndarray) and len(_saved_payouts):
     _paid_positions = int(np.count_nonzero(_saved_payouts > 0))
     _top_prize = float(np.max(_saved_payouts))
     st.success(
@@ -5896,7 +5906,12 @@ if (
     avg_percentiles = np.zeros(n_candidates)
     expected_prize_totals = np.zeros(n_candidates, dtype=np.float64)
     payout_schedule = st.session_state.get("contest_payout_schedule")
-    if isinstance(payout_schedule, np.ndarray) and len(payout_schedule):
+    _scoring_contest_id = str(st.session_state.get("selected_dk_contest", {}).get("id", ""))
+    _payout_belongs_to_scoring_contest = (
+        bool(_scoring_contest_id)
+        and str(st.session_state.get("contest_payout_contest_id", "")) == _scoring_contest_id
+    )
+    if _payout_belongs_to_scoring_contest and isinstance(payout_schedule, np.ndarray) and len(payout_schedule):
         payout_schedule = np.asarray(payout_schedule, dtype=np.float64)
     else:
         payout_schedule = None
