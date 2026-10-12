@@ -20,16 +20,19 @@ st.set_page_config(
 
 st.title("Universal DFS Simulator")
 
-# Keep the projection-update alert and refresh button together in the fixed top bar.
+# Keep the full projection-update message and refresh button in the fixed top bar.
 from datetime import datetime as _sticky_datetime
 
 with st.container(key="sticky_projection_bar"):
-    sticky_status, sticky_right = st.columns([2, 3])
-    with sticky_status:
+    sticky_message, sticky_right = st.columns([3, 2])
+    with sticky_message:
         if st.session_state.get("projection_updates_found"):
-            st.markdown("**PROJECTION UPDATES FOUND**")
+            st.markdown(
+                "**PROJECTION UPDATES FOUND — click REFRESH PROJECTIONS to clear the cache "
+                "and reload the latest public projections. Uploaded CSVs still take priority.**"
+            )
         else:
-            st.markdown("**PROJECTION STATUS**")
+            st.markdown("**Uploaded CSVs still take priority.**")
     with sticky_right:
         if st.button("REFRESH PROJECTIONS + INJURY NEWS", key="sticky_refresh_projections", use_container_width=True):
             # Cache functions are defined later in the file, so defer clearing until then.
