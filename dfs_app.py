@@ -4926,32 +4926,48 @@ locked_players = [
 ]
 
 if build_clicked:
-    # Show each stage explicitly so the user can see where the workflow stops.
+    # Keep a persistent status message and surface failures instead of letting
+    # the player progress bar vanish without telling the user what failed.
     workflow_status = st.empty()
     workflow_status.info(f"Step 1 of 4: Running {SIMULATION_COUNT:,} player simulations...")
-    # Use the persistent workflow status for the stage label. A spinner with
-    # fixed Step 1 text can remain visible while the status placeholder advances.
-    simulation_df = run_game_simulations(
-        players_df, platform=platform, workflow_status=workflow_status
-    )
+    try:
+        simulation_df = run_game_simulations(
+            players_df, platform=platform, workflow_status=workflow_status
+        )
+        if not isinstance(simulation_df, pd.DataFrame) or simulation_df.empty:
+            raise RuntimeError("The player simulation returned no results.")
+        st.session_state["simulation_df"] = simulation_df
+        st.session_state["simulations_ready"] = True
 
-    st.session_state["simulation_df"] = simulation_df
-    st.session_state["simulations_ready"] = True
+        workflow_status.info("Step 2 of 4: Preparing rankings and building your candidate lineups...")
 
-    # Advance the visible status immediately so any later failure is not
-    # mistaken for player simulations being the final step.
-    workflow_status.info("Step 2 of 4: Preparing rankings and building your candidate lineups...")
-
-    # Refresh rankings with the simulations created by this BUILD click.
-    player_sim = {}
-    for player in players_df["Name"]:
-        values = simulation_df[player]
-        player_sim[player] = {
-            "Mean": values.mean(),
-            "P95": values.quantile(0.95),
-            "P99": values.quantile(0.99),
-            "StdDev": values.std(ddof=0)
-        }
+        # Refresh rankings with the simulations created by this SIM click.
+        player_sim = {}
+        missing_simulation_columns = [
+            str(player) for player in players_df["Name"]
+            if player not in simulation_df.columns
+        ]
+        if missing_simulation_columns:
+            raise RuntimeError(
+                "Simulation results are missing player columns: "
+                + ", ".join(missing_simulation_columns[:10])
+            )
+        for player in players_df["Name"]:
+            values = pd.to_numeric(simulation_df[player], errors="coerce").dropna()
+            if values.empty:
+                raise RuntimeError(f"No usable simulated scores were returned for {player}.")
+            player_sim[player] = {
+                "Mean": float(values.mean()),
+                "P95": float(values.quantile(0.95)),
+                "P99": float(values.quantile(0.99)),
+                "StdDev": float(values.std(ddof=0))
+            }
+    except Exception as exc:
+        workflow_status.error(
+            f"SIM stopped during player simulations or ranking setup: {type(exc).__name__}: {exc}"
+        )
+        st.exception(exc)
+        st.stop()
 
 # The eligible player pool was prepared before the SIM handler above.
 
