@@ -5427,8 +5427,11 @@ if build_clicked:
             if control_map[captain]["Captain Max %"] <= 0:
                 continue
 
+            # Keep captain search focused on the strongest ranked players, but allow every
+            # eligible player into FLEX. Restricting FLEX to search_pool silently excluded
+            # useful mid-ranked players (such as James Cook) from every generated lineup.
             flex_pool = [
-                p for p in search_pool
+                p for p in available_players
                 if p != captain
             ]
 
