@@ -2973,6 +2973,51 @@ if platform == "FanDuel":
                     text=f"Simulating players: {index + 1} of {total_players} ({(index + 1) / total_players:.0%})"
                 )
 
+        # Add a direct QB-to-pass-catcher relationship on top of the shared
+        # team/game scripts above. A QB's high or low passing outcome should
+        # move his team's WR/TE outcomes in the same direction. Standardizing
+        # the QB outcome avoids using raw points across players with different
+        # scoring ranges. This is a lightweight covariance layer, not a play-by-play
+        # model; the effect is controlled by the existing correlation slider.
+        if correlation_strength > 0 and not players_df.empty:
+            team_col = "Team" if "Team" in players_df.columns else None
+            position_col = "Position" if "Position" in players_df.columns else None
+            name_col = "Name" if "Name" in players_df.columns else None
+            if team_col and position_col and name_col:
+                for team, team_rows in players_df.groupby(
+                    players_df[team_col].astype(str).str.upper().str.strip()
+                ):
+                    qb_names = team_rows[
+                        team_rows[position_col].astype(str).str.upper().str.contains(r"\bQB\b", regex=True)
+                    ][name_col].astype(str).tolist()
+                    if not qb_names:
+                        continue
+                    qb_name = next((name for name in qb_names if name in simulations), None)
+                    if qb_name is None:
+                        continue
+                    qb_scores = np.asarray(simulations[qb_name], dtype=float)
+                    qb_std = float(np.std(qb_scores))
+                    if not np.isfinite(qb_std) or qb_std < 1e-6:
+                        continue
+                    qb_z = np.clip((qb_scores - float(np.mean(qb_scores))) / qb_std, -2.5, 2.5)
+                    pass_catchers = team_rows[
+                        team_rows[position_col].astype(str).str.upper().str.contains(r"\b(WR|TE)\b", regex=True)
+                    ][name_col].astype(str).tolist()
+                    for catcher_name in pass_catchers:
+                        if catcher_name not in simulations or catcher_name == qb_name:
+                            continue
+                        catcher_scores = np.asarray(simulations[catcher_name], dtype=float)
+                        catcher_std = float(np.std(catcher_scores))
+                        if not np.isfinite(catcher_std) or catcher_std < 1e-6:
+                            continue
+                        # Moderate direct correlation avoids making every receiver
+                        # mirror the QB while still rewarding coherent passing spikes.
+                        rho = 0.18 * correlation_strength
+                        simulations[catcher_name] = np.maximum(
+                            catcher_scores + rho * catcher_std * qb_z,
+                            0.0,
+                        )
+
         result = pd.DataFrame(simulations)
         st.session_state["simulation_cap_hit_pct"] = cap_hit_percentages
         simulation_progress.progress(1.0, text=f"Player simulations complete: {total_players} players")
