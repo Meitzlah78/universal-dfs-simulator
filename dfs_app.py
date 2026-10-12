@@ -337,7 +337,12 @@ def build_showdown_opponent_field(available_players, simulation_df, players_df,
                 text=f"Building opponent lineups: {len(rows):,} of {target:,} accepted (attempt {attempts:,})"
             )
         picked = rng.choice(len(names), size=6, replace=False, p=weights)
-        captain_idx = picked[int(np.argmax(means[picked]))]
+        # Randomize Captain assignment among the six selected players, weighted by projection.
+        # Choosing the highest-projection player every time incorrectly makes the top-projected
+        # player Captain in every lineup where they appear, inflating Captain ownership to overall ownership.
+        captain_weights = np.clip(means[picked], 0.01, None)
+        captain_weights = captain_weights / captain_weights.sum()
+        captain_idx = int(rng.choice(picked, p=captain_weights))
         flex_idx = picked[picked != captain_idx]
         salary = int(captain_salaries[captain_idx] + salaries[flex_idx].sum())
         if salary > salary_cap:
