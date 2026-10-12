@@ -24,14 +24,17 @@ st.title("Universal DFS Simulator")
 from datetime import datetime as _sticky_datetime
 
 with st.container(key="sticky_projection_bar"):
-    sticky_left, sticky_right = st.columns([3, 1])
+    sticky_left, sticky_status, sticky_right = st.columns([3, 2, 2])
     with sticky_left:
         st.markdown("**Reminder: Refresh projections + injury news before building lineups.**")
         _sticky_updated_at = st.session_state.get("shared_projection_updated_at")
         if _sticky_updated_at:
             st.caption("Last refresh: " + _sticky_updated_at)
+    with sticky_status:
+        if st.session_state.get("projection_updates_found"):
+            st.markdown("**PROJECTION UPDATES FOUND**")
     with sticky_right:
-        if st.button("REFRESH PROJECTIONS + INJURY NEWS", key="sticky_refresh_projections"):
+        if st.button("REFRESH PROJECTIONS + INJURY NEWS", key="sticky_refresh_projections", use_container_width=True):
             # Cache functions are defined later in the file, so defer clearing until then.
             st.session_state["pending_sticky_projection_refresh"] = True
             st.rerun()
