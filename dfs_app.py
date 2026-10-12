@@ -3777,8 +3777,32 @@ else:
     st.session_state["selected_dk_contests_by_slate"] = dk_saved_contests
     st.session_state["selected_dk_contest"] = active_dk_selection
 
+    # The sampled opponent field is used to estimate the full contest, not to
+    # pretend the sample is the actual contest size.
+    previous_field_size = active_dk_selection.get("field_size")
+    try:
+        default_field_size = int(previous_field_size) if previous_field_size else 45396
+    except (TypeError, ValueError):
+        default_field_size = 45396
+    active_field_size = st.number_input(
+        "Current total contest entries (update from DraftKings lobby)",
+        min_value=2,
+        max_value=200000,
+        value=max(2, min(200000, default_field_size)),
+        step=100,
+        key=f"dk_field_size_{dk_slate_key}",
+        help="Enter the current total entries shown in the DraftKings lobby, including your entries."
+    )
+    active_dk_selection["field_size"] = int(active_field_size)
+    dk_saved_contests[dk_slate_key] = active_dk_selection
+    st.session_state["selected_dk_contests_by_slate"] = dk_saved_contests
+    st.session_state["selected_dk_contest"] = active_dk_selection
+
     dk_opponent_target = get_contest_opponent_target("dk")
-    st.caption(f"Simulated DraftKings opponents: up to {dk_opponent_target:,} (speed limit)")
+    st.caption(
+        f"Simulated opponent sample: up to {dk_opponent_target:,}; "
+        f"estimated full contest: {int(active_field_size):,} total entries."
+    )
 
     st.write("### Projection Sources")
 
