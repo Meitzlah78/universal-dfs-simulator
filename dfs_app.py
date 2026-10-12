@@ -5012,7 +5012,10 @@ if build_clicked:
 # RANK PLAYERS
 # ============================================
 
-showdown_base_scores = np.asarray([
+if build_clicked:
+    workflow_status.info("Step 2 of 4: Preparing rankings and building your candidate lineups...")
+    try:
+        showdown_base_scores = np.asarray([
     player_sim[p]["P95"] * P95_WEIGHT
     + player_sim[p]["P99"] * P99_WEIGHT
     + player_sim[p]["Mean"] * MEAN_WEIGHT
@@ -5203,6 +5206,12 @@ for captain_index, captain in enumerate(search_pool):
 
 candidates_df = pd.DataFrame(candidates)
 candidate_progress.progress(1.0, text=f"Candidate lineup search complete: {len(candidates_df):,} found")
+    except Exception as exc:
+        workflow_status.error(
+            f"Step 2 failed while ranking players or building candidate lineups: {type(exc).__name__}: {exc}"
+        )
+        st.exception(exc)
+        st.stop()
 
 
 st.session_state["candidates_df"] = candidates_df
