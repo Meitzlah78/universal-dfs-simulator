@@ -20,6 +20,40 @@ st.set_page_config(
 
 st.title("Universal DFS Simulator")
 
+# Keep the projection-update reminder visible while the user scrolls.
+st.markdown(
+    """
+    <style>
+    .projection-update-sticky {
+        position: fixed;
+        top: 3.15rem;
+        left: 0;
+        right: 0;
+        z-index: 999990;
+        padding: 0.55rem 1rem;
+        background: #fff4cc;
+        color: #3d3100;
+        border-bottom: 1px solid #d8bd63;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.12);
+        text-align: center;
+        font-weight: 600;
+        font-size: 0.92rem;
+    }
+    @media (prefers-color-scheme: dark) {
+        .projection-update-sticky {
+            background: #3b3217;
+            color: #fff0b3;
+            border-bottom-color: #76652d;
+        }
+    }
+    </style>
+    <div class="projection-update-sticky">
+        Reminder: Before building lineups, click “REFRESH PROJECTIONS + INJURY NEWS” to check for the latest updates.
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
 # Shared ranking choices across every supported format.
 PORTFOLIO_METRICS = {
     "Contest Score": "ContestScore",
