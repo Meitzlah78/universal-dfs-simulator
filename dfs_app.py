@@ -5997,7 +5997,7 @@ def delete_and_replace_portfolio_lineup(
 st.divider()
 st.write("## Portfolio")
 
-if "contest_results_df" in st.session_state:
+if "contest_results_df" in st.session_state and not (platform == "DraftKings" and lineup_mode == "Classic"):
 
     results_df = st.session_state["contest_results_df"]
     classic_mode = platform == "DraftKings" and lineup_mode == "Classic"
