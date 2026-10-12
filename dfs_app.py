@@ -6153,7 +6153,7 @@ if (
         # the smaller opponent sample. Without a contest payout table, retain
         # the conventional 10% paid estimate.
         paid_positions = (
-            min(len(payout_schedule), estimated_full_field_size)
+            min(int(np.count_nonzero(payout_schedule > 0)), estimated_full_field_size)
             if payout_schedule is not None
             else int(np.ceil(estimated_full_field_size * 0.10))
         )
