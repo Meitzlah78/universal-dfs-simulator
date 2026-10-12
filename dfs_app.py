@@ -4579,7 +4579,7 @@ else:
             st.session_state["classic_lineups"] = classic_results
             st.session_state["classic_pool_signature"] = slate_signature
 
-    if classic_run_all:
+    if classic_run_all and platform == "DraftKings" and lineup_mode == "Classic":
         # Keep the Classic workflow compact, matching the single-button Showdown layout.
         if "simulation_df" not in st.session_state:
             st.warning("Run SIM first, then run CONTEST SIM.")
