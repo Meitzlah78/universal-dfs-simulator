@@ -361,6 +361,66 @@ def build_showdown_opponent_field(available_players, simulation_df, players_df,
     return pd.DataFrame.from_records(rows, columns=columns)
 
 
+
+def expand_showdown_field_by_ownership(sample_field, full_field_size, seed=20261012):
+    """Expand a 10k sampled Showdown field into a full estimated field with duplicates.
+
+    Each sampled lineup receives a probability weight based on the simulated
+    Captain and FLEX ownership observed in the sample. Draws are with replacement,
+    so exact lineups can repeat. This is an ownership-based estimate, not actual
+    opponent-entry data.
+    """
+    if sample_field is None or sample_field.empty:
+        return sample_field
+    try:
+        full_field_size = int(full_field_size)
+    except (TypeError, ValueError):
+        return sample_field
+    if full_field_size <= len(sample_field):
+        return sample_field.reset_index(drop=True)
+
+    slots = ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"]
+    field = sample_field.copy().reset_index(drop=True)
+    if not all(slot in field.columns for slot in slots):
+        return field
+
+    total = len(field)
+    overall_counts = {}
+    captain_counts = field["Captain"].astype(str).str.strip().value_counts().to_dict()
+    for slot in slots:
+        counts = field[slot].astype(str).str.strip().value_counts().to_dict()
+        for player, count in counts.items():
+            overall_counts[player] = overall_counts.get(player, 0) + int(count)
+
+    # Estimate lineup popularity from the observed per-player rates. Captain
+    # ownership is slot-specific; FLEX ownership uses the player's five FLEX
+    # appearances. A geometric mean prevents six ownership rates from becoming
+    # so small that floating-point underflow erases all useful differences.
+    captain_rate = {p: max(c / total, 1e-6) for p, c in captain_counts.items()}
+    flex_counts = {}
+    for slot in slots[1:]:
+        for player, count in field[slot].astype(str).str.strip().value_counts().items():
+            flex_counts[player] = flex_counts.get(player, 0) + int(count)
+    flex_rate = {p: max(c / (total * 5), 1e-6) for p, c in flex_counts.items()}
+
+    log_weights = np.zeros(total, dtype=np.float64)
+    for slot in slots:
+        rates = captain_rate if slot == "Captain" else flex_rate
+        values = field[slot].astype(str).str.strip().map(rates).fillna(1e-6).to_numpy(dtype=np.float64)
+        log_weights += np.log(values)
+    # Temper the popularity curve so one high-ownership player does not dominate
+    # the entire simulated field.
+    log_weights = (log_weights - np.max(log_weights)) * 0.65
+    weights = np.exp(log_weights)
+    weights /= weights.sum()
+
+    rng = np.random.default_rng(seed)
+    sampled_indices = rng.choice(total, size=full_field_size, replace=True, p=weights)
+    expanded = field.iloc[sampled_indices].copy().reset_index(drop=True)
+    expanded["Salary"] = pd.to_numeric(expanded["Salary"], errors="coerce").fillna(0).astype(int)
+    return expanded
+
+
 def build_dk_contest_entry_export(entry_df, selected_contest_id, lineup_ids_df, expected_slots, slate_label):
     """Replace roster slots on existing DraftKings entries; never create new contest entries."""
     if entry_df is None or not isinstance(entry_df, pd.DataFrame) or entry_df.empty:
@@ -5678,7 +5738,9 @@ if build_clicked:
     workflow_status.info(f"Step 3 of 4: Building up to {dk_opponent_target:,} simulated opponent lineups...")
     field_progress = st.progress(0, text=f"Step 3 of 4: Building opponent lineups (0 of {dk_opponent_target:,})...")
     try:
-        contest_field_df = build_showdown_opponent_field(
+        # First generate the representative 10,000-lineup sample, then use
+        # ownership observed in that sample to estimate a full contest field.
+        contest_field_sample_df = build_showdown_opponent_field(
             available_players, simulation_df, players_df, salary_map,
             captain_salary_map, SALARY_CAP, dk_opponent_target,
             progress_bar=field_progress
@@ -5687,27 +5749,45 @@ if build_clicked:
         workflow_status.error(f"Step 3 failed while building opponent lineups: {type(exc).__name__}: {exc}")
         st.exception(exc)
         st.stop()
-    field_progress.progress(1.0, text=f"Step 3 of 4 complete: {len(contest_field_df):,} opponent lineups created")
-    if contest_field_df.empty:
+    field_progress.progress(1.0, text=f"Step 3 of 4 complete: {len(contest_field_sample_df):,} sample opponent lineups created")
+    if contest_field_sample_df.empty:
         workflow_status.error(
             "Step 3 could not create any valid opponent lineups. Check the salary cap and eligible player pool."
         )
         st.stop()
 
-    st.session_state["contest_field_df"] = contest_field_df
-    st.session_state["contest_field_count"] = len(contest_field_df)
-    st.session_state["contest_field_ready"] = (
-        dk_opponent_target > 0 and len(contest_field_df) >= dk_opponent_target
+    selected_contest = st.session_state.get("selected_dk_contest") or {}
+    try:
+        full_field_size = int(selected_contest.get("field_size") or (dk_opponent_target + 1))
+    except (TypeError, ValueError):
+        full_field_size = dk_opponent_target + 1
+    try:
+        own_entries = max(0, int(selected_contest.get("your_entries", 0) or 0))
+    except (TypeError, ValueError):
+        own_entries = 0
+    full_opponent_count = max(1, full_field_size - own_entries)
+    contest_field_df = expand_showdown_field_by_ownership(
+        contest_field_sample_df, full_opponent_count
     )
 
-    selected_contest = st.session_state.get("selected_dk_contest")
+    st.session_state["contest_field_sample_df"] = contest_field_sample_df
+    st.session_state["contest_field_df"] = contest_field_df
+    st.session_state["contest_field_count"] = len(contest_field_df)
+    st.session_state["contest_field_ready"] = len(contest_field_df) > 0
+
     if selected_contest:
         st.info(
-            f"Contest selected from your entry CSV: {selected_contest['name']} "
-            f"(ID {selected_contest['id']}). Your uploaded file has "
-            f"{selected_contest['your_entries']} of your entries in this contest. "
-            f"The {dk_opponent_target:,} opponents are simulated; the entry CSV does not contain "
-            "the actual opponent field or payout table."
+            f"Contest selected from your entry CSV: {selected_contest.get('name', 'DraftKings contest')} "
+            f"(ID {selected_contest.get('id', 'unknown')}). Your uploaded file has "
+            f"{own_entries} of your entries in this contest. Built {len(contest_field_sample_df):,} "
+            f"representative lineups, then expanded them with ownership-weighted sampling to "
+            f"{len(contest_field_df):,} estimated opponent entries, allowing exact lineup duplicates. "
+            "This is an estimate; the entry CSV does not contain the actual opponent lineups."
+        )
+    else:
+        st.info(
+            f"Built {len(contest_field_sample_df):,} representative lineups and expanded them to "
+            f"{len(contest_field_df):,} ownership-weighted estimated opponent entries."
         )
 
 
