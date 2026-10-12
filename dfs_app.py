@@ -4038,7 +4038,7 @@ else:
     # SIMULATION
     # ================================
 
-    def run_game_simulations(players_df, platform="DraftKings"):
+    def run_game_simulations(players_df, platform="DraftKings", workflow_status=None):
         # Final safety check: Out players must never enter simulations, even if
         # this function is called from a different slate builder or stale UI state.
         eligible_players = players_df.copy()
@@ -4052,6 +4052,9 @@ else:
         # Simulate stat lines first, then calculate fantasy points with site scoring.
         rng = np.random.default_rng()
         outcomes = _simulate_scored_player_outcomes(eligible_players, platform, rng)
+        # Show Step 2 as soon as the player outcomes finish, before the historical-data check.
+        if workflow_status is not None:
+            workflow_status.info("Step 2 of 4: Preparing rankings and building your candidate lineups...")
         # Store a rough historical volatility diagnostic alongside each completed sim.
         # This is a proxy check, not a true forecast backtest: historical projection snapshots
         # are unavailable, and source scoring may not exactly match every DFS format.
@@ -4930,7 +4933,7 @@ if build_clicked:
         f"Loading recent historical stats if available, then running "
         f"{SIMULATION_COUNT:,} game simulations..."
     ):
-        simulation_df = run_game_simulations(players_df, platform=platform)
+        simulation_df = run_game_simulations(players_df, platform=platform, workflow_status=workflow_status)
 
     st.session_state["simulation_df"] = simulation_df
     st.session_state["simulations_ready"] = True
