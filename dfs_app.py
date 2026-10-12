@@ -4445,7 +4445,7 @@ else:
         st.write("### Run")
         classic_run_all = st.button("SIM", type="primary", use_container_width=True, key="dk_classic_run_all")
     if classic_run_all:
-        with st.spinner(f"Step 1 of 3: Running {SIMULATION_COUNT:,} player simulations for DraftKings Classic..."):
+        with st.spinner(f"Step 1 of 4: Running {SIMULATION_COUNT:,} player simulations for DraftKings Classic..."):
             classic_simulation_df = run_game_simulations(players_df, platform=platform)
         st.session_state["simulation_df"] = classic_simulation_df
         st.session_state["simulations_ready"] = True
@@ -4870,8 +4870,8 @@ else:
 # BUILD LINEUPS
 # ============================================
 
-# One-click workflow: SIM runs player simulations, builds the opponent field,
-# then builds and scores the user's lineups below.
+# One-click workflow: SIM runs player simulations, builds the user's candidate lineups,
+# builds the opponent field, then scores the contest.
 
 build_cols = st.columns([1, 1, 0.65])
 with build_cols[0]:
@@ -4935,43 +4935,6 @@ if build_clicked:
     st.session_state["simulation_df"] = simulation_df
     st.session_state["simulations_ready"] = True
 
-    # Step 2: build the simulated contest field.
-    workflow_status.info(f"Step 2 of 3: Building up to {dk_opponent_target:,} simulated opponent lineups...")
-    field_progress = st.progress(0, text=f"Step 2 of 3: Building opponent lineups (0 of {dk_opponent_target:,})...")
-    try:
-        contest_field_df = build_showdown_opponent_field(
-            available_players, simulation_df, players_df, salary_map,
-            captain_salary_map, SALARY_CAP, dk_opponent_target,
-            progress_bar=field_progress
-        )
-    except Exception as exc:
-        workflow_status.error(f"Step 2 failed while building opponent lineups: {type(exc).__name__}: {exc}")
-        st.exception(exc)
-        st.stop()
-    field_progress.progress(1.0, text=f"Step 2 complete: {len(contest_field_df):,} opponent lineups created")
-    if contest_field_df.empty:
-        workflow_status.error(
-            "Step 2 could not create any valid opponent lineups. Check the salary cap and eligible player pool."
-        )
-        st.stop()
-
-    show_field_ownership(contest_field_df, ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"], "Simulated Field Player Ownership", captain_slot="Captain")
-    st.session_state["contest_field_df"] = contest_field_df
-    st.session_state["contest_field_count"] = len(contest_field_df)
-    st.session_state["contest_field_ready"] = (
-        dk_opponent_target > 0 and len(contest_field_df) >= dk_opponent_target
-    )
-
-    selected_contest = st.session_state.get("selected_dk_contest")
-    if selected_contest:
-        st.info(
-            f"Contest selected from your entry CSV: {selected_contest['name']} "
-            f"(ID {selected_contest['id']}). Your uploaded file has "
-            f"{selected_contest['your_entries']} of your entries in this contest. "
-            f"The {dk_opponent_target:,} opponents are simulated; the entry CSV does not contain "
-            "the actual opponent field or payout table."
-        )
-
     # Refresh rankings with the simulations created by this BUILD click.
     player_sim = {}
     for player in players_df["Name"]:
@@ -5021,7 +4984,7 @@ rng.shuffle(search_pool)
 # ============================================
 
 if build_clicked:
-    workflow_status.info("Step 3 of 3: Building your candidate lineups, then scoring them against the simulated contest field...")
+    workflow_status.info("Step 2 of 4: Building your candidate lineups...")
 
 LINEUP_COUNT = 5000
 CANDIDATE_COUNT = 5000
@@ -5192,6 +5155,45 @@ st.write(
     f"Candidate lineups tested: {len(candidates_df):,}"
 )
 
+    # Step 3: build the simulated opponent field after our candidate lineups exist.
+
+    workflow_status.info(f"Step 3 of 4: Building up to {dk_opponent_target:,} simulated opponent lineups...")
+    field_progress = st.progress(0, text=f"Step 3 of 4: Building opponent lineups (0 of {dk_opponent_target:,})...")
+    try:
+        contest_field_df = build_showdown_opponent_field(
+            available_players, simulation_df, players_df, salary_map,
+            captain_salary_map, SALARY_CAP, dk_opponent_target,
+            progress_bar=field_progress
+        )
+    except Exception as exc:
+        workflow_status.error(f"Step 3 failed while building opponent lineups: {type(exc).__name__}: {exc}")
+        st.exception(exc)
+        st.stop()
+    field_progress.progress(1.0, text=f"Step 3 complete: {len(contest_field_df):,} opponent lineups created")
+    if contest_field_df.empty:
+        workflow_status.error(
+            "Step 3 could not create any valid opponent lineups. Check the salary cap and eligible player pool."
+        )
+        st.stop()
+
+    show_field_ownership(contest_field_df, ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"], "Simulated Field Player Ownership", captain_slot="Captain")
+    st.session_state["contest_field_df"] = contest_field_df
+    st.session_state["contest_field_count"] = len(contest_field_df)
+    st.session_state["contest_field_ready"] = (
+        dk_opponent_target > 0 and len(contest_field_df) >= dk_opponent_target
+    )
+
+    selected_contest = st.session_state.get("selected_dk_contest")
+    if selected_contest:
+        st.info(
+            f"Contest selected from your entry CSV: {selected_contest['name']} "
+            f"(ID {selected_contest['id']}). Your uploaded file has "
+            f"{selected_contest['your_entries']} of your entries in this contest. "
+            f"The {dk_opponent_target:,} opponents are simulated; the entry CSV does not contain "
+            "the actual opponent field or payout table."
+        )
+
+
 
 # ============================================
 # CONTEST SCORING
@@ -5250,7 +5252,7 @@ if (
 
     if build_clicked:
         workflow_status.info(
-            f"Step 3 of 3: Scoring {n_candidates:,} candidate lineups against "
+            f"Step 4 of 4: Scoring {n_candidates:,} candidate lineups against "
             f"{total_field:,} opponents across {n_sims:,} simulations..."
         )
     st.info(
