@@ -187,7 +187,12 @@ def show_field_ownership(field_df, slots, title, captain_slot=None):
     if not ownership_df.empty:
         st.write("### " + title)
         st.caption(f"Ownership calculated from {len(field_df):,} simulated opponent lineups. Captain/MVP ownership is shown separately where applicable.")
-        st.dataframe(ownership_df, use_container_width=True, hide_index=True)
+        st.dataframe(
+            ownership_df,
+            use_container_width=True,
+            hide_index=True,
+            column_config={"Name": st.column_config.TextColumn("Name", pinned=True)},
+        )
 
 
 def add_lineup_field_ownership(portfolio_df):
@@ -1857,7 +1862,12 @@ if platform == "FanDuel":
                     columns=["MVP Exp %", "Flex Exp %"], errors="ignore"
                 )
 
-        st.dataframe(fd_player_display, use_container_width=True, hide_index=True)
+        st.dataframe(
+            fd_player_display,
+            use_container_width=True,
+            hide_index=True,
+            column_config={"Name": st.column_config.TextColumn("Name", pinned=True)},
+        )
         with st.expander("Copy Player Info to ChatGPT"):
             st.caption("Click inside the text box, press Ctrl+A, then Ctrl+C. Paste the copied text into ChatGPT.")
             fd_copy_text = fd_player_display.to_csv(index=False, sep="\t", na_rep="")
@@ -4302,6 +4312,7 @@ else:
         hide_index=True,
         disabled=disabled_control_columns,
         column_config={
+            "Name": st.column_config.TextColumn("Name", pinned=True),
             "Lock": st.column_config.CheckboxColumn("Lock", help="Force this player into lineup builds."),
             "Fade": st.column_config.CheckboxColumn("Fade", help="Keep this player out of lineup builds."),
             "Min Exposure %": st.column_config.NumberColumn("Min Exp %", min_value=0, max_value=100, step=5, format="%d%%"),
@@ -5979,7 +5990,12 @@ if "contest_results_df" in st.session_state:
             ["Exposure %", "Captain %", "Player"],
             ascending=[False, False, True]
         )
-        st.dataframe(exposure_df, use_container_width=True, hide_index=True)
+        st.dataframe(
+            exposure_df,
+            use_container_width=True,
+            hide_index=True,
+            column_config={"Player": st.column_config.TextColumn("Player", pinned=True)},
+        )
         with st.expander("Copy Final Exposure to ChatGPT"):
             st.caption("Click inside the text box, press Ctrl+A, then Ctrl+C. Paste the copied text into ChatGPT.")
             st.text_area(
