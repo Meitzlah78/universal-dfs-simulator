@@ -4444,11 +4444,51 @@ else:
     with build_cols[2]:
         st.write("### Run")
         classic_run_all = st.button("SIM", type="primary", use_container_width=True, key="dk_classic_run_all")
+    classic_workflow_status = None
     if classic_run_all:
-        with st.spinner(f"Step 1 of 4: Running {SIMULATION_COUNT:,} player simulations for DraftKings Classic..."):
-            classic_simulation_df = run_game_simulations(players_df, platform=platform)
-        st.session_state["simulation_df"] = classic_simulation_df
-        st.session_state["simulations_ready"] = True
+        classic_workflow_status = st.empty()
+        classic_workflow_status.info(
+            f"Step 1 of 4: Running {SIMULATION_COUNT:,} player simulations for DraftKings Classic..."
+        )
+        try:
+            classic_simulation_df = run_game_simulations(
+                players_df, platform=platform, workflow_status=classic_workflow_status
+            )
+            if not isinstance(classic_simulation_df, pd.DataFrame) or classic_simulation_df.empty:
+                raise RuntimeError("The player simulation returned no results.")
+            st.session_state["simulation_df"] = classic_simulation_df
+            st.session_state["simulations_ready"] = True
+
+            # Build ranking statistics from this click's simulation results, not stale values.
+            player_sim = {}
+            missing_names = [
+                str(name) for name in classic_pool["Name"]
+                if name not in classic_simulation_df.columns
+            ]
+            if missing_names:
+                raise RuntimeError(
+                    "Simulation results are missing player columns: "
+                    + ", ".join(missing_names[:10])
+                )
+            for name in classic_pool["Name"].astype(str):
+                values = pd.to_numeric(classic_simulation_df[name], errors="coerce").dropna()
+                if values.empty:
+                    raise RuntimeError(f"No usable simulated scores were returned for {name}.")
+                player_sim[name] = {
+                    "Mean": float(values.mean()),
+                    "P95": float(values.quantile(0.95)),
+                    "P99": float(values.quantile(0.99)),
+                    "StdDev": float(values.std(ddof=0)),
+                }
+            classic_workflow_status.info(
+                "Step 2 of 4: Preparing rankings and building your candidate lineups..."
+            )
+        except Exception as exc:
+            classic_workflow_status.error(
+                f"SIM stopped during player simulations or ranking setup: {type(exc).__name__}: {exc}"
+            )
+            st.exception(exc)
+            st.stop()
 
     build_clicked = classic_run_all
 
