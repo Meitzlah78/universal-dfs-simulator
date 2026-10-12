@@ -6145,16 +6145,53 @@ if "contest_results_df" in st.session_state and not (platform == "DraftKings" an
             ).head(int(portfolio_count))
 
         else:
-            # Select the actual top lineups from the full candidate build for the
-            # chosen metric. Do not use the diversity-penalty selector here: the
-            # user's chosen sort metric determines which candidates make the pool.
+            # Rank candidates by the selected metric, then build a diversified
+            # portfolio from those strong lineups. Prefer lineups that differ by
+            # multiple players; if the candidate pool cannot fill the portfolio,
+            # fill remaining spots with the next best unique lineups.
             ranked_df = (
                 results_df
                 .drop_duplicates(subset=portfolio_lineup_columns, keep="first")
                 .sort_values(portfolio_metric, ascending=False, kind="stable")
                 .reset_index(drop=True)
             )
-            portfolio_df = ranked_df.head(int(portfolio_count)).copy()
+
+            lineup_columns = portfolio_lineup_columns
+            slot_count = len(lineup_columns)
+            # Showdown has 6 roster spots; Classic has 9. Avoid near-duplicates
+            # while keeping the selected lineups near the top of the chosen metric.
+            max_shared_players = max(1, slot_count - 2)
+            selected_indices = []
+            selected_sets = []
+            selected_keys = set()
+
+            for idx, row in ranked_df.iterrows():
+                lineup_key = tuple(str(row[col]) for col in lineup_columns)
+                if lineup_key in selected_keys:
+                    continue
+                player_set = set(lineup_key)
+                if all(
+                    len(player_set.intersection(existing)) <= max_shared_players
+                    for existing in selected_sets
+                ):
+                    selected_indices.append(idx)
+                    selected_sets.append(player_set)
+                    selected_keys.add(lineup_key)
+                    if len(selected_indices) >= int(portfolio_count):
+                        break
+
+            # Fallback ensures the requested portfolio size can still be reached.
+            if len(selected_indices) < int(portfolio_count):
+                for idx, row in ranked_df.iterrows():
+                    lineup_key = tuple(str(row[col]) for col in lineup_columns)
+                    if lineup_key in selected_keys:
+                        continue
+                    selected_indices.append(idx)
+                    selected_keys.add(lineup_key)
+                    if len(selected_indices) >= int(portfolio_count):
+                        break
+
+            portfolio_df = ranked_df.iloc[selected_indices].copy().reset_index(drop=True)
             portfolio_df["Locked"] = False
 
         st.session_state["portfolio_df"] = portfolio_df
