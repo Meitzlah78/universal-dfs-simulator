@@ -6790,37 +6790,125 @@ if "contest_results_df" in st.session_state and not (platform == "DraftKings" an
     if pd.notna(_portfolio_entry_fee) and float(_portfolio_entry_fee) >= 0:
         portfolio_df["Entry Fee ($)"] = float(_portfolio_entry_fee)
 
-    # Summarize the entire selected portfolio as a 20-max entrant would evaluate it.
-    # Per-lineup prize estimates are added together; entry fees are charged for
-    # every lineup actually included in the final portfolio.
-    if "Expected Prize ($)" in portfolio_df.columns and pd.notna(_portfolio_entry_fee):
-        _portfolio_expected_prizes = pd.to_numeric(
-            portfolio_df["Expected Prize ($)"], errors="coerce"
-        ).fillna(0.0)
+    # Score the selected portfolio jointly. Each simulation compares every selected
+    # entry with the sampled opponent field AND with the user's other entries.
+    # This avoids simply adding independent per-lineup estimates that ignore
+    # portfolio overlap and ties among the user's own entries.
+    if pd.notna(_portfolio_entry_fee):
         _portfolio_lineup_count = len(portfolio_df)
         _portfolio_total_fees = _portfolio_lineup_count * float(_portfolio_entry_fee)
-        _portfolio_total_prizes = float(_portfolio_expected_prizes.sum())
-        _portfolio_expected_net = _portfolio_total_prizes - _portfolio_total_fees
-        _portfolio_expected_roi = (
-            _portfolio_expected_net / _portfolio_total_fees * 100.0
-            if _portfolio_total_fees > 0 else np.nan
+        _portfolio_prize_schedule = st.session_state.get("contest_payout_schedule")
+        _portfolio_contest_id = str(st.session_state.get("selected_dk_contest", {}).get("id", ""))
+        _portfolio_payout_is_valid = (
+            bool(_portfolio_contest_id)
+            and str(st.session_state.get("contest_payout_contest_id", "")) == _portfolio_contest_id
+            and isinstance(_portfolio_prize_schedule, np.ndarray)
+            and len(_portfolio_prize_schedule) > 0
         )
-        st.write("### Estimated Results for Your Entries")
-        _portfolio_metrics = st.columns(4)
-        _portfolio_metrics[0].metric("Entries", f"{_portfolio_lineup_count:,}")
-        _portfolio_metrics[1].metric("Total Entry Fees", f"${_portfolio_total_fees:,.2f}")
-        _portfolio_metrics[2].metric("Expected Winnings", f"${_portfolio_total_prizes:,.2f}")
-        _portfolio_metrics[3].metric(
-            "Expected Profit / ROI",
-            f"${_portfolio_expected_net:,.2f} / {_portfolio_expected_roi:.1f}%"
-            if pd.notna(_portfolio_expected_roi)
-            else f"${_portfolio_expected_net:,.2f} / N/A"
-        )
-        st.caption(
-            "Estimates for this portfolio only. They use the selected contest's payout table "
-            "and sampled opponent field; duplicate-entry ties and final contest size can make "
-            "actual results different."
-        )
+        if _portfolio_payout_is_valid and _portfolio_lineup_count > 0:
+            _portfolio_slot_indices = np.array([
+                [player_index[str(row[col])] for col in lineup_cols]
+                for _, row in portfolio_df.iterrows()
+            ], dtype=np.int16)
+            _portfolio_prize_totals = np.zeros(_portfolio_lineup_count, dtype=np.float64)
+            _portfolio_batch_size = 128
+            _portfolio_full_size = int(max(2, estimated_full_field_size))
+            _portfolio_rank_axis = np.arange(1, len(_portfolio_prize_schedule) + 1, dtype=np.int64)
+            _portfolio_rank_prizes = np.where(
+                _portfolio_rank_axis <= _portfolio_full_size,
+                _portfolio_prize_schedule,
+                0.0,
+            )
+            _portfolio_cumulative_prizes = np.concatenate((
+                [0.0], np.cumsum(_portfolio_rank_prizes, dtype=np.float64)
+            ))
+            for _portfolio_batch_start in range(0, n_sims, _portfolio_batch_size):
+                _portfolio_batch_end = min(_portfolio_batch_start + _portfolio_batch_size, n_sims)
+                _portfolio_values = simulation_values[_portfolio_batch_start:_portfolio_batch_end]
+                _portfolio_scores = _portfolio_values[:, _portfolio_slot_indices].sum(axis=2)
+                _portfolio_field_scores = _portfolio_values[:, contest_idx].sum(axis=2)
+                if scoring_multiplier != 1.0:
+                    _portfolio_scores += (
+                        _portfolio_values[:, _portfolio_slot_indices[:, 0]]
+                        * (scoring_multiplier - 1.0)
+                    )
+                    _portfolio_field_scores += (
+                        _portfolio_values[:, contest_idx[:, 0]]
+                        * (scoring_multiplier - 1.0)
+                    )
+                for _portfolio_sim_idx in range(_portfolio_batch_end - _portfolio_batch_start):
+                    _own_scores = _portfolio_scores[_portfolio_sim_idx]
+                    _field_scores = _portfolio_field_scores[_portfolio_sim_idx]
+                    _greater_field = np.sum(_field_scores[:, None] > _own_scores[None, :], axis=0)
+                    _equal_field = np.sum(_field_scores[:, None] == _own_scores[None, :], axis=0)
+                    _greater_own = np.sum(_own_scores[:, None] > _own_scores[None, :], axis=0)
+                    _equal_own = np.sum(_own_scores[:, None] == _own_scores[None, :], axis=0) - 1
+                    _sampled_greater = _greater_field + _greater_own
+                    _sampled_ties = _equal_field + _equal_own
+                    _rank_fraction = (_sampled_greater + 0.5 * _sampled_ties + 1.0) / (total_field + 1.0)
+                    _estimated_ranks = np.clip(
+                        1.0 + _rank_fraction * (_portfolio_full_size - 1),
+                        1.0,
+                        float(_portfolio_full_size),
+                    )
+                    _estimated_tie_sizes = np.maximum(
+                        1,
+                        np.rint(
+                            (_sampled_ties + 1.0) / (total_field + _portfolio_lineup_count + 1.0)
+                            * _portfolio_full_size
+                        ).astype(np.int64),
+                    )
+                    _tie_start = np.maximum(
+                        1,
+                        np.floor(_estimated_ranks - (_estimated_tie_sizes - 1) / 2.0).astype(np.int64),
+                    )
+                    _tie_end = np.minimum(
+                        _portfolio_full_size,
+                        _tie_start + _estimated_tie_sizes - 1,
+                    )
+                    _safe_start = np.clip(_tie_start - 1, 0, len(_portfolio_cumulative_prizes) - 1)
+                    _safe_end = np.clip(_tie_end, 0, len(_portfolio_cumulative_prizes) - 1)
+                    _tie_prize_sum = _portfolio_cumulative_prizes[_safe_end] - _portfolio_cumulative_prizes[_safe_start]
+                    _portfolio_prize_totals += np.divide(
+                        _tie_prize_sum,
+                        _estimated_tie_sizes,
+                        out=np.zeros_like(_tie_prize_sum, dtype=np.float64),
+                        where=_estimated_tie_sizes > 0,
+                    )
+            portfolio_df["Expected Prize ($)"] = _portfolio_prize_totals / n_sims
+            portfolio_df["Expected Net ($)"] = portfolio_df["Expected Prize ($)"] - float(_portfolio_entry_fee)
+            portfolio_df["Expected ROI (%)"] = np.where(
+                float(_portfolio_entry_fee) > 0,
+                portfolio_df["Expected Net ($)"] / float(_portfolio_entry_fee) * 100.0,
+                np.nan,
+            )
+            st.session_state["portfolio_df"] = portfolio_df
+            _portfolio_total_prizes = float(_portfolio_prize_totals.sum() / n_sims)
+            _portfolio_expected_net = _portfolio_total_prizes - _portfolio_total_fees
+            _portfolio_expected_roi = (
+                _portfolio_expected_net / _portfolio_total_fees * 100.0
+                if _portfolio_total_fees > 0 else np.nan
+            )
+            st.write("### Estimated Results for Your Entries")
+            _portfolio_metrics = st.columns(4)
+            _portfolio_metrics[0].metric("Entries", f"{_portfolio_lineup_count:,}")
+            _portfolio_metrics[1].metric("Total Entry Fees", f"${_portfolio_total_fees:,.2f}")
+            _portfolio_metrics[2].metric("Expected Winnings", f"${_portfolio_total_prizes:,.2f}")
+            _portfolio_metrics[3].metric(
+                "Expected Profit / ROI",
+                f"${_portfolio_expected_net:,.2f} / {_portfolio_expected_roi:.1f}%"
+                if pd.notna(_portfolio_expected_roi)
+                else f"${_portfolio_expected_net:,.2f} / N/A"
+            )
+            st.caption(
+                "Joint portfolio estimate: the selected entries are scored together against the sampled field, "
+                "including ties between your own entries. Full-field ranks and winnings remain estimates."
+            )
+        else:
+            st.info(
+                "Joint portfolio winnings are not available because a payout schedule has not been confirmed "
+                "for the selected contest. Upload or select the correct contest payout table to calculate ROI."
+            )
 
     _payout_columns = ["Expected Prize ($)", "Expected Net ($)", "Expected ROI (%)"]
     if classic_mode:
