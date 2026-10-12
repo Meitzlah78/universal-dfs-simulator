@@ -4925,7 +4925,7 @@ locked_players = [
 if build_clicked:
     # Show each stage explicitly so the user can see where the workflow stops.
     workflow_status = st.empty()
-    workflow_status.info(f"Step 1 of 3: Running {SIMULATION_COUNT:,} player simulations...")
+    workflow_status.info(f"Step 1 of 4: Running {SIMULATION_COUNT:,} player simulations...")
     with st.spinner(
         f"Loading recent historical stats if available, then running "
         f"{SIMULATION_COUNT:,} game simulations..."
@@ -5155,6 +5155,7 @@ st.write(
     f"Candidate lineups tested: {len(candidates_df):,}"
 )
 
+if build_clicked:
     # Step 3: build the simulated opponent field after our candidate lineups exist.
 
     workflow_status.info(f"Step 3 of 4: Building up to {dk_opponent_target:,} simulated opponent lineups...")
@@ -5169,7 +5170,7 @@ st.write(
         workflow_status.error(f"Step 3 failed while building opponent lineups: {type(exc).__name__}: {exc}")
         st.exception(exc)
         st.stop()
-    field_progress.progress(1.0, text=f"Step 3 complete: {len(contest_field_df):,} opponent lineups created")
+    field_progress.progress(1.0, text=f"Step 3 of 4 complete: {len(contest_field_df):,} opponent lineups created")
     if contest_field_df.empty:
         workflow_status.error(
             "Step 3 could not create any valid opponent lineups. Check the salary cap and eligible player pool."
