@@ -4416,6 +4416,33 @@ else:
             player_display["Captain Exp %"] = np.nan
             player_display["Flex Exp %"] = np.nan
 
+    # Add simulated opponent-field ownership beside the user's own exposure columns.
+    # The field table is created during Contest Sim and retained in session state.
+    field_ownership_display = st.session_state.get("latest_field_ownership")
+    if (
+        isinstance(field_ownership_display, pd.DataFrame)
+        and not field_ownership_display.empty
+        and "Name" in field_ownership_display.columns
+        and "Ownership %" in field_ownership_display.columns
+    ):
+        field_own_map = dict(zip(
+            field_ownership_display["Name"].astype(str).str.strip(),
+            pd.to_numeric(field_ownership_display["Ownership %"], errors="coerce")
+        ))
+        player_display["Field Own %"] = player_display["Name"].astype(str).str.strip().map(field_own_map).round(1)
+        if "Captain/MVP Ownership %" in field_ownership_display.columns and not (
+            platform == "DraftKings" and lineup_mode == "Classic"
+        ):
+            field_captain_map = dict(zip(
+                field_ownership_display["Name"].astype(str).str.strip(),
+                pd.to_numeric(field_ownership_display["Captain/MVP Ownership %"], errors="coerce")
+            ))
+            player_display["Field CPT Own %"] = player_display["Name"].astype(str).str.strip().map(field_captain_map).round(1)
+    else:
+        player_display["Field Own %"] = np.nan
+        if not (platform == "DraftKings" and lineup_mode == "Classic"):
+            player_display["Field CPT Own %"] = np.nan
+
     if "simulation_df" in st.session_state:
         simulation_df = st.session_state["simulation_df"]
 
