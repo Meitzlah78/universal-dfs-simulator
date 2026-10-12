@@ -2015,7 +2015,7 @@ if platform == "FanDuel":
             results = []
             seen = set()
             player_build_counts = {str(name): 0 for name in names}
-            target_lineups = 5000
+            target_lineups = 2000
             max_attempts = 500000
             salary_min, salary_max = int(fd_salary_range[0]), min(int(fd_salary_range[1]), 60000)
             if lineup_mode == "Single Game":
@@ -4885,7 +4885,7 @@ else:
             # completed. Unique Classic lineups are normally found much sooner; keep
             # the full 5,000-lineup target while bounding wasted duplicate/invalid tries.
             max_attempts = 100000
-            build_progress = st.progress(0, text="Building DraftKings Classic lineups: 0 / 5,000")
+            build_progress = st.progress(0, text="Building DraftKings Classic lineups: 0 / 2,000")
             expected_exposure = max(1.0, target_lineups * len(roster_slots) / max(1, len(classic_names)))
             for attempt in range(max_attempts):
                 chosen = {}
@@ -5392,7 +5392,7 @@ if build_clicked:
         ))
         # Use a local generator for randomized candidate order on every slate build.
         rng = np.random.default_rng()
-        # Shuffle candidate search order so the 5,000-lineup pool explores more flex combinations.
+        # Shuffle candidate search order so the 2,000-lineup pool explores more flex combinations.
         rng.shuffle(search_pool)
 
         # ============================================
@@ -5400,15 +5400,15 @@ if build_clicked:
         # CANDIDATE SETTINGS
         # ============================================
 
-        LINEUP_COUNT = 5000
-        CANDIDATE_COUNT = 5000
+        LINEUP_COUNT = 2000
+        CANDIDATE_COUNT = 2000
 
         # BUILD CANDIDATES
         # ============================================
 
         candidates = []
 
-        # Spread the 5,000 candidate lineups across eligible captains instead of
+        # Spread the 2,000 candidate lineups across eligible captains instead of
         # filling the entire candidate pool with the first captain's combinations.
         per_captain_candidate_limit = max(
             1,
