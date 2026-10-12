@@ -6057,11 +6057,17 @@ if (
         batch_top1 = np.sum(percentiles >= 0.99, axis=0, dtype=np.float64)
         batch_top5 = np.sum(percentiles >= 0.95, axis=0, dtype=np.float64)
         batch_top10 = np.sum(percentiles >= 0.90, axis=0, dtype=np.float64)
-        batch_cash = np.sum(percentiles >= 0.50, axis=0, dtype=np.float64)
         batch_percentiles = np.sum(percentiles, axis=0, dtype=np.float64)
+        # "Cash %" must mean finishing in a paid position, not beating half the field.
+        ranks = count_greater + 1
+        paid_positions = (
+            min(len(payout_schedule), total_field + 1)
+            if payout_schedule is not None
+            else int(np.ceil(total_field * 0.10))
+        )
+        batch_cash = np.sum(ranks <= paid_positions, axis=0, dtype=np.float64)
         if payout_schedule is not None:
             # All equal-scoring entries split the combined prizes for their occupied ranks.
-            ranks = count_greater + 1
             tie_counts = low - left_low + 1
             batch_prizes = np.zeros((batch_count, n_candidates), dtype=np.float64)
             max_tie_count = int(np.max(tie_counts)) if tie_counts.size else 1
@@ -6148,10 +6154,18 @@ if (
     # Save immediately so the ranked results survive later UI rendering or reruns.
     st.session_state["contest_results_df"] = results_df
     if payout_schedule is not None:
-        st.success(
-            "Expected Prize and ROI use the selected contest's payout table and simulated opponent lineups. "
-            "Prize money is split across ranks when simulated entries tie; results remain estimates, not guaranteed winnings."
-        )
+        _paid_positions_for_notice = int(np.count_nonzero(payout_schedule > 0))
+        if total_field + 1 < _paid_positions_for_notice:
+            st.warning(
+                f"ROI warning: the payout table pays {_paid_positions_for_notice:,} places, but the simulation has only "
+                f"{total_field:,} opponent lineups. That field is too small to estimate this contest's prizes reliably. "
+                "Set the simulated opponent count to match the contest's actual field size, then run CONTEST SIM again."
+            )
+        else:
+            st.success(
+                "Expected Prize and ROI use the selected contest's payout table and simulated opponent lineups. "
+                "Prize money is split across ranks when simulated entries tie; results remain estimates, not guaranteed winnings."
+            )
     if build_clicked:
         # A fresh build must create a fresh user pool instead of carrying over
         # lineups or exposure state from the previous build.
