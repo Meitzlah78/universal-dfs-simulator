@@ -5020,6 +5020,9 @@ rng.shuffle(search_pool)
 # CANDIDATE SETTINGS
 # ============================================
 
+if build_clicked:
+    workflow_status.info("Step 3 of 3: Building your candidate lineups, then scoring them against the simulated contest field...")
+
 LINEUP_COUNT = 5000
 CANDIDATE_COUNT = 5000
 
@@ -5245,6 +5248,11 @@ if (
     n_sims = len(simulation_df)
     total_field = len(contest_idx)
 
+    if build_clicked:
+        workflow_status.info(
+            f"Step 3 of 3: Scoring {n_candidates:,} candidate lineups against "
+            f"{total_field:,} opponents across {n_sims:,} simulations..."
+        )
     st.info(
         f"Candidate lineups are ready. Now scoring {n_candidates:,} lineups "
         f"against {total_field:,} simulated opponents across {n_sims:,} simulations. "
