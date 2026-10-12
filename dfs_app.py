@@ -32,11 +32,8 @@ with st.container(key="sticky_projection_bar"):
             st.caption("Last refresh: " + _sticky_updated_at)
     with sticky_right:
         if st.button("REFRESH PROJECTIONS + INJURY NEWS", key="sticky_refresh_projections"):
-            download_public_projection_table.clear()
-            fetch_nfl_injury_statuses.clear()
-            st.session_state["projection_updates_found"] = False
-            st.session_state["injury_updates_found"] = False
-            st.session_state["shared_projection_updated_at"] = _sticky_datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %I:%M:%S %p %Z")
+            # Cache functions are defined later in the file, so defer clearing until then.
+            st.session_state["pending_sticky_projection_refresh"] = True
             st.rerun()
 
 st.markdown(
@@ -1385,6 +1382,15 @@ with st.expander("Projection Accuracy Report", expanded=False):
                     )
         except Exception as exc:
             st.error(f"Could not read the projection accuracy file: {exc}")
+# Process the sticky refresh request only after both cached functions are defined.
+if st.session_state.pop("pending_sticky_projection_refresh", False):
+    download_public_projection_table.clear()
+    fetch_nfl_injury_statuses.clear()
+    st.session_state["projection_updates_found"] = False
+    st.session_state["injury_updates_found"] = False
+    st.session_state["shared_projection_updated_at"] = _sticky_datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %I:%M:%S %p %Z")
+    st.rerun()
+
 platform, lineup_mode = format_options[selected_format]
 automatic_projection_refresh(selected_format)
 # Keep the derived values in session state for existing format-specific logic.
