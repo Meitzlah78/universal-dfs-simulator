@@ -6323,8 +6323,23 @@ if "contest_results_df" in st.session_state:
     )
 
     st.write("### Portfolio Controls")
+    st.caption("To keep the app responsive, manage 50 lineups at a time.")
 
-    for idx in portfolio_df.index:
+    controls_page_size = 50
+    controls_page_count = max(1, int(np.ceil(len(portfolio_df) / controls_page_size)))
+    controls_page = st.number_input(
+        "Portfolio controls page",
+        min_value=1,
+        max_value=controls_page_count,
+        value=1,
+        step=1,
+        key="portfolio_controls_page"
+    )
+    controls_start = (int(controls_page) - 1) * controls_page_size
+    controls_end = min(controls_start + controls_page_size, len(portfolio_df))
+    st.caption(f"Showing lineup controls {controls_start + 1}–{controls_end} of {len(portfolio_df)}.")
+
+    for idx in portfolio_df.index[controls_start:controls_end]:
 
         cols = st.columns([0.7, 1.0, 1.0])
 
