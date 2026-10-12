@@ -5401,7 +5401,7 @@ if build_clicked:
         # ============================================
 
         LINEUP_COUNT = 2000
-        CANDIDATE_COUNT = 3000
+        CANDIDATE_COUNT = 5000
 
         # BUILD CANDIDATES
         # ============================================
