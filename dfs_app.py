@@ -2921,6 +2921,12 @@ else:
         historical = load_nfl_historical_player_stats()
         historical_name_index = _build_historical_name_index(historical)
         simulation_progress.progress(0.05, text="Historical data loaded. Preparing game scripts...")
+        pbp_status_box = st.empty()
+        pbp_status_box.info("Loading NFL play-by-play history...")
+        pbp_history = load_nfl_pbp_game_history()
+        pbp_status_box.info("Play-by-play history: " + st.session_state.get(
+            "nfl_pbp_history_status", "Status not available yet."
+        ))
         simulations = {}
         cap_hit_percentages = {}
         n = SIMULATIONS
@@ -2928,12 +2934,21 @@ else:
             np.clip(st.session_state.get("active_game_correlation_strength", 1.0), 0.0, 1.0)
         )
 
-        # Calibrate shared game environments from historical NFL game outcomes when
-        # the downloaded player-week data has game IDs and fantasy-point totals.
-        # The same sampled environment is shared by both teams in a matchup, so
-        # player outcomes remain correlated in every format using this engine.
+        # Prefer actual NFL game totals from play-by-play history. If that download
+        # is unavailable, fall back to the existing historical player-week data.
         historical_game_factors = np.array([], dtype=float)
-        if not historical.empty and "game_id" in historical.columns:
+        if not pbp_history.empty and "GamePoints" in pbp_history.columns:
+            try:
+                game_totals = pd.to_numeric(pbp_history["GamePoints"], errors="coerce").dropna()
+                game_totals = game_totals[game_totals > 0].to_numpy(dtype=float)
+                if len(game_totals) >= 20:
+                    center = float(np.median(game_totals))
+                    if np.isfinite(center) and center > 0:
+                        historical_game_factors = np.clip(game_totals / center, 0.75, 1.25)
+            except Exception:
+                historical_game_factors = np.array([], dtype=float)
+
+        if len(historical_game_factors) < 20 and not historical.empty and "game_id" in historical.columns:
             historical_points_col = next(
                 (col for col in ["fantasy_points_ppr", "fantasy_points"] if col in historical.columns),
                 None
