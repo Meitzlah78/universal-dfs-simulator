@@ -6322,61 +6322,7 @@ if "contest_results_df" in st.session_state:
         use_container_width=True
     )
 
-    st.write("### Portfolio Controls")
-    st.caption("To keep the app responsive, manage 50 lineups at a time.")
-
-    controls_page_size = 50
-    controls_page_count = max(1, int(np.ceil(len(portfolio_df) / controls_page_size)))
-    controls_page = st.number_input(
-        "Portfolio controls page",
-        min_value=1,
-        max_value=controls_page_count,
-        value=1,
-        step=1,
-        key="portfolio_controls_page"
-    )
-    controls_start = (int(controls_page) - 1) * controls_page_size
-    controls_end = min(controls_start + controls_page_size, len(portfolio_df))
-    st.caption(f"Showing lineup controls {controls_start + 1}–{controls_end} of {len(portfolio_df)}.")
-
-    for idx in portfolio_df.index[controls_start:controls_end]:
-
-        cols = st.columns([0.7, 1.0, 1.0])
-
-        cols[0].write(f"Lineup {idx + 1}")
-
-        if bool(portfolio_df.loc[idx, "Locked"]):
-            cols[1].success("LOCKED")
-        else:
-            if cols[1].button(
-                "LOCK",
-                key=f"portfolio_lock_{idx}"
-            ):
-                portfolio_df = lock_portfolio_lineup(
-                    portfolio_df,
-                    idx
-                )
-
-                st.session_state["portfolio_df"] = portfolio_df
-                st.rerun()
-
-        if bool(portfolio_df.loc[idx, "Locked"]):
-            cols[2].write("Protected")
-        else:
-            if cols[2].button(
-                "DELETE",
-                key=f"portfolio_delete_{idx}"
-            ):
-                portfolio_df = delete_and_replace_portfolio_lineup(
-                    portfolio_df,
-                    results_df,
-                    idx,
-                    portfolio_metric,
-                    portfolio_lineup_columns
-                )
-
-                st.session_state["portfolio_df"] = portfolio_df
-                st.rerun()
+    # Individual LOCK/DELETE controls removed to keep large portfolios fast.
 
     else:
         st.info(
