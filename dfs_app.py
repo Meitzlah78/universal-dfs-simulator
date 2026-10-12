@@ -2826,7 +2826,7 @@ if platform == "FanDuel":
             # back to the projection. The projection sets a reasonable ceiling, but
             # historical results and game scripts determine the simulated average.
             if np.isfinite(projection) and projection > 0:
-                upper_cap = max(6.0, projection * (1.0 + 2.0 * volatility_cv))
+                upper_cap = max(1.0, projection * (1.0 + 2.0 * volatility_cv))
                 final_scores = np.minimum(final_scores, upper_cap)
                 cap_tolerance = max(0.01, upper_cap * 1e-6)
                 cap_hit_percentages[name] = round(
@@ -3241,7 +3241,7 @@ else:
             # back to the projection. The projection sets a reasonable ceiling, but
             # historical results and game scripts determine the simulated average.
             if np.isfinite(projection) and projection > 0:
-                upper_cap = max(6.0, projection * (1.0 + 2.0 * volatility_cv))
+                upper_cap = max(1.0, projection * (1.0 + 2.0 * volatility_cv))
                 final_scores = np.minimum(final_scores, upper_cap)
                 cap_tolerance = max(0.01, upper_cap * 1e-6)
                 cap_hit_percentages[name] = round(
