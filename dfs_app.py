@@ -6251,16 +6251,16 @@ if (
     st.session_state["contest_results_df"] = results_df
     if payout_schedule is not None:
         _paid_positions_for_notice = int(np.count_nonzero(payout_schedule > 0))
-        if total_field + 1 < _paid_positions_for_notice:
+        if estimated_full_field_size < _paid_positions_for_notice:
             st.warning(
-                f"ROI warning: the payout table pays {_paid_positions_for_notice:,} places, but the simulation has only "
-                f"{total_field:,} opponent lineups. That field is too small to estimate this contest's prizes reliably. "
-                "Set the simulated opponent count to match the contest's actual field size, then run CONTEST SIM again."
+                f"The payout table pays {_paid_positions_for_notice:,} places, but the entered contest size is "
+                f"{estimated_full_field_size:,}. Cash rate, prize, and ROI estimates may not match the selected contest."
             )
         else:
             st.success(
-                "Expected Prize and ROI use the selected contest's payout table and simulated opponent lineups. "
-                "Prize money is split across ranks when simulated entries tie; results remain estimates, not guaranteed winnings."
+                f"Expected Prize and ROI use the selected payout table and estimated ranks in a "
+                f"{estimated_full_field_size:,}-entry contest. The opponent field is sampled "
+                f"({total_field:,} per simulation), so results are estimates, not guaranteed winnings."
             )
     if build_clicked:
         # A fresh build must create a fresh user pool instead of carrying over
