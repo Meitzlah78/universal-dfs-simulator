@@ -2518,12 +2518,23 @@ if platform == "FanDuel":
             np.clip(st.session_state.get("active_game_correlation_strength", 1.0), 0.0, 1.0)
         )
 
-        # Calibrate shared game environments from historical NFL game outcomes when
-        # the downloaded player-week data has game IDs and fantasy-point totals.
-        # The same sampled environment is shared by both teams in a matchup, so
-        # player outcomes remain correlated in every format using this engine.
+        # Calibrate shared game environments from actual NFL game scores in play-by-play.
+        # PBP is cached for 24 hours; if it cannot be reached, fall back to the existing
+        # player-week history so simulations can still run.
         historical_game_factors = np.array([], dtype=float)
-        if not historical.empty and "game_id" in historical.columns:
+        pbp_history = load_nfl_pbp_game_history()
+        if not pbp_history.empty and "GamePoints" in pbp_history.columns:
+            try:
+                game_totals = pd.to_numeric(pbp_history["GamePoints"], errors="coerce").dropna()
+                game_totals = game_totals[game_totals > 0].to_numpy(dtype=float)
+                if len(game_totals) >= 20:
+                    center = float(np.median(game_totals))
+                    if np.isfinite(center) and center > 0:
+                        historical_game_factors = np.clip(game_totals / center, 0.75, 1.25)
+            except Exception:
+                historical_game_factors = np.array([], dtype=float)
+
+        if len(historical_game_factors) < 20 and not historical.empty and "game_id" in historical.columns:
             historical_points_col = next(
                 (col for col in ["fantasy_points_ppr", "fantasy_points"] if col in historical.columns),
                 None
@@ -2535,13 +2546,9 @@ if platform == "FanDuel":
                     ).groupby(historical["game_id"]).sum(min_count=1).dropna()
                     game_totals = game_totals[game_totals > 0].to_numpy(dtype=float)
                     if len(game_totals) >= 20:
-                        # Normalize and trim extreme games to keep the historical
-                        # factor useful without overwhelming player-level outcomes.
                         center = float(np.median(game_totals))
                         if np.isfinite(center) and center > 0:
-                            historical_game_factors = np.clip(
-                                game_totals / center, 0.75, 1.25
-                            )
+                            historical_game_factors = np.clip(game_totals / center, 0.75, 1.25)
                 except Exception:
                     historical_game_factors = np.array([], dtype=float)
 
@@ -3707,6 +3714,79 @@ else:
                 + detail
             )
         return historical
+
+
+    @st.cache_data(show_spinner=False, ttl=86400)
+    def _download_nfl_pbp_game_history():
+        """Load compact final-score history from nflverse play-by-play, cached for 24 hours."""
+        import requests
+
+        frames = []
+        loaded_seasons = []
+        errors = []
+        # Recent seasons are enough for game-environment calibration and keep downloads bounded.
+        wanted_columns = {
+            "season", "game_id", "play_id", "total_home_score", "total_away_score",
+            "game_seconds_remaining", "qtr"
+        }
+        for season in [2025, 2026]:
+            url = f"https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_{season}.csv"
+            try:
+                with requests.get(url, timeout=(4, 12), stream=True) as response:
+                    response.raise_for_status()
+                    response.raw.decode_content = True
+                    frame = pd.read_csv(
+                        response.raw,
+                        usecols=lambda column: column in wanted_columns,
+                        low_memory=False,
+                    )
+                required = {"game_id", "total_home_score", "total_away_score"}
+                if frame.empty or not required.issubset(frame.columns):
+                    errors.append(f"{season}: play-by-play file did not contain required score columns")
+                    continue
+                frame["season"] = season
+                frame["_play_order"] = pd.to_numeric(
+                    frame.get("play_id", pd.Series(np.arange(len(frame)))), errors="coerce"
+                )
+                frame["_home_score"] = pd.to_numeric(frame["total_home_score"], errors="coerce")
+                frame["_away_score"] = pd.to_numeric(frame["total_away_score"], errors="coerce")
+                frame = frame.dropna(subset=["game_id", "_home_score", "_away_score"])
+                final_scores = (
+                    frame.sort_values("_play_order")
+                    .groupby("game_id", sort=False)
+                    .tail(1)
+                    .copy()
+                )
+                final_scores["GamePoints"] = final_scores["_home_score"] + final_scores["_away_score"]
+                final_scores = final_scores[["season", "game_id", "GamePoints"]]
+                if not final_scores.empty:
+                    frames.append(final_scores)
+                    loaded_seasons.append(season)
+            except Exception as exc:
+                errors.append(f"{season}: {str(exc)[:120]}")
+        history = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame(
+            columns=["season", "game_id", "GamePoints"]
+        )
+        if not history.empty:
+            history = history.drop_duplicates(subset=["game_id"], keep="last").reset_index(drop=True)
+        return history, loaded_seasons, errors
+
+
+    def load_nfl_pbp_game_history():
+        """Return cached play-by-play game-score history, failing safely if unavailable."""
+        try:
+            history, loaded_seasons, errors = _download_nfl_pbp_game_history()
+        except Exception as exc:
+            history, loaded_seasons, errors = pd.DataFrame(), [], [str(exc)[:120]]
+        st.session_state["nfl_pbp_history_status"] = (
+            "Play-by-play game history loaded for seasons "
+            + ", ".join(str(year) for year in loaded_seasons)
+            + ". Cached for 24 hours."
+            if loaded_seasons
+            else "Play-by-play history unavailable; using historical player stats instead."
+            + ((" " + "; ".join(errors[:2])) if errors else "")
+        )
+        return history
 
 
     def build_historical_volatility_check(historical):
