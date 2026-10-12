@@ -6790,6 +6790,38 @@ if "contest_results_df" in st.session_state and not (platform == "DraftKings" an
     if pd.notna(_portfolio_entry_fee) and float(_portfolio_entry_fee) >= 0:
         portfolio_df["Entry Fee ($)"] = float(_portfolio_entry_fee)
 
+    # Summarize the entire selected portfolio as a 20-max entrant would evaluate it.
+    # Per-lineup prize estimates are added together; entry fees are charged for
+    # every lineup actually included in the final portfolio.
+    if "Expected Prize ($)" in portfolio_df.columns and pd.notna(_portfolio_entry_fee):
+        _portfolio_expected_prizes = pd.to_numeric(
+            portfolio_df["Expected Prize ($)"], errors="coerce"
+        ).fillna(0.0)
+        _portfolio_lineup_count = len(portfolio_df)
+        _portfolio_total_fees = _portfolio_lineup_count * float(_portfolio_entry_fee)
+        _portfolio_total_prizes = float(_portfolio_expected_prizes.sum())
+        _portfolio_expected_net = _portfolio_total_prizes - _portfolio_total_fees
+        _portfolio_expected_roi = (
+            _portfolio_expected_net / _portfolio_total_fees * 100.0
+            if _portfolio_total_fees > 0 else np.nan
+        )
+        st.write("### Estimated Results for Your Entries")
+        _portfolio_metrics = st.columns(4)
+        _portfolio_metrics[0].metric("Entries", f"{_portfolio_lineup_count:,}")
+        _portfolio_metrics[1].metric("Total Entry Fees", f"${_portfolio_total_fees:,.2f}")
+        _portfolio_metrics[2].metric("Expected Winnings", f"${_portfolio_total_prizes:,.2f}")
+        _portfolio_metrics[3].metric(
+            "Expected Profit / ROI",
+            f"${_portfolio_expected_net:,.2f} / {_portfolio_expected_roi:.1f}%"
+            if pd.notna(_portfolio_expected_roi)
+            else f"${_portfolio_expected_net:,.2f} / N/A"
+        )
+        st.caption(
+            "Estimates for this portfolio only. They use the selected contest's payout table "
+            "and sampled opponent field; duplicate-entry ties and final contest size can make "
+            "actual results different."
+        )
+
     _payout_columns = ["Expected Prize ($)", "Expected Net ($)", "Expected ROI (%)"]
     if classic_mode:
         # Show each Classic roster slot beside that player's simulated points,
