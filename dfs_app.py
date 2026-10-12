@@ -4055,13 +4055,10 @@ else:
         # Show Step 2 as soon as the player outcomes finish, before the historical-data check.
         if workflow_status is not None:
             workflow_status.info("Step 2 of 4: Preparing rankings and building your candidate lineups...")
-        # Store a rough historical volatility diagnostic alongside each completed sim.
-        # This is a proxy check, not a true forecast backtest: historical projection snapshots
-        # are unavailable, and source scoring may not exactly match every DFS format.
-        historical_for_check = load_nfl_historical_player_stats()
-        st.session_state["historical_volatility_check"] = build_historical_volatility_check(
-            historical_for_check
-        )
+        # Do not load historical datasets in the critical SIM workflow. This extra
+        # diagnostic can be slow and is unrelated to building the current slate.
+        # Keeping it out of the button path lets Step 2 and lineup building proceed
+        # immediately after the player outcomes finish.
         return outcomes
 
     # ================================
