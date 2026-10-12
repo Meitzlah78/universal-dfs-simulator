@@ -5127,7 +5127,7 @@ else:
             # Classic portfolio controls match the larger portfolio selector used by other formats.
             st.divider()
             st.write("## Portfolio")
-            st.caption("Choose how many generated Classic lineups to show and export. Up to 5,000 lineups can be selected.")
+            st.caption("Choose how many generated Classic lineups to show and export. Up to 2,500 lineups can be selected.")
             classic_portfolio_source = st.session_state.get("classic_contest_comparison_df")
             if not isinstance(classic_portfolio_source, pd.DataFrame) or classic_portfolio_source.empty:
                 classic_portfolio_source = classic_results.copy()
@@ -5141,8 +5141,8 @@ else:
             classic_portfolio_count = st.number_input(
                 "Number of lineups to show",
                 min_value=1,
-                max_value=max(1, len(classic_portfolio_source)),
-                value=min(5000, max(1, len(classic_portfolio_source))),
+                max_value=min(2500, max(1, len(classic_portfolio_source))),
+                value=min(2500, max(1, len(classic_portfolio_source))),
                 step=100 if len(classic_portfolio_source) >= 100 else 1,
                 key="dk_classic_portfolio_count"
             )
@@ -6006,9 +6006,9 @@ if "contest_results_df" in st.session_state and not (platform == "DraftKings" an
         if classic_mode else ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"]
     )
     portfolio_lineup_columns = [col for col in portfolio_lineup_columns if col in results_df.columns]
-    st.caption("Choose how many of your generated lineups to show in the final portfolio. Up to 5,000 lineups can be selected and exported.")
+    st.caption("Choose how many of your generated lineups to show in the final portfolio. Up to 2,500 lineups can be selected and exported.")
 
-    portfolio_limit = min(5000, len(results_df))
+    portfolio_limit = min(2500, len(results_df))
     portfolio_count = st.number_input(
         "Number of lineups",
         min_value=1,
