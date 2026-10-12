@@ -5964,6 +5964,19 @@ if (
         count_greater = total_field - low
         percentiles = 1.0 - (count_greater / total_field)
 
+        # Find the left insertion point too, so equal-scoring entries can share
+        # the prize money for every rank occupied by the tie.
+        left_low = np.zeros((batch_count, n_candidates), dtype=np.int32)
+        left_high = np.full((batch_count, n_candidates), total_field, dtype=np.int32)
+        while np.any(left_low < left_high):
+            active_left = left_low < left_high
+            mid_left = np.minimum((left_low + left_high) // 2, total_field - 1)
+            mid_left_values = sorted_field[sim_rows, mid_left]
+            move_right_left = (mid_left_values < batch_candidate_scores) & active_left
+            move_left_left = (mid_left_values >= batch_candidate_scores) & active_left
+            left_low = np.where(move_right_left, mid_left + 1, left_low)
+            left_high = np.where(move_left_left, mid_left, left_high)
+
         # Aggregate all simulations in this batch using NumPy array operations.
         batch_win = np.sum(count_greater == 0, axis=0, dtype=np.float64)
         batch_top1 = np.sum(percentiles >= 0.99, axis=0, dtype=np.float64)
@@ -5972,15 +5985,22 @@ if (
         batch_cash = np.sum(percentiles >= 0.50, axis=0, dtype=np.float64)
         batch_percentiles = np.sum(percentiles, axis=0, dtype=np.float64)
         if payout_schedule is not None:
-            # Rank is the number of opponents scoring higher, plus one.
-            # Tied scores currently use the same rank for ranking metrics; prizes are not split across tied ranks yet.
+            # All equal-scoring entries split the combined prizes for their occupied ranks.
             ranks = count_greater + 1
-            payout_indices = np.minimum(ranks - 1, len(payout_schedule) - 1)
-            batch_prizes = np.where(
-                ranks <= len(payout_schedule),
-                payout_schedule[payout_indices],
-                0.0
-            )
+            tie_counts = low - left_low + 1
+            batch_prizes = np.zeros((batch_count, n_candidates), dtype=np.float64)
+            max_tie_count = int(np.max(tie_counts)) if tie_counts.size else 1
+            for tie_offset in range(min(max_tie_count, len(payout_schedule))):
+                active_ties = tie_counts > tie_offset
+                tie_ranks = ranks + tie_offset
+                paid = active_ties & (tie_ranks <= len(payout_schedule))
+                if np.any(paid):
+                    prize_indices = np.minimum(tie_ranks - 1, len(payout_schedule) - 1)
+                    batch_prizes += np.where(
+                        paid,
+                        payout_schedule[prize_indices] / tie_counts,
+                        0.0
+                    )
             batch_prize_totals = np.sum(batch_prizes, axis=0, dtype=np.float64)
         else:
             batch_prize_totals = np.zeros(n_candidates, dtype=np.float64)
@@ -6054,8 +6074,8 @@ if (
     st.session_state["contest_results_df"] = results_df
     if payout_schedule is not None:
         st.success(
-            "Expected Prize and ROI use the uploaded payout table and simulated opponent lineups. "
-            "They are estimates, not guaranteed winnings; tied finishes are not yet split across prize ranks."
+            "Expected Prize and ROI use the selected contest's payout table and simulated opponent lineups. "
+            "Prize money is split across ranks when simulated entries tie; results remain estimates, not guaranteed winnings."
         )
     if build_clicked:
         # A fresh build must create a fresh user pool instead of carrying over
