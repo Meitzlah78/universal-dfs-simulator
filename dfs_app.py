@@ -5016,196 +5016,196 @@ if build_clicked:
     workflow_status.info("Step 2 of 4: Preparing rankings and building your candidate lineups...")
     try:
         showdown_base_scores = np.asarray([
-    player_sim[p]["P95"] * P95_WEIGHT
-    + player_sim[p]["P99"] * P99_WEIGHT
-    + player_sim[p]["Mean"] * MEAN_WEIGHT
-    + player_sim[p].get("StdDev", 0.0) * STDDEV_WEIGHT
-    for p in available_players
-], dtype=float)
-showdown_adjusted_scores, showdown_ownership_proxy = ownership_adjusted_player_scores(
-    players_df[players_df["Name"].isin(available_players)].drop_duplicates("Name"),
-    available_players, showdown_base_scores, player_sim
-)
-ownership_index = {name: i for i, name in enumerate(available_players)}
-showdown_rankings = {
-    p: float(showdown_adjusted_scores[i]) for i, p in enumerate(available_players)
-}
-player_rank = sorted(available_players, key=lambda p: showdown_rankings[p], reverse=True)
+        player_sim[p]["P95"] * P95_WEIGHT
+        + player_sim[p]["P99"] * P99_WEIGHT
+        + player_sim[p]["Mean"] * MEAN_WEIGHT
+        + player_sim[p].get("StdDev", 0.0) * STDDEV_WEIGHT
+        for p in available_players
+    ], dtype=float)
+    showdown_adjusted_scores, showdown_ownership_proxy = ownership_adjusted_player_scores(
+        players_df[players_df["Name"].isin(available_players)].drop_duplicates("Name"),
+        available_players, showdown_base_scores, player_sim
+    )
+    ownership_index = {name: i for i, name in enumerate(available_players)}
+    showdown_rankings = {
+        p: float(showdown_adjusted_scores[i]) for i, p in enumerate(available_players)
+    }
+    player_rank = sorted(available_players, key=lambda p: showdown_rankings[p], reverse=True)
 
-# Use top players plus all locked players.
-search_pool = list(dict.fromkeys(
-    player_rank[:20] + locked_players
-))
-# Use a local generator for randomized candidate order on every slate build.
-rng = np.random.default_rng()
-# Shuffle candidate search order so the 5,000-lineup pool explores more flex combinations.
-rng.shuffle(search_pool)
+    # Use top players plus all locked players.
+    search_pool = list(dict.fromkeys(
+        player_rank[:20] + locked_players
+    ))
+    # Use a local generator for randomized candidate order on every slate build.
+    rng = np.random.default_rng()
+    # Shuffle candidate search order so the 5,000-lineup pool explores more flex combinations.
+    rng.shuffle(search_pool)
 
-# ============================================
-# ============================================
-# CANDIDATE SETTINGS
-# ============================================
+    # ============================================
+    # ============================================
+    # CANDIDATE SETTINGS
+    # ============================================
 
-LINEUP_COUNT = 5000
-CANDIDATE_COUNT = 5000
+    LINEUP_COUNT = 5000
+    CANDIDATE_COUNT = 5000
 
-# BUILD CANDIDATES
-# ============================================
+    # BUILD CANDIDATES
+    # ============================================
 
-candidates = []
+    candidates = []
 
-# Spread the 5,000 candidate lineups across eligible captains instead of
-# filling the entire candidate pool with the first captain's combinations.
-per_captain_candidate_limit = max(
-    1,
-    int(np.ceil(CANDIDATE_COUNT / max(1, len(search_pool))))
-)
-
-candidate_progress = st.progress(0, text=f"Building candidate lineups: 0 of {CANDIDATE_COUNT:,}")
-for captain_index, captain in enumerate(search_pool):
-    captain_candidates = []
-    candidate_progress.progress(
-        captain_index / max(1, len(search_pool)),
-        text=f"Testing captain {captain_index + 1} of {len(search_pool)}: {captain}"
+    # Spread the 5,000 candidate lineups across eligible captains instead of
+    # filling the entire candidate pool with the first captain's combinations.
+    per_captain_candidate_limit = max(
+        1,
+        int(np.ceil(CANDIDATE_COUNT / max(1, len(search_pool))))
     )
 
-    if control_map[captain]["Captain Max %"] <= 0:
-        continue
+    candidate_progress = st.progress(0, text=f"Building candidate lineups: 0 of {CANDIDATE_COUNT:,}")
+    for captain_index, captain in enumerate(search_pool):
+        captain_candidates = []
+        candidate_progress.progress(
+            captain_index / max(1, len(search_pool)),
+            text=f"Testing captain {captain_index + 1} of {len(search_pool)}: {captain}"
+        )
 
-    flex_pool = [
-        p for p in search_pool
-        if p != captain
-    ]
-
-    # Sample flex groups randomly instead of taking the first combinations.
-    # itertools.combinations() favors players near the start of the pool,
-    # which was causing players like Allen and Stafford to appear everywhere.
-    seen_flex_groups = set()
-    captain_attempts = 0
-    max_captain_attempts = max(1000, per_captain_candidate_limit * 40)
-    while (
-        len(captain_candidates) < per_captain_candidate_limit
-        and captain_attempts < max_captain_attempts
-        and len(flex_pool) >= 5
-    ):
-        captain_attempts += 1
-        if captain_attempts % 100 == 0:
-            candidate_progress.progress(
-                min(0.99, (captain_index + min(0.99, captain_attempts / max(1, max_captain_attempts))) / max(1, len(search_pool))),
-                text=f"Testing {captain}: {len(candidates) + len(captain_candidates):,} candidates accepted"
-            )
-        sampled = rng.choice(np.asarray(flex_pool, dtype=object), size=5, replace=False)
-        flex_players = tuple(str(p) for p in sampled)
-        flex_key = tuple(sorted(flex_players))
-        if flex_key in seen_flex_groups:
+        if control_map[captain]["Captain Max %"] <= 0:
             continue
-        seen_flex_groups.add(flex_key)
 
-        lineup_players = [
-            captain
-        ] + list(flex_players)
+        flex_pool = [
+            p for p in search_pool
+            if p != captain
+        ]
 
-        # LOCK CHECK
-        if not all(
-            p in lineup_players
-            for p in locked_players
+        # Sample flex groups randomly instead of taking the first combinations.
+        # itertools.combinations() favors players near the start of the pool,
+        # which was causing players like Allen and Stafford to appear everywhere.
+        seen_flex_groups = set()
+        captain_attempts = 0
+        max_captain_attempts = max(1000, per_captain_candidate_limit * 40)
+        while (
+            len(captain_candidates) < per_captain_candidate_limit
+            and captain_attempts < max_captain_attempts
+            and len(flex_pool) >= 5
         ):
-            continue
+            captain_attempts += 1
+            if captain_attempts % 100 == 0:
+                candidate_progress.progress(
+                    min(0.99, (captain_index + min(0.99, captain_attempts / max(1, max_captain_attempts))) / max(1, len(search_pool))),
+                    text=f"Testing {captain}: {len(candidates) + len(captain_candidates):,} candidates accepted"
+                )
+            sampled = rng.choice(np.asarray(flex_pool, dtype=object), size=5, replace=False)
+            flex_players = tuple(str(p) for p in sampled)
+            flex_key = tuple(sorted(flex_players))
+            if flex_key in seen_flex_groups:
+                continue
+            seen_flex_groups.add(flex_key)
 
-        # SALARY CHECK
-        total_salary = (
-            captain_salary_map[captain]
-            + sum(
-                salary_map[p]
-                for p in flex_players
+            lineup_players = [
+                captain
+            ] + list(flex_players)
+
+            # LOCK CHECK
+            if not all(
+                p in lineup_players
+                for p in locked_players
+            ):
+                continue
+
+            # SALARY CHECK
+            total_salary = (
+                captain_salary_map[captain]
+                + sum(
+                    salary_map[p]
+                    for p in flex_players
+                )
             )
-        )
 
-        if total_salary < MIN_LINEUP_SALARY or total_salary > min(SALARY_CAP, MAX_LINEUP_SALARY):
-            continue
+            if total_salary < MIN_LINEUP_SALARY or total_salary > min(SALARY_CAP, MAX_LINEUP_SALARY):
+                continue
 
-        # DraftKings Showdown requires players
-        # from both teams
-        lineup_teams = set(
-            players_df.loc[
-                players_df["Name"].isin(lineup_players),
-                "Team"
-            ]
-        )
-
-        if len(lineup_teams) < 2:
-            continue
-
-        # ========================================
-        # SIMULATION SCORE
-        # ========================================
-
-        total_mean = (
-            player_sim[captain]["Mean"] * 1.5
-            + sum(
-                player_sim[p]["Mean"]
-                for p in flex_players
+            # DraftKings Showdown requires players
+            # from both teams
+            lineup_teams = set(
+                players_df.loc[
+                    players_df["Name"].isin(lineup_players),
+                    "Team"
+                ]
             )
-        )
 
-        total_p95 = (
-            player_sim[captain]["P95"] * 1.5
-            + sum(
-                player_sim[p]["P95"]
-                for p in flex_players
+            if len(lineup_teams) < 2:
+                continue
+
+            # ========================================
+            # SIMULATION SCORE
+            # ========================================
+
+            total_mean = (
+                player_sim[captain]["Mean"] * 1.5
+                + sum(
+                    player_sim[p]["Mean"]
+                    for p in flex_players
+                )
             )
-        )
 
-        total_p99 = (
-            player_sim[captain]["P99"] * 1.5
-            + sum(
-                player_sim[p]["P99"]
-                for p in flex_players
+            total_p95 = (
+                player_sim[captain]["P95"] * 1.5
+                + sum(
+                    player_sim[p]["P95"]
+                    for p in flex_players
+                )
             )
+
+            total_p99 = (
+                player_sim[captain]["P99"] * 1.5
+                + sum(
+                    player_sim[p]["P99"]
+                    for p in flex_players
+                )
+            )
+
+            raw_score = (
+                total_p95 * P95_WEIGHT
+                + total_p99 * P99_WEIGHT
+                + total_mean * MEAN_WEIGHT
+                + (
+                    player_sim[captain].get("StdDev", 0.0) * 1.5
+                    + sum(player_sim[p].get("StdDev", 0.0) for p in flex_players)
+                ) * STDDEV_WEIGHT
+            )
+            lineup_ownership = (
+                showdown_ownership_proxy[ownership_index[captain]] * 1.5
+                + sum(showdown_ownership_proxy[ownership_index[p]] for p in flex_players)
+            )
+            lineup_upside = max(0.0, total_p99 - total_p95)
+            ownership_tax = max(0.0, lineup_ownership - 15.0 * 6.5) * 0.06
+            upside_credit = min(ownership_tax, lineup_upside * 0.08)
+            score = raw_score - ownership_tax + upside_credit
+
+            captain_candidates.append({
+                "Captain": captain,
+                "Flex1": flex_players[0],
+                "Flex2": flex_players[1],
+                "Flex3": flex_players[2],
+                "Flex4": flex_players[3],
+                "Flex5": flex_players[4],
+                "Salary": total_salary,
+                "SimMean": total_mean,
+                "SimP95": total_p95,
+                "SimP99": total_p99,
+                "Score": score
+            })
+
+        candidates.extend(captain_candidates)
+        candidate_progress.progress(
+            min(0.99, (captain_index + 1) / max(1, len(search_pool))),
+            text=f"Candidate lineups built: {len(candidates):,} of {CANDIDATE_COUNT:,}"
         )
+        if len(candidates) >= CANDIDATE_COUNT:
+            break
 
-        raw_score = (
-            total_p95 * P95_WEIGHT
-            + total_p99 * P99_WEIGHT
-            + total_mean * MEAN_WEIGHT
-            + (
-                player_sim[captain].get("StdDev", 0.0) * 1.5
-                + sum(player_sim[p].get("StdDev", 0.0) for p in flex_players)
-            ) * STDDEV_WEIGHT
-        )
-        lineup_ownership = (
-            showdown_ownership_proxy[ownership_index[captain]] * 1.5
-            + sum(showdown_ownership_proxy[ownership_index[p]] for p in flex_players)
-        )
-        lineup_upside = max(0.0, total_p99 - total_p95)
-        ownership_tax = max(0.0, lineup_ownership - 15.0 * 6.5) * 0.06
-        upside_credit = min(ownership_tax, lineup_upside * 0.08)
-        score = raw_score - ownership_tax + upside_credit
-
-        captain_candidates.append({
-            "Captain": captain,
-            "Flex1": flex_players[0],
-            "Flex2": flex_players[1],
-            "Flex3": flex_players[2],
-            "Flex4": flex_players[3],
-            "Flex5": flex_players[4],
-            "Salary": total_salary,
-            "SimMean": total_mean,
-            "SimP95": total_p95,
-            "SimP99": total_p99,
-            "Score": score
-        })
-
-    candidates.extend(captain_candidates)
-    candidate_progress.progress(
-        min(0.99, (captain_index + 1) / max(1, len(search_pool))),
-        text=f"Candidate lineups built: {len(candidates):,} of {CANDIDATE_COUNT:,}"
-    )
-    if len(candidates) >= CANDIDATE_COUNT:
-        break
-
-candidates_df = pd.DataFrame(candidates)
-candidate_progress.progress(1.0, text=f"Candidate lineup search complete: {len(candidates_df):,} found")
+    candidates_df = pd.DataFrame(candidates)
+    candidate_progress.progress(1.0, text=f"Candidate lineup search complete: {len(candidates_df):,} found")
     except Exception as exc:
         workflow_status.error(
             f"Step 2 failed while ranking players or building candidate lineups: {type(exc).__name__}: {exc}"
