@@ -2755,9 +2755,14 @@ if platform == "FanDuel":
                             (standardized - standardized_mean)
                             * (target_std / standardized_std)
                         )
-                    # Preserve the historical/sample mean instead of forcing
-                    # simulated outcomes to average the supplied projection.
-                    scores = sampled_mean + standardized
+                        # Preserve the historical/sample mean instead of forcing
+                        # simulated outcomes to average the supplied projection.
+                        scores = sampled_mean + standardized
+                    else:
+                        # Sparse/constant historical samples can have a nonzero
+                        # raw spread but no usable spread after outlier trimming.
+                        # Generate a distribution rather than a flat line.
+                        scores = rng.normal(max(0.0, sampled_mean), target_std, size=n)
                 else:
                     # If the sampled history has no usable spread, retain its own
                     # average and use the projection only to set the spread.
@@ -3149,9 +3154,14 @@ else:
                             (standardized - standardized_mean)
                             * (target_std / standardized_std)
                         )
-                    # Preserve the historical/sample mean instead of forcing
-                    # simulated outcomes to average the supplied projection.
-                    scores = sampled_mean + standardized
+                        # Preserve the historical/sample mean instead of forcing
+                        # simulated outcomes to average the supplied projection.
+                        scores = sampled_mean + standardized
+                    else:
+                        # Sparse/constant historical samples can have a nonzero
+                        # raw spread but no usable spread after outlier trimming.
+                        # Generate a distribution rather than a flat line.
+                        scores = rng.normal(max(0.0, sampled_mean), target_std, size=n)
                 else:
                     # If the sampled history has no usable spread, retain its own
                     # average and use the projection only to set the spread.
