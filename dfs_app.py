@@ -6278,16 +6278,15 @@ if (
             safe_start = np.clip(tie_start_ranks - 1, 0, len(payout_schedule))
             safe_end = np.clip(tie_end_ranks, 0, len(payout_schedule))
             prize_sums = cumulative_prizes[safe_end] - cumulative_prizes[safe_start]
-            paid_tie_positions = np.maximum(
-                0,
-                np.minimum(tie_end_ranks, len(payout_schedule))
-                - np.minimum(tie_start_ranks - 1, len(payout_schedule)),
-            )
+            # Divide by every rank occupied by the tie, including unpaid ranks.
+            # Any tied positions beyond the payout schedule receive $0, so a tie
+            # that crosses the cash line shares the available prizes with those
+            # unpaid positions instead of overstating expected winnings.
             batch_prizes = np.divide(
                 prize_sums,
-                paid_tie_positions,
+                estimated_tie_sizes,
                 out=np.zeros_like(prize_sums, dtype=np.float64),
-                where=paid_tie_positions > 0,
+                where=estimated_tie_sizes > 0,
             )
             batch_prize_totals = np.sum(batch_prizes, axis=0, dtype=np.float64)
         else:
