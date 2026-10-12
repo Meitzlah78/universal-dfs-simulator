@@ -6222,7 +6222,9 @@ if (
         # opponent from being treated as a guaranteed first-place finish.
         sampled_equal_opponents = low - left_low
         sampled_rank_equivalent = count_greater + (0.5 * sampled_equal_opponents)
-        rank_fraction = (count_greater + 1.0) / (total_field + 1.0)
+        # Include duplicate/equal-scoring entries in the rank estimate instead
+        # of silently treating every tied lineup as if it had no ties.
+        rank_fraction = (sampled_rank_equivalent + 1.0) / (total_field + 1.0)
         estimated_ranks = 1.0 + rank_fraction * (estimated_full_field_size - 1)
         estimated_ranks = np.clip(estimated_ranks, 1.0, float(estimated_full_field_size))
 
