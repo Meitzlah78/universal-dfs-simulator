@@ -4929,11 +4929,11 @@ if build_clicked:
     # Show each stage explicitly so the user can see where the workflow stops.
     workflow_status = st.empty()
     workflow_status.info(f"Step 1 of 4: Running {SIMULATION_COUNT:,} player simulations...")
-    with st.spinner(
-        f"Loading recent historical stats if available, then running "
-        f"{SIMULATION_COUNT:,} game simulations..."
-    ):
-        simulation_df = run_game_simulations(players_df, platform=platform, workflow_status=workflow_status)
+    # Use the persistent workflow status for the stage label. A spinner with
+    # fixed Step 1 text can remain visible while the status placeholder advances.
+    simulation_df = run_game_simulations(
+        players_df, platform=platform, workflow_status=workflow_status
+    )
 
     st.session_state["simulation_df"] = simulation_df
     st.session_state["simulations_ready"] = True
