@@ -2522,8 +2522,10 @@ if platform == "FanDuel":
         # PBP is cached for 24 hours; if it cannot be reached, fall back to the existing
         # player-week history so simulations can still run.
         historical_game_factors = np.array([], dtype=float)
+        pbp_status_box = st.empty()
+        pbp_status_box.info("Loading NFL play-by-play history...")
         pbp_history = load_nfl_pbp_game_history()
-        st.caption("Play-by-play history: " + st.session_state.get(
+        pbp_status_box.info("Play-by-play history: " + st.session_state.get(
             "nfl_pbp_history_status", "Status not available yet."
         ))
         if not pbp_history.empty and "GamePoints" in pbp_history.columns:
