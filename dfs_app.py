@@ -20,36 +20,47 @@ st.set_page_config(
 
 st.title("Universal DFS Simulator")
 
-# Keep the projection-update reminder visible while the user scrolls.
+# Keep the reminder and the actual refresh button together at the top while scrolling.
+from datetime import datetime as _sticky_datetime
+
+with st.container(key="sticky_projection_bar"):
+    sticky_left, sticky_right = st.columns([3, 1])
+    with sticky_left:
+        st.markdown("**Reminder: Refresh projections + injury news before building lineups.**")
+        _sticky_updated_at = st.session_state.get("shared_projection_updated_at")
+        if _sticky_updated_at:
+            st.caption("Last refresh: " + _sticky_updated_at)
+    with sticky_right:
+        if st.button("REFRESH PROJECTIONS + INJURY NEWS", key="sticky_refresh_projections"):
+            download_public_projection_table.clear()
+            fetch_nfl_injury_statuses.clear()
+            st.session_state["projection_updates_found"] = False
+            st.session_state["injury_updates_found"] = False
+            st.session_state["shared_projection_updated_at"] = _sticky_datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %I:%M:%S %p %Z")
+            st.rerun()
+
 st.markdown(
     """
     <style>
-    .projection-update-sticky {
+    .st-key-sticky_projection_bar {
         position: fixed;
         top: 3.15rem;
         left: 0;
         right: 0;
         z-index: 999990;
-        padding: 0.55rem 1rem;
-        background: #fff4cc;
-        color: #3d3100;
-        border-bottom: 1px solid #d8bd63;
+        padding: 0.45rem 1rem 0.15rem 1rem;
+        background: var(--background-color, white);
+        border-bottom: 1px solid #b8a45a;
         box-shadow: 0 2px 5px rgba(0, 0, 0, 0.12);
-        text-align: center;
-        font-weight: 600;
-        font-size: 0.92rem;
     }
-    @media (prefers-color-scheme: dark) {
-        .projection-update-sticky {
-            background: #3b3217;
-            color: #fff0b3;
-            border-bottom-color: #76652d;
-        }
+    .st-key-sticky_projection_bar [data-testid="stHorizontalBlock"] {
+        align-items: center;
+        gap: 1rem;
+    }
+    .st-key-sticky_projection_bar p {
+        margin-bottom: 0.15rem;
     }
     </style>
-    <div class="projection-update-sticky">
-        Reminder: Before building lineups, click “REFRESH PROJECTIONS + INJURY NEWS” to check for the latest updates.
-    </div>
     """,
     unsafe_allow_html=True,
 )
@@ -677,24 +688,11 @@ def show_projection_refresh_status(source_files, key_prefix=None):
         if any(digest is not None for _, digest in signatures):
             st.session_state[time_key] = datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %I:%M:%S %p %Z")
 
-    left, right = st.columns([1, 2])
-    with left:
-        refresh_clicked = st.button("REFRESH PROJECTIONS + INJURY NEWS", key="shared_refresh_projections")
-    with right:
-        updated_at = st.session_state.get(time_key)
-        if updated_at:
-            st.caption("Last projection refresh: " + updated_at)
-        else:
-            st.caption("Projection sources have not been refreshed manually yet.")
-
-    if refresh_clicked:
-        download_public_projection_table.clear()
-        fetch_nfl_injury_statuses.clear()
-        st.session_state["projection_updates_found"] = False
-        st.session_state["injury_updates_found"] = False
-        st.session_state[time_key] = datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %I:%M:%S %p %Z")
-        st.success("Refreshing projections and NFL injury news. Uploaded projection CSVs still take priority.")
-        st.rerun()
+    updated_at = st.session_state.get(time_key)
+    if updated_at:
+        st.caption("Last projection refresh: " + updated_at)
+    else:
+        st.caption("Projection sources have not been refreshed manually yet.")
 
 
 def normalize_projection_player_name(name):
