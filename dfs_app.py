@@ -6036,6 +6036,23 @@ if (
     else:
         payout_schedule = None
 
+    # Do not calculate contest cash, prizes, or ROI against a field that is
+    # smaller than the contest's actual paid-rank range. That makes results
+    # misleading because every simulated finish is compared with too few entries.
+    if payout_schedule is not None:
+        paid_positions = int(np.count_nonzero(payout_schedule > 0))
+        simulated_positions = total_field + 1  # opponents plus the lineup being scored
+        if paid_positions > simulated_positions:
+            st.error(
+                f"Contest scoring stopped to prevent misleading results. The selected "
+                f"payout table has {paid_positions:,} paid places, but this run includes "
+                f"only {total_field:,} simulated opponents ({simulated_positions:,} "
+                f"places including the lineup being scored). Cash rate, expected prize, "
+                f"and ROI would be unreliable. Increase the simulated opponent field "
+                f"or select a smaller contest with a matching payout structure."
+            )
+            st.stop()
+
     progress = st.progress(0)
     # Convert once and score independent simulation batches concurrently.
     # All simulations and opponents are retained; parallelism changes only how
