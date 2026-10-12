@@ -6243,9 +6243,10 @@ if (
         batch_top10 = np.sum(percentiles >= 0.90, axis=0, dtype=np.float64)
         batch_percentiles = np.sum(percentiles, axis=0, dtype=np.float64)
 
-        # Use interpolated expected payouts at the estimated rank instead of
-        # rounding ranks to integers. Ranks beyond the supplied payout schedule
-        # receive $0; this avoids abrupt prize jumps caused by rank rounding.
+        # Estimate the size of each scoring tie from the sampled field, then
+        # award the average payout across every rank occupied by that tie.
+        # This handles duplicate lineups and other equal-scoring entries more
+        # realistically than assigning a single interpolated rank prize.
         paid_positions = (
             min(int(np.count_nonzero(payout_schedule > 0)), estimated_full_field_size)
             if payout_schedule is not None
@@ -6253,14 +6254,41 @@ if (
         )
         batch_cash = np.sum(estimated_ranks <= paid_positions, axis=0, dtype=np.float64)
         if payout_schedule is not None and len(payout_schedule) > 0:
-            lower_rank = np.floor(estimated_ranks).astype(np.int64)
-            upper_rank = np.ceil(estimated_ranks).astype(np.int64)
-            lower_index = np.clip(lower_rank - 1, 0, len(payout_schedule) - 1)
-            upper_index = np.clip(upper_rank - 1, 0, len(payout_schedule) - 1)
-            lower_prize = np.where(lower_rank <= len(payout_schedule), payout_schedule[lower_index], 0.0)
-            upper_prize = np.where(upper_rank <= len(payout_schedule), payout_schedule[upper_index], 0.0)
-            fraction = estimated_ranks - lower_rank
-            batch_prizes = lower_prize + fraction * (upper_prize - lower_prize)
+            # Scale the observed tie rate from the sampled field to the full
+            # contest. A minimum tie size of one preserves ordinary solo ranks.
+            estimated_tie_sizes = np.maximum(
+                1,
+                np.rint(
+                    (sampled_equal_opponents + 1.0)
+                    / (total_field + 1.0)
+                    * estimated_full_field_size
+                ).astype(np.int64),
+            )
+            tie_start_ranks = np.maximum(
+                1,
+                np.floor(estimated_ranks - (estimated_tie_sizes - 1) / 2.0).astype(np.int64),
+            )
+            tie_end_ranks = np.minimum(
+                estimated_full_field_size,
+                tie_start_ranks + estimated_tie_sizes - 1,
+            )
+            rank_axis = np.arange(1, len(payout_schedule) + 1, dtype=np.int64)
+            rank_prizes = np.where(rank_axis <= estimated_full_field_size, payout_schedule, 0.0)
+            cumulative_prizes = np.concatenate(([0.0], np.cumsum(rank_prizes, dtype=np.float64)))
+            safe_start = np.clip(tie_start_ranks - 1, 0, len(payout_schedule))
+            safe_end = np.clip(tie_end_ranks, 0, len(payout_schedule))
+            prize_sums = cumulative_prizes[safe_end] - cumulative_prizes[safe_start]
+            paid_tie_positions = np.maximum(
+                0,
+                np.minimum(tie_end_ranks, len(payout_schedule))
+                - np.minimum(tie_start_ranks - 1, len(payout_schedule)),
+            )
+            batch_prizes = np.divide(
+                prize_sums,
+                paid_tie_positions,
+                out=np.zeros_like(prize_sums, dtype=np.float64),
+                where=paid_tie_positions > 0,
+            )
             batch_prize_totals = np.sum(batch_prizes, axis=0, dtype=np.float64)
         else:
             batch_prize_totals = np.zeros(n_candidates, dtype=np.float64)
