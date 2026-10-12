@@ -3123,6 +3123,7 @@ else:
                 name, next(iter(positions), ""), platform, historical,
                 return_scores=True, historical_name_index=historical_name_index
             )
+            has_player_history = historical_result is not None
             if historical_result is not None:
                 historical_points, recency_weights = historical_result
                 probabilities = recency_weights / recency_weights.sum()
@@ -3130,6 +3131,9 @@ else:
                     historical_points, size=n, replace=True, p=probabilities
                 ).astype(float)
 
+            # Anchor sparse/no-history players to a projection-informed distribution.
+            # This prevents generic position outcomes from overwhelming tiny projections.
+            # Historical player distributions remain unscaled.
             # Anchor the simulated mean to the slate projection and calibrate volatility.
             # Historical results determine the shape, while position-specific limits prevent
             # mismatched or sparse history from creating absurdly wide distributions.
@@ -3162,6 +3166,18 @@ else:
             )
             sampled_mean = float(np.mean(scores)) if len(scores) else 0.0
             sampled_std = float(np.std(scores, ddof=1)) if len(scores) > 1 else 0.0
+            if (
+                not has_player_history
+                and np.isfinite(projection) and projection > 0
+                and np.isfinite(sampled_mean) and sampled_mean > 1e-6
+            ):
+                scores = np.maximum(
+                    0.0,
+                    scores * (projection / sampled_mean)
+                    + rng.normal(0.0, max(0.25, projection * 0.20), size=n),
+                )
+                sampled_mean = float(np.mean(scores))
+                sampled_std = float(np.std(scores, ddof=1)) if len(scores) > 1 else 0.0
 
             if np.isfinite(projection) and projection > 0:
                 # Use half historical volatility and half position baseline, then
@@ -3225,7 +3241,7 @@ else:
             # back to the projection. The projection sets a reasonable ceiling, but
             # historical results and game scripts determine the simulated average.
             if np.isfinite(projection) and projection > 0:
-                upper_cap = max(3.0, projection * (1.0 + 2.0 * volatility_cv))
+                upper_cap = max(6.0, projection * (1.0 + 2.0 * volatility_cv))
                 final_scores = np.minimum(final_scores, upper_cap)
                 cap_tolerance = max(0.01, upper_cap * 1e-6)
                 cap_hit_percentages[name] = round(
