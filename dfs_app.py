@@ -5386,16 +5386,12 @@ if build_clicked:
         }
         player_rank = sorted(available_players, key=lambda p: showdown_rankings[p], reverse=True)
 
-        # Use top players plus all locked players.
+        # Use top players plus all locked players, but weight candidates toward stronger captains.
         search_pool = list(dict.fromkeys(
             player_rank[:20] + locked_players
         ))
-        # Use a local generator for randomized candidate order on every slate build.
         rng = np.random.default_rng()
-        # Shuffle candidate search order so the 2,000-lineup pool explores more flex combinations.
-        rng.shuffle(search_pool)
 
-        # ============================================
         # ============================================
         # CANDIDATE SETTINGS
         # ============================================
@@ -5403,24 +5399,36 @@ if build_clicked:
         LINEUP_COUNT = 2000
         CANDIDATE_COUNT = 5000
 
+        # Rank-based probability curve: all captains retain a chance, but stronger
+        # ranked players receive a larger share of candidate generation.
+        player_rank_index = {p: i for i, p in enumerate(player_rank)}
+        captain_weights = np.asarray(
+            [1.0 / ((player_rank_index.get(p, len(player_rank)) + 1) ** 0.70) for p in search_pool],
+            dtype=float
+        )
+        captain_weights /= captain_weights.sum()
+        captain_candidate_limits = {
+            p: max(1, int(round(CANDIDATE_COUNT * captain_weights[i])))
+            for i, p in enumerate(search_pool)
+        }
+        while sum(captain_candidate_limits.values()) > CANDIDATE_COUNT:
+            largest = max(captain_candidate_limits, key=captain_candidate_limits.get)
+            if captain_candidate_limits[largest] <= 1:
+                break
+            captain_candidate_limits[largest] -= 1
+
         # BUILD CANDIDATES
         # ============================================
 
         candidates = []
 
-        # Spread the 2,000 candidate lineups across eligible captains instead of
-        # filling the entire candidate pool with the first captain's combinations.
-        per_captain_candidate_limit = max(
-            1,
-            int(np.ceil(CANDIDATE_COUNT / max(1, len(search_pool))))
-        )
-
-        candidate_progress = st.progress(0, text=f"Building candidate lineups: 0 of {CANDIDATE_COUNT:,}")
+        candidate_progress = st.progress(0, text=f"Building weighted candidate lineups: 0 of {CANDIDATE_COUNT:,}")
         for captain_index, captain in enumerate(search_pool):
             captain_candidates = []
+            per_captain_candidate_limit = captain_candidate_limits[captain]
             candidate_progress.progress(
                 captain_index / max(1, len(search_pool)),
-                text=f"Testing captain {captain_index + 1} of {len(search_pool)}: {captain}"
+                text=f"Weighted search: captain {captain_index + 1} of {len(search_pool)} — {captain}"
             )
 
             if control_map[captain]["Captain Max %"] <= 0:
@@ -5434,9 +5442,14 @@ if build_clicked:
                 if p != captain
             ]
 
-            # Sample flex groups randomly instead of taking the first combinations.
-            # itertools.combinations() favors players near the start of the pool,
-            # which was causing players like Allen and Stafford to appear everywhere.
+            # Use a softer rank-based probability curve for FLEX selection.
+            # Every player remains eligible, but higher-ranked players are sampled more often.
+            flex_rank_weights = np.asarray(
+                [1.0 / ((player_rank_index.get(p, len(player_rank)) + 1) ** 0.45) for p in flex_pool],
+                dtype=float
+            )
+            flex_rank_weights /= flex_rank_weights.sum()
+
             seen_flex_groups = set()
             captain_attempts = 0
             # Keep the search bounded on Streamlit Cloud; repeated random samples can otherwise burn CPU for a long time when salary/lock rules reject most lineups.
@@ -5452,7 +5465,12 @@ if build_clicked:
                         min(0.99, (captain_index + min(0.99, captain_attempts / max(1, max_captain_attempts))) / max(1, len(search_pool))),
                         text=f"Testing {captain}: {len(candidates) + len(captain_candidates):,} candidates accepted"
                     )
-                sampled = rng.choice(np.asarray(flex_pool, dtype=object), size=5, replace=False)
+                sampled = rng.choice(
+                    np.asarray(flex_pool, dtype=object),
+                    size=5,
+                    replace=False,
+                    p=flex_rank_weights
+                )
                 flex_players = tuple(str(p) for p in sampled)
                 flex_key = tuple(sorted(flex_players))
                 if flex_key in seen_flex_groups:
@@ -5557,7 +5575,7 @@ if build_clicked:
             candidates.extend(captain_candidates)
             candidate_progress.progress(
                 min(0.99, (captain_index + 1) / max(1, len(search_pool))),
-                text=f"Candidate lineups built: {len(candidates):,} of {CANDIDATE_COUNT:,}"
+                text=f"Weighted candidates built: {len(candidates):,} of {CANDIDATE_COUNT:,}"
             )
             if len(candidates) >= CANDIDATE_COUNT:
                 break
