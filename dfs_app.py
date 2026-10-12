@@ -5660,6 +5660,62 @@ if isinstance(_saved_contest_field, pd.DataFrame) and not _saved_contest_field.e
 
 
 # ============================================
+# CONTEST PAYOUT STRUCTURE
+# ============================================
+st.subheader("Contest Payout Structure")
+st.caption(
+    "Upload the selected DraftKings contest's payout table as a CSV with one row per finishing rank "
+    "and columns named Rank (or Place) and Prize (or Payout). Opponent lineups remain simulated."
+)
+payout_file = st.file_uploader(
+    "Upload contest payout table CSV",
+    type=["csv"],
+    key="contest_payout_table_upload",
+    help="Use the payout schedule shown in the DraftKings contest details. Include each paid rank."
+)
+if payout_file is not None:
+    try:
+        payout_source = pd.read_csv(payout_file)
+        payout_lookup = {str(c).strip().casefold(): c for c in payout_source.columns}
+        rank_col = next((payout_lookup[k] for k in ("rank", "place", "position", "finish") if k in payout_lookup), None)
+        prize_col = next((payout_lookup[k] for k in ("prize", "payout", "winnings", "amount") if k in payout_lookup), None)
+        if rank_col is None or prize_col is None:
+            st.error("Payout CSV needs a Rank/Place column and a Prize/Payout column.")
+        else:
+            payout_source["_rank"] = pd.to_numeric(
+                payout_source[rank_col].astype(str).str.extract(r"(\d+)")[0], errors="coerce"
+            )
+            payout_source["_prize"] = pd.to_numeric(
+                payout_source[prize_col].astype(str).str.replace(r"[$,]", "", regex=True), errors="coerce"
+            )
+            payout_source = payout_source.dropna(subset=["_rank", "_prize"])
+            payout_source = payout_source[payout_source["_rank"] >= 1].copy()
+            payout_source["_rank"] = payout_source["_rank"].astype(int)
+            payout_source = payout_source.sort_values("_rank").drop_duplicates("_rank", keep="last")
+            if payout_source.empty:
+                st.error("No valid rank/prize rows were found in the payout CSV.")
+            else:
+                payout_schedule = np.zeros(int(payout_source["_rank"].max()), dtype=float)
+                payout_schedule[payout_source["_rank"].to_numpy() - 1] = payout_source["_prize"].to_numpy(dtype=float)
+                st.session_state["contest_payout_schedule"] = payout_schedule
+                st.session_state["contest_payout_source_name"] = getattr(payout_file, "name", "uploaded payout CSV")
+    except Exception as exc:
+        st.error(f"Could not read payout table: {type(exc).__name__}: {exc}")
+
+_saved_payouts = st.session_state.get("contest_payout_schedule")
+if isinstance(_saved_payouts, np.ndarray) and len(_saved_payouts):
+    _paid_positions = int(np.count_nonzero(_saved_payouts > 0))
+    _top_prize = float(np.max(_saved_payouts))
+    st.success(
+        f"Payout table loaded: {_paid_positions:,} paid finishing positions; "
+        f"top prize ${_top_prize:,.2f}. Source: "
+        f"{st.session_state.get('contest_payout_source_name', 'uploaded CSV')}."
+    )
+else:
+    st.info("No payout table loaded yet. Contest Sim will show ranking metrics, but projected winnings and ROI will remain unavailable.")
+
+
+# ============================================
 # CONTEST SCORING
 # ============================================
 
@@ -5736,6 +5792,12 @@ if (
     top10_rates = np.zeros(n_candidates)
     cash_rates = np.zeros(n_candidates)
     avg_percentiles = np.zeros(n_candidates)
+    expected_prize_totals = np.zeros(n_candidates, dtype=np.float64)
+    payout_schedule = st.session_state.get("contest_payout_schedule")
+    if isinstance(payout_schedule, np.ndarray) and len(payout_schedule):
+        payout_schedule = np.asarray(payout_schedule, dtype=np.float64)
+    else:
+        payout_schedule = None
 
     progress = st.progress(0)
     # Convert once and score independent simulation batches concurrently.
@@ -5792,8 +5854,21 @@ if (
         batch_top10 = np.sum(percentiles >= 0.90, axis=0, dtype=np.float64)
         batch_cash = np.sum(percentiles >= 0.50, axis=0, dtype=np.float64)
         batch_percentiles = np.sum(percentiles, axis=0, dtype=np.float64)
+        if payout_schedule is not None:
+            # Rank is the number of opponents scoring higher, plus one.
+            # Tied scores currently use the same rank for ranking metrics; prizes are not split across tied ranks yet.
+            ranks = count_greater + 1
+            payout_indices = np.minimum(ranks - 1, len(payout_schedule) - 1)
+            batch_prizes = np.where(
+                ranks <= len(payout_schedule),
+                payout_schedule[payout_indices],
+                0.0
+            )
+            batch_prize_totals = np.sum(batch_prizes, axis=0, dtype=np.float64)
+        else:
+            batch_prize_totals = np.zeros(n_candidates, dtype=np.float64)
 
-        return batch_win, batch_top1, batch_top5, batch_top10, batch_cash, batch_percentiles
+        return batch_win, batch_top1, batch_top5, batch_top10, batch_cash, batch_percentiles, batch_prize_totals
 
     completed_batches = 0
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
@@ -5802,13 +5877,14 @@ if (
             for batch_start, batch_end in batch_ranges
         }
         for future in as_completed(futures):
-            batch_win, batch_top1, batch_top5, batch_top10, batch_cash, batch_percentiles = future.result()
+            batch_win, batch_top1, batch_top5, batch_top10, batch_cash, batch_percentiles, batch_prize_totals = future.result()
             win_rates += batch_win
             top1_rates += batch_top1
             top5_rates += batch_top5
             top10_rates += batch_top10
             cash_rates += batch_cash
             avg_percentiles += batch_percentiles
+            expected_prize_totals += batch_prize_totals
             completed_batches += 1
             completed_sims = min(completed_batches * batch_size, n_sims)
             progress.progress(completed_batches / len(batch_ranges))
@@ -5829,6 +5905,20 @@ if (
     results_df["CashRate"] = cash_rates / n_sims
     results_df["AvgPercentile"] = avg_percentiles / n_sims
 
+    if payout_schedule is not None:
+        results_df["Expected Prize ($)"] = expected_prize_totals / n_sims
+        selected_contest_for_payout = st.session_state.get("selected_dk_contest", {})
+        entry_fee_for_payout = pd.to_numeric(
+            selected_contest_for_payout.get("entry_fee"), errors="coerce"
+        )
+        if pd.notna(entry_fee_for_payout) and float(entry_fee_for_payout) >= 0:
+            results_df["Expected Net ($)"] = results_df["Expected Prize ($)"] - float(entry_fee_for_payout)
+            results_df["Expected ROI (%)"] = np.where(
+                float(entry_fee_for_payout) > 0,
+                results_df["Expected Net ($)"] / float(entry_fee_for_payout) * 100.0,
+                np.nan
+            )
+
     results_df["ContestScore"] = (
         results_df["Top1"] * 0.40
         + results_df["Top5"] * 0.25
@@ -5845,6 +5935,11 @@ if (
 
     # Save immediately so the ranked results survive later UI rendering or reruns.
     st.session_state["contest_results_df"] = results_df
+    if payout_schedule is not None:
+        st.success(
+            "Expected Prize and ROI use the uploaded payout table and simulated opponent lineups. "
+            "They are estimates, not guaranteed winnings; tied finishes are not yet split across prize ranks."
+        )
     if build_clicked:
         # A fresh build must create a fresh user pool instead of carrying over
         # lineups or exposure state from the previous build.
