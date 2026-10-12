@@ -1356,7 +1356,7 @@ st.session_state["lineup_mode_" + platform] = lineup_mode
 st.subheader(selected_format)
 
 # Initialize from the saved slider value; the control itself appears beside SIM.
-aggressiveness = float(st.session_state.get("lineup_build_aggressiveness", 50)) / 100.0
+aggressiveness = float(st.session_state.get(f"lineup_build_aggressiveness_{platform}_{lineup_mode}", 100 if ((platform == "DraftKings" and lineup_mode == "Showdown") or (platform == "FanDuel" and lineup_mode == "Single Game")) else 50)) / 100.0
 P95_WEIGHT = 0.60 - 0.30 * aggressiveness
 P99_WEIGHT = 0.10 + 0.45 * aggressiveness
 MEAN_WEIGHT = 1.0 - P95_WEIGHT - P99_WEIGHT
@@ -1365,7 +1365,7 @@ STDDEV_WEIGHT = 0.10 * (2.0 * aggressiveness - 1.0)
 # The correlation slider is displayed with Build Settings below.
 # Read its saved value here; the Build Settings control updates it before SIM runs.
 correlation_strength = (
-    float(st.session_state.get("single_game_correlation_strength", 70)) / 100.0
+    float(st.session_state.get(f"single_game_correlation_strength_{platform}_{lineup_mode}", 0 if ((platform == "DraftKings" and lineup_mode == "Showdown") or (platform == "FanDuel" and lineup_mode == "Single Game")) else 70)) / 100.0
     if lineup_mode in ("Showdown", "Single Game") else 1.0
 )
 
@@ -1638,9 +1638,11 @@ if platform == "FanDuel":
         )
     with build_cols[1]:
         aggressiveness_pct = st.slider(
-            "Lineup Build Aggressiveness", 0, 100, 50, step=5,
+            "Lineup Build Aggressiveness", 0, 100,
+            100 if ((platform == "DraftKings" and lineup_mode == "Showdown") or (platform == "FanDuel" and lineup_mode == "Single Game")) else 50,
+            step=5,
             help="Conservative favors steadier outcomes; aggressive favors ceiling and volatility. Does not change simulation or lineup counts.",
-            key="lineup_build_aggressiveness",
+            key=f"lineup_build_aggressiveness_{platform}_{lineup_mode}",
         )
         aggressiveness = aggressiveness_pct / 100.0
         P95_WEIGHT = 0.60 - 0.30 * aggressiveness
@@ -1650,9 +1652,11 @@ if platform == "FanDuel":
         st.caption(f"Build style: {aggressiveness_pct}% aggressive · P95 {P95_WEIGHT:.0%} · P99 {P99_WEIGHT:.0%} · average {MEAN_WEIGHT:.0%} · volatility {STDDEV_WEIGHT:+.0%}.")
         if lineup_mode in ("Showdown", "Single Game"):
             correlation_pct = st.slider(
-                "Game Correlation", 0, 100, 70, step=5,
+                "Game Correlation", 0, 100,
+                0 if ((platform == "DraftKings" and lineup_mode == "Showdown") or (platform == "FanDuel" and lineup_mode == "Single Game")) else 70,
+                step=5,
                 help="Controls how strongly shared game conditions connect player outcomes.",
-                key="single_game_correlation_strength",
+                key=f"single_game_correlation_strength_{platform}_{lineup_mode}",
             )
             correlation_strength = correlation_pct / 100.0
         else:
@@ -4497,9 +4501,11 @@ else:
         MIN_LINEUP_SALARY, MAX_LINEUP_SALARY = dk_salary_range
         with build_cols[1]:
             aggressiveness_pct = st.slider(
-                "Lineup Build Aggressiveness", 0, 100, 50, step=5,
+                "Lineup Build Aggressiveness", 0, 100,
+                100 if ((platform == "DraftKings" and lineup_mode == "Showdown") or (platform == "FanDuel" and lineup_mode == "Single Game")) else 50,
+                step=5,
                 help="Conservative favors steadier outcomes; aggressive favors ceiling and volatility. Does not change simulation or lineup counts.",
-                key="lineup_build_aggressiveness",
+                key=f"lineup_build_aggressiveness_{platform}_{lineup_mode}",
             )
             aggressiveness = aggressiveness_pct / 100.0
             P95_WEIGHT = 0.60 - 0.30 * aggressiveness
@@ -4996,9 +5002,11 @@ with build_cols[0]:
 MIN_LINEUP_SALARY, MAX_LINEUP_SALARY = dk_salary_range
 with build_cols[1]:
     aggressiveness_pct = st.slider(
-        "Lineup Build Aggressiveness", 0, 100, 50, step=5,
+        "Lineup Build Aggressiveness", 0, 100,
+        100 if ((platform == "DraftKings" and lineup_mode == "Showdown") or (platform == "FanDuel" and lineup_mode == "Single Game")) else 50,
+        step=5,
         help="Conservative favors steadier outcomes; aggressive favors ceiling and volatility. Does not change simulation or lineup counts.",
-        key="lineup_build_aggressiveness",
+        key=f"lineup_build_aggressiveness_{platform}_{lineup_mode}",
     )
     aggressiveness = aggressiveness_pct / 100.0
     P95_WEIGHT = 0.60 - 0.30 * aggressiveness
@@ -5008,9 +5016,11 @@ with build_cols[1]:
     st.caption(f"Build style: {aggressiveness_pct}% aggressive · P95 {P95_WEIGHT:.0%} · P99 {P99_WEIGHT:.0%} · average {MEAN_WEIGHT:.0%} · volatility {STDDEV_WEIGHT:+.0%}.")
     if lineup_mode in ("Showdown", "Single Game"):
         correlation_pct = st.slider(
-            "Game Correlation", 0, 100, 70, step=5,
+            "Game Correlation", 0, 100,
+            0 if ((platform == "DraftKings" and lineup_mode == "Showdown") or (platform == "FanDuel" and lineup_mode == "Single Game")) else 70,
+            step=5,
             help="Controls how strongly shared game conditions connect player outcomes.",
-            key="single_game_correlation_strength",
+            key=f"single_game_correlation_strength_{platform}_{lineup_mode}",
         )
         correlation_strength = correlation_pct / 100.0
     else:
