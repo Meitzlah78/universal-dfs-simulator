@@ -5124,11 +5124,10 @@ else:
                 hide_index=True
             )
 
-            # Classic stops before the shared Showdown portfolio section, so provide
-            # the same top-20 portfolio controls here using Classic lineup results.
+            # Classic portfolio controls match the larger portfolio selector used by other formats.
             st.divider()
             st.write("## Portfolio")
-            st.caption("Choose how to rank your Classic lineups. Your top 20 are shown by default.")
+            st.caption("Choose how many generated Classic lineups to show and export. Up to 5,000 lineups can be selected.")
             classic_portfolio_source = st.session_state.get("classic_contest_comparison_df")
             if not isinstance(classic_portfolio_source, pd.DataFrame) or classic_portfolio_source.empty:
                 classic_portfolio_source = classic_results.copy()
@@ -5143,8 +5142,8 @@ else:
                 "Number of lineups to show",
                 min_value=1,
                 max_value=max(1, len(classic_portfolio_source)),
-                value=min(20, max(1, len(classic_portfolio_source))),
-                step=1,
+                value=min(5000, max(1, len(classic_portfolio_source))),
+                step=100 if len(classic_portfolio_source) >= 100 else 1,
                 key="dk_classic_portfolio_count"
             )
             classic_rank_label = st.selectbox(
