@@ -3723,15 +3723,16 @@ else:
         frames = []
         loaded_seasons = []
         errors = []
-        # Recent seasons are enough for game-environment calibration and keep downloads bounded.
+        # Use recent historical seasons for game-environment calibration.
+        # Streamlit caches the completed result for 24 hours to avoid repeat downloads.
         wanted_columns = {
             "season", "game_id", "play_id", "total_home_score", "total_away_score",
             "game_seconds_remaining", "qtr"
         }
-        for season in [2025, 2026]:
+        for season in range(2020, 2027):
             url = f"https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_{season}.csv"
             try:
-                with requests.get(url, timeout=(4, 12), stream=True) as response:
+                with requests.get(url, timeout=(10, 60), stream=True) as response:
                     response.raise_for_status()
                     response.raw.decode_content = True
                     frame = pd.read_csv(
