@@ -6137,40 +6137,48 @@ if (
             left_low = np.where(move_right_left, mid_left + 1, left_low)
             left_high = np.where(move_left_left, mid_left, left_high)
 
-        # Estimate full-contest ranks from sampled opponents. Use a midrank for
-        # ties observed in the sample: opponents scoring above the candidate count
-        # ahead, while equal-scoring opponents contribute half a place on average.
-        # Do not scale a sampled tie group to the full contest and then divide prizes
-        # by that invented tie count; a sample with no observed ties must not become
-        # an automatic multi-entry tie.
+        # Convert sampled opponent results to a smoothed full-field rank estimate.
+        # The +1 continuity correction prevents a lineup that beats every sampled
+        # opponent from being treated as a guaranteed first-place finish.
         sampled_equal_opponents = low - left_low
         sampled_rank_equivalent = count_greater + (0.5 * sampled_equal_opponents)
-        ranks = 1 + np.rint(
-            (sampled_rank_equivalent / total_field) * (estimated_full_field_size - 1)
-        ).astype(np.int64)
-        ranks = np.clip(ranks, 1, estimated_full_field_size)
-        batch_win = np.sum(ranks == 1, axis=0, dtype=np.float64)
-        batch_top1 = np.sum(ranks <= max(1, int(np.ceil(estimated_full_field_size * 0.01))), axis=0, dtype=np.float64)
-        batch_top5 = np.sum(ranks <= max(1, int(np.ceil(estimated_full_field_size * 0.05))), axis=0, dtype=np.float64)
-        batch_top10 = np.sum(ranks <= max(1, int(np.ceil(estimated_full_field_size * 0.10))), axis=0, dtype=np.float64)
+        rank_fraction = (count_greater + 1.0) / (total_field + 1.0)
+        estimated_ranks = 1.0 + rank_fraction * (estimated_full_field_size - 1)
+        estimated_ranks = np.clip(estimated_ranks, 1.0, float(estimated_full_field_size))
+
+        # A sampled best score is not a guaranteed win in a much larger contest.
+        # Approximate win probability from the estimated chance one field entry
+        # outscores this lineup, rather than counting a rounded rank of 1 as a win.
+        estimated_tail_probability = np.clip(
+            (count_greater + 1.0) / (total_field + 1.0), 0.0, 1.0
+        )
+        win_probabilities = np.exp(
+            -estimated_tail_probability * max(0, estimated_full_field_size - 1)
+        )
+        batch_win = np.sum(win_probabilities, axis=0, dtype=np.float64)
+        batch_top1 = np.sum(percentiles >= 0.99, axis=0, dtype=np.float64)
+        batch_top5 = np.sum(percentiles >= 0.95, axis=0, dtype=np.float64)
+        batch_top10 = np.sum(percentiles >= 0.90, axis=0, dtype=np.float64)
         batch_percentiles = np.sum(percentiles, axis=0, dtype=np.float64)
 
-        # Cash and prize ranks refer to the estimated full contest. Payouts are
-        # assigned at the estimated midrank; we avoid inventing a full-field tie
-        # count from the sampled tie group, which can badly distort expected ROI.
+        # Use interpolated expected payouts at the estimated rank instead of
+        # rounding ranks to integers. Ranks beyond the supplied payout schedule
+        # receive $0; this avoids abrupt prize jumps caused by rank rounding.
         paid_positions = (
             min(int(np.count_nonzero(payout_schedule > 0)), estimated_full_field_size)
             if payout_schedule is not None
             else int(np.ceil(estimated_full_field_size * 0.10))
         )
-        batch_cash = np.sum(ranks <= paid_positions, axis=0, dtype=np.float64)
-        if payout_schedule is not None:
-            prize_indices = np.clip(ranks - 1, 0, len(payout_schedule) - 1)
-            batch_prizes = np.where(
-                ranks <= len(payout_schedule),
-                payout_schedule[prize_indices],
-                0.0
-            )
+        batch_cash = np.sum(estimated_ranks <= paid_positions, axis=0, dtype=np.float64)
+        if payout_schedule is not None and len(payout_schedule) > 0:
+            lower_rank = np.floor(estimated_ranks).astype(np.int64)
+            upper_rank = np.ceil(estimated_ranks).astype(np.int64)
+            lower_index = np.clip(lower_rank - 1, 0, len(payout_schedule) - 1)
+            upper_index = np.clip(upper_rank - 1, 0, len(payout_schedule) - 1)
+            lower_prize = np.where(lower_rank <= len(payout_schedule), payout_schedule[lower_index], 0.0)
+            upper_prize = np.where(upper_rank <= len(payout_schedule), payout_schedule[upper_index], 0.0)
+            fraction = estimated_ranks - lower_rank
+            batch_prizes = lower_prize + fraction * (upper_prize - lower_prize)
             batch_prize_totals = np.sum(batch_prizes, axis=0, dtype=np.float64)
         else:
             batch_prize_totals = np.zeros(n_candidates, dtype=np.float64)
