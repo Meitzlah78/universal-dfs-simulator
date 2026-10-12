@@ -5862,6 +5862,28 @@ if payout_file is not None:
     except Exception as exc:
         st.error(f"Could not read payout table: {type(exc).__name__}: {exc}")
 
+# Verified payout schedule supplied from the DraftKings contest details.
+# Keep it scoped to this exact contest ID; never apply it to another contest.
+if (
+    str(st.session_state.get("selected_dk_contest", {}).get("id", "")) == "196537800"
+    and str(st.session_state.get("contest_payout_contest_id", "")) != "196537800"
+):
+    _known_dk_payout_ranges = [
+        (1, 1, 250.00), (2, 2, 150.00), (3, 3, 100.00), (4, 4, 75.00),
+        (5, 5, 50.00), (6, 6, 40.00), (7, 8, 30.00), (9, 10, 25.00),
+        (11, 13, 20.00), (14, 16, 15.00), (17, 20, 10.00), (21, 25, 8.00),
+        (26, 35, 6.00), (36, 45, 5.00), (46, 60, 4.00), (61, 75, 3.00),
+        (76, 100, 2.00), (101, 135, 1.50), (136, 215, 1.00),
+        (216, 425, 0.75), (426, 945, 0.50), (946, 2165, 0.40),
+        (2166, 5385, 0.30), (5386, 14240, 0.20),
+    ]
+    _known_dk_payout_schedule = np.zeros(14240, dtype=float)
+    for _rank_start, _rank_end, _rank_prize in _known_dk_payout_ranges:
+        _known_dk_payout_schedule[_rank_start - 1:_rank_end] = _rank_prize
+    st.session_state["contest_payout_schedule"] = _known_dk_payout_schedule
+    st.session_state["contest_payout_source_name"] = "User-provided DraftKings payout table"
+    st.session_state["contest_payout_contest_id"] = "196537800"
+
 _saved_payouts = st.session_state.get("contest_payout_schedule")
 _current_payout_contest_id = str(st.session_state.get("selected_dk_contest", {}).get("id", ""))
 _payout_matches_selected_contest = (
