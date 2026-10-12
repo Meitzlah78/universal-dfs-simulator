@@ -1362,25 +1362,12 @@ P99_WEIGHT = 0.10 + 0.45 * aggressiveness
 MEAN_WEIGHT = 1.0 - P95_WEIGHT - P99_WEIGHT
 STDDEV_WEIGHT = 0.10 * (2.0 * aggressiveness - 1.0)
 
-# Game-level correlation control is relevant to single-game formats. Full-slate
-# formats keep the current default behavior and do not show this control.
-if lineup_mode in ("Showdown", "Single Game"):
-    correlation_strength = st.slider(
-        "Game Correlation",
-        min_value=0,
-        max_value=100,
-        value=70,
-        step=5,
-        help=(
-            "Controls how strongly shared game conditions connect player outcomes. "
-            "0% minimizes shared game-script effects; 100% uses the full model. "
-            "This changes correlation strength, not the number of simulations."
-        ),
-        key="single_game_correlation_strength",
-    ) / 100.0
-else:
-    correlation_strength = 1.0
-st.session_state["active_game_correlation_strength"] = correlation_strength
+# The correlation slider is displayed with Build Settings below.
+# Read its saved value here; the Build Settings control updates it before SIM runs.
+correlation_strength = (
+    float(st.session_state.get("single_game_correlation_strength", 70)) / 100.0
+    if lineup_mode in ("Showdown", "Single Game") else 1.0
+)
 
 if platform == "FanDuel":
     # FanDuel uses its own player upload and lineup rules. This separate path
@@ -1661,6 +1648,16 @@ if platform == "FanDuel":
         MEAN_WEIGHT = 1.0 - P95_WEIGHT - P99_WEIGHT
         STDDEV_WEIGHT = 0.10 * (2.0 * aggressiveness - 1.0)
         st.caption(f"Build style: {aggressiveness_pct}% aggressive · P95 {P95_WEIGHT:.0%} · P99 {P99_WEIGHT:.0%} · average {MEAN_WEIGHT:.0%} · volatility {STDDEV_WEIGHT:+.0%}.")
+        if lineup_mode in ("Showdown", "Single Game"):
+            correlation_pct = st.slider(
+                "Game Correlation", 0, 100, 70, step=5,
+                help="Controls how strongly shared game conditions connect player outcomes.",
+                key="single_game_correlation_strength",
+            )
+            correlation_strength = correlation_pct / 100.0
+        else:
+            correlation_strength = 1.0
+        st.session_state["active_game_correlation_strength"] = correlation_strength
     with build_cols[2]:
         st.write("### Run")
         fd_run_all_clicked = st.button(
@@ -5009,6 +5006,16 @@ with build_cols[1]:
     MEAN_WEIGHT = 1.0 - P95_WEIGHT - P99_WEIGHT
     STDDEV_WEIGHT = 0.10 * (2.0 * aggressiveness - 1.0)
     st.caption(f"Build style: {aggressiveness_pct}% aggressive · P95 {P95_WEIGHT:.0%} · P99 {P99_WEIGHT:.0%} · average {MEAN_WEIGHT:.0%} · volatility {STDDEV_WEIGHT:+.0%}.")
+    if lineup_mode in ("Showdown", "Single Game"):
+        correlation_pct = st.slider(
+            "Game Correlation", 0, 100, 70, step=5,
+            help="Controls how strongly shared game conditions connect player outcomes.",
+            key="single_game_correlation_strength",
+        )
+        correlation_strength = correlation_pct / 100.0
+    else:
+        correlation_strength = 1.0
+    st.session_state["active_game_correlation_strength"] = correlation_strength
 with build_cols[2]:
     st.write("### Run")
     build_clicked = st.button(
