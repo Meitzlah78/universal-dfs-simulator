@@ -5406,6 +5406,8 @@ if build_clicked:
             [1.0 / ((player_rank_index.get(p, len(player_rank)) + 1) ** 0.70) for p in search_pool],
             dtype=float
         )
+        # Standard-deviation randomization adds variety to selection probabilities, not projections.
+        captain_weights *= rng.lognormal(mean=0.0, sigma=0.25, size=len(captain_weights))
         captain_weights /= captain_weights.sum()
         captain_candidate_limits = {
             p: max(1, int(round(CANDIDATE_COUNT * captain_weights[i])))
@@ -5448,6 +5450,8 @@ if build_clicked:
                 [1.0 / ((player_rank_index.get(p, len(player_rank)) + 1) ** 0.45) for p in flex_pool],
                 dtype=float
             )
+            # Standard-deviation randomization adds variety while preserving rank preference.
+            flex_rank_weights *= rng.lognormal(mean=0.0, sigma=0.25, size=len(flex_rank_weights))
             flex_rank_weights /= flex_rank_weights.sum()
 
             seen_flex_groups = set()
