@@ -3820,7 +3820,8 @@ else:
                 if selected_contest_entry_fee is not None and pd.notna(selected_contest_entry_fee)
                 else None
             ),
-            "field_size": None,
+            # Keep the user's field-size setting when contest details are refreshed.
+            "field_size": previous_selection.get("field_size"),
         }
         st.caption("Using contest details from your uploaded DraftKings entry CSV.")
     else:
@@ -6237,7 +6238,12 @@ if (
         win_probabilities = np.exp(
             -estimated_tail_probability * max(0, estimated_full_field_size - 1)
         )
-        batch_win = np.sum(win_probabilities, axis=0, dtype=np.float64)
+        # First place must be a subset of top-1% finishes. The smoothed tail
+        # estimate can otherwise produce an impossible Win % greater than Top 1%.
+        batch_win = np.minimum(
+            np.sum(win_probabilities, axis=0, dtype=np.float64),
+            np.sum(percentiles >= 0.99, axis=0, dtype=np.float64),
+        )
         batch_top1 = np.sum(percentiles >= 0.99, axis=0, dtype=np.float64)
         batch_top5 = np.sum(percentiles >= 0.95, axis=0, dtype=np.float64)
         batch_top10 = np.sum(percentiles >= 0.90, axis=0, dtype=np.float64)
@@ -6729,6 +6735,12 @@ if "contest_results_df" in st.session_state and not (platform == "DraftKings" an
     # Changing the sort option must reorder the existing pool, not select a new one.
     # This keeps the exact same lineups while letting the user inspect a different ranking.
     portfolio_df = st.session_state["portfolio_df"].copy()
+    # Keep saved/restored portfolio rows mathematically consistent too.
+    if "WinRate" in portfolio_df.columns and "Top1" in portfolio_df.columns:
+        portfolio_df["WinRate"] = np.minimum(
+            pd.to_numeric(portfolio_df["WinRate"], errors="coerce").fillna(0.0),
+            pd.to_numeric(portfolio_df["Top1"], errors="coerce").fillna(0.0),
+        )
     if portfolio_metric in portfolio_df.columns:
         portfolio_df = portfolio_df.sort_values(
             portfolio_metric, ascending=False, kind="stable"
