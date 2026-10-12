@@ -2523,6 +2523,9 @@ if platform == "FanDuel":
         # player-week history so simulations can still run.
         historical_game_factors = np.array([], dtype=float)
         pbp_history = load_nfl_pbp_game_history()
+        st.caption("Play-by-play history: " + st.session_state.get(
+            "nfl_pbp_history_status", "Status not available yet."
+        ))
         if not pbp_history.empty and "GamePoints" in pbp_history.columns:
             try:
                 game_totals = pd.to_numeric(pbp_history["GamePoints"], errors="coerce").dropna()
