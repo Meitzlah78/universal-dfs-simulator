@@ -2608,24 +2608,38 @@ if platform == "FanDuel":
                     team_a_leads = rng.random(n) < 0.5
                     a_leading = np.where(team_a_leads, margin, -margin)
                     b_leading = -a_leading
-                    # Model possession-changing turnovers for both teams.
+                    # Approximate drive/field-position effects alongside turnovers.
+                    # These are simulated game-environment factors, not a full
+                    # play-by-play drive engine yet.
                     team_giveaways = np.clip(rng.poisson(1.25, n), 0, 4)
                     opponent_giveaways = np.clip(rng.poisson(1.25, n), 0, 4)
-                    for side, lead_state, giveaways, forced in (
-                        (team, a_leading, team_giveaways, opponent_giveaways),
-                        (opponent, b_leading, opponent_giveaways, team_giveaways),
+                    team_short_fields = np.clip(rng.binomial(team_giveaways, 0.30), 0, 3)
+                    opponent_short_fields = np.clip(rng.binomial(opponent_giveaways, 0.30), 0, 3)
+                    team_red_zone_drives = rng.poisson(2.2, n)
+                    opponent_red_zone_drives = rng.poisson(2.2, n)
+                    team_long_field_drives = rng.poisson(2.0, n)
+                    opponent_long_field_drives = rng.poisson(2.0, n)
+                    for side, lead_state, giveaways, forced, short_fields, red_zone, long_fields in (
+                        (team, a_leading, team_giveaways, opponent_giveaways, team_short_fields, team_red_zone_drives, team_long_field_drives),
+                        (opponent, b_leading, opponent_giveaways, team_giveaways, opponent_short_fields, opponent_red_zone_drives, opponent_long_field_drives),
                     ):
                         base_scoring = np.clip(game_environment * rng.normal(1.0, 0.07, n), 0.70, 1.35)
-                        # Giveaways reduce the offense's scoring chances; the
-                        # opposing team gets a small, bounded short-field benefit.
-                        offense_turnover_factor = np.clip(1.0 - 0.045 * giveaways, 0.78, 1.0)
-                        short_field_factor = np.clip(1.0 + 0.025 * forced, 1.0, 1.10)
+                        # Giveaways hurt the offense; short fields help the team
+                        # receiving the extra possession. Red-zone drives improve
+                        # scoring chances, while long-field drives lower them.
+                        turnover_factor = np.clip(1.0 - 0.035 * giveaways, 0.82, 1.0)
+                        short_field_factor = np.clip(1.0 + 0.035 * short_fields, 1.0, 1.12)
+                        red_zone_factor = np.clip(1.0 + 0.025 * (red_zone - 2.2), 0.90, 1.12)
+                        long_field_factor = np.clip(1.0 - 0.018 * (long_fields - 2.0), 0.92, 1.08)
                         team_scripts[side] = {
-                            "scoring": np.clip(base_scoring * offense_turnover_factor * short_field_factor, 0.65, 1.40),
+                            "scoring": np.clip(base_scoring * turnover_factor * short_field_factor * red_zone_factor * long_field_factor, 0.65, 1.42),
                             "leading": lead_state > 0.35,
                             "trailing": lead_state < -0.35,
                             "giveaways": giveaways,
                             "opponent_giveaways": forced,
+                            "short_fields": short_fields,
+                            "red_zone_drives": red_zone,
+                            "long_field_drives": long_fields,
                         }
                     handled.add(team)
                     handled.add(opponent)
@@ -3045,24 +3059,38 @@ else:
                     team_a_leads = rng.random(n) < 0.5
                     a_leading = np.where(team_a_leads, margin, -margin)
                     b_leading = -a_leading
-                    # Model possession-changing turnovers for both teams.
+                    # Approximate drive/field-position effects alongside turnovers.
+                    # These are simulated game-environment factors, not a full
+                    # play-by-play drive engine yet.
                     team_giveaways = np.clip(rng.poisson(1.25, n), 0, 4)
                     opponent_giveaways = np.clip(rng.poisson(1.25, n), 0, 4)
-                    for side, lead_state, giveaways, forced in (
-                        (team, a_leading, team_giveaways, opponent_giveaways),
-                        (opponent, b_leading, opponent_giveaways, team_giveaways),
+                    team_short_fields = np.clip(rng.binomial(team_giveaways, 0.30), 0, 3)
+                    opponent_short_fields = np.clip(rng.binomial(opponent_giveaways, 0.30), 0, 3)
+                    team_red_zone_drives = rng.poisson(2.2, n)
+                    opponent_red_zone_drives = rng.poisson(2.2, n)
+                    team_long_field_drives = rng.poisson(2.0, n)
+                    opponent_long_field_drives = rng.poisson(2.0, n)
+                    for side, lead_state, giveaways, forced, short_fields, red_zone, long_fields in (
+                        (team, a_leading, team_giveaways, opponent_giveaways, team_short_fields, team_red_zone_drives, team_long_field_drives),
+                        (opponent, b_leading, opponent_giveaways, team_giveaways, opponent_short_fields, opponent_red_zone_drives, opponent_long_field_drives),
                     ):
                         base_scoring = np.clip(game_environment * rng.normal(1.0, 0.07, n), 0.70, 1.35)
-                        # Giveaways reduce the offense's scoring chances; the
-                        # opposing team gets a small, bounded short-field benefit.
-                        offense_turnover_factor = np.clip(1.0 - 0.045 * giveaways, 0.78, 1.0)
-                        short_field_factor = np.clip(1.0 + 0.025 * forced, 1.0, 1.10)
+                        # Giveaways hurt the offense; short fields help the team
+                        # receiving the extra possession. Red-zone drives improve
+                        # scoring chances, while long-field drives lower them.
+                        turnover_factor = np.clip(1.0 - 0.035 * giveaways, 0.82, 1.0)
+                        short_field_factor = np.clip(1.0 + 0.035 * short_fields, 1.0, 1.12)
+                        red_zone_factor = np.clip(1.0 + 0.025 * (red_zone - 2.2), 0.90, 1.12)
+                        long_field_factor = np.clip(1.0 - 0.018 * (long_fields - 2.0), 0.92, 1.08)
                         team_scripts[side] = {
-                            "scoring": np.clip(base_scoring * offense_turnover_factor * short_field_factor, 0.65, 1.40),
+                            "scoring": np.clip(base_scoring * turnover_factor * short_field_factor * red_zone_factor * long_field_factor, 0.65, 1.42),
                             "leading": lead_state > 0.35,
                             "trailing": lead_state < -0.35,
                             "giveaways": giveaways,
                             "opponent_giveaways": forced,
+                            "short_fields": short_fields,
+                            "red_zone_drives": red_zone,
+                            "long_field_drives": long_fields,
                         }
                     handled.add(team)
                     handled.add(opponent)
