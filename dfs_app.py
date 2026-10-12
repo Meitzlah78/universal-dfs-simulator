@@ -40,16 +40,23 @@ st.markdown(
     """
     <style>
     .st-key-sticky_projection_bar {
-        position: sticky !important;
-        top: 0 !important;
-        z-index: 999990 !important;
-        width: 100%;
-        padding: 0.55rem 1rem 0.25rem 1rem;
-        background: var(--background-color, #ffffff);
+        position: fixed !important;
+        top: 3.25rem !important;
+        left: 0 !important;
+        right: 0 !important;
+        z-index: 999999 !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+        padding: 0.45rem 1rem 0.35rem 1rem;
+        background: var(--background-color, #ffffff) !important;
         border: 1px solid #b8a45a;
-        border-radius: 0.25rem;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.12);
-        margin-bottom: 0.75rem;
+        border-radius: 0;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+        margin: 0 !important;
+    }
+    /* Keep the page content clear of the fixed reminder bar. */
+    section.main > div.block-container {
+        padding-top: 7rem !important;
     }
     .st-key-sticky_projection_bar [data-testid="stHorizontalBlock"] {
         align-items: center;
