@@ -2608,11 +2608,24 @@ if platform == "FanDuel":
                     team_a_leads = rng.random(n) < 0.5
                     a_leading = np.where(team_a_leads, margin, -margin)
                     b_leading = -a_leading
-                    for side, lead_state in ((team, a_leading), (opponent, b_leading)):
+                    # Model possession-changing turnovers for both teams.
+                    team_giveaways = np.clip(rng.poisson(1.25, n), 0, 4)
+                    opponent_giveaways = np.clip(rng.poisson(1.25, n), 0, 4)
+                    for side, lead_state, giveaways, forced in (
+                        (team, a_leading, team_giveaways, opponent_giveaways),
+                        (opponent, b_leading, opponent_giveaways, team_giveaways),
+                    ):
+                        base_scoring = np.clip(game_environment * rng.normal(1.0, 0.07, n), 0.70, 1.35)
+                        # Giveaways reduce the offense's scoring chances; the
+                        # opposing team gets a small, bounded short-field benefit.
+                        offense_turnover_factor = np.clip(1.0 - 0.045 * giveaways, 0.78, 1.0)
+                        short_field_factor = np.clip(1.0 + 0.025 * forced, 1.0, 1.10)
                         team_scripts[side] = {
-                            "scoring": np.clip(game_environment * rng.normal(1.0, 0.07, n), 0.70, 1.35),
+                            "scoring": np.clip(base_scoring * offense_turnover_factor * short_field_factor, 0.65, 1.40),
                             "leading": lead_state > 0.35,
                             "trailing": lead_state < -0.35,
+                            "giveaways": giveaways,
+                            "opponent_giveaways": forced,
                         }
                     handled.add(team)
                     handled.add(opponent)
@@ -2822,6 +2835,10 @@ if platform == "FanDuel":
 
             script_factor = np.clip(script_factor, 0.80, 1.20)
             final_scores = np.maximum(scores * script_factor, 0.0)
+            # Defenses benefit from turnovers by the opposing offense.
+            if position_type == "DST":
+                forced_turnovers = np.asarray(script.get("opponent_giveaways", np.zeros(n)), dtype=float)
+                final_scores = final_scores + np.minimum(forced_turnovers, 3.0) * 1.5
             # Limit extreme simulated outcomes without shifting the distribution
             # back to the projection. The projection sets a reasonable ceiling, but
             # historical results and game scripts determine the simulated average.
@@ -3028,11 +3045,24 @@ else:
                     team_a_leads = rng.random(n) < 0.5
                     a_leading = np.where(team_a_leads, margin, -margin)
                     b_leading = -a_leading
-                    for side, lead_state in ((team, a_leading), (opponent, b_leading)):
+                    # Model possession-changing turnovers for both teams.
+                    team_giveaways = np.clip(rng.poisson(1.25, n), 0, 4)
+                    opponent_giveaways = np.clip(rng.poisson(1.25, n), 0, 4)
+                    for side, lead_state, giveaways, forced in (
+                        (team, a_leading, team_giveaways, opponent_giveaways),
+                        (opponent, b_leading, opponent_giveaways, team_giveaways),
+                    ):
+                        base_scoring = np.clip(game_environment * rng.normal(1.0, 0.07, n), 0.70, 1.35)
+                        # Giveaways reduce the offense's scoring chances; the
+                        # opposing team gets a small, bounded short-field benefit.
+                        offense_turnover_factor = np.clip(1.0 - 0.045 * giveaways, 0.78, 1.0)
+                        short_field_factor = np.clip(1.0 + 0.025 * forced, 1.0, 1.10)
                         team_scripts[side] = {
-                            "scoring": np.clip(game_environment * rng.normal(1.0, 0.07, n), 0.70, 1.35),
+                            "scoring": np.clip(base_scoring * offense_turnover_factor * short_field_factor, 0.65, 1.40),
                             "leading": lead_state > 0.35,
                             "trailing": lead_state < -0.35,
+                            "giveaways": giveaways,
+                            "opponent_giveaways": forced,
                         }
                     handled.add(team)
                     handled.add(opponent)
@@ -3237,6 +3267,10 @@ else:
 
             script_factor = np.clip(script_factor, 0.80, 1.20)
             final_scores = np.maximum(scores * script_factor, 0.0)
+            # Defenses benefit from turnovers by the opposing offense.
+            if position_type == "DST":
+                forced_turnovers = np.asarray(script.get("opponent_giveaways", np.zeros(n)), dtype=float)
+                final_scores = final_scores + np.minimum(forced_turnovers, 3.0) * 1.5
             # Limit extreme simulated outcomes without shifting the distribution
             # back to the projection. The projection sets a reasonable ceiling, but
             # historical results and game scripts determine the simulated average.
