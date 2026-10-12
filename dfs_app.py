@@ -6562,6 +6562,15 @@ if "contest_results_df" in st.session_state and not (platform == "DraftKings" an
     if "Lineup Ownership Score (%)" in portfolio_df.columns:
         st.caption("Lineup Ownership Score is the sum of each player's simulated ownership in the contest field. Lower scores generally mean a less popular lineup; this is a score, not the chance the exact lineup appears.")
 
+    # Add the selected contest entry fee beside each lineup when available.
+    selected_contest_for_portfolio = st.session_state.get("selected_dk_contest", {})
+    _portfolio_entry_fee = pd.to_numeric(
+        selected_contest_for_portfolio.get("entry_fee"), errors="coerce"
+    )
+    if pd.notna(_portfolio_entry_fee) and float(_portfolio_entry_fee) >= 0:
+        portfolio_df["Entry Fee ($)"] = float(_portfolio_entry_fee)
+
+    _payout_columns = ["Expected Prize ($)", "Expected Net ($)", "Expected ROI (%)"]
     if classic_mode:
         # Show each Classic roster slot beside that player's simulated points,
         # matching the player-by-player layout used for Showdown.
@@ -6571,7 +6580,7 @@ if "contest_results_df" in st.session_state and not (platform == "DraftKings" an
         display_columns.extend([
             "Total Sim Pts", "Lineup Ownership Score (%)", "Salary",
             "ContestScore", "WinRate", "Top1", "Top5", "Top10", "CashRate",
-            "AvgPercentile", "Locked"
+            "AvgPercentile", "Entry Fee ($)", *_payout_columns, "Locked"
         ])
     else:
         display_columns = [
@@ -6580,7 +6589,7 @@ if "contest_results_df" in st.session_state and not (platform == "DraftKings" an
             "Flex4", "Flex4 Sim Pts", "Flex5", "Flex5 Sim Pts",
             "Total Sim Pts", "Lineup Ownership Score (%)", "Salary",
             "ContestScore", "WinRate", "Top1", "Top5", "Top10", "CashRate",
-            "AvgPercentile", "Locked"
+            "AvgPercentile", "Entry Fee ($)", *_payout_columns, "Locked"
         ]
 
     display_df = portfolio_df[
@@ -6678,7 +6687,8 @@ if "contest_results_df" in st.session_state and not (platform == "DraftKings" an
         "Flex2", "Flex2 Sim Pts", "Flex3", "Flex3 Sim Pts",
         "Flex4", "Flex4 Sim Pts", "Flex5", "Flex5 Sim Pts",
         "Salary", "Lineup Ownership Score (%)", "ContestScore", "WinRate", "Top1", "Top5",
-        "Top10", "CashRate"
+        "Top10", "CashRate", "Entry Fee ($)", "Expected Prize ($)", "Expected Net ($)",
+        "Expected ROI (%)"
     ]
     portfolio_df = remove_out_players_from_lineups(
         portfolio_df,
