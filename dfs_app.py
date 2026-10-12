@@ -2504,8 +2504,8 @@ if platform == "FanDuel":
     def _simulate_scored_player_outcomes(players_df, platform, rng):
         """Simulate player outcomes from historical distributions and shared game scripts.
 
-        Projections are deliberately not used to scale simulated scores. Game scripts
-        create shared game-level conditions so teammates and opponents move together.
+        Projections help set volatility and reasonable upper bounds, but do not force
+        simulated averages to equal the supplied projection.
         """
         simulation_progress = st.progress(0, text="Preparing player simulations...")
         historical = load_nfl_historical_player_stats()
@@ -2755,14 +2755,15 @@ if platform == "FanDuel":
                             (standardized - standardized_mean)
                             * (target_std / standardized_std)
                         )
-                    scores = projection + standardized
+                    # Preserve the historical/sample mean instead of forcing
+                    # simulated outcomes to average the supplied projection.
+                    scores = sampled_mean + standardized
                 else:
-                    scores = rng.normal(projection, target_std, size=n)
+                    # If the sampled history has no usable spread, retain its own
+                    # average and use the projection only to set the spread.
+                    scores = rng.normal(max(0.0, sampled_mean), target_std, size=n)
 
-                # Fantasy scores cannot be negative. Keep the minimum absolute
-                # volatility floor for low-projection players; multiplicative mean
-                # rescaling here would collapse their upside toward zero. The final
-                # shift-and-clip calibration below matches the projection instead.
+                # Fantasy scores cannot be negative.
                 scores = np.maximum(scores, 0.0)
             # Shared game script adjusts the sampled outcome modestly. Trailing teams
             # throw more; leading teams lean more on their running backs.
@@ -2784,38 +2785,16 @@ if platform == "FanDuel":
 
             script_factor = np.clip(script_factor, 0.80, 1.20)
             final_scores = np.maximum(scores * script_factor, 0.0)
-            # Keep the final upper tail controlled AFTER game-script effects.
-            # Use an upper limit of two target standard deviations above projection,
-            # then shift-and-clip (rather than multiply) so the final mean stays close
-            # to the supplied projection without scaling the capped tail back upward.
+            # Limit extreme simulated outcomes without shifting the distribution
+            # back to the projection. The projection sets a reasonable ceiling, but
+            # historical results and game scripts determine the simulated average.
             if np.isfinite(projection) and projection > 0:
-                final_mean = float(np.mean(final_scores)) if len(final_scores) else 0.0
-                if final_mean > 0 and np.isfinite(final_mean):
-                    upper_cap = max(3.0, projection * (1.0 + 2.0 * volatility_cv))
-                    raw_scores = np.asarray(final_scores, dtype=float)
-                    # Find an additive adjustment whose clipped outcomes average to
-                    # the projection. The cap remains in force after calibration.
-                    low_shift = -float(np.max(raw_scores)) - upper_cap
-                    high_shift = upper_cap
-                    for _ in range(50):
-                        mid_shift = (low_shift + high_shift) / 2.0
-                        adjusted_mean = float(np.mean(np.clip(
-                            raw_scores + mid_shift, 0.0, upper_cap
-                        )))
-                        if adjusted_mean < projection:
-                            low_shift = mid_shift
-                        else:
-                            high_shift = mid_shift
-                    final_scores = np.clip(
-                        raw_scores + (low_shift + high_shift) / 2.0,
-                        0.0,
-                        upper_cap,
-                    )
-                    # Record how often outcomes land on the final upper cap.
-                    cap_tolerance = max(0.01, upper_cap * 1e-6)
-                    cap_hit_percentages[name] = round(
-                        100.0 * float(np.mean(final_scores >= upper_cap - cap_tolerance)), 2
-                    )
+                upper_cap = max(3.0, projection * (1.0 + 2.0 * volatility_cv))
+                final_scores = np.minimum(final_scores, upper_cap)
+                cap_tolerance = max(0.01, upper_cap * 1e-6)
+                cap_hit_percentages[name] = round(
+                    100.0 * float(np.mean(final_scores >= upper_cap - cap_tolerance)), 2
+                )
             simulations[name] = final_scores
             if index == 0 or (index + 1) % 2 == 0 or index + 1 == total_players:
                 progress_value = 0.05 + 0.90 * (index + 1) / total_players
@@ -2916,8 +2895,8 @@ else:
     def _simulate_scored_player_outcomes(players_df, platform, rng):
         """Simulate player outcomes from historical distributions and shared game scripts.
 
-        Projections are deliberately not used to scale simulated scores. Game scripts
-        create shared game-level conditions so teammates and opponents move together.
+        Projections help set volatility and reasonable upper bounds, but do not force
+        simulated averages to equal the supplied projection.
         """
         simulation_progress = st.progress(0, text="Preparing player simulations...")
         historical = load_nfl_historical_player_stats()
@@ -3170,14 +3149,15 @@ else:
                             (standardized - standardized_mean)
                             * (target_std / standardized_std)
                         )
-                    scores = projection + standardized
+                    # Preserve the historical/sample mean instead of forcing
+                    # simulated outcomes to average the supplied projection.
+                    scores = sampled_mean + standardized
                 else:
-                    scores = rng.normal(projection, target_std, size=n)
+                    # If the sampled history has no usable spread, retain its own
+                    # average and use the projection only to set the spread.
+                    scores = rng.normal(max(0.0, sampled_mean), target_std, size=n)
 
-                # Fantasy scores cannot be negative. Keep the minimum absolute
-                # volatility floor for low-projection players; multiplicative mean
-                # rescaling here would collapse their upside toward zero. The final
-                # shift-and-clip calibration below matches the projection instead.
+                # Fantasy scores cannot be negative.
                 scores = np.maximum(scores, 0.0)
             # Shared game script adjusts the sampled outcome modestly. Trailing teams
             # throw more; leading teams lean more on their running backs.
@@ -3199,38 +3179,16 @@ else:
 
             script_factor = np.clip(script_factor, 0.80, 1.20)
             final_scores = np.maximum(scores * script_factor, 0.0)
-            # Keep the final upper tail controlled AFTER game-script effects.
-            # Use an upper limit of two target standard deviations above projection,
-            # then shift-and-clip (rather than multiply) so the final mean stays close
-            # to the supplied projection without scaling the capped tail back upward.
+            # Limit extreme simulated outcomes without shifting the distribution
+            # back to the projection. The projection sets a reasonable ceiling, but
+            # historical results and game scripts determine the simulated average.
             if np.isfinite(projection) and projection > 0:
-                final_mean = float(np.mean(final_scores)) if len(final_scores) else 0.0
-                if final_mean > 0 and np.isfinite(final_mean):
-                    upper_cap = max(3.0, projection * (1.0 + 2.0 * volatility_cv))
-                    raw_scores = np.asarray(final_scores, dtype=float)
-                    # Find an additive adjustment whose clipped outcomes average to
-                    # the projection. The cap remains in force after calibration.
-                    low_shift = -float(np.max(raw_scores)) - upper_cap
-                    high_shift = upper_cap
-                    for _ in range(50):
-                        mid_shift = (low_shift + high_shift) / 2.0
-                        adjusted_mean = float(np.mean(np.clip(
-                            raw_scores + mid_shift, 0.0, upper_cap
-                        )))
-                        if adjusted_mean < projection:
-                            low_shift = mid_shift
-                        else:
-                            high_shift = mid_shift
-                    final_scores = np.clip(
-                        raw_scores + (low_shift + high_shift) / 2.0,
-                        0.0,
-                        upper_cap,
-                    )
-                    # Record how often outcomes land on the final upper cap.
-                    cap_tolerance = max(0.01, upper_cap * 1e-6)
-                    cap_hit_percentages[name] = round(
-                        100.0 * float(np.mean(final_scores >= upper_cap - cap_tolerance)), 2
-                    )
+                upper_cap = max(3.0, projection * (1.0 + 2.0 * volatility_cv))
+                final_scores = np.minimum(final_scores, upper_cap)
+                cap_tolerance = max(0.01, upper_cap * 1e-6)
+                cap_hit_percentages[name] = round(
+                    100.0 * float(np.mean(final_scores >= upper_cap - cap_tolerance)), 2
+                )
             simulations[name] = final_scores
             if index == 0 or (index + 1) % 2 == 0 or index + 1 == total_players:
                 progress_value = 0.05 + 0.90 * (index + 1) / total_players
