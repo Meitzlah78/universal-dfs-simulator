@@ -4935,6 +4935,10 @@ if build_clicked:
     st.session_state["simulation_df"] = simulation_df
     st.session_state["simulations_ready"] = True
 
+    # Advance the visible status immediately so any later failure is not
+    # mistaken for player simulations being the final step.
+    workflow_status.info("Step 2 of 4: Preparing rankings and building your candidate lineups...")
+
     # Refresh rankings with the simulations created by this BUILD click.
     player_sim = {}
     for player in players_df["Name"]:
@@ -4982,9 +4986,6 @@ rng.shuffle(search_pool)
 # ============================================
 # CANDIDATE SETTINGS
 # ============================================
-
-if build_clicked:
-    workflow_status.info("Step 2 of 4: Building your candidate lineups...")
 
 LINEUP_COUNT = 5000
 CANDIDATE_COUNT = 5000
