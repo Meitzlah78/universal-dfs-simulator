@@ -5908,21 +5908,7 @@ if build_clicked:
 
 
 
-# Keep opponent ownership available after reruns without crowding the main workflow.
-_saved_contest_field = st.session_state.get("contest_field_df")
-if isinstance(_saved_contest_field, pd.DataFrame) and not _saved_contest_field.empty:
-    with st.expander("Simulated Opponent Ownership", expanded=False):
-        st.caption(
-            f"Based on {len(_saved_contest_field):,} simulated opponent lineups. "
-            "These percentages describe the simulated field, not your lineups."
-        )
-        show_field_ownership(
-            _saved_contest_field,
-            ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"],
-            "Simulated Field Player Ownership",
-            captain_slot="Captain",
-        )
-
+# Simulated field ownership is displayed in the Player Pool table, so do not render a duplicate table here.
 
 with st.expander("Contest Payout Structure", expanded=False):
     st.caption(
