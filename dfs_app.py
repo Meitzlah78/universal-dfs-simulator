@@ -7125,37 +7125,7 @@ if "contest_results_df" in st.session_state and not (platform == "DraftKings" an
         hide_index=True
     )
 
-    # Show realized exposure in the final portfolio after Contest Sim.
-    lineup_columns = [col for col in portfolio_lineup_columns if col in portfolio_df.columns]
-    captain_count = (
-        portfolio_df["Captain"].value_counts()
-        if "Captain" in portfolio_df.columns else pd.Series(dtype=int)
-    )
-    total_lineups = len(portfolio_df)
-    exposure_rows = []
-    if total_lineups and lineup_columns:
-        # Count portfolio appearances in one pass rather than repeatedly scanning
-        # the portfolio once for every player in the full player pool.
-        flat_portfolio_names = portfolio_df[lineup_columns].astype(str).to_numpy().ravel()
-        appearance_counts = pd.Series(flat_portfolio_names).value_counts().to_dict()
-        player_lookup = players_df.drop_duplicates("Name").set_index("Name", drop=False)
-        for player_name, appearances in appearance_counts.items():
-            if player_name not in player_lookup.index:
-                continue
-            player_row = player_lookup.loc[player_name]
-            captain_appearances = int(captain_count.get(player_name, 0))
-            exposure_rows.append({
-                "Player": player_name,
-                "Team": player_row.get("Team", ""),
-                "Position": player_row.get("Position", ""),
-                "Lineups": int(appearances),
-                "Exposure %": round(100 * appearances / total_lineups, 1),
-                "Captain Lineups": captain_appearances,
-                "Captain %": round(100 * captain_appearances / total_lineups, 1)
-            })
-
-    # Final portfolio exposure is already shown in the Player Pool table.
-    # Keep the computed data available internally, but do not render a duplicate table.
+    # Final portfolio exposure is shown in the Player Pool table, so no separate table is built here.
 
     export_columns = [
         "Captain", "Captain Sim Pts", "Flex1", "Flex1 Sim Pts",
