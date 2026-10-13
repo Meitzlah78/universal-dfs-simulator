@@ -4051,6 +4051,7 @@ else:
             st.error(f"Could not read that CSV: {exc}. The sample player pool is still being used.")
 
     @st.cache_data(show_spinner=False, ttl=86400)
+    @st.cache_data(show_spinner=False, ttl=86400)
     def _download_nfl_historical_player_stats():
         """Download historical NFL stats once per cache period, with a network timeout."""
         import io
