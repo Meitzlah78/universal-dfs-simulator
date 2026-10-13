@@ -10,6 +10,7 @@ on:
       - '.github/scripts/remove_dead_duplicate_sim_engine.py'
       - '.github/scripts/use_local_pbp_archive.py'
       - '.github/scripts/fix_dk_contest_field_size.py'
+      - '.github/scripts/harden_dk_replacement_export.py'
       - '.github/workflows/apply-postgame-learning.yml'
 
 permissions:
@@ -45,6 +46,9 @@ jobs:
       - name: Correct DraftKings pregame contest field size
         run: python .github/scripts/fix_dk_contest_field_size.py
 
+      - name: Harden DraftKings reserved-entry replacement export
+        run: python .github/scripts/harden_dk_replacement_export.py
+
       - name: Syntax check
         run: python -m py_compile dfs_app.py
 
@@ -57,5 +61,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add dfs_app.py
-          git commit -m "Correct DraftKings contest simulation field size [skip ci]"
+          git commit -m "Harden DraftKings replacement export [skip ci]"
           git push origin HEAD:feature/salary-csv-upload
