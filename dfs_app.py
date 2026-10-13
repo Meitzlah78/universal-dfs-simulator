@@ -3626,6 +3626,34 @@ if platform == "FanDuel":
                 fd_pool, fd_pool["Projection"].to_numpy(dtype=float)
             )
             fd_weights = fd_weights / fd_weights.sum() if fd_weights.sum() else np.full(len(fd_pool), 1 / max(len(fd_pool), 1))
+
+            # FanDuel Single Game role weights: MVP and FLEX are modeled separately.
+            # This mirrors the DraftKings Showdown approach: overall ownership drives
+            # field selection, while special-role ownership drives the MVP/CPT slot.
+            fd_role_lookup = {str(c).strip().casefold(): c for c in fd_pool.columns}
+            fd_mvp_col = next((fd_role_lookup[k] for k in (
+                "field mvp own %", "mvp ownership %", "projected mvp ownership",
+                "captain/mvp ownership %", "mvp own %"
+            ) if k in fd_role_lookup), None)
+            fd_flex_col = next((fd_role_lookup[k] for k in (
+                "field flex own %", "flex ownership %", "projected flex ownership",
+                "flex own %"
+            ) if k in fd_role_lookup), None)
+
+            if fd_mvp_col is not None:
+                fd_mvp_weights = pd.to_numeric(fd_pool[fd_mvp_col], errors="coerce").fillna(0.0).to_numpy(dtype=float)
+                if fd_mvp_weights.sum() <= 0:
+                    fd_mvp_weights = fd_weights.copy()
+            else:
+                fd_mvp_weights = fd_weights.copy()
+
+            if fd_flex_col is not None:
+                fd_flex_weights = pd.to_numeric(fd_pool[fd_flex_col], errors="coerce").fillna(0.0).to_numpy(dtype=float)
+                if fd_flex_weights.sum() <= 0:
+                    fd_flex_weights = fd_weights.copy()
+            else:
+                fd_flex_weights = fd_weights.copy()
+
             rng = np.random.default_rng(123)
             opponent_rows = []
             seen_opponents = set()
@@ -3663,7 +3691,8 @@ if platform == "FanDuel":
                             ]
                             if mvp_candidates.empty:
                                 break
-                            mvp_weights = mvp_candidates["Projection"].to_numpy(dtype=float)
+                            mvp_candidate_indices = mvp_candidates.index.to_numpy(dtype=int)
+                            mvp_weights = np.clip(fd_mvp_weights[mvp_candidate_indices].astype(float), 0.01, None)
                             mvp_weights = mvp_weights / mvp_weights.sum()
                             mvp_row = mvp_candidates.iloc[int(rng.choice(len(mvp_candidates), p=mvp_weights))]
                             mvp = str(mvp_row["Name"])
@@ -3680,7 +3709,7 @@ if platform == "FanDuel":
                                 if choices.empty:
                                     break
                                 choice_indices = choices.index.to_numpy(dtype=int)
-                                weights = fd_weights[choice_indices].astype(float)
+                                weights = fd_flex_weights[choice_indices].astype(float)
                                 weights = weights / weights.sum() if weights.sum() else np.full(len(choices), 1.0 / len(choices))
                                 picked = choices.iloc[int(rng.choice(len(choices), p=weights))]
                                 name = str(picked["Name"])
