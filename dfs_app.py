@@ -7308,7 +7308,7 @@ with st.expander("SIMMAH ROI Tracker", expanded=False):
                 except Exception as exc:
                     st.error(f"Could not load that history file: {exc}")
 
-    with st.expander("Record a completed contest", expanded=True):
+    with st.expander("Record a completed contest", expanded=False):
         with st.form("roi_record_contest_form", clear_on_submit=True):
             roi_date = st.text_input(
                 "Contest date (YYYY-MM-DD)",
