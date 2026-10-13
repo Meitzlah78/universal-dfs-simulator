@@ -596,16 +596,39 @@ def build_dk_contest_entry_export(entry_df, selected_contest_id, lineup_ids_df, 
     if lineup_ids_df is None or lineup_ids_df.empty:
         st.error("There are no lineups available to export.")
         return None
+    # A replacement export must cover every reserved entry in the selected contest.
+    # Never emit a partial file: any omitted Entry ID would keep its old lineup on DraftKings.
+    entry_ids = entries["Entry ID"].fillna("").astype(str).str.replace(r"\.0$", "", regex=True).str.strip()
+    invalid_entry_ids = entry_ids.eq("") | entry_ids.str.casefold().eq("nan")
+    if invalid_entry_ids.any():
+        st.error(
+            "The selected DraftKings contest contains one or more blank Entry IDs. "
+            "Re-download the original contest entry CSV before exporting replacements."
+        )
+        return None
+    if entry_ids.duplicated().any():
+        st.error(
+            "The selected DraftKings contest contains duplicate Entry IDs. "
+            "Re-download the original contest entry CSV before exporting replacements."
+        )
+        return None
+
     entry_count = len(entries)
     lineup_count = len(lineup_ids_df)
     if lineup_count < entry_count:
-        st.warning(
-            f"You have {entry_count} entries in this contest but only {lineup_count} lineups. "
-            f"Only {lineup_count} existing entries will be updated; build at least {entry_count} lineups to fill them all."
+        st.error(
+            f"Replacement export blocked: this contest has {entry_count} reserved entries but only "
+            f"{lineup_count} new lineups are available. Build at least {entry_count} new lineups so "
+            "every reserved Entry ID is overwritten. No partial replacement file was created."
         )
-    count = min(entry_count, lineup_count)
-    export_df = entries.iloc[:count].copy().reset_index(drop=True)
-    ids = lineup_ids_df.iloc[:count].reset_index(drop=True)
+        return None
+
+    # Export exactly one row per reserved Entry ID for this contest. Extra generated
+    # lineups are ignored; no old roster rows or unrelated contest rows are appended.
+    count = entry_count
+    export_df = entries.copy().reset_index(drop=True)
+    export_df["Entry ID"] = entry_ids.reset_index(drop=True)
+    ids = lineup_ids_df.iloc[:entry_count].reset_index(drop=True)
 
     # DraftKings contest-entry replacement CSVs use "Player Name (PlayerID)"
     # in roster cells, not the bare numeric IDs used by the basic lineup upload.
