@@ -212,5 +212,60 @@ replace_once(
 "FD missing upload message",
 )
 
+# Clearly explain when the slate loaded before DFF/DraftEdge have posted projections.
+replace_once(
+'''    fd_players = apply_external_projection_sources(fd_players, fd_dff_projection_file, fd_draftedge_projection_file, platform_name=("FanDuel Single Game" if lineup_mode == "Single Game" else "FanDuel Full Roster"))
+    fd_players = exclude_zero_projection_players(fd_players, "FanDuel " + lineup_mode)
+''',
+'''    fd_players = apply_external_projection_sources(fd_players, fd_dff_projection_file, fd_draftedge_projection_file, platform_name=("FanDuel Single Game" if lineup_mode == "Single Game" else "FanDuel Full Roster"))
+    fd_valid_projection_count = int(pd.to_numeric(fd_players.get("Projection"), errors="coerce").gt(0).sum())
+    if fd_valid_projection_count == 0 and not fd_players.empty:
+        st.warning(
+            "Players loaded successfully, but DFF/DraftEdge projections are not available for this slate yet. "
+            "Click REFRESH PROJECTIONS + INJURY NEWS later after projections are posted."
+        )
+    elif fd_valid_projection_count < len(fd_players):
+        st.info(
+            f"Players loaded successfully. Projections are available for {fd_valid_projection_count} of {len(fd_players)} players; "
+            "players without a posted external projection will stay out of builds until a refresh finds one."
+        )
+    fd_players = exclude_zero_projection_players(fd_players, "FanDuel " + lineup_mode)
+''',
+"FD projection availability message",
+)
+
+replace_once(
+'''    players_df = apply_external_projection_sources(
+        players_df,
+        dff_projection_file,
+        draftedge_projection_file,
+        platform_name=("DraftKings Showdown" if lineup_mode == "Showdown" else "DraftKings Classic"),
+    )
+
+    def internal_slate_key(frame):
+''',
+'''    players_df = apply_external_projection_sources(
+        players_df,
+        dff_projection_file,
+        draftedge_projection_file,
+        platform_name=("DraftKings Showdown" if lineup_mode == "Showdown" else "DraftKings Classic"),
+    )
+    dk_valid_projection_count = int(pd.to_numeric(players_df.get("Projection"), errors="coerce").gt(0).sum())
+    if dk_valid_projection_count == 0 and not players_df.empty:
+        st.warning(
+            "Players loaded successfully, but DFF/DraftEdge projections are not available for this slate yet. "
+            "Click REFRESH PROJECTIONS + INJURY NEWS later after projections are posted."
+        )
+    elif dk_valid_projection_count < len(players_df):
+        st.info(
+            f"Players loaded successfully. Projections are available for {dk_valid_projection_count} of {len(players_df)} players; "
+            "players without a posted external projection will stay out of builds until a refresh finds one."
+        )
+
+    def internal_slate_key(frame):
+''',
+"DK projection availability message",
+)
+
 APP.write_text(text, encoding="utf-8")
 print("Patched one-upload slate setup")
