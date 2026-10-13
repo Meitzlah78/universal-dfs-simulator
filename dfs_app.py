@@ -2674,12 +2674,24 @@ if platform == "FanDuel":
         ))
         if not pbp_history.empty and "GamePoints" in pbp_history.columns:
             try:
-                game_totals = pd.to_numeric(pbp_history["GamePoints"], errors="coerce").dropna()
-                game_totals = game_totals[game_totals > 0].to_numpy(dtype=float)
-                if len(game_totals) >= 20:
-                    center = float(np.median(game_totals))
-                    if np.isfinite(center) and center > 0:
-                        historical_game_factors = np.clip(game_totals / center, 0.75, 1.25)
+                valid_games = pbp_history.copy()
+                valid_games["GamePoints"] = pd.to_numeric(valid_games["GamePoints"], errors="coerce")
+                valid_games = valid_games[valid_games["GamePoints"] > 0]
+                score_factors = valid_games["GamePoints"].to_numpy(dtype=float)
+                score_center = float(np.median(score_factors)) if len(score_factors) else 0.0
+                if len(valid_games) >= 20 and np.isfinite(score_center) and score_center > 0:
+                    score_factors = score_factors / score_center
+                    if "GamePlays" in valid_games.columns:
+                        play_counts = pd.to_numeric(valid_games["GamePlays"], errors="coerce")
+                        play_center = float(play_counts.median())
+                        if np.isfinite(play_center) and play_center > 0:
+                            pace_factors = play_counts.fillna(play_center).to_numpy(dtype=float) / play_center
+                            combined = 0.70 * score_factors + 0.30 * pace_factors
+                            historical_game_factors = np.clip(combined, 0.75, 1.25)
+                        else:
+                            historical_game_factors = np.clip(score_factors, 0.75, 1.25)
+                    else:
+                        historical_game_factors = np.clip(score_factors, 0.75, 1.25)
             except Exception:
                 historical_game_factors = np.array([], dtype=float)
 
@@ -4087,8 +4099,8 @@ else:
         # Use recent historical seasons for game-environment calibration.
         # Streamlit caches the completed result for 24 hours to avoid repeat downloads.
         wanted_columns = {
-            "season", "game_id", "play_id", "total_home_score", "total_away_score",
-            "game_seconds_remaining", "qtr"
+            "season", "game_id", "play_id", "play_type", "total_home_score",
+            "total_away_score", "game_seconds_remaining", "qtr"
         }
         for season in range(2020, 2027):
             url = f"https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_{season}.csv"
@@ -4119,14 +4131,27 @@ else:
                     .copy()
                 )
                 final_scores["GamePoints"] = final_scores["_home_score"] + final_scores["_away_score"]
-                final_scores = final_scores[["season", "game_id", "GamePoints"]]
+                # Summarize real play volume by game so the simulator can learn
+                # from both scoring environment and pace, not just final scores.
+                play_counts = frame.groupby("game_id").agg(
+                    GamePlays=("play_id", "count"),
+                    PassPlays=("play_type", lambda values: values.astype(str).str.lower().eq("pass").sum()),
+                    RunPlays=("play_type", lambda values: values.astype(str).str.lower().eq("run").sum()),
+                ).reset_index()
+                final_scores = final_scores.merge(play_counts, on="game_id", how="left")
+                final_scores[["GamePlays", "PassPlays", "RunPlays"]] = (
+                    final_scores[["GamePlays", "PassPlays", "RunPlays"]].fillna(0)
+                )
+                final_scores = final_scores[
+                    ["season", "game_id", "GamePoints", "GamePlays", "PassPlays", "RunPlays"]
+                ]
                 if not final_scores.empty:
                     frames.append(final_scores)
                     loaded_seasons.append(season)
             except Exception as exc:
                 errors.append(f"{season}: {str(exc)[:120]}")
         history = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame(
-            columns=["season", "game_id", "GamePoints"]
+            columns=["season", "game_id", "GamePoints", "GamePlays", "PassPlays", "RunPlays"]
         )
         if not history.empty:
             history = history.drop_duplicates(subset=["game_id"], keep="last").reset_index(drop=True)
