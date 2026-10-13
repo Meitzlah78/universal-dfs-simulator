@@ -3207,12 +3207,24 @@ else:
         historical_game_factors = np.array([], dtype=float)
         if not pbp_history.empty and "GamePoints" in pbp_history.columns:
             try:
-                game_totals = pd.to_numeric(pbp_history["GamePoints"], errors="coerce").dropna()
-                game_totals = game_totals[game_totals > 0].to_numpy(dtype=float)
-                if len(game_totals) >= 20:
-                    center = float(np.median(game_totals))
-                    if np.isfinite(center) and center > 0:
-                        historical_game_factors = np.clip(game_totals / center, 0.75, 1.25)
+                valid_games = pbp_history.copy()
+                valid_games["GamePoints"] = pd.to_numeric(valid_games["GamePoints"], errors="coerce")
+                valid_games = valid_games[valid_games["GamePoints"] > 0]
+                score_factors = valid_games["GamePoints"].to_numpy(dtype=float)
+                score_center = float(np.median(score_factors)) if len(score_factors) else 0.0
+                if len(valid_games) >= 20 and np.isfinite(score_center) and score_center > 0:
+                    score_factors = score_factors / score_center
+                    if "GamePlays" in valid_games.columns:
+                        play_counts = pd.to_numeric(valid_games["GamePlays"], errors="coerce")
+                        play_center = float(play_counts.median())
+                        if np.isfinite(play_center) and play_center > 0:
+                            pace_factors = play_counts.fillna(play_center).to_numpy(dtype=float) / play_center
+                            combined = 0.70 * score_factors + 0.30 * pace_factors
+                            historical_game_factors = np.clip(combined, 0.75, 1.25)
+                        else:
+                            historical_game_factors = np.clip(score_factors, 0.75, 1.25)
+                    else:
+                        historical_game_factors = np.clip(score_factors, 0.75, 1.25)
             except Exception:
                 historical_game_factors = np.array([], dtype=float)
 
