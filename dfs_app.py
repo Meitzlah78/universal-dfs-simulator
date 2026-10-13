@@ -4065,7 +4065,7 @@ else:
         # seasons still load. Streamlit caches the result for 24 hours.
         # Short per-request timeouts ensure unavailable data falls back promptly.
         for season in [2026, 2025, 2024, 2023]:
-            url = f"https://github.com/nflverse/nflverse-data/releases/download/player_stats/stats_player_week_{season}.csv"
+            url = f"https://github.com/nflverse/nflverse-data/releases/download/stats_player/stats_player_week_{season}.csv"
             try:
                 response = requests.get(url, timeout=(4, 10))
                 response.raise_for_status()
