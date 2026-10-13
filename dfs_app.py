@@ -1239,6 +1239,28 @@ def automatic_projection_refresh(platform_name):
     st.session_state["automatic_projection_snapshot_previous"] = current_snapshot
     st.session_state["automatic_projection_refresh_time"] = now
     st.session_state["automatic_projection_refresh_status"] = status
+
+    # This function runs as a Streamlit fragment every 30 minutes, so update the
+    # button styling here too when new projection or injury data is detected.
+    if st.session_state.get("projection_updates_found") or st.session_state.get("injury_updates_found"):
+        st.markdown(
+            """
+            <style>
+            .st-key-sticky_projection_bar button {
+                background-color: #d62828 !important;
+                border-color: #d62828 !important;
+                color: #ffffff !important;
+            }
+            .st-key-sticky_projection_bar button:hover {
+                background-color: #b71c1c !important;
+                border-color: #b71c1c !important;
+                color: #ffffff !important;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True,
+        )
+
     successful = [name for name, loaded in status.items() if loaded]
     if successful:
         st.caption("Automatic projection check: " + ", ".join(successful) + ". Last checked: " + now)
