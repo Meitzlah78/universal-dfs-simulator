@@ -2011,6 +2011,7 @@ if st.session_state.get("projection_updates_found") or st.session_state.get("inj
 st.session_state["dfs_platform"] = platform
 st.session_state["lineup_mode_" + platform] = lineup_mode
 st.subheader(selected_format)
+st.caption("Workflow: Slate Setup → Contest → Player Pool → Build Settings → SIM → BUILD → CONTEST SIM → Results / Export")
 
 # Initialize from the saved slider value; the control itself appears beside SIM.
 aggressiveness = float(st.session_state.get(f"lineup_build_aggressiveness_{platform}_{lineup_mode}", 100 if ((platform == "DraftKings" and lineup_mode == "Showdown") or (platform == "FanDuel" and lineup_mode == "Single Game")) else 50)) / 100.0
@@ -2290,10 +2291,155 @@ if platform == "FanDuel":
             ).any() for col in lineup_columns if col in saved_lineups.columns):
                 st.session_state["fd_saved_builds"].pop(saved_key, None)
 
+    st.divider()
+    st.write("### Player Pool — Stats, Simulation, Exposure & Controls")
+    st.success(f"Loaded {len(fd_players)} FanDuel players after injury-status filtering.")
+    if fd_proj_col is None:
+        st.caption(
+            "FanDuel salary-file averages are ignored. Check ProjectionSource "
+            "in the player table to see whether DFF or DraftEdge matched. "
+            "Players without a valid positive external projection are excluded."
+        )
+    fd_player_display = fd_players.drop(columns=["FD_ID"], errors="ignore").copy()
+    # Show exposure from the active FanDuel slate only.
+    fd_build_key = "fd_lineups_" + lineup_mode.replace(" ", "_").lower()
+    fd_current_lineups = st.session_state.get(fd_build_key)
+    if isinstance(fd_current_lineups, pd.DataFrame) and not fd_current_lineups.empty:
+        fd_total = len(fd_current_lineups)
+        fd_slot_columns = [
+            c for c in fd_current_lineups.columns
+            if c.upper() in {"MVP", "FLEX", "FLEX1", "FLEX2", "FLEX3", "FLEX4", "FLEX5", "QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "D"}
+        ]
+        player_names = fd_player_display["Name"].astype(str).str.strip()
+        fd_player_display["Exposure %"] = player_names.map(
+            lambda name: round(100 * sum(
+                fd_current_lineups[c].astype(str).str.strip().eq(name).sum()
+                for c in fd_slot_columns
+            ) / fd_total, 1)
+        )
+        if lineup_mode == "Single Game":
+            mvp_column = next((c for c in fd_current_lineups.columns if c.upper() == "MVP"), None)
+            flex_columns = [c for c in fd_current_lineups.columns if c.upper().startswith("FLEX")]
+            if mvp_column:
+                fd_player_display["MVP Exp %"] = player_names.map(
+                    lambda name: round(100 * fd_current_lineups[mvp_column].astype(str).str.strip().eq(name).sum() / fd_total, 1)
+                )
+            else:
+                fd_player_display["MVP Exp %"] = 0.0
+            if flex_columns:
+                flex_appearances = (
+                    fd_current_lineups[flex_columns]
+                    .astype(str)
+                    .apply(lambda row: pd.unique(row.str.strip()).tolist(), axis=1)
+                    .explode()
+                    .value_counts()
+                )
+                fd_player_display["Flex Exp %"] = player_names.map(
+                    lambda name: round(100 * flex_appearances.get(name, 0) / fd_total, 1)
+                )
+            else:
+                fd_player_display["Flex Exp %"] = 0.0
+        else:
+            fd_player_display = fd_player_display.drop(
+                columns=["MVP Exp %", "Flex Exp %"], errors="ignore"
+            )
+    else:
+        fd_player_display["Exposure %"] = np.nan
+        if lineup_mode == "Single Game":
+            fd_player_display["MVP Exp %"] = np.nan
+            fd_player_display["Flex Exp %"] = np.nan
+        else:
+            fd_player_display = fd_player_display.drop(
+                columns=["MVP Exp %", "Flex Exp %"], errors="ignore"
+            )
+
+    # Put simulated field ownership directly in the visible FanDuel Player Pool.
+    fd_ownership_by_format = st.session_state.get("latest_field_ownership_by_format", {})
+    fd_visible_field = fd_ownership_by_format.get(selected_format) if isinstance(fd_ownership_by_format, dict) else None
+    if isinstance(fd_visible_field, pd.DataFrame) and not fd_visible_field.empty and "Name" in fd_visible_field.columns:
+        fd_names_for_field = fd_player_display["Name"].astype(str).str.strip()
+        fd_overall_map = dict(zip(
+            fd_visible_field["Name"].astype(str).str.strip(),
+            pd.to_numeric(fd_visible_field.get("Ownership %"), errors="coerce")
+        ))
+        fd_overall = fd_names_for_field.map(fd_overall_map)
+        if lineup_mode == "Single Game":
+            if "Captain/MVP Ownership %" in fd_visible_field.columns:
+                fd_mvp_map = dict(zip(
+                    fd_visible_field["Name"].astype(str).str.strip(),
+                    pd.to_numeric(fd_visible_field["Captain/MVP Ownership %"], errors="coerce")
+                ))
+                fd_mvp = fd_names_for_field.map(fd_mvp_map).fillna(0.0)
+            else:
+                fd_mvp = pd.Series(0.0, index=fd_player_display.index)
+            fd_player_display["Field MVP Own %"] = fd_mvp.round(1)
+            fd_player_display["Field FLEX Own %"] = (fd_overall.fillna(0.0) - fd_mvp).clip(lower=0.0).round(1)
+            fd_player_display = fd_player_display.drop(columns=["Field Own %"], errors="ignore")
+        else:
+            fd_player_display["Field Own %"] = fd_overall.round(1)
+            fd_player_display = fd_player_display.drop(columns=["Field MVP Own %", "Field FLEX Own %"], errors="ignore")
+    else:
+        if lineup_mode == "Single Game":
+            fd_player_display["Field MVP Own %"] = np.nan
+            fd_player_display["Field FLEX Own %"] = np.nan
+            fd_player_display = fd_player_display.drop(columns=["Field Own %"], errors="ignore")
+        else:
+            fd_player_display["Field Own %"] = np.nan
+            fd_player_display = fd_player_display.drop(columns=["Field MVP Own %", "Field FLEX Own %"], errors="ignore")
+
+    fd_snapshot_display = fd_player_display.copy()
+    for sim_key, sim_label in [
+        ("Mean", "Sim Pts"), ("P10", "Sim P10"), ("P25", "Sim P25"),
+        ("P50", "Sim P50"), ("P75", "Sim P75"), ("P90", "Sim P90"),
+        ("P95", "Sim P95"), ("P99", "Sim P99"),
+    ]:
+        fd_snapshot_display[sim_label] = fd_snapshot_display["Name"].astype(str).map(
+            lambda name, key=sim_key: pd.to_numeric(player_sim.get(str(name), {}).get(key), errors="coerce")
+        )
+    ownership_by_format = st.session_state.get("latest_field_ownership_by_format", {})
+    fd_field_ownership = ownership_by_format.get(selected_format) if isinstance(ownership_by_format, dict) else None
+    if isinstance(fd_field_ownership, pd.DataFrame) and not fd_field_ownership.empty:
+        own_map = dict(zip(
+            fd_field_ownership["Name"].astype(str).str.strip(),
+            pd.to_numeric(fd_field_ownership["Ownership %"], errors="coerce"),
+        ))
+        fd_snapshot_display["Field Own %"] = fd_snapshot_display["Name"].astype(str).str.strip().map(own_map)
+        if "Captain/MVP Ownership %" in fd_field_ownership.columns:
+            mvp_map = dict(zip(
+                fd_field_ownership["Name"].astype(str).str.strip(),
+                pd.to_numeric(fd_field_ownership["Captain/MVP Ownership %"], errors="coerce"),
+            ))
+            fd_snapshot_display["Field MVP Own %"] = fd_snapshot_display["Name"].astype(str).str.strip().map(mvp_map)
+    if st.session_state.get("fd_simulation_ready_" + lineup_mode.replace(" ", "_").lower()):
+        save_automatic_pregame_snapshot(
+            fd_snapshot_display,
+            selected_format,
+            correlation_pct=float(correlation_strength) * 100.0,
+            aggressiveness_pct=float(aggressiveness) * 100.0,
+        )
+
+    st.dataframe(
+        fd_player_display,
+        use_container_width=True,
+        hide_index=True,
+        column_config={"Name": st.column_config.TextColumn("Name", pinned=True)},
+    )
+    with st.expander("Copy Player Info to ChatGPT"):
+        st.caption("Click inside the text box, press Ctrl+A, then Ctrl+C. Paste the copied text into ChatGPT.")
+        fd_copy_text = fd_player_display.to_csv(index=False, sep="\t", na_rep="")
+        st.text_area(
+            "Player data (copy this text)",
+            value=fd_copy_text,
+            height=300,
+            key="fd_chatgpt_player_export",
+            label_visibility="collapsed"
+        )
+
+
+    st.write("### Build Settings")
     st.caption("The 5,000-lineup build automatically spreads player exposure while still favoring stronger simulated scores.")
     build_cols = st.columns([1, 1, 0.65])
     with build_cols[0]:
-        st.write("### Build Settings")
         fd_salary_range = st.slider(
             "Allowed lineup salary range",
             min_value=0,
@@ -2464,148 +2610,6 @@ if platform == "FanDuel":
                 st.session_state["fd_simulation_ready_" + lineup_mode.replace(" ", "_").lower()] = True
             if fd_run_all_clicked:
                 fd_progress_bar.progress(30, text="Simulation complete. Building 5,000 FanDuel lineups...")
-
-        st.success(f"Loaded {len(fd_players)} FanDuel players after injury-status filtering.")
-        if fd_proj_col is None:
-            st.caption(
-                "FanDuel salary-file averages are ignored. Check ProjectionSource "
-                "in the player table to see whether DFF or DraftEdge matched. "
-                "Players without a valid positive external projection are excluded."
-            )
-        fd_player_display = fd_players.drop(columns=["FD_ID"], errors="ignore").copy()
-        # Show exposure from the active FanDuel slate only.
-        fd_build_key = "fd_lineups_" + lineup_mode.replace(" ", "_").lower()
-        fd_current_lineups = st.session_state.get(fd_build_key)
-        if isinstance(fd_current_lineups, pd.DataFrame) and not fd_current_lineups.empty:
-            fd_total = len(fd_current_lineups)
-            fd_slot_columns = [
-                c for c in fd_current_lineups.columns
-                if c.upper() in {"MVP", "FLEX", "FLEX1", "FLEX2", "FLEX3", "FLEX4", "FLEX5", "QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "D"}
-            ]
-            player_names = fd_player_display["Name"].astype(str).str.strip()
-            fd_player_display["Exposure %"] = player_names.map(
-                lambda name: round(100 * sum(
-                    fd_current_lineups[c].astype(str).str.strip().eq(name).sum()
-                    for c in fd_slot_columns
-                ) / fd_total, 1)
-            )
-            if lineup_mode == "Single Game":
-                mvp_column = next((c for c in fd_current_lineups.columns if c.upper() == "MVP"), None)
-                flex_columns = [c for c in fd_current_lineups.columns if c.upper().startswith("FLEX")]
-                if mvp_column:
-                    fd_player_display["MVP Exp %"] = player_names.map(
-                        lambda name: round(100 * fd_current_lineups[mvp_column].astype(str).str.strip().eq(name).sum() / fd_total, 1)
-                    )
-                else:
-                    fd_player_display["MVP Exp %"] = 0.0
-                if flex_columns:
-                    flex_appearances = (
-                        fd_current_lineups[flex_columns]
-                        .astype(str)
-                        .apply(lambda row: pd.unique(row.str.strip()).tolist(), axis=1)
-                        .explode()
-                        .value_counts()
-                    )
-                    fd_player_display["Flex Exp %"] = player_names.map(
-                        lambda name: round(100 * flex_appearances.get(name, 0) / fd_total, 1)
-                    )
-                else:
-                    fd_player_display["Flex Exp %"] = 0.0
-            else:
-                fd_player_display = fd_player_display.drop(
-                    columns=["MVP Exp %", "Flex Exp %"], errors="ignore"
-                )
-        else:
-            fd_player_display["Exposure %"] = np.nan
-            if lineup_mode == "Single Game":
-                fd_player_display["MVP Exp %"] = np.nan
-                fd_player_display["Flex Exp %"] = np.nan
-            else:
-                fd_player_display = fd_player_display.drop(
-                    columns=["MVP Exp %", "Flex Exp %"], errors="ignore"
-                )
-
-        # Put simulated field ownership directly in the visible FanDuel Player Pool.
-        fd_ownership_by_format = st.session_state.get("latest_field_ownership_by_format", {})
-        fd_visible_field = fd_ownership_by_format.get(selected_format) if isinstance(fd_ownership_by_format, dict) else None
-        if isinstance(fd_visible_field, pd.DataFrame) and not fd_visible_field.empty and "Name" in fd_visible_field.columns:
-            fd_names_for_field = fd_player_display["Name"].astype(str).str.strip()
-            fd_overall_map = dict(zip(
-                fd_visible_field["Name"].astype(str).str.strip(),
-                pd.to_numeric(fd_visible_field.get("Ownership %"), errors="coerce")
-            ))
-            fd_overall = fd_names_for_field.map(fd_overall_map)
-            if lineup_mode == "Single Game":
-                if "Captain/MVP Ownership %" in fd_visible_field.columns:
-                    fd_mvp_map = dict(zip(
-                        fd_visible_field["Name"].astype(str).str.strip(),
-                        pd.to_numeric(fd_visible_field["Captain/MVP Ownership %"], errors="coerce")
-                    ))
-                    fd_mvp = fd_names_for_field.map(fd_mvp_map).fillna(0.0)
-                else:
-                    fd_mvp = pd.Series(0.0, index=fd_player_display.index)
-                fd_player_display["Field MVP Own %"] = fd_mvp.round(1)
-                fd_player_display["Field FLEX Own %"] = (fd_overall.fillna(0.0) - fd_mvp).clip(lower=0.0).round(1)
-                fd_player_display = fd_player_display.drop(columns=["Field Own %"], errors="ignore")
-            else:
-                fd_player_display["Field Own %"] = fd_overall.round(1)
-                fd_player_display = fd_player_display.drop(columns=["Field MVP Own %", "Field FLEX Own %"], errors="ignore")
-        else:
-            if lineup_mode == "Single Game":
-                fd_player_display["Field MVP Own %"] = np.nan
-                fd_player_display["Field FLEX Own %"] = np.nan
-                fd_player_display = fd_player_display.drop(columns=["Field Own %"], errors="ignore")
-            else:
-                fd_player_display["Field Own %"] = np.nan
-                fd_player_display = fd_player_display.drop(columns=["Field MVP Own %", "Field FLEX Own %"], errors="ignore")
-
-        fd_snapshot_display = fd_player_display.copy()
-        for sim_key, sim_label in [
-            ("Mean", "Sim Pts"), ("P10", "Sim P10"), ("P25", "Sim P25"),
-            ("P50", "Sim P50"), ("P75", "Sim P75"), ("P90", "Sim P90"),
-            ("P95", "Sim P95"), ("P99", "Sim P99"),
-        ]:
-            fd_snapshot_display[sim_label] = fd_snapshot_display["Name"].astype(str).map(
-                lambda name, key=sim_key: pd.to_numeric(player_sim.get(str(name), {}).get(key), errors="coerce")
-            )
-        ownership_by_format = st.session_state.get("latest_field_ownership_by_format", {})
-        fd_field_ownership = ownership_by_format.get(selected_format) if isinstance(ownership_by_format, dict) else None
-        if isinstance(fd_field_ownership, pd.DataFrame) and not fd_field_ownership.empty:
-            own_map = dict(zip(
-                fd_field_ownership["Name"].astype(str).str.strip(),
-                pd.to_numeric(fd_field_ownership["Ownership %"], errors="coerce"),
-            ))
-            fd_snapshot_display["Field Own %"] = fd_snapshot_display["Name"].astype(str).str.strip().map(own_map)
-            if "Captain/MVP Ownership %" in fd_field_ownership.columns:
-                mvp_map = dict(zip(
-                    fd_field_ownership["Name"].astype(str).str.strip(),
-                    pd.to_numeric(fd_field_ownership["Captain/MVP Ownership %"], errors="coerce"),
-                ))
-                fd_snapshot_display["Field MVP Own %"] = fd_snapshot_display["Name"].astype(str).str.strip().map(mvp_map)
-        if st.session_state.get("fd_simulation_ready_" + lineup_mode.replace(" ", "_").lower()):
-            save_automatic_pregame_snapshot(
-                fd_snapshot_display,
-                selected_format,
-                correlation_pct=float(correlation_strength) * 100.0,
-                aggressiveness_pct=float(aggressiveness) * 100.0,
-            )
-
-        st.dataframe(
-            fd_player_display,
-            use_container_width=True,
-            hide_index=True,
-            column_config={"Name": st.column_config.TextColumn("Name", pinned=True)},
-        )
-        with st.expander("Copy Player Info to ChatGPT"):
-            st.caption("Click inside the text box, press Ctrl+A, then Ctrl+C. Paste the copied text into ChatGPT.")
-            fd_copy_text = fd_player_display.to_csv(index=False, sep="\t", na_rep="")
-            st.text_area(
-                "Player data (copy this text)",
-                value=fd_copy_text,
-                height=300,
-                key="fd_chatgpt_player_export",
-                label_visibility="collapsed"
-            )
 
         fd_signature = (
             "FanDuel",
