@@ -4380,6 +4380,35 @@ else:
                 return None
             points = pd.to_numeric(rows[points_col], errors="coerce").fillna(0).to_numpy(dtype=float)
         weights = np.linspace(0.5, 1.5, len(points))
+        # Gently favor games that match the player's current workload. This
+        # changes sampling frequency, not the underlying scoring or projections.
+        # Keep the adjustment bounded so a single high-usage game cannot dominate.
+        usage_columns = []
+        normalized_position = str(position or "").upper().strip()
+        if normalized_position == "QB":
+            usage_columns = [col for col in ["attempts", "carries"] if col in rows.columns]
+        elif normalized_position == "RB":
+            usage_columns = [col for col in ["carries", "targets"] if col in rows.columns]
+        elif normalized_position in {"WR", "TE"}:
+            usage_columns = [col for col in ["targets"] if col in rows.columns]
+            if not usage_columns and "receptions" in rows.columns:
+                usage_columns = ["receptions"]
+        if usage_columns and len(points) == len(rows) and len(points) >= 4:
+            usage_parts = []
+            for col in usage_columns:
+                values = pd.to_numeric(rows[col], errors="coerce").fillna(0).clip(lower=0).to_numpy(dtype=float)
+                # Targets are a useful role signal but slightly less direct than
+                # carries/attempts, so scale them to avoid overwhelming the measure.
+                usage_parts.append(values * (1.25 if col == "targets" and normalized_position == "RB" else 1.0))
+            workload = np.sum(np.vstack(usage_parts), axis=0)
+            positive_workload = workload[workload > 0]
+            if len(positive_workload) >= 3:
+                reference = float(np.median(positive_workload))
+                if np.isfinite(reference) and reference > 0:
+                    usage_multiplier = np.clip(workload / reference, 0.75, 1.25)
+                    # Blend with neutral weighting to limit impact from role changes
+                    # and noisy weekly stats.
+                    weights = weights * (0.5 + 0.5 * usage_multiplier)
         average = float(np.average(points, weights=weights))
         if return_scores:
             return (points, weights) if len(points) and np.isfinite(points).all() else None
