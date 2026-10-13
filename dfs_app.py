@@ -142,7 +142,7 @@ def add_field_ranking_metrics(frame, field_scores, score_column="ProjectedPoints
 top_buttons = st.columns(2)
 with top_buttons[0]:
     st.link_button(
-        "CONTEST",
+        "EDIT ENTRIES",
         "https://www.draftkings.com/entry/upload",
         use_container_width=True,
     )
