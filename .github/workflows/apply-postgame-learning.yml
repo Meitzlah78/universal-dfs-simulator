@@ -8,6 +8,7 @@ on:
       - '.github/scripts/add_postgame_learning.py'
       - '.github/scripts/add_one_upload_slate_setup.py'
       - '.github/scripts/add_auto_contest_size.py'
+      - '.github/scripts/add_auto_format_detection.py'
       - '.github/workflows/apply-postgame-learning.yml'
 
 permissions:
@@ -36,6 +37,9 @@ jobs:
 
       - name: Apply automatic contest size patch
         run: python .github/scripts/add_auto_contest_size.py
+
+      - name: Apply automatic format detection patch
+        run: python .github/scripts/add_auto_format_detection.py
 
       - name: Syntax check
         run: python -m py_compile dfs_app.py
