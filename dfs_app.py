@@ -5299,7 +5299,7 @@ else:
                     st.caption("Comparison uses projected average points from the internal player simulations. It is an estimate, not actual contest results.")
                     st.dataframe(user_lineups, use_container_width=True, hide_index=True)
                     st.metric("Simulated opponent lineups", f"{len(contest_field_df):,}")
-                    show_field_ownership(contest_field_df, [slot for slot, _ in contest_slots], "Simulated Field Player Ownership")
+                    # Field ownership is already shown in the Player Pool.
                 else:
                     st.error("Could not create valid opponent lineups. Check the player pool and salary range.")
         classic_results = st.session_state.get("classic_lineups")
