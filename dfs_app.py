@@ -4135,6 +4135,12 @@ else:
                 )
                 frame["_home_score"] = pd.to_numeric(frame["total_home_score"], errors="coerce")
                 frame["_away_score"] = pd.to_numeric(frame["total_away_score"], errors="coerce")
+                # Some historical or alternate PBP exports may omit these fields.
+                # Keep score history usable even when play-volume details are missing.
+                if "play_id" not in frame.columns:
+                    frame["play_id"] = np.nan
+                if "play_type" not in frame.columns:
+                    frame["play_type"] = ""
                 frame = frame.dropna(subset=["game_id", "_home_score", "_away_score"])
                 final_scores = (
                     frame.sort_values("_play_order")
