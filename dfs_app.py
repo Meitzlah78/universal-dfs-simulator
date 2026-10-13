@@ -22,13 +22,50 @@ st.title("Universal DFS Simulator")
 
 from datetime import datetime as _sticky_datetime
 
+# Keep the refresh control in the sticky top bar, without the projection-update warning.
+with st.container(key="sticky_projection_bar"):
+    _sticky_left, _sticky_right = st.columns([3, 2])
+    with _sticky_left:
+        st.markdown("**Uploaded CSVs still take priority.**")
+    with _sticky_right:
+        if st.button("REFRESH PROJECTIONS + INJURY NEWS", key="sticky_refresh_projections", use_container_width=True):
+            download_public_projection_table.clear()
+            fetch_nfl_injury_statuses.clear()
+            st.session_state["projection_updates_found"] = False
+            st.session_state["injury_updates_found"] = False
+            st.session_state["shared_projection_updated_at"] = _sticky_datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %I:%M:%S %p %Z")
+            st.rerun()
+
 st.markdown(
     """
     <style>
+    .st-key-sticky_projection_bar {
+        position: fixed !important;
+        top: 3.25rem !important;
+        left: 0 !important;
+        right: 0 !important;
+        z-index: 999999 !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+        padding: 0.35rem 1rem;
+        background: #111111 !important;
+        color: #ffffff !important;
+        border: 1px solid #444444;
+        border-radius: 0;
+        margin: 0 !important;
+    }
     section.main > div.block-container {
-        padding-top: 1.5rem !important;
+        padding-top: 5.2rem !important;
         padding-bottom: 1.5rem !important;
         max-width: 1600px;
+    }
+    .st-key-sticky_projection_bar [data-testid="stHorizontalBlock"] {
+        align-items: center;
+        gap: 0.65rem;
+    }
+    .st-key-sticky_projection_bar p {
+        margin-bottom: 0.15rem;
+        color: #ffffff !important;
     }
     /* Tighten default Streamlit spacing so the main workflow is easier to scan. */
     section.main [data-testid="stVerticalBlock"] {
@@ -1469,16 +1506,6 @@ automatic_projection_refresh(selected_format)
 st.session_state["dfs_platform"] = platform
 st.session_state["lineup_mode_" + platform] = lineup_mode
 st.subheader(selected_format)
-
-refresh_col, _refresh_spacer = st.columns([1, 3])
-with refresh_col:
-    if st.button("REFRESH PROJECTIONS + INJURY NEWS", key="refresh_projections_button", use_container_width=True):
-        download_public_projection_table.clear()
-        fetch_nfl_injury_statuses.clear()
-        st.session_state["projection_updates_found"] = False
-        st.session_state["injury_updates_found"] = False
-        st.session_state["shared_projection_updated_at"] = _sticky_datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %I:%M:%S %p %Z")
-        st.rerun()
 
 # Initialize from the saved slider value; the control itself appears beside SIM.
 aggressiveness = float(st.session_state.get(f"lineup_build_aggressiveness_{platform}_{lineup_mode}", 100 if ((platform == "DraftKings" and lineup_mode == "Showdown") or (platform == "FanDuel" and lineup_mode == "Single Game")) else 50)) / 100.0
