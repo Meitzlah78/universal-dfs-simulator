@@ -4352,7 +4352,10 @@ else:
     auto_current_entries, auto_max_entries = fetch_draftkings_contest_size(
         active_dk_selection.get("id")
     )
-    auto_field_size = auto_current_entries or auto_max_entries
+    # Pregame contest simulation should use the contest capacity when DraftKings
+    # provides it. Using current entries while a contest is still filling makes
+    # estimated ranks, cash rates, payouts, and ROI too optimistic.
+    auto_field_size = auto_max_entries or auto_current_entries
     try:
         fallback_field_size = int(previous_field_size) if previous_field_size else 45396
     except (TypeError, ValueError):
@@ -4360,12 +4363,12 @@ else:
 
     if auto_field_size is not None and int(auto_field_size) >= 2:
         active_field_size = int(auto_field_size)
-        if auto_current_entries:
-            st.success(f"Contest field size loaded automatically from DraftKings: {active_field_size:,} entries")
-        else:
+        if auto_max_entries:
             st.success(f"Contest capacity loaded automatically from DraftKings: {active_field_size:,} entries")
+        else:
+            st.success(f"Contest field size loaded automatically from DraftKings: {active_field_size:,} entries")
         if auto_current_entries and auto_max_entries and auto_max_entries >= auto_current_entries:
-            st.caption(f"Current entries: {auto_current_entries:,} of {auto_max_entries:,} maximum")
+            st.caption(f"Current entries: {auto_current_entries:,} of {auto_max_entries:,} maximum. Pregame ROI uses the maximum field size.")
     else:
         active_field_size = st.number_input(
             "Contest field size (fallback only)",
