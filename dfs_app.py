@@ -5432,6 +5432,9 @@ with build_cols[2]:
         use_container_width=True
     )
 
+# Keep the contest-scoring bar in the same visible Build workflow area as SIM/BUILD.
+contest_progress_slot = st.empty()
+
 # ============================================
 # BUILD ACTION
 # ============================================
@@ -6157,7 +6160,14 @@ if (
             f"not exact full-field results."
         )
 
-    progress = st.progress(0)
+    progress = contest_progress_slot.progress(
+        0,
+        text=(
+            f"Step 4 of 4: Scoring contest — 0 of {n_sims:,} simulations (0%) · "
+            f"estimated field {estimated_full_field_size:,} entries · "
+            f"{total_field:,} opponents scored per simulation"
+        ),
+    )
     # Convert once and score independent simulation batches concurrently.
     # All simulations and opponents are retained; parallelism changes only how
     # the work is scheduled, not the amount of work performed.
@@ -6317,10 +6327,14 @@ if (
             expected_prize_totals += batch_prize_totals
             completed_batches += 1
             completed_sims = min(completed_batches * batch_size, n_sims)
-            progress.progress(completed_batches / len(batch_ranges))
-            scoring_status.caption(
-                f"Scoring contest: {completed_sims:,} of {n_sims:,} simulations complete "
-                f"({completed_sims / n_sims:.0%}) using {max_workers} workers."
+            progress.progress(
+                completed_batches / len(batch_ranges),
+                text=(
+                    f"Step 4 of 4: Scoring contest — {completed_sims:,} of {n_sims:,} "
+                    f"simulations ({completed_sims / n_sims:.0%}) using {max_workers} workers · "
+                    f"estimated field {estimated_full_field_size:,} entries · "
+                    f"{total_field:,} opponents per simulation"
+                ),
             )
 
     progress.empty()
