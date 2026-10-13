@@ -5909,20 +5909,20 @@ if build_clicked:
 
 
 
-# Keep opponent ownership visible after Streamlit reruns, not only on the button-click run.
+# Keep opponent ownership available after reruns without crowding the main workflow.
 _saved_contest_field = st.session_state.get("contest_field_df")
 if isinstance(_saved_contest_field, pd.DataFrame) and not _saved_contest_field.empty:
-    st.subheader("Simulated Opponent Ownership")
-    st.caption(
-        f"Based on {len(_saved_contest_field):,} simulated opponent lineups. "
-        "These percentages describe the simulated field, not your lineups."
-    )
-    show_field_ownership(
-        _saved_contest_field,
-        ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"],
-        "Simulated Field Player Ownership",
-        captain_slot="Captain",
-    )
+    with st.expander("Simulated Opponent Ownership", expanded=False):
+        st.caption(
+            f"Based on {len(_saved_contest_field):,} simulated opponent lineups. "
+            "These percentages describe the simulated field, not your lineups."
+        )
+        show_field_ownership(
+            _saved_contest_field,
+            ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"],
+            "Simulated Field Player Ownership",
+            captain_slot="Captain",
+        )
 
 
 with st.expander("Contest Payout Structure", expanded=False):
