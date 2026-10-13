@@ -1,0 +1,45 @@
+name: Apply One-Upload Slate Setup
+
+on:
+  push:
+    branches:
+      - feature/salary-csv-upload
+    paths:
+      - '.github/scripts/add_one_upload_slate_setup.py'
+      - '.github/workflows/apply-one-upload-slate.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/salary-csv-upload
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Apply one-upload slate patch
+        run: python .github/scripts/add_one_upload_slate_setup.py
+
+      - name: Syntax check
+        run: python -m py_compile dfs_app.py
+
+      - name: Commit patched app
+        run: |
+          if git diff --quiet -- dfs_app.py; then
+            echo "No app changes needed."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add dfs_app.py
+          git commit -m "Simplify slate setup to one upload [skip ci]"
+          git push origin HEAD:feature/salary-csv-upload
