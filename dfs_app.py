@@ -2027,6 +2027,889 @@ correlation_strength = (
     if lineup_mode in ("Showdown", "Single Game") else 1.0
 )
 
+# SHARED HISTORICAL/PBP PLAYER SIMULATION ENGINE
+# ================================
+# SETTINGS
+# ================================
+
+SIMULATIONS = SIMULATION_COUNT
+DISPERSION = 8.0
+SALARY_CAP = 50000
+
+# NFL DFS scoring settings. Lineup builders use these site/format rules.
+# Player outcomes are still generated from the app's internal estimates; this
+# defines the fantasy-point scoring model and the single-game multiplier.
+DFS_SCORING_RULES = {
+    "DraftKings": {
+        "pass_yard": 0.04, "pass_td": 4, "interception": -1,
+        "rush_yard": 0.1, "rush_td": 6,
+        "receiving_yard": 0.1, "receiving_td": 6, "reception": 1,
+        "fumble_lost": -1, "two_point_conversion": 2,
+        "pass_300_bonus": 3, "rush_100_bonus": 3, "receiving_100_bonus": 3,
+        "single_game_multiplier": 1.5,
+        "sack": 1, "def_interception": 2, "fumble_recovery": 2,
+        "defensive_td": 6, "safety": 2, "blocked_kick": 2,
+    },
+    "FanDuel": {
+        "pass_yard": 0.04, "pass_td": 4, "interception": -1,
+        "rush_yard": 0.1, "rush_td": 6,
+        "receiving_yard": 0.1, "receiving_td": 6, "reception": 0.5,
+        "fumble_lost": -2, "two_point_conversion": 2,
+        "pass_300_bonus": 0, "rush_100_bonus": 0, "receiving_100_bonus": 0,
+        "single_game_multiplier": 1.5,
+        "sack": 1, "def_interception": 2, "fumble_recovery": 2,
+        "defensive_td": 6, "safety": 2, "blocked_kick": 2,
+    },
+}
+
+def score_nfl_stat_line(stats, platform):
+    """Apply DraftKings or FanDuel NFL scoring to simulated player stat lines."""
+    rules = DFS_SCORING_RULES["FanDuel" if str(platform).lower().startswith("fanduel") else "DraftKings"]
+    arr = lambda key: np.asarray(stats.get(key, 0), dtype=float)
+    passing_yards, rushing_yards, receiving_yards = arr("passing_yards"), arr("rushing_yards"), arr("receiving_yards")
+    score = (
+        passing_yards * rules["pass_yard"]
+        + arr("passing_tds") * rules["pass_td"]
+        + arr("interceptions") * rules["interception"]
+        + rushing_yards * rules["rush_yard"]
+        + arr("rushing_tds") * rules["rush_td"]
+        + receiving_yards * rules["receiving_yard"]
+        + arr("receiving_tds") * rules["receiving_td"]
+        + arr("receptions") * rules["reception"]
+        + arr("fumbles_lost") * rules["fumble_lost"]
+        + arr("two_point_conversions") * rules["two_point_conversion"]
+        + arr("sacks") * rules["sack"]
+        + arr("def_interceptions") * rules["def_interception"]
+        + arr("fumble_recoveries") * rules["fumble_recovery"]
+        + arr("defensive_tds") * rules["defensive_td"]
+        + arr("safeties") * rules["safety"]
+        + arr("blocked_kicks") * rules["blocked_kick"]
+    )
+    score = score + (passing_yards >= 300) * rules["pass_300_bonus"]
+    score = score + (rushing_yards >= 100) * rules["rush_100_bonus"]
+    score = score + (receiving_yards >= 100) * rules["receiving_100_bonus"]
+    # Kicker scoring: 3 points for short FGs, 4 for 40-49 yards, 5 for 50+.
+    score = score + arr("fg_under_40") * 3 + arr("fg_40_49") * 4 + arr("fg_50_plus") * 5
+    score = score + arr("extra_points_made")
+    # Defense scoring includes points-allowed tiers; yardage allowed is modeled too.
+    points_allowed = arr("points_allowed")
+    score = score + np.select(
+        [points_allowed == 0, points_allowed <= 6, points_allowed <= 13,
+         points_allowed <= 20, points_allowed <= 27, points_allowed <= 34],
+        [10, 7, 4, 1, 0, -1], default=-4
+    ) * np.asarray(stats.get("is_defense", 0), dtype=float)
+    if not str(platform).lower().startswith("fanduel"):
+        yards_allowed = arr("yards_allowed")
+        score = score + np.select(
+            [yards_allowed <= 100, yards_allowed <= 199, yards_allowed <= 299,
+             yards_allowed <= 349, yards_allowed <= 399, yards_allowed <= 449,
+             yards_allowed <= 499],
+            [3, 2, 1, 0, -1, -3, -5], default=-7
+        ) * np.asarray(stats.get("is_defense", 0), dtype=float)
+    return score
+
+
+def _simulate_scored_player_outcomes(players_df, platform, rng):
+    """Shared DK/FD engine: simulate player outcomes from historical distributions and shared game scripts.
+
+    Projections help set volatility and reasonable upper bounds, but do not force
+    simulated averages to equal the supplied projection.
+    """
+    simulation_progress = st.progress(0, text="Preparing player simulations...")
+    historical = load_nfl_historical_player_stats()
+    historical_name_index = _build_historical_name_index(historical)
+    simulation_progress.progress(0.05, text="Historical data loaded. Preparing game scripts...")
+    pbp_status_box = st.empty()
+    pbp_status_box.info("Loading NFL play-by-play history...")
+    pbp_history = load_nfl_pbp_game_history()
+    pbp_status_box.info("Play-by-play history: " + st.session_state.get(
+        "nfl_pbp_history_status", "Status not available yet."
+    ))
+    simulations = {}
+    cap_hit_percentages = {}
+    n = SIMULATIONS
+    correlation_strength = float(
+        np.clip(st.session_state.get("active_game_correlation_strength", 1.0), 0.0, 1.0)
+    )
+
+    # Prefer actual NFL game totals from play-by-play history. If that download
+    # is unavailable, fall back to the existing historical player-week data.
+    historical_game_factors = np.array([], dtype=float)
+    if not pbp_history.empty and "GamePoints" in pbp_history.columns:
+        try:
+            valid_games = pbp_history.copy()
+            valid_games["GamePoints"] = pd.to_numeric(valid_games["GamePoints"], errors="coerce")
+            valid_games = valid_games[valid_games["GamePoints"] > 0]
+            score_factors = valid_games["GamePoints"].to_numpy(dtype=float)
+            score_center = float(np.median(score_factors)) if len(score_factors) else 0.0
+            if len(valid_games) >= 20 and np.isfinite(score_center) and score_center > 0:
+                score_factors = score_factors / score_center
+                if "GamePlays" in valid_games.columns:
+                    play_counts = pd.to_numeric(valid_games["GamePlays"], errors="coerce")
+                    play_center = float(play_counts.median())
+                    if np.isfinite(play_center) and play_center > 0:
+                        pace_factors = play_counts.fillna(play_center).to_numpy(dtype=float) / play_center
+                        combined = 0.70 * score_factors + 0.30 * pace_factors
+                        historical_game_factors = np.clip(combined, 0.75, 1.25)
+                    else:
+                        historical_game_factors = np.clip(score_factors, 0.75, 1.25)
+                else:
+                    historical_game_factors = np.clip(score_factors, 0.75, 1.25)
+        except Exception:
+            historical_game_factors = np.array([], dtype=float)
+
+    if len(historical_game_factors) < 20 and not historical.empty and "game_id" in historical.columns:
+        historical_points_col = next(
+            (col for col in ["fantasy_points_ppr", "fantasy_points"] if col in historical.columns),
+            None
+        )
+        if historical_points_col:
+            try:
+                game_totals = pd.to_numeric(
+                    historical[historical_points_col], errors="coerce"
+                ).groupby(historical["game_id"]).sum(min_count=1).dropna()
+                game_totals = game_totals[game_totals > 0].to_numpy(dtype=float)
+                if len(game_totals) >= 20:
+                    # Normalize and trim extreme games to keep the historical
+                    # factor useful without overwhelming player-level outcomes.
+                    center = float(np.median(game_totals))
+                    if np.isfinite(center) and center > 0:
+                        historical_game_factors = np.clip(
+                            game_totals / center, 0.75, 1.25
+                        )
+            except Exception:
+                historical_game_factors = np.array([], dtype=float)
+
+    # Build one shared script per matchup so players in the same game are correlated.
+    team_col = "Team" if "Team" in players_df.columns else None
+    opponent_col = "Opponent" if "Opponent" in players_df.columns else None
+    teams = (
+        players_df[team_col].astype(str).str.upper().str.strip().unique().tolist()
+        if team_col else []
+    )
+    team_scripts = {}
+    if teams:
+        team_opponents = {}
+        for team in teams:
+            opponent = ""
+            if opponent_col:
+                rows = players_df[
+                    players_df[team_col].astype(str).str.upper().str.strip() == team
+                ]
+                values = rows[opponent_col].astype(str).str.upper().str.strip()
+                values = values[~values.isin(["", "—", "-", "NAN", "NONE"])]
+                if not values.empty:
+                    opponent = values.iloc[0]
+            team_opponents[team] = opponent
+
+        handled = set()
+        for team in teams:
+            if team in handled:
+                continue
+            opponent = team_opponents.get(team, "")
+            if opponent and opponent in teams and opponent != team:
+                # Each simulated game has a shared scoring environment and a
+                # random leader. The trailing team tends to pass more; the
+                # leading team tends to run more.
+                if historical_game_factors.size:
+                    # Bootstrap historical game environments for all formats.
+                    game_environment = rng.choice(historical_game_factors, size=n, replace=True)
+                else:
+                    game_environment = np.clip(rng.normal(1.0, 0.12, n), 0.72, 1.30)
+                margin = np.abs(rng.normal(0.0, 1.0, n))
+                team_a_leads = rng.random(n) < 0.5
+                a_leading = np.where(team_a_leads, margin, -margin)
+                b_leading = -a_leading
+                # Approximate drive/field-position effects alongside turnovers.
+                # These are simulated game-environment factors, not a full
+                # play-by-play drive engine yet.
+                team_giveaways = np.clip(rng.poisson(1.25, n), 0, 4)
+                opponent_giveaways = np.clip(rng.poisson(1.25, n), 0, 4)
+                team_short_fields = np.clip(rng.binomial(team_giveaways, 0.30), 0, 3)
+                opponent_short_fields = np.clip(rng.binomial(opponent_giveaways, 0.30), 0, 3)
+                team_red_zone_drives = rng.poisson(2.2, n)
+                opponent_red_zone_drives = rng.poisson(2.2, n)
+                team_long_field_drives = rng.poisson(2.0, n)
+                opponent_long_field_drives = rng.poisson(2.0, n)
+                for side, lead_state, giveaways, forced, short_fields, red_zone, long_fields in (
+                    (team, a_leading, team_giveaways, opponent_giveaways, team_short_fields, team_red_zone_drives, team_long_field_drives),
+                    (opponent, b_leading, opponent_giveaways, team_giveaways, opponent_short_fields, opponent_red_zone_drives, opponent_long_field_drives),
+                ):
+                    base_scoring = np.clip(game_environment * rng.normal(1.0, 0.07, n), 0.70, 1.35)
+                    # Giveaways hurt the offense; short fields help the team
+                    # receiving the extra possession. Red-zone drives improve
+                    # scoring chances, while long-field drives lower them.
+                    turnover_factor = np.clip(1.0 - 0.035 * giveaways, 0.82, 1.0)
+                    short_field_factor = np.clip(1.0 + 0.035 * short_fields, 1.0, 1.12)
+                    red_zone_factor = np.clip(1.0 + 0.025 * (red_zone - 2.2), 0.90, 1.12)
+                    long_field_factor = np.clip(1.0 - 0.018 * (long_fields - 2.0), 0.92, 1.08)
+                    team_scripts[side] = {
+                        "scoring": np.clip(base_scoring * turnover_factor * short_field_factor * red_zone_factor * long_field_factor, 0.65, 1.42),
+                        "leading": lead_state > 0.35,
+                        "trailing": lead_state < -0.35,
+                        "giveaways": giveaways,
+                        "opponent_giveaways": forced,
+                        "short_fields": short_fields,
+                        "red_zone_drives": red_zone,
+                        "long_field_drives": long_fields,
+                    }
+                handled.add(team)
+                handled.add(opponent)
+            else:
+                # If opponent data is unavailable, retain a modest standalone
+                # game environment instead of pretending to know the matchup.
+                team_scripts[team] = {
+                    "scoring": np.clip(rng.normal(1.0, 0.14, n), 0.70, 1.35),
+                    "leading": rng.random(n) < 0.35,
+                    "trailing": rng.random(n) < 0.35,
+                }
+
+    total_players = max(1, len(players_df))
+    for index, (_, row) in enumerate(players_df.iterrows()):
+        name = str(row["Name"])
+        positions = set(str(row.get("Position", "")).upper().replace(" ", "").split("/"))
+        team = str(row.get("Team", "")).upper().strip()
+        script = team_scripts.get(team, {
+            "scoring": np.ones(n),
+            "leading": np.zeros(n, dtype=bool),
+            "trailing": np.zeros(n, dtype=bool),
+        })
+
+        if "QB" in positions:
+            stats = {
+                "passing_yards": np.maximum(0, rng.normal(225, 65, n)),
+                "passing_tds": rng.poisson(1.45, n),
+                "interceptions": rng.poisson(0.65, n),
+                "rushing_yards": np.maximum(0, rng.normal(16, 20, n)),
+                "rushing_tds": rng.binomial(1, 0.12, n),
+                "fumbles_lost": rng.binomial(1, 0.08, n),
+            }
+            position_type = "QB"
+        elif "RB" in positions:
+            stats = {
+                "rushing_yards": np.maximum(0, rng.normal(55, 30, n)),
+                "rushing_tds": rng.binomial(2, 0.18, n),
+                "receiving_yards": np.maximum(0, rng.normal(22, 20, n)),
+                "receiving_tds": rng.binomial(1, 0.10, n),
+                "receptions": rng.poisson(2.5, n),
+                "fumbles_lost": rng.binomial(1, 0.04, n),
+            }
+            position_type = "RB"
+        elif "WR" in positions:
+            stats = {
+                "receiving_yards": np.maximum(0, rng.normal(55, 35, n)),
+                "receiving_tds": rng.binomial(1, 0.28, n),
+                "receptions": rng.poisson(4.0, n),
+                "rushing_yards": np.maximum(0, rng.normal(2, 5, n)),
+                "fumbles_lost": rng.binomial(1, 0.02, n),
+            }
+            position_type = "WR"
+        elif "TE" in positions:
+            stats = {
+                "receiving_yards": np.maximum(0, rng.normal(34, 24, n)),
+                "receiving_tds": rng.binomial(1, 0.20, n),
+                "receptions": rng.poisson(2.7, n),
+                "fumbles_lost": rng.binomial(1, 0.02, n),
+            }
+            position_type = "TE"
+        elif "K" in positions:
+            stats = {
+                "fg_under_40": rng.poisson(1.0, n),
+                "fg_40_49": rng.poisson(0.5, n),
+                "fg_50_plus": rng.poisson(0.25, n),
+                "extra_points_made": rng.poisson(2.0, n),
+            }
+            position_type = "K"
+        else:
+            stats = {
+                "sacks": rng.poisson(2.3, n),
+                "def_interceptions": rng.binomial(1, 0.7, n),
+                "fumble_recoveries": rng.binomial(1, 0.45, n),
+                "defensive_tds": rng.binomial(1, 0.08, n),
+                "safeties": rng.binomial(1, 0.03, n),
+                "blocked_kicks": rng.binomial(1, 0.04, n),
+                "points_allowed": np.clip(rng.normal(22, 10, n), 0, 50),
+                "yards_allowed": np.clip(rng.normal(350, 80, n), 0, 650),
+                "is_defense": 1,
+            }
+            position_type = "DST"
+
+        scores = np.asarray(score_nfl_stat_line(stats, platform), dtype=float)
+
+        # Historical scores provide the player's own distribution. Do not
+        # force the samples to match projections or a salary-based average.
+        historical_result = _historical_player_average(
+            name, next(iter(positions), ""), platform, historical,
+            return_scores=True, historical_name_index=historical_name_index
+        )
+        has_player_history = historical_result is not None
+        if historical_result is not None:
+            historical_points, recency_weights = historical_result
+            probabilities = recency_weights / recency_weights.sum()
+            scores = rng.choice(
+                historical_points, size=n, replace=True, p=probabilities
+            ).astype(float)
+
+        # Anchor sparse/no-history players to a projection-informed distribution.
+        # This prevents generic position outcomes from overwhelming tiny projections.
+        # Historical player distributions remain unscaled.
+        # Anchor the simulated mean to the slate projection and calibrate volatility.
+        # Historical results determine the shape, while position-specific limits prevent
+        # mismatched or sparse history from creating absurdly wide distributions.
+        projection = np.nan
+        for projection_column in (
+            "Projection", "ProjectedPoints", "FinalProjection",
+            "FantasyPoints", "FPTS", "Proj", "Points"
+        ):
+            if projection_column in row.index:
+                candidate = pd.to_numeric(
+                    pd.Series([row.get(projection_column)]), errors="coerce"
+                ).iloc[0]
+                if np.isfinite(candidate) and candidate > 0:
+                    projection = float(candidate)
+                    break
+
+        # Position-specific volatility targets. Historical data still informs
+        # each player's spread, but blending it with a position baseline helps
+        # prevent noisy samples from creating extreme tails.
+        position_cv_limits = {
+            "QB": (0.25, 0.55, 0.40),
+            "RB": (0.25, 0.60, 0.45),
+            "WR": (0.30, 0.60, 0.50),
+            "TE": (0.30, 0.60, 0.50),
+            "K": (0.20, 0.40, 0.30),
+            "DST": (0.35, 0.65, 0.50),
+        }
+        min_cv, max_cv, baseline_cv = position_cv_limits.get(
+            position_type, (0.30, 0.55, 0.45)
+        )
+        sampled_mean = float(np.mean(scores)) if len(scores) else 0.0
+        sampled_std = float(np.std(scores, ddof=1)) if len(scores) > 1 else 0.0
+        if position_type == "K" and np.isfinite(projection) and projection > 0:
+            # Kicker historical samples may be all-zero or mismatched. If
+            # usable, retain their shape while scaling toward the projection;
+            # otherwise generate a projection-centered distribution.
+            if np.isfinite(sampled_mean) and sampled_mean > 1e-6:
+                scores = np.maximum(
+                    0.0,
+                    scores * (projection / sampled_mean)
+                    + rng.normal(0.0, max(0.25, projection * 0.12), size=n),
+                )
+            else:
+                scores = np.maximum(
+                    0.0,
+                    rng.normal(projection, max(1.0, projection * 0.30), size=n),
+                )
+            sampled_mean = float(np.mean(scores))
+            sampled_std = float(np.std(scores, ddof=1)) if len(scores) > 1 else 0.0
+        elif (
+            not has_player_history
+            and np.isfinite(projection) and projection > 0
+            and np.isfinite(sampled_mean) and sampled_mean > 1e-6
+        ):
+            scores = np.maximum(
+                0.0,
+                scores * (projection / sampled_mean)
+                + rng.normal(0.0, max(0.25, projection * 0.20), size=n),
+            )
+            sampled_mean = float(np.mean(scores))
+            sampled_std = float(np.std(scores, ddof=1)) if len(scores) > 1 else 0.0
+
+        if np.isfinite(projection) and projection > 0:
+            # Use half historical volatility and half position baseline, then
+            # cap the result to reduce over-wide P90/P95/P99 outcomes.
+            if sampled_mean > 0 and np.isfinite(sampled_std) and sampled_std > 0:
+                historical_cv = sampled_std / sampled_mean
+                blended_cv = 0.50 * historical_cv + 0.50 * baseline_cv
+                volatility_cv = float(np.clip(blended_cv, min_cv, max_cv))
+            else:
+                volatility_cv = baseline_cv
+            target_std = max(0.5, projection * volatility_cv)
+
+            if sampled_std > 1e-6 and np.isfinite(sampled_std):
+                # Limit extreme historical outliers before rescaling. This reduces
+                # unrealistic P95/P99 values while retaining player-specific shape.
+                standardized = (scores - sampled_mean) / sampled_std
+                standardized = np.clip(standardized, -3.0, 3.0)
+                standardized_mean = float(np.mean(standardized))
+                standardized_std = float(np.std(standardized, ddof=1))
+                if standardized_std > 1e-6 and np.isfinite(standardized_std):
+                    standardized = (
+                        (standardized - standardized_mean)
+                        * (target_std / standardized_std)
+                    )
+                    # Preserve the historical/sample mean instead of forcing
+                    # simulated outcomes to average the supplied projection.
+                    scores = projection + standardized
+                else:
+                    # Sparse/constant historical samples can have a nonzero
+                    # raw spread but no usable spread after outlier trimming.
+                    # Generate a distribution rather than a flat line.
+                    scores = rng.normal(max(0.0, projection), target_std, size=n)
+            else:
+                # If the sampled history has no usable spread, retain its own
+                # average and use the projection only to set the spread.
+                scores = rng.normal(max(0.0, projection), target_std, size=n)
+
+            # Fantasy scores cannot be negative.
+            scores = np.maximum(scores, 0.0)
+
+            # Low-projection players often have sparse or discrete history,
+            # which can leave several displayed percentiles identical. Use a
+            # positive, right-skewed distribution for these players so they
+            # retain a realistic chance of zero while keeping the mean anchored
+            # to the supplied projection.
+            if projection <= 3.0:
+                low_projection_cv = max(volatility_cv, 0.45)
+                gamma_shape = 1.0 / (low_projection_cv ** 2)
+                scores = rng.gamma(
+                    shape=gamma_shape,
+                    scale=max(projection, 0.01) / gamma_shape,
+                    size=n,
+                )
+        # Shared game script adjusts the sampled outcome modestly. Trailing teams
+        # throw more; leading teams lean more on their running backs.
+        # Scale shared game-script effects with the user's single-game slider.
+        # At 0%, players still have their own outcome variation, but shared
+        # scoring/lead-trail adjustments are neutralized.
+        raw_scoring_factor = script["scoring"]
+        scoring_factor = 1.0 + (raw_scoring_factor - 1.0) * correlation_strength
+        trailing = script["trailing"].astype(float) * correlation_strength
+        leading = script["leading"].astype(float) * correlation_strength
+        if position_type in ("QB", "WR", "TE"):
+            script_factor = scoring_factor + trailing * 0.12 - leading * 0.06
+        elif position_type == "RB":
+            script_factor = scoring_factor + leading * 0.10 - trailing * 0.08
+        elif position_type == "DST":
+            script_factor = 2.0 - scoring_factor
+        else:
+            script_factor = scoring_factor
+
+        script_factor = np.clip(script_factor, 0.80, 1.20)
+        final_scores = np.maximum(scores * script_factor, 0.0)
+        # Defensive turnover points are already represented in the sampled
+        # defensive outcomes. Do not add opponent giveaways a second time.
+        # Limit extreme simulated outcomes without shifting the distribution
+        # back to the projection. The projection sets a reasonable ceiling, but
+        # historical results and game scripts determine the simulated average.
+        if np.isfinite(projection) and projection > 0:
+            upper_cap = max(1.0, projection * (1.0 + 3.0 * volatility_cv))
+            final_scores = np.minimum(final_scores, upper_cap)
+            cap_tolerance = max(0.01, upper_cap * 1e-6)
+            cap_hit_percentages[name] = round(
+                100.0 * float(np.mean(final_scores >= upper_cap - cap_tolerance)), 2
+            )
+        simulations[name] = final_scores
+        if index == 0 or (index + 1) % 2 == 0 or index + 1 == total_players:
+            progress_value = 0.05 + 0.90 * (index + 1) / total_players
+            simulation_progress.progress(
+                min(0.95, progress_value),
+                text=f"Simulating players: {index + 1} of {total_players} ({(index + 1) / total_players:.0%})"
+            )
+
+    result = pd.DataFrame(simulations)
+    st.session_state["simulation_cap_hit_pct"] = cap_hit_percentages
+    simulation_progress.progress(1.0, text=f"Player simulations complete: {total_players} players")
+
+    return result
+
+@st.cache_data(show_spinner=False, ttl=86400)
+@st.cache_data(show_spinner=False, ttl=86400)
+def _download_nfl_historical_player_stats():
+    """Download historical NFL stats once per cache period, with a network timeout."""
+    import io
+    import requests
+
+    frames = []
+    loaded_seasons = []
+    errors = []
+    # Load the current season plus recent seasons for player history.
+    # The 2026 file may not be published yet; failures are recorded and older
+    # seasons still load. Streamlit caches the result for 24 hours.
+    # Short per-request timeouts ensure unavailable data falls back promptly.
+    for season in [2026, 2025, 2024, 2023]:
+        url = f"https://github.com/nflverse/nflverse-data/releases/download/stats_player/stats_player_week_{season}.csv"
+        try:
+            response = requests.get(url, timeout=(4, 10))
+            response.raise_for_status()
+            frame = pd.read_csv(io.BytesIO(response.content), low_memory=False)
+            if not frame.empty:
+                frame["season"] = season
+                frames.append(frame)
+                loaded_seasons.append(season)
+        except Exception as exc:
+            errors.append(f"{season}: {str(exc)[:120]}")
+    historical = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
+    return historical, loaded_seasons, errors
+
+
+def load_nfl_historical_player_stats():
+    """Use Streamlit's shared cache so reruns reuse data instead of downloading it again."""
+    try:
+        historical, loaded_seasons, errors = _download_nfl_historical_player_stats()
+    except Exception as exc:
+        historical, loaded_seasons, errors = pd.DataFrame(), [], [str(exc)]
+    if loaded_seasons:
+        st.session_state["nfl_historical_stats_status"] = (
+            "Historical NFL data cached for reuse. Loaded seasons: "
+            + ", ".join(str(year) for year in loaded_seasons)
+            + ". Cache refreshes every 24 hours."
+        )
+    else:
+        detail = (" " + "; ".join(errors[:2])) if errors else ""
+        st.session_state["nfl_historical_stats_status"] = (
+            "Historical NFL data could not be downloaded; using salary/position estimates."
+            + detail
+        )
+    return historical
+
+
+@st.cache_data(show_spinner=False, ttl=86400)
+def _download_nfl_pbp_game_history():
+    """Load compact final-score history from nflverse play-by-play, cached for 24 hours."""
+    import requests
+
+    frames = []
+    loaded_seasons = []
+    errors = []
+    # Use recent historical seasons for game-environment calibration.
+    # Streamlit caches the completed result for 24 hours to avoid repeat downloads.
+    wanted_columns = {
+        "season", "game_id", "play_id", "play_type", "total_home_score",
+        "total_away_score", "game_seconds_remaining", "qtr"
+    }
+    for season in range(2020, 2027):
+        url = f"https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_{season}.csv"
+        try:
+            with requests.get(url, timeout=(10, 60), stream=True) as response:
+                response.raise_for_status()
+                response.raw.decode_content = True
+                frame = pd.read_csv(
+                    response.raw,
+                    usecols=lambda column: column in wanted_columns,
+                    low_memory=False,
+                )
+            required = {"game_id", "total_home_score", "total_away_score"}
+            if frame.empty or not required.issubset(frame.columns):
+                errors.append(f"{season}: play-by-play file did not contain required score columns")
+                continue
+            frame["season"] = season
+            frame["_play_order"] = pd.to_numeric(
+                frame.get("play_id", pd.Series(np.arange(len(frame)))), errors="coerce"
+            )
+            frame["_home_score"] = pd.to_numeric(frame["total_home_score"], errors="coerce")
+            frame["_away_score"] = pd.to_numeric(frame["total_away_score"], errors="coerce")
+            # Some historical or alternate PBP exports may omit these fields.
+            # Keep score history usable even when play-volume details are missing.
+            if "play_id" not in frame.columns:
+                frame["play_id"] = np.nan
+            if "play_type" not in frame.columns:
+                frame["play_type"] = ""
+            frame = frame.dropna(subset=["game_id", "_home_score", "_away_score"])
+            final_scores = (
+                frame.sort_values("_play_order")
+                .groupby("game_id", sort=False)
+                .tail(1)
+                .copy()
+            )
+            final_scores["GamePoints"] = final_scores["_home_score"] + final_scores["_away_score"]
+            # Summarize real play volume by game so the simulator can learn
+            # from both scoring environment and pace, not just final scores.
+            play_counts = frame.groupby("game_id").agg(
+                GamePlays=("play_id", "count"),
+                PassPlays=("play_type", lambda values: values.astype(str).str.lower().eq("pass").sum()),
+                RunPlays=("play_type", lambda values: values.astype(str).str.lower().eq("run").sum()),
+            ).reset_index()
+            final_scores = final_scores.merge(play_counts, on="game_id", how="left")
+            final_scores[["GamePlays", "PassPlays", "RunPlays"]] = (
+                final_scores[["GamePlays", "PassPlays", "RunPlays"]].fillna(0)
+            )
+            final_scores = final_scores[
+                ["season", "game_id", "GamePoints", "GamePlays", "PassPlays", "RunPlays"]
+            ]
+            if not final_scores.empty:
+                frames.append(final_scores)
+                loaded_seasons.append(season)
+        except Exception as exc:
+            errors.append(f"{season}: {str(exc)[:120]}")
+    history = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame(
+        columns=["season", "game_id", "GamePoints", "GamePlays", "PassPlays", "RunPlays"]
+    )
+    if not history.empty:
+        history = history.drop_duplicates(subset=["game_id"], keep="last").reset_index(drop=True)
+    return history, loaded_seasons, errors
+
+
+def load_nfl_pbp_game_history():
+    """Return cached play-by-play game-score history, failing safely if unavailable."""
+    try:
+        history, loaded_seasons, errors = _download_nfl_pbp_game_history()
+    except Exception as exc:
+        history, loaded_seasons, errors = pd.DataFrame(), [], [str(exc)[:120]]
+    st.session_state["nfl_pbp_history_status"] = (
+        "Play-by-play game history loaded for seasons "
+        + ", ".join(str(year) for year in loaded_seasons)
+        + ". Cached for 24 hours."
+        if loaded_seasons
+        else "Play-by-play history unavailable; using historical player stats instead."
+        + ((" " + "; ".join(errors[:2])) if errors else "")
+    )
+    return history
+
+
+def build_historical_volatility_check(historical):
+    """Compare observed weekly score variation with the simulator's position CV targets."""
+    if historical is None or historical.empty or "position" not in historical.columns:
+        return pd.DataFrame()
+
+    score_col = next(
+        (col for col in ["fantasy_points", "fantasy_points_ppr"] if col in historical.columns),
+        None,
+    )
+    name_col = next(
+        (col for col in ["player_id", "player_display_name", "player_name", "name"] if col in historical.columns),
+        None,
+    )
+    if not score_col or not name_col or "week" not in historical.columns:
+        return pd.DataFrame()
+
+    data = historical.copy()
+    data["_score"] = pd.to_numeric(data[score_col], errors="coerce")
+    data["_week"] = pd.to_numeric(data["week"], errors="coerce")
+    data["_position"] = data["position"].astype(str).str.upper().str.strip()
+    data = data[
+        data["_position"].isin(["QB", "RB", "WR", "TE", "K", "DST"])
+        & data["_week"].between(1, 18)
+        & data["_score"].notna()
+    ].copy()
+    if data.empty:
+        return pd.DataFrame()
+
+    # One score per player per season/week; use player IDs when available.
+    dedupe = [c for c in ["season", name_col, "_week"] if c in data.columns]
+    if dedupe:
+        data = data.drop_duplicates(subset=dedupe, keep="last")
+    player_key = (data["season"].astype(str) + ":" if "season" in data.columns else "") + data[name_col].astype(str)
+    data["_player_key"] = player_key
+    player_rows = []
+    for (position, player), group in data.groupby(["_position", "_player_key"], sort=False):
+        scores = group["_score"].astype(float)
+        if len(scores) < 8 or scores.mean() < 5.0:
+            continue
+        mean_score = float(scores.mean())
+        if mean_score <= 0:
+            continue
+        player_rows.append({
+            "Position": position,
+            "Games": len(scores),
+            "Historical Mean": mean_score,
+            "Historical CV %": 100.0 * float(scores.std(ddof=1)) / mean_score,
+        })
+    per_player = pd.DataFrame(player_rows)
+    if per_player.empty:
+        return pd.DataFrame()
+
+    targets = {"QB": 40, "RB": 45, "WR": 50, "TE": 50, "K": 30, "DST": 50}
+    rows = []
+    for position, group in per_player.groupby("Position"):
+        observed = float(group["Historical CV %"].median())
+        target = targets.get(position, 45)
+        rows.append({
+            "Position": position,
+            "Players Tested": len(group),
+            "Median Historical CV %": round(observed, 1),
+            "Current Simulator Target CV %": target,
+            "Difference (points)": round(target - observed, 1),
+            "Initial Read": (
+                "Target may be too wide" if target - observed >= 10
+                else "Target may be too narrow" if target - observed <= -10
+                else "Roughly in range"
+            ),
+        })
+    return pd.DataFrame(rows).sort_values("Position").reset_index(drop=True)
+
+
+def _normalize_historical_player_names(values):
+    """Normalize player names once so historical matching does not rescan all rows per player."""
+    return (
+        values.astype(str)
+        .str.casefold()
+        .str.replace(r"[^a-z0-9 ]", "", regex=True)
+        .str.replace(r"\s+", " ", regex=True)
+        .str.strip()
+    )
+
+
+def _build_historical_name_index(historical):
+    """Build a reusable name-to-rows index for one simulation run."""
+    if historical.empty:
+        return {}
+    name_col = next((col for col in ["player_display_name", "player_name", "name"] if col in historical.columns), None)
+    if name_col is None or "week" not in historical.columns:
+        return {}
+    prepared = historical.copy()
+    prepared["_normalized_player_name"] = _normalize_historical_player_names(prepared[name_col])
+    return {
+        name: group.drop(columns=["_normalized_player_name"])
+        for name, group in prepared.groupby("_normalized_player_name", sort=False)
+        if name
+    }
+
+
+def _historical_player_average(player_name, position, platform, historical, return_scores=False, historical_name_index=None):
+    """Return recency-weighted fantasy points, or the recent weekly scores themselves."""
+    if historical.empty:
+        return None
+    name_col = next((col for col in ["player_display_name", "player_name", "name"] if col in historical.columns), None)
+    if name_col is None or "week" not in historical.columns:
+        return None
+    wanted = " ".join(str(player_name).casefold().replace(".", "").replace(",", "").split())
+    wanted = " ".join(pd.Series([wanted]).str.replace(r"[^a-z0-9 ]", "", regex=True).iloc[0].split())
+    if historical_name_index is not None:
+        rows = historical_name_index.get(wanted)
+        if rows is None:
+            return None
+        rows = rows.copy()
+    else:
+        names = _normalize_historical_player_names(historical[name_col])
+        rows = historical[names == wanted].copy()
+    if rows.empty:
+        return None
+    # Use regular-season records only when the source identifies game type.
+    # Playoff and preseason usage can differ substantially from normal weekly roles.
+    if "season_type" in rows.columns:
+        season_type = rows["season_type"].astype(str).str.strip().str.upper()
+        rows = rows[season_type.isin(["REG", "REGULAR", "REGULAR_SEASON"])].copy()
+    if rows.empty:
+        return None
+
+    # Do not silently use records from another position when a position match
+    # is available in the source. Ambiguous or mismatched history is safer to skip.
+    if "position" in rows.columns and position:
+        matching = rows[rows["position"].astype(str).str.upper().str.strip() == str(position).upper().strip()]
+        if matching.empty:
+            return None
+        rows = matching.copy()
+
+    if "season" in rows.columns:
+        rows["season"] = pd.to_numeric(rows["season"], errors="coerce")
+    else:
+        rows["season"] = 0
+    rows["week"] = pd.to_numeric(rows["week"], errors="coerce")
+    rows = rows[rows["week"].between(1, 18, inclusive="both")].copy()
+    rows = rows.dropna(subset=["week"])
+    if rows.empty:
+        return None
+
+    # If the same normalized name maps to multiple NFL player IDs at the same
+    # position, do not blend those players' histories together. A bad match is
+    # worse than falling back to the model's projection-based distribution.
+    if "player_id" in rows.columns:
+        ids = rows["player_id"].dropna().astype(str).str.strip()
+        ids = ids[ids.ne("")]
+        if ids.nunique() > 1:
+            return None
+
+    # A player should contribute at most one record per game. Remove duplicate
+    # player/game rows if the source contains them. Keep a longer recent window
+    # now that three seasons are available.
+    dedupe_cols = [col for col in ["player_id", "game_id"] if col in rows.columns]
+    if len(dedupe_cols) == 2:
+        rows = rows.drop_duplicates(subset=dedupe_cols, keep="last")
+    elif "game_id" in rows.columns:
+        rows = rows.drop_duplicates(subset=["game_id"], keep="last")
+
+    rows = rows.sort_values(["season", "week"]).tail(30)
+    if rows.empty:
+        return None
+    if str(platform).lower().startswith("fanduel"):
+        stats_map = {
+            "passing_yards": "passing_yards", "passing_tds": "passing_tds",
+            "interceptions": "interceptions", "rushing_yards": "rushing_yards",
+            "rushing_tds": "rushing_tds", "receiving_yards": "receiving_yards",
+            "receiving_tds": "receiving_tds", "receptions": "receptions",
+            "fumbles_lost": "sack_fumbles_lost",
+        }
+        scores = []
+        for _, game in rows.iterrows():
+            stat_line = {}
+            for output_col, source_col in stats_map.items():
+                if source_col in rows.columns:
+                    stat_line[output_col] = pd.to_numeric(pd.Series([game[source_col]]), errors="coerce").fillna(0).iloc[0]
+            scores.append(float(score_nfl_stat_line(stat_line, platform)))
+        points = np.asarray(scores, dtype=float)
+    else:
+        points_col = next((col for col in ["fantasy_points_ppr", "fantasy_points"] if col in rows.columns), None)
+        if points_col is None:
+            return None
+        points = pd.to_numeric(rows[points_col], errors="coerce").fillna(0).to_numpy(dtype=float)
+    weights = np.linspace(0.5, 1.5, len(points))
+    # Gently favor games that match the player's current workload. This
+    # changes sampling frequency, not the underlying scoring or projections.
+    # Keep the adjustment bounded so a single high-usage game cannot dominate.
+    usage_columns = []
+    normalized_position = str(position or "").upper().strip()
+    if normalized_position == "QB":
+        usage_columns = [col for col in ["attempts", "carries"] if col in rows.columns]
+    elif normalized_position == "RB":
+        usage_columns = [col for col in ["carries", "targets"] if col in rows.columns]
+    elif normalized_position in {"WR", "TE"}:
+        usage_columns = [col for col in ["targets"] if col in rows.columns]
+        if not usage_columns and "receptions" in rows.columns:
+            usage_columns = ["receptions"]
+    if usage_columns and len(points) == len(rows) and len(points) >= 4:
+        usage_parts = []
+        for col in usage_columns:
+            values = pd.to_numeric(rows[col], errors="coerce").fillna(0).clip(lower=0).to_numpy(dtype=float)
+            # Targets are a useful role signal but slightly less direct than
+            # carries/attempts, so scale them to avoid overwhelming the measure.
+            usage_parts.append(values * (1.25 if col == "targets" and normalized_position == "RB" else 1.0))
+        workload = np.sum(np.vstack(usage_parts), axis=0)
+        positive_workload = workload[workload > 0]
+        if len(positive_workload) >= 3:
+            reference = float(np.median(positive_workload))
+            if np.isfinite(reference) and reference > 0:
+                usage_multiplier = np.clip(workload / reference, 0.75, 1.25)
+                # Blend with neutral weighting to limit impact from role changes
+                # and noisy weekly stats.
+                weights = weights * (0.5 + 0.5 * usage_multiplier)
+    average = float(np.average(points, weights=weights))
+    if return_scores:
+        return (points, weights) if len(points) and np.isfinite(points).all() else None
+    return max(0.0, average) if np.isfinite(average) else None
+
+def build_internal_projection_means(players_df, platform="DraftKings", include_history=False):
+    """Blend salary/position estimates with recency-weighted historical NFL results."""
+    salary = pd.to_numeric(players_df["Salary"], errors="coerce").fillna(0).to_numpy(dtype=float)
+    positions = players_df["Position"].astype(str).str.upper().str.split("/")
+    position_rates = {
+        "QB": 2.00, "RB": 1.75, "WR": 1.70, "TE": 1.50,
+        "K": 1.35, "DST": 1.35, "D": 1.35, "DEF": 1.35,
+    }
+    baseline = []
+    for pay, eligible_positions in zip(salary, positions):
+        rates = [position_rates[pos.strip()] for pos in eligible_positions if pos.strip() in position_rates]
+        rate = max(rates) if rates else 1.60
+        baseline.append(max(0.3, (pay / 1000.0) * rate))
+    baseline = np.asarray(baseline, dtype=float)
+    # Avoid network downloads while the app page is starting up. Load historical data only when a simulation is explicitly run.
+    historical = load_nfl_historical_player_stats() if include_history else pd.DataFrame()
+    blended = []
+    matched = 0
+    for index, (_, row) in enumerate(players_df.iterrows()):
+        pos = str(row.get("Position", "")).upper().split("/")[0].strip()
+        historical_avg = _historical_player_average(row.get("Name", ""), pos, platform, historical)
+        if historical_avg is None:
+            blended.append(baseline[index])
+        else:
+            # Historical performance is informative, but salary-based opportunity
+            # prevents tiny samples from overpowering the estimate.
+            blended.append(max(0.3, 0.65 * historical_avg + 0.35 * baseline[index]))
+            matched += 1
+    st.session_state["nfl_historical_players_matched"] = matched
+    return np.asarray(blended, dtype=float)
+
+
 if platform == "FanDuel":
     # One-upload FanDuel slate setup. FanDuel entry templates include both the
     # user's contest rows and a player-reference section later in the same CSV.
@@ -2492,109 +3375,16 @@ if platform == "FanDuel":
         if fd_run_all_clicked:
             fd_progress_bar = st.progress(2, text="Starting FanDuel simulation...")
         if fd_sim_clicked:
-            with st.spinner(f"Running {SIMULATION_COUNT:,} FanDuel scoring simulations..."):
+            with st.spinner(f"Running {SIMULATION_COUNT:,} shared historical/PBP simulations for FanDuel..."):
                 rng = np.random.default_rng()
-                position_rates = {
-                    "QB": 2.00, "RB": 1.75, "WR": 1.70, "TE": 1.50,
-                    "K": 1.35, "D": 1.35, "DST": 1.35, "DEF": 1.35
-                }
-                # FanDuel scoring differs from DraftKings: half-point receptions,
-                # -2 lost fumbles, and no 300/100-yard bonuses.
-                simulated_scores = np.zeros((SIMULATION_COUNT, len(fd_players)), dtype=float)
-                for index, (_, player_row) in enumerate(fd_players.iterrows()):
-                    if fd_run_all_clicked:
-                        sim_pct = 3 + int(25 * (index / max(1, len(fd_players))))
-                        fd_progress_bar.progress(
-                            sim_pct,
-                            text=f"Simulating FanDuel players: {index + 1:,} of {len(fd_players):,}..."
-                        )
-                    positions = set(str(player_row["Position"]).upper().replace(" ", "").split("/"))
-                    n = SIMULATION_COUNT
-                    if "QB" in positions:
-                        stats = {"passing_yards": np.maximum(0, rng.normal(225, 65, n)),
-                                 "passing_tds": rng.poisson(1.45, n), "interceptions": rng.poisson(0.65, n),
-                                 "rushing_yards": np.maximum(0, rng.normal(16, 20, n)),
-                                 "rushing_tds": rng.binomial(1, 0.12, n)}
-                    elif "RB" in positions:
-                        stats = {"rushing_yards": np.maximum(0, rng.normal(55, 30, n)),
-                                 "rushing_tds": rng.binomial(2, 0.18, n),
-                                 "receiving_yards": np.maximum(0, rng.normal(22, 20, n)),
-                                 "receiving_tds": rng.binomial(1, 0.10, n), "receptions": rng.poisson(2.5, n)}
-                    elif "WR" in positions:
-                        stats = {"receiving_yards": np.maximum(0, rng.normal(55, 35, n)),
-                                 "receiving_tds": rng.binomial(1, 0.28, n), "receptions": rng.poisson(4.0, n),
-                                 "rushing_yards": np.maximum(0, rng.normal(2, 5, n))}
-                    elif "TE" in positions:
-                        stats = {"receiving_yards": np.maximum(0, rng.normal(34, 24, n)),
-                                 "receiving_tds": rng.binomial(1, 0.20, n), "receptions": rng.poisson(2.7, n)}
-                    elif positions & {"K"}:
-                        stats = {"fg_under_40": rng.poisson(1.0, n), "fg_40_49": rng.poisson(0.5, n),
-                                 "fg_50_plus": rng.poisson(0.25, n), "extra_points_made": rng.poisson(2.0, n)}
-                    else:
-                        stats = {"sacks": rng.poisson(2.3, n), "def_interceptions": rng.binomial(1, 0.7, n),
-                                 "fumble_recoveries": rng.binomial(1, 0.45, n), "defensive_tds": rng.binomial(1, 0.08, n),
-                                 "safeties": rng.binomial(1, 0.03, n), "blocked_kicks": rng.binomial(1, 0.04, n),
-                                 "points_allowed": np.clip(rng.normal(22, 10, n), 0, 50),
-                                 "yards_allowed": np.clip(rng.normal(350, 80, n), 0, 650), "is_defense": 1}
-                    score = (
-                        np.asarray(stats.get("passing_yards", 0), dtype=float) * 0.04
-                        + np.asarray(stats.get("passing_tds", 0), dtype=float) * 4
-                        - np.asarray(stats.get("interceptions", 0), dtype=float)
-                        + np.asarray(stats.get("rushing_yards", 0), dtype=float) * 0.1
-                        + np.asarray(stats.get("rushing_tds", 0), dtype=float) * 6
-                        + np.asarray(stats.get("receiving_yards", 0), dtype=float) * 0.1
-                        + np.asarray(stats.get("receiving_tds", 0), dtype=float) * 6
-                        + np.asarray(stats.get("receptions", 0), dtype=float) * 0.5
-                        - np.asarray(stats.get("fumbles_lost", 0), dtype=float) * 2
-                        + np.asarray(stats.get("fg_under_40", 0), dtype=float) * 3
-                        + np.asarray(stats.get("fg_40_49", 0), dtype=float) * 4
-                        + np.asarray(stats.get("fg_50_plus", 0), dtype=float) * 5
-                        + np.asarray(stats.get("extra_points_made", 0), dtype=float)
-                        + np.asarray(stats.get("sacks", 0), dtype=float)
-                        + np.asarray(stats.get("def_interceptions", 0), dtype=float) * 2
-                        + np.asarray(stats.get("fumble_recoveries", 0), dtype=float) * 2
-                        + np.asarray(stats.get("defensive_tds", 0), dtype=float) * 6
-                        + np.asarray(stats.get("safeties", 0), dtype=float) * 2
-                        + np.asarray(stats.get("blocked_kicks", 0), dtype=float) * 2
-                    )
-                    if "D" in positions or "DST" in positions or "DEF" in positions:
-                        pa = np.asarray(stats["points_allowed"], dtype=float)
-                        ya = np.asarray(stats["yards_allowed"], dtype=float)
-                        score += np.select([pa == 0, pa <= 6, pa <= 13, pa <= 20, pa <= 27, pa <= 34],
-                                           [10, 7, 4, 1, 0, -1], default=-4)
-                        score += np.select([ya <= 100, ya <= 199, ya <= 299, ya <= 349, ya <= 399, ya <= 449, ya <= 499],
-                                           [3, 2, 1, 0, -1, -3, -5], default=-7)
-                    # Use each player's projection as the center of the outcomes,
-                    # while retaining the position-specific shape and volatility.
-                    # This prevents every QB/WR/etc. from receiving nearly the same
-                    # distribution just because they share a position.
-                    raw_scores = np.asarray(score, dtype=float)
-                    raw_mean = float(np.mean(raw_scores))
-                    raw_std = float(np.std(raw_scores))
-                    target_mean = float(pd.to_numeric(
-                        pd.Series([player_row.get("Projection", 0.01)]),
-                        errors="coerce"
-                    ).fillna(0.01).iloc[0])
-                    cv_by_position = {
-                        "QB": 0.35, "RB": 0.45, "WR": 0.55, "TE": 0.60,
-                        "K": 0.45, "D": 0.65, "DST": 0.65, "DEF": 0.65
-                    }
-                    main_position = next(
-                        (p for p in ("QB", "RB", "WR", "TE", "K", "D", "DST", "DEF") if p in positions),
-                        "WR"
-                    )
-                    target_std = max(1.5, abs(target_mean) * cv_by_position[main_position])
-                    if raw_std > 1e-8:
-                        adjusted_scores = (raw_scores - raw_mean) * (target_std / raw_std) + target_mean
-                    else:
-                        adjusted_scores = np.full(n, target_mean, dtype=float)
-                    simulated_scores[:, index] = adjusted_scores
-
-                # FanDuel's build stage uses the same distribution summaries as DraftKings.
-                # Keep them in this branch because FanDuel's UI exits before the shared DK engine.
+                simulated_scores = _simulate_scored_player_outcomes(fd_players, "FanDuel", rng)
                 player_sim = {}
-                for sim_index, sim_name in enumerate(fd_players["Name"].astype(str)):
-                    values = simulated_scores[:, sim_index]
+                for sim_name in fd_players["Name"].astype(str):
+                    if sim_name not in simulated_scores.columns:
+                        continue
+                    values = pd.to_numeric(simulated_scores[sim_name], errors="coerce").dropna().to_numpy(dtype=float)
+                    if not len(values):
+                        continue
                     player_sim[sim_name] = {
                         "Mean": float(np.mean(values)),
                         "P10": float(np.quantile(values, 0.10)),
@@ -2609,7 +3399,7 @@ if platform == "FanDuel":
                 st.session_state["fd_player_sim_" + lineup_mode.replace(" ", "_").lower()] = player_sim
                 st.session_state["fd_simulation_ready_" + lineup_mode.replace(" ", "_").lower()] = True
             if fd_run_all_clicked:
-                fd_progress_bar.progress(30, text="Simulation complete. Building 5,000 FanDuel lineups...")
+                fd_progress_bar.progress(30, text="Shared historical/PBP simulation complete. Building FanDuel lineups...")
 
         fd_signature = (
             "FanDuel",
@@ -3722,491 +4512,6 @@ if platform == "FanDuel":
 else:
 
     # ================================
-    # SETTINGS
-    # ================================
-
-    SIMULATIONS = SIMULATION_COUNT
-    DISPERSION = 8.0
-    SALARY_CAP = 50000
-
-    # NFL DFS scoring settings. Lineup builders use these site/format rules.
-    # Player outcomes are still generated from the app's internal estimates; this
-    # defines the fantasy-point scoring model and the single-game multiplier.
-    DFS_SCORING_RULES = {
-        "DraftKings": {
-            "pass_yard": 0.04, "pass_td": 4, "interception": -1,
-            "rush_yard": 0.1, "rush_td": 6,
-            "receiving_yard": 0.1, "receiving_td": 6, "reception": 1,
-            "fumble_lost": -1, "two_point_conversion": 2,
-            "pass_300_bonus": 3, "rush_100_bonus": 3, "receiving_100_bonus": 3,
-            "single_game_multiplier": 1.5,
-            "sack": 1, "def_interception": 2, "fumble_recovery": 2,
-            "defensive_td": 6, "safety": 2, "blocked_kick": 2,
-        },
-        "FanDuel": {
-            "pass_yard": 0.04, "pass_td": 4, "interception": -1,
-            "rush_yard": 0.1, "rush_td": 6,
-            "receiving_yard": 0.1, "receiving_td": 6, "reception": 0.5,
-            "fumble_lost": -2, "two_point_conversion": 2,
-            "pass_300_bonus": 0, "rush_100_bonus": 0, "receiving_100_bonus": 0,
-            "single_game_multiplier": 1.5,
-            "sack": 1, "def_interception": 2, "fumble_recovery": 2,
-            "defensive_td": 6, "safety": 2, "blocked_kick": 2,
-        },
-    }
-
-    def score_nfl_stat_line(stats, platform):
-        """Apply DraftKings or FanDuel NFL scoring to simulated player stat lines."""
-        rules = DFS_SCORING_RULES["FanDuel" if str(platform).lower().startswith("fanduel") else "DraftKings"]
-        arr = lambda key: np.asarray(stats.get(key, 0), dtype=float)
-        passing_yards, rushing_yards, receiving_yards = arr("passing_yards"), arr("rushing_yards"), arr("receiving_yards")
-        score = (
-            passing_yards * rules["pass_yard"]
-            + arr("passing_tds") * rules["pass_td"]
-            + arr("interceptions") * rules["interception"]
-            + rushing_yards * rules["rush_yard"]
-            + arr("rushing_tds") * rules["rush_td"]
-            + receiving_yards * rules["receiving_yard"]
-            + arr("receiving_tds") * rules["receiving_td"]
-            + arr("receptions") * rules["reception"]
-            + arr("fumbles_lost") * rules["fumble_lost"]
-            + arr("two_point_conversions") * rules["two_point_conversion"]
-            + arr("sacks") * rules["sack"]
-            + arr("def_interceptions") * rules["def_interception"]
-            + arr("fumble_recoveries") * rules["fumble_recovery"]
-            + arr("defensive_tds") * rules["defensive_td"]
-            + arr("safeties") * rules["safety"]
-            + arr("blocked_kicks") * rules["blocked_kick"]
-        )
-        score = score + (passing_yards >= 300) * rules["pass_300_bonus"]
-        score = score + (rushing_yards >= 100) * rules["rush_100_bonus"]
-        score = score + (receiving_yards >= 100) * rules["receiving_100_bonus"]
-        # Kicker scoring: 3 points for short FGs, 4 for 40-49 yards, 5 for 50+.
-        score = score + arr("fg_under_40") * 3 + arr("fg_40_49") * 4 + arr("fg_50_plus") * 5
-        score = score + arr("extra_points_made")
-        # Defense scoring includes points-allowed tiers; yardage allowed is modeled too.
-        points_allowed = arr("points_allowed")
-        score = score + np.select(
-            [points_allowed == 0, points_allowed <= 6, points_allowed <= 13,
-             points_allowed <= 20, points_allowed <= 27, points_allowed <= 34],
-            [10, 7, 4, 1, 0, -1], default=-4
-        ) * np.asarray(stats.get("is_defense", 0), dtype=float)
-        if not str(platform).lower().startswith("fanduel"):
-            yards_allowed = arr("yards_allowed")
-            score = score + np.select(
-                [yards_allowed <= 100, yards_allowed <= 199, yards_allowed <= 299,
-                 yards_allowed <= 349, yards_allowed <= 399, yards_allowed <= 449,
-                 yards_allowed <= 499],
-                [3, 2, 1, 0, -1, -3, -5], default=-7
-            ) * np.asarray(stats.get("is_defense", 0), dtype=float)
-        return score
-
-
-    def _simulate_scored_player_outcomes(players_df, platform, rng):
-        """Simulate player outcomes from historical distributions and shared game scripts.
-
-        Projections help set volatility and reasonable upper bounds, but do not force
-        simulated averages to equal the supplied projection.
-        """
-        simulation_progress = st.progress(0, text="Preparing player simulations...")
-        historical = load_nfl_historical_player_stats()
-        historical_name_index = _build_historical_name_index(historical)
-        simulation_progress.progress(0.05, text="Historical data loaded. Preparing game scripts...")
-        pbp_status_box = st.empty()
-        pbp_status_box.info("Loading NFL play-by-play history...")
-        pbp_history = load_nfl_pbp_game_history()
-        pbp_status_box.info("Play-by-play history: " + st.session_state.get(
-            "nfl_pbp_history_status", "Status not available yet."
-        ))
-        simulations = {}
-        cap_hit_percentages = {}
-        n = SIMULATIONS
-        correlation_strength = float(
-            np.clip(st.session_state.get("active_game_correlation_strength", 1.0), 0.0, 1.0)
-        )
-
-        # Prefer actual NFL game totals from play-by-play history. If that download
-        # is unavailable, fall back to the existing historical player-week data.
-        historical_game_factors = np.array([], dtype=float)
-        if not pbp_history.empty and "GamePoints" in pbp_history.columns:
-            try:
-                valid_games = pbp_history.copy()
-                valid_games["GamePoints"] = pd.to_numeric(valid_games["GamePoints"], errors="coerce")
-                valid_games = valid_games[valid_games["GamePoints"] > 0]
-                score_factors = valid_games["GamePoints"].to_numpy(dtype=float)
-                score_center = float(np.median(score_factors)) if len(score_factors) else 0.0
-                if len(valid_games) >= 20 and np.isfinite(score_center) and score_center > 0:
-                    score_factors = score_factors / score_center
-                    if "GamePlays" in valid_games.columns:
-                        play_counts = pd.to_numeric(valid_games["GamePlays"], errors="coerce")
-                        play_center = float(play_counts.median())
-                        if np.isfinite(play_center) and play_center > 0:
-                            pace_factors = play_counts.fillna(play_center).to_numpy(dtype=float) / play_center
-                            combined = 0.70 * score_factors + 0.30 * pace_factors
-                            historical_game_factors = np.clip(combined, 0.75, 1.25)
-                        else:
-                            historical_game_factors = np.clip(score_factors, 0.75, 1.25)
-                    else:
-                        historical_game_factors = np.clip(score_factors, 0.75, 1.25)
-            except Exception:
-                historical_game_factors = np.array([], dtype=float)
-
-        if len(historical_game_factors) < 20 and not historical.empty and "game_id" in historical.columns:
-            historical_points_col = next(
-                (col for col in ["fantasy_points_ppr", "fantasy_points"] if col in historical.columns),
-                None
-            )
-            if historical_points_col:
-                try:
-                    game_totals = pd.to_numeric(
-                        historical[historical_points_col], errors="coerce"
-                    ).groupby(historical["game_id"]).sum(min_count=1).dropna()
-                    game_totals = game_totals[game_totals > 0].to_numpy(dtype=float)
-                    if len(game_totals) >= 20:
-                        # Normalize and trim extreme games to keep the historical
-                        # factor useful without overwhelming player-level outcomes.
-                        center = float(np.median(game_totals))
-                        if np.isfinite(center) and center > 0:
-                            historical_game_factors = np.clip(
-                                game_totals / center, 0.75, 1.25
-                            )
-                except Exception:
-                    historical_game_factors = np.array([], dtype=float)
-
-        # Build one shared script per matchup so players in the same game are correlated.
-        team_col = "Team" if "Team" in players_df.columns else None
-        opponent_col = "Opponent" if "Opponent" in players_df.columns else None
-        teams = (
-            players_df[team_col].astype(str).str.upper().str.strip().unique().tolist()
-            if team_col else []
-        )
-        team_scripts = {}
-        if teams:
-            team_opponents = {}
-            for team in teams:
-                opponent = ""
-                if opponent_col:
-                    rows = players_df[
-                        players_df[team_col].astype(str).str.upper().str.strip() == team
-                    ]
-                    values = rows[opponent_col].astype(str).str.upper().str.strip()
-                    values = values[~values.isin(["", "—", "-", "NAN", "NONE"])]
-                    if not values.empty:
-                        opponent = values.iloc[0]
-                team_opponents[team] = opponent
-
-            handled = set()
-            for team in teams:
-                if team in handled:
-                    continue
-                opponent = team_opponents.get(team, "")
-                if opponent and opponent in teams and opponent != team:
-                    # Each simulated game has a shared scoring environment and a
-                    # random leader. The trailing team tends to pass more; the
-                    # leading team tends to run more.
-                    if historical_game_factors.size:
-                        # Bootstrap historical game environments for all formats.
-                        game_environment = rng.choice(historical_game_factors, size=n, replace=True)
-                    else:
-                        game_environment = np.clip(rng.normal(1.0, 0.12, n), 0.72, 1.30)
-                    margin = np.abs(rng.normal(0.0, 1.0, n))
-                    team_a_leads = rng.random(n) < 0.5
-                    a_leading = np.where(team_a_leads, margin, -margin)
-                    b_leading = -a_leading
-                    # Approximate drive/field-position effects alongside turnovers.
-                    # These are simulated game-environment factors, not a full
-                    # play-by-play drive engine yet.
-                    team_giveaways = np.clip(rng.poisson(1.25, n), 0, 4)
-                    opponent_giveaways = np.clip(rng.poisson(1.25, n), 0, 4)
-                    team_short_fields = np.clip(rng.binomial(team_giveaways, 0.30), 0, 3)
-                    opponent_short_fields = np.clip(rng.binomial(opponent_giveaways, 0.30), 0, 3)
-                    team_red_zone_drives = rng.poisson(2.2, n)
-                    opponent_red_zone_drives = rng.poisson(2.2, n)
-                    team_long_field_drives = rng.poisson(2.0, n)
-                    opponent_long_field_drives = rng.poisson(2.0, n)
-                    for side, lead_state, giveaways, forced, short_fields, red_zone, long_fields in (
-                        (team, a_leading, team_giveaways, opponent_giveaways, team_short_fields, team_red_zone_drives, team_long_field_drives),
-                        (opponent, b_leading, opponent_giveaways, team_giveaways, opponent_short_fields, opponent_red_zone_drives, opponent_long_field_drives),
-                    ):
-                        base_scoring = np.clip(game_environment * rng.normal(1.0, 0.07, n), 0.70, 1.35)
-                        # Giveaways hurt the offense; short fields help the team
-                        # receiving the extra possession. Red-zone drives improve
-                        # scoring chances, while long-field drives lower them.
-                        turnover_factor = np.clip(1.0 - 0.035 * giveaways, 0.82, 1.0)
-                        short_field_factor = np.clip(1.0 + 0.035 * short_fields, 1.0, 1.12)
-                        red_zone_factor = np.clip(1.0 + 0.025 * (red_zone - 2.2), 0.90, 1.12)
-                        long_field_factor = np.clip(1.0 - 0.018 * (long_fields - 2.0), 0.92, 1.08)
-                        team_scripts[side] = {
-                            "scoring": np.clip(base_scoring * turnover_factor * short_field_factor * red_zone_factor * long_field_factor, 0.65, 1.42),
-                            "leading": lead_state > 0.35,
-                            "trailing": lead_state < -0.35,
-                            "giveaways": giveaways,
-                            "opponent_giveaways": forced,
-                            "short_fields": short_fields,
-                            "red_zone_drives": red_zone,
-                            "long_field_drives": long_fields,
-                        }
-                    handled.add(team)
-                    handled.add(opponent)
-                else:
-                    # If opponent data is unavailable, retain a modest standalone
-                    # game environment instead of pretending to know the matchup.
-                    team_scripts[team] = {
-                        "scoring": np.clip(rng.normal(1.0, 0.14, n), 0.70, 1.35),
-                        "leading": rng.random(n) < 0.35,
-                        "trailing": rng.random(n) < 0.35,
-                    }
-
-        total_players = max(1, len(players_df))
-        for index, (_, row) in enumerate(players_df.iterrows()):
-            name = str(row["Name"])
-            positions = set(str(row.get("Position", "")).upper().replace(" ", "").split("/"))
-            team = str(row.get("Team", "")).upper().strip()
-            script = team_scripts.get(team, {
-                "scoring": np.ones(n),
-                "leading": np.zeros(n, dtype=bool),
-                "trailing": np.zeros(n, dtype=bool),
-            })
-
-            if "QB" in positions:
-                stats = {
-                    "passing_yards": np.maximum(0, rng.normal(225, 65, n)),
-                    "passing_tds": rng.poisson(1.45, n),
-                    "interceptions": rng.poisson(0.65, n),
-                    "rushing_yards": np.maximum(0, rng.normal(16, 20, n)),
-                    "rushing_tds": rng.binomial(1, 0.12, n),
-                    "fumbles_lost": rng.binomial(1, 0.08, n),
-                }
-                position_type = "QB"
-            elif "RB" in positions:
-                stats = {
-                    "rushing_yards": np.maximum(0, rng.normal(55, 30, n)),
-                    "rushing_tds": rng.binomial(2, 0.18, n),
-                    "receiving_yards": np.maximum(0, rng.normal(22, 20, n)),
-                    "receiving_tds": rng.binomial(1, 0.10, n),
-                    "receptions": rng.poisson(2.5, n),
-                    "fumbles_lost": rng.binomial(1, 0.04, n),
-                }
-                position_type = "RB"
-            elif "WR" in positions:
-                stats = {
-                    "receiving_yards": np.maximum(0, rng.normal(55, 35, n)),
-                    "receiving_tds": rng.binomial(1, 0.28, n),
-                    "receptions": rng.poisson(4.0, n),
-                    "rushing_yards": np.maximum(0, rng.normal(2, 5, n)),
-                    "fumbles_lost": rng.binomial(1, 0.02, n),
-                }
-                position_type = "WR"
-            elif "TE" in positions:
-                stats = {
-                    "receiving_yards": np.maximum(0, rng.normal(34, 24, n)),
-                    "receiving_tds": rng.binomial(1, 0.20, n),
-                    "receptions": rng.poisson(2.7, n),
-                    "fumbles_lost": rng.binomial(1, 0.02, n),
-                }
-                position_type = "TE"
-            elif "K" in positions:
-                stats = {
-                    "fg_under_40": rng.poisson(1.0, n),
-                    "fg_40_49": rng.poisson(0.5, n),
-                    "fg_50_plus": rng.poisson(0.25, n),
-                    "extra_points_made": rng.poisson(2.0, n),
-                }
-                position_type = "K"
-            else:
-                stats = {
-                    "sacks": rng.poisson(2.3, n),
-                    "def_interceptions": rng.binomial(1, 0.7, n),
-                    "fumble_recoveries": rng.binomial(1, 0.45, n),
-                    "defensive_tds": rng.binomial(1, 0.08, n),
-                    "safeties": rng.binomial(1, 0.03, n),
-                    "blocked_kicks": rng.binomial(1, 0.04, n),
-                    "points_allowed": np.clip(rng.normal(22, 10, n), 0, 50),
-                    "yards_allowed": np.clip(rng.normal(350, 80, n), 0, 650),
-                    "is_defense": 1,
-                }
-                position_type = "DST"
-
-            scores = np.asarray(score_nfl_stat_line(stats, platform), dtype=float)
-
-            # Historical scores provide the player's own distribution. Do not
-            # force the samples to match projections or a salary-based average.
-            historical_result = _historical_player_average(
-                name, next(iter(positions), ""), platform, historical,
-                return_scores=True, historical_name_index=historical_name_index
-            )
-            has_player_history = historical_result is not None
-            if historical_result is not None:
-                historical_points, recency_weights = historical_result
-                probabilities = recency_weights / recency_weights.sum()
-                scores = rng.choice(
-                    historical_points, size=n, replace=True, p=probabilities
-                ).astype(float)
-
-            # Anchor sparse/no-history players to a projection-informed distribution.
-            # This prevents generic position outcomes from overwhelming tiny projections.
-            # Historical player distributions remain unscaled.
-            # Anchor the simulated mean to the slate projection and calibrate volatility.
-            # Historical results determine the shape, while position-specific limits prevent
-            # mismatched or sparse history from creating absurdly wide distributions.
-            projection = np.nan
-            for projection_column in (
-                "Projection", "ProjectedPoints", "FinalProjection",
-                "FantasyPoints", "FPTS", "Proj", "Points"
-            ):
-                if projection_column in row.index:
-                    candidate = pd.to_numeric(
-                        pd.Series([row.get(projection_column)]), errors="coerce"
-                    ).iloc[0]
-                    if np.isfinite(candidate) and candidate > 0:
-                        projection = float(candidate)
-                        break
-
-            # Position-specific volatility targets. Historical data still informs
-            # each player's spread, but blending it with a position baseline helps
-            # prevent noisy samples from creating extreme tails.
-            position_cv_limits = {
-                "QB": (0.25, 0.55, 0.40),
-                "RB": (0.25, 0.60, 0.45),
-                "WR": (0.30, 0.60, 0.50),
-                "TE": (0.30, 0.60, 0.50),
-                "K": (0.20, 0.40, 0.30),
-                "DST": (0.35, 0.65, 0.50),
-            }
-            min_cv, max_cv, baseline_cv = position_cv_limits.get(
-                position_type, (0.30, 0.55, 0.45)
-            )
-            sampled_mean = float(np.mean(scores)) if len(scores) else 0.0
-            sampled_std = float(np.std(scores, ddof=1)) if len(scores) > 1 else 0.0
-            if position_type == "K" and np.isfinite(projection) and projection > 0:
-                # Kicker historical samples may be all-zero or mismatched. If
-                # usable, retain their shape while scaling toward the projection;
-                # otherwise generate a projection-centered distribution.
-                if np.isfinite(sampled_mean) and sampled_mean > 1e-6:
-                    scores = np.maximum(
-                        0.0,
-                        scores * (projection / sampled_mean)
-                        + rng.normal(0.0, max(0.25, projection * 0.12), size=n),
-                    )
-                else:
-                    scores = np.maximum(
-                        0.0,
-                        rng.normal(projection, max(1.0, projection * 0.30), size=n),
-                    )
-                sampled_mean = float(np.mean(scores))
-                sampled_std = float(np.std(scores, ddof=1)) if len(scores) > 1 else 0.0
-            elif (
-                not has_player_history
-                and np.isfinite(projection) and projection > 0
-                and np.isfinite(sampled_mean) and sampled_mean > 1e-6
-            ):
-                scores = np.maximum(
-                    0.0,
-                    scores * (projection / sampled_mean)
-                    + rng.normal(0.0, max(0.25, projection * 0.20), size=n),
-                )
-                sampled_mean = float(np.mean(scores))
-                sampled_std = float(np.std(scores, ddof=1)) if len(scores) > 1 else 0.0
-
-            if np.isfinite(projection) and projection > 0:
-                # Use half historical volatility and half position baseline, then
-                # cap the result to reduce over-wide P90/P95/P99 outcomes.
-                if sampled_mean > 0 and np.isfinite(sampled_std) and sampled_std > 0:
-                    historical_cv = sampled_std / sampled_mean
-                    blended_cv = 0.50 * historical_cv + 0.50 * baseline_cv
-                    volatility_cv = float(np.clip(blended_cv, min_cv, max_cv))
-                else:
-                    volatility_cv = baseline_cv
-                target_std = max(0.5, projection * volatility_cv)
-
-                if sampled_std > 1e-6 and np.isfinite(sampled_std):
-                    # Limit extreme historical outliers before rescaling. This reduces
-                    # unrealistic P95/P99 values while retaining player-specific shape.
-                    standardized = (scores - sampled_mean) / sampled_std
-                    standardized = np.clip(standardized, -3.0, 3.0)
-                    standardized_mean = float(np.mean(standardized))
-                    standardized_std = float(np.std(standardized, ddof=1))
-                    if standardized_std > 1e-6 and np.isfinite(standardized_std):
-                        standardized = (
-                            (standardized - standardized_mean)
-                            * (target_std / standardized_std)
-                        )
-                        # Preserve the historical/sample mean instead of forcing
-                        # simulated outcomes to average the supplied projection.
-                        scores = projection + standardized
-                    else:
-                        # Sparse/constant historical samples can have a nonzero
-                        # raw spread but no usable spread after outlier trimming.
-                        # Generate a distribution rather than a flat line.
-                        scores = rng.normal(max(0.0, projection), target_std, size=n)
-                else:
-                    # If the sampled history has no usable spread, retain its own
-                    # average and use the projection only to set the spread.
-                    scores = rng.normal(max(0.0, projection), target_std, size=n)
-
-                # Fantasy scores cannot be negative.
-                scores = np.maximum(scores, 0.0)
-
-                # Low-projection players often have sparse or discrete history,
-                # which can leave several displayed percentiles identical. Use a
-                # positive, right-skewed distribution for these players so they
-                # retain a realistic chance of zero while keeping the mean anchored
-                # to the supplied projection.
-                if projection <= 3.0:
-                    low_projection_cv = max(volatility_cv, 0.45)
-                    gamma_shape = 1.0 / (low_projection_cv ** 2)
-                    scores = rng.gamma(
-                        shape=gamma_shape,
-                        scale=max(projection, 0.01) / gamma_shape,
-                        size=n,
-                    )
-            # Shared game script adjusts the sampled outcome modestly. Trailing teams
-            # throw more; leading teams lean more on their running backs.
-            # Scale shared game-script effects with the user's single-game slider.
-            # At 0%, players still have their own outcome variation, but shared
-            # scoring/lead-trail adjustments are neutralized.
-            raw_scoring_factor = script["scoring"]
-            scoring_factor = 1.0 + (raw_scoring_factor - 1.0) * correlation_strength
-            trailing = script["trailing"].astype(float) * correlation_strength
-            leading = script["leading"].astype(float) * correlation_strength
-            if position_type in ("QB", "WR", "TE"):
-                script_factor = scoring_factor + trailing * 0.12 - leading * 0.06
-            elif position_type == "RB":
-                script_factor = scoring_factor + leading * 0.10 - trailing * 0.08
-            elif position_type == "DST":
-                script_factor = 2.0 - scoring_factor
-            else:
-                script_factor = scoring_factor
-
-            script_factor = np.clip(script_factor, 0.80, 1.20)
-            final_scores = np.maximum(scores * script_factor, 0.0)
-            # Defensive turnover points are already represented in the sampled
-            # defensive outcomes. Do not add opponent giveaways a second time.
-            # Limit extreme simulated outcomes without shifting the distribution
-            # back to the projection. The projection sets a reasonable ceiling, but
-            # historical results and game scripts determine the simulated average.
-            if np.isfinite(projection) and projection > 0:
-                upper_cap = max(1.0, projection * (1.0 + 3.0 * volatility_cv))
-                final_scores = np.minimum(final_scores, upper_cap)
-                cap_tolerance = max(0.01, upper_cap * 1e-6)
-                cap_hit_percentages[name] = round(
-                    100.0 * float(np.mean(final_scores >= upper_cap - cap_tolerance)), 2
-                )
-            simulations[name] = final_scores
-            if index == 0 or (index + 1) % 2 == 0 or index + 1 == total_players:
-                progress_value = 0.05 + 0.90 * (index + 1) / total_players
-                simulation_progress.progress(
-                    min(0.95, progress_value),
-                    text=f"Simulating players: {index + 1} of {total_players} ({(index + 1) / total_players:.0%})"
-                )
-
-        result = pd.DataFrame(simulations)
-        st.session_state["simulation_cap_hit_pct"] = cap_hit_percentages
-        simulation_progress.progress(1.0, text=f"Player simulations complete: {total_players} players")
-
-        return result
-
-    # ================================
     # PLAYER POOL
     # ================================
 
@@ -4704,401 +5009,6 @@ else:
         except Exception as exc:
             st.error(f"Could not read that CSV: {exc}. The sample player pool is still being used.")
 
-    @st.cache_data(show_spinner=False, ttl=86400)
-    @st.cache_data(show_spinner=False, ttl=86400)
-    def _download_nfl_historical_player_stats():
-        """Download historical NFL stats once per cache period, with a network timeout."""
-        import io
-        import requests
-
-        frames = []
-        loaded_seasons = []
-        errors = []
-        # Load the current season plus recent seasons for player history.
-        # The 2026 file may not be published yet; failures are recorded and older
-        # seasons still load. Streamlit caches the result for 24 hours.
-        # Short per-request timeouts ensure unavailable data falls back promptly.
-        for season in [2026, 2025, 2024, 2023]:
-            url = f"https://github.com/nflverse/nflverse-data/releases/download/stats_player/stats_player_week_{season}.csv"
-            try:
-                response = requests.get(url, timeout=(4, 10))
-                response.raise_for_status()
-                frame = pd.read_csv(io.BytesIO(response.content), low_memory=False)
-                if not frame.empty:
-                    frame["season"] = season
-                    frames.append(frame)
-                    loaded_seasons.append(season)
-            except Exception as exc:
-                errors.append(f"{season}: {str(exc)[:120]}")
-        historical = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
-        return historical, loaded_seasons, errors
-
-
-    def load_nfl_historical_player_stats():
-        """Use Streamlit's shared cache so reruns reuse data instead of downloading it again."""
-        try:
-            historical, loaded_seasons, errors = _download_nfl_historical_player_stats()
-        except Exception as exc:
-            historical, loaded_seasons, errors = pd.DataFrame(), [], [str(exc)]
-        if loaded_seasons:
-            st.session_state["nfl_historical_stats_status"] = (
-                "Historical NFL data cached for reuse. Loaded seasons: "
-                + ", ".join(str(year) for year in loaded_seasons)
-                + ". Cache refreshes every 24 hours."
-            )
-        else:
-            detail = (" " + "; ".join(errors[:2])) if errors else ""
-            st.session_state["nfl_historical_stats_status"] = (
-                "Historical NFL data could not be downloaded; using salary/position estimates."
-                + detail
-            )
-        return historical
-
-
-    @st.cache_data(show_spinner=False, ttl=86400)
-    def _download_nfl_pbp_game_history():
-        """Load compact final-score history from nflverse play-by-play, cached for 24 hours."""
-        import requests
-
-        frames = []
-        loaded_seasons = []
-        errors = []
-        # Use recent historical seasons for game-environment calibration.
-        # Streamlit caches the completed result for 24 hours to avoid repeat downloads.
-        wanted_columns = {
-            "season", "game_id", "play_id", "play_type", "total_home_score",
-            "total_away_score", "game_seconds_remaining", "qtr"
-        }
-        for season in range(2020, 2027):
-            url = f"https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_{season}.csv"
-            try:
-                with requests.get(url, timeout=(10, 60), stream=True) as response:
-                    response.raise_for_status()
-                    response.raw.decode_content = True
-                    frame = pd.read_csv(
-                        response.raw,
-                        usecols=lambda column: column in wanted_columns,
-                        low_memory=False,
-                    )
-                required = {"game_id", "total_home_score", "total_away_score"}
-                if frame.empty or not required.issubset(frame.columns):
-                    errors.append(f"{season}: play-by-play file did not contain required score columns")
-                    continue
-                frame["season"] = season
-                frame["_play_order"] = pd.to_numeric(
-                    frame.get("play_id", pd.Series(np.arange(len(frame)))), errors="coerce"
-                )
-                frame["_home_score"] = pd.to_numeric(frame["total_home_score"], errors="coerce")
-                frame["_away_score"] = pd.to_numeric(frame["total_away_score"], errors="coerce")
-                # Some historical or alternate PBP exports may omit these fields.
-                # Keep score history usable even when play-volume details are missing.
-                if "play_id" not in frame.columns:
-                    frame["play_id"] = np.nan
-                if "play_type" not in frame.columns:
-                    frame["play_type"] = ""
-                frame = frame.dropna(subset=["game_id", "_home_score", "_away_score"])
-                final_scores = (
-                    frame.sort_values("_play_order")
-                    .groupby("game_id", sort=False)
-                    .tail(1)
-                    .copy()
-                )
-                final_scores["GamePoints"] = final_scores["_home_score"] + final_scores["_away_score"]
-                # Summarize real play volume by game so the simulator can learn
-                # from both scoring environment and pace, not just final scores.
-                play_counts = frame.groupby("game_id").agg(
-                    GamePlays=("play_id", "count"),
-                    PassPlays=("play_type", lambda values: values.astype(str).str.lower().eq("pass").sum()),
-                    RunPlays=("play_type", lambda values: values.astype(str).str.lower().eq("run").sum()),
-                ).reset_index()
-                final_scores = final_scores.merge(play_counts, on="game_id", how="left")
-                final_scores[["GamePlays", "PassPlays", "RunPlays"]] = (
-                    final_scores[["GamePlays", "PassPlays", "RunPlays"]].fillna(0)
-                )
-                final_scores = final_scores[
-                    ["season", "game_id", "GamePoints", "GamePlays", "PassPlays", "RunPlays"]
-                ]
-                if not final_scores.empty:
-                    frames.append(final_scores)
-                    loaded_seasons.append(season)
-            except Exception as exc:
-                errors.append(f"{season}: {str(exc)[:120]}")
-        history = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame(
-            columns=["season", "game_id", "GamePoints", "GamePlays", "PassPlays", "RunPlays"]
-        )
-        if not history.empty:
-            history = history.drop_duplicates(subset=["game_id"], keep="last").reset_index(drop=True)
-        return history, loaded_seasons, errors
-
-
-    def load_nfl_pbp_game_history():
-        """Return cached play-by-play game-score history, failing safely if unavailable."""
-        try:
-            history, loaded_seasons, errors = _download_nfl_pbp_game_history()
-        except Exception as exc:
-            history, loaded_seasons, errors = pd.DataFrame(), [], [str(exc)[:120]]
-        st.session_state["nfl_pbp_history_status"] = (
-            "Play-by-play game history loaded for seasons "
-            + ", ".join(str(year) for year in loaded_seasons)
-            + ". Cached for 24 hours."
-            if loaded_seasons
-            else "Play-by-play history unavailable; using historical player stats instead."
-            + ((" " + "; ".join(errors[:2])) if errors else "")
-        )
-        return history
-
-
-    def build_historical_volatility_check(historical):
-        """Compare observed weekly score variation with the simulator's position CV targets."""
-        if historical is None or historical.empty or "position" not in historical.columns:
-            return pd.DataFrame()
-
-        score_col = next(
-            (col for col in ["fantasy_points", "fantasy_points_ppr"] if col in historical.columns),
-            None,
-        )
-        name_col = next(
-            (col for col in ["player_id", "player_display_name", "player_name", "name"] if col in historical.columns),
-            None,
-        )
-        if not score_col or not name_col or "week" not in historical.columns:
-            return pd.DataFrame()
-
-        data = historical.copy()
-        data["_score"] = pd.to_numeric(data[score_col], errors="coerce")
-        data["_week"] = pd.to_numeric(data["week"], errors="coerce")
-        data["_position"] = data["position"].astype(str).str.upper().str.strip()
-        data = data[
-            data["_position"].isin(["QB", "RB", "WR", "TE", "K", "DST"])
-            & data["_week"].between(1, 18)
-            & data["_score"].notna()
-        ].copy()
-        if data.empty:
-            return pd.DataFrame()
-
-        # One score per player per season/week; use player IDs when available.
-        dedupe = [c for c in ["season", name_col, "_week"] if c in data.columns]
-        if dedupe:
-            data = data.drop_duplicates(subset=dedupe, keep="last")
-        player_key = (data["season"].astype(str) + ":" if "season" in data.columns else "") + data[name_col].astype(str)
-        data["_player_key"] = player_key
-        player_rows = []
-        for (position, player), group in data.groupby(["_position", "_player_key"], sort=False):
-            scores = group["_score"].astype(float)
-            if len(scores) < 8 or scores.mean() < 5.0:
-                continue
-            mean_score = float(scores.mean())
-            if mean_score <= 0:
-                continue
-            player_rows.append({
-                "Position": position,
-                "Games": len(scores),
-                "Historical Mean": mean_score,
-                "Historical CV %": 100.0 * float(scores.std(ddof=1)) / mean_score,
-            })
-        per_player = pd.DataFrame(player_rows)
-        if per_player.empty:
-            return pd.DataFrame()
-
-        targets = {"QB": 40, "RB": 45, "WR": 50, "TE": 50, "K": 30, "DST": 50}
-        rows = []
-        for position, group in per_player.groupby("Position"):
-            observed = float(group["Historical CV %"].median())
-            target = targets.get(position, 45)
-            rows.append({
-                "Position": position,
-                "Players Tested": len(group),
-                "Median Historical CV %": round(observed, 1),
-                "Current Simulator Target CV %": target,
-                "Difference (points)": round(target - observed, 1),
-                "Initial Read": (
-                    "Target may be too wide" if target - observed >= 10
-                    else "Target may be too narrow" if target - observed <= -10
-                    else "Roughly in range"
-                ),
-            })
-        return pd.DataFrame(rows).sort_values("Position").reset_index(drop=True)
-
-
-    def _normalize_historical_player_names(values):
-        """Normalize player names once so historical matching does not rescan all rows per player."""
-        return (
-            values.astype(str)
-            .str.casefold()
-            .str.replace(r"[^a-z0-9 ]", "", regex=True)
-            .str.replace(r"\s+", " ", regex=True)
-            .str.strip()
-        )
-
-
-    def _build_historical_name_index(historical):
-        """Build a reusable name-to-rows index for one simulation run."""
-        if historical.empty:
-            return {}
-        name_col = next((col for col in ["player_display_name", "player_name", "name"] if col in historical.columns), None)
-        if name_col is None or "week" not in historical.columns:
-            return {}
-        prepared = historical.copy()
-        prepared["_normalized_player_name"] = _normalize_historical_player_names(prepared[name_col])
-        return {
-            name: group.drop(columns=["_normalized_player_name"])
-            for name, group in prepared.groupby("_normalized_player_name", sort=False)
-            if name
-        }
-
-
-    def _historical_player_average(player_name, position, platform, historical, return_scores=False, historical_name_index=None):
-        """Return recency-weighted fantasy points, or the recent weekly scores themselves."""
-        if historical.empty:
-            return None
-        name_col = next((col for col in ["player_display_name", "player_name", "name"] if col in historical.columns), None)
-        if name_col is None or "week" not in historical.columns:
-            return None
-        wanted = " ".join(str(player_name).casefold().replace(".", "").replace(",", "").split())
-        wanted = " ".join(pd.Series([wanted]).str.replace(r"[^a-z0-9 ]", "", regex=True).iloc[0].split())
-        if historical_name_index is not None:
-            rows = historical_name_index.get(wanted)
-            if rows is None:
-                return None
-            rows = rows.copy()
-        else:
-            names = _normalize_historical_player_names(historical[name_col])
-            rows = historical[names == wanted].copy()
-        if rows.empty:
-            return None
-        # Use regular-season records only when the source identifies game type.
-        # Playoff and preseason usage can differ substantially from normal weekly roles.
-        if "season_type" in rows.columns:
-            season_type = rows["season_type"].astype(str).str.strip().str.upper()
-            rows = rows[season_type.isin(["REG", "REGULAR", "REGULAR_SEASON"])].copy()
-        if rows.empty:
-            return None
-
-        # Do not silently use records from another position when a position match
-        # is available in the source. Ambiguous or mismatched history is safer to skip.
-        if "position" in rows.columns and position:
-            matching = rows[rows["position"].astype(str).str.upper().str.strip() == str(position).upper().strip()]
-            if matching.empty:
-                return None
-            rows = matching.copy()
-
-        if "season" in rows.columns:
-            rows["season"] = pd.to_numeric(rows["season"], errors="coerce")
-        else:
-            rows["season"] = 0
-        rows["week"] = pd.to_numeric(rows["week"], errors="coerce")
-        rows = rows[rows["week"].between(1, 18, inclusive="both")].copy()
-        rows = rows.dropna(subset=["week"])
-        if rows.empty:
-            return None
-
-        # If the same normalized name maps to multiple NFL player IDs at the same
-        # position, do not blend those players' histories together. A bad match is
-        # worse than falling back to the model's projection-based distribution.
-        if "player_id" in rows.columns:
-            ids = rows["player_id"].dropna().astype(str).str.strip()
-            ids = ids[ids.ne("")]
-            if ids.nunique() > 1:
-                return None
-
-        # A player should contribute at most one record per game. Remove duplicate
-        # player/game rows if the source contains them. Keep a longer recent window
-        # now that three seasons are available.
-        dedupe_cols = [col for col in ["player_id", "game_id"] if col in rows.columns]
-        if len(dedupe_cols) == 2:
-            rows = rows.drop_duplicates(subset=dedupe_cols, keep="last")
-        elif "game_id" in rows.columns:
-            rows = rows.drop_duplicates(subset=["game_id"], keep="last")
-
-        rows = rows.sort_values(["season", "week"]).tail(30)
-        if rows.empty:
-            return None
-        if str(platform).lower().startswith("fanduel"):
-            stats_map = {
-                "passing_yards": "passing_yards", "passing_tds": "passing_tds",
-                "interceptions": "interceptions", "rushing_yards": "rushing_yards",
-                "rushing_tds": "rushing_tds", "receiving_yards": "receiving_yards",
-                "receiving_tds": "receiving_tds", "receptions": "receptions",
-                "fumbles_lost": "sack_fumbles_lost",
-            }
-            scores = []
-            for _, game in rows.iterrows():
-                stat_line = {}
-                for output_col, source_col in stats_map.items():
-                    if source_col in rows.columns:
-                        stat_line[output_col] = pd.to_numeric(pd.Series([game[source_col]]), errors="coerce").fillna(0).iloc[0]
-                scores.append(float(score_nfl_stat_line(stat_line, platform)))
-            points = np.asarray(scores, dtype=float)
-        else:
-            points_col = next((col for col in ["fantasy_points_ppr", "fantasy_points"] if col in rows.columns), None)
-            if points_col is None:
-                return None
-            points = pd.to_numeric(rows[points_col], errors="coerce").fillna(0).to_numpy(dtype=float)
-        weights = np.linspace(0.5, 1.5, len(points))
-        # Gently favor games that match the player's current workload. This
-        # changes sampling frequency, not the underlying scoring or projections.
-        # Keep the adjustment bounded so a single high-usage game cannot dominate.
-        usage_columns = []
-        normalized_position = str(position or "").upper().strip()
-        if normalized_position == "QB":
-            usage_columns = [col for col in ["attempts", "carries"] if col in rows.columns]
-        elif normalized_position == "RB":
-            usage_columns = [col for col in ["carries", "targets"] if col in rows.columns]
-        elif normalized_position in {"WR", "TE"}:
-            usage_columns = [col for col in ["targets"] if col in rows.columns]
-            if not usage_columns and "receptions" in rows.columns:
-                usage_columns = ["receptions"]
-        if usage_columns and len(points) == len(rows) and len(points) >= 4:
-            usage_parts = []
-            for col in usage_columns:
-                values = pd.to_numeric(rows[col], errors="coerce").fillna(0).clip(lower=0).to_numpy(dtype=float)
-                # Targets are a useful role signal but slightly less direct than
-                # carries/attempts, so scale them to avoid overwhelming the measure.
-                usage_parts.append(values * (1.25 if col == "targets" and normalized_position == "RB" else 1.0))
-            workload = np.sum(np.vstack(usage_parts), axis=0)
-            positive_workload = workload[workload > 0]
-            if len(positive_workload) >= 3:
-                reference = float(np.median(positive_workload))
-                if np.isfinite(reference) and reference > 0:
-                    usage_multiplier = np.clip(workload / reference, 0.75, 1.25)
-                    # Blend with neutral weighting to limit impact from role changes
-                    # and noisy weekly stats.
-                    weights = weights * (0.5 + 0.5 * usage_multiplier)
-        average = float(np.average(points, weights=weights))
-        if return_scores:
-            return (points, weights) if len(points) and np.isfinite(points).all() else None
-        return max(0.0, average) if np.isfinite(average) else None
-
-    def build_internal_projection_means(players_df, platform="DraftKings", include_history=False):
-        """Blend salary/position estimates with recency-weighted historical NFL results."""
-        salary = pd.to_numeric(players_df["Salary"], errors="coerce").fillna(0).to_numpy(dtype=float)
-        positions = players_df["Position"].astype(str).str.upper().str.split("/")
-        position_rates = {
-            "QB": 2.00, "RB": 1.75, "WR": 1.70, "TE": 1.50,
-            "K": 1.35, "DST": 1.35, "D": 1.35, "DEF": 1.35,
-        }
-        baseline = []
-        for pay, eligible_positions in zip(salary, positions):
-            rates = [position_rates[pos.strip()] for pos in eligible_positions if pos.strip() in position_rates]
-            rate = max(rates) if rates else 1.60
-            baseline.append(max(0.3, (pay / 1000.0) * rate))
-        baseline = np.asarray(baseline, dtype=float)
-        # Avoid network downloads while the app page is starting up. Load historical data only when a simulation is explicitly run.
-        historical = load_nfl_historical_player_stats() if include_history else pd.DataFrame()
-        blended = []
-        matched = 0
-        for index, (_, row) in enumerate(players_df.iterrows()):
-            pos = str(row.get("Position", "")).upper().split("/")[0].strip()
-            historical_avg = _historical_player_average(row.get("Name", ""), pos, platform, historical)
-            if historical_avg is None:
-                blended.append(baseline[index])
-            else:
-                # Historical performance is informative, but salary-based opportunity
-                # prevents tiny samples from overpowering the estimate.
-                blended.append(max(0.3, 0.65 * historical_avg + 0.35 * baseline[index]))
-                matched += 1
-        st.session_state["nfl_historical_players_matched"] = matched
-        return np.asarray(blended, dtype=float)
 
 
     players_df = apply_injury_statuses(players_df, "injury_status_dk_" + lineup_mode.replace(" ", "_").lower())
