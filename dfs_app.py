@@ -5925,247 +5925,246 @@ if isinstance(_saved_contest_field, pd.DataFrame) and not _saved_contest_field.e
     )
 
 
-# ============================================
-# CONTEST PAYOUT STRUCTURE
-# ============================================
-st.subheader("Contest Payout Structure")
-st.caption(
-    "Fetch contest details from DraftKings first. If the public endpoint does not expose every payout tier, "
-    "upload the payout table CSV shown in the contest details. Opponent lineups remain simulated."
-)
-
-_selected_dk_for_details = st.session_state.get("selected_dk_contest", {})
-if _selected_dk_for_details.get("id"):
+with st.expander("Contest Payout Structure", expanded=False):
     st.caption(
-        f"Selected contest: {_selected_dk_for_details.get('name', 'DraftKings contest')} "
-        f"(ID {_selected_dk_for_details['id']})"
+        "Fetch contest details from DraftKings first. If the public endpoint does not expose every payout tier, "
+        "upload the payout table CSV shown in the contest details. Opponent lineups remain simulated."
     )
-    if st.button("FETCH DRAFTKINGS CONTEST DETAILS", key="fetch_dk_contest_details", use_container_width=True):
-        try:
-            _contest_id_for_api = str(_selected_dk_for_details["id"]).strip()
-            if not _contest_id_for_api.isdigit():
-                raise ValueError("Contest ID must contain digits only.")
-            _dk_headers = {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/128.0 Safari/537.36",
-                "Accept": "application/json, text/plain, */*",
-                "Referer": "https://www.draftkings.com/",
-            }
-            _dk_payload = None
-            _dk_source = ""
-            _dk_api_error = None
 
-            # Try the detailed endpoint first. Some deployments return HTTP 403,
-            # so fall back to the public lobby feed rather than stopping immediately.
+    _selected_dk_for_details = st.session_state.get("selected_dk_contest", {})
+    if _selected_dk_for_details.get("id"):
+        st.caption(
+            f"Selected contest: {_selected_dk_for_details.get('name', 'DraftKings contest')} "
+            f"(ID {_selected_dk_for_details['id']})"
+        )
+        if st.button("FETCH DRAFTKINGS CONTEST DETAILS", key="fetch_dk_contest_details", use_container_width=True):
             try:
-                _dk_response = requests.get(
-                    f"https://api.draftkings.com/contests/v1/contests/{_contest_id_for_api}?format=json",
-                    headers=_dk_headers,
-                    timeout=8,
-                )
-                _dk_response.raise_for_status()
-                _dk_payload = _dk_response.json()
-                _dk_source = "contest details endpoint"
-            except Exception as _api_exc:
-                _dk_api_error = f"{type(_api_exc).__name__}: {_api_exc}"
+                _contest_id_for_api = str(_selected_dk_for_details["id"]).strip()
+                if not _contest_id_for_api.isdigit():
+                    raise ValueError("Contest ID must contain digits only.")
+                _dk_headers = {
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/128.0 Safari/537.36",
+                    "Accept": "application/json, text/plain, */*",
+                    "Referer": "https://www.draftkings.com/",
+                }
+                _dk_payload = None
+                _dk_source = ""
+                _dk_api_error = None
 
-            if _dk_payload is None:
-                _dk_lobby_response = requests.get(
-                    "https://www.draftkings.com/lobby/getcontests?sport=NFL",
-                    headers=_dk_headers,
-                    timeout=12,
-                )
-                _dk_lobby_response.raise_for_status()
-                _dk_lobby_payload = _dk_lobby_response.json()
-
-                # Lobby payload shapes vary. Search nested objects for the exact
-                # contest ID and use only that contest's own details.
-                _dk_matches = []
-                def _find_dk_contest(obj):
-                    if isinstance(obj, dict):
-                        _normalized = {str(k).casefold(): v for k, v in obj.items()}
-                        _id_value = next(
-                            (_normalized[k] for k in ("contestid", "contest_id", "id") if k in _normalized),
-                            None,
-                        )
-                        if _id_value is not None and str(_id_value).strip() == _contest_id_for_api:
-                            _dk_matches.append(obj)
-                        for _child in obj.values():
-                            _find_dk_contest(_child)
-                    elif isinstance(obj, list):
-                        for _child in obj:
-                            _find_dk_contest(_child)
-                _find_dk_contest(_dk_lobby_payload)
-                if not _dk_matches:
-                    raise ValueError(
-                        "The detailed endpoint was blocked and the public NFL lobby feed did not contain "
-                        f"contest ID {_contest_id_for_api}. Details endpoint error: {_dk_api_error}"
+                # Try the detailed endpoint first. Some deployments return HTTP 403,
+                # so fall back to the public lobby feed rather than stopping immediately.
+                try:
+                    _dk_response = requests.get(
+                        f"https://api.draftkings.com/contests/v1/contests/{_contest_id_for_api}?format=json",
+                        headers=_dk_headers,
+                        timeout=8,
                     )
-                _dk_payload = _dk_matches[0]
-                _dk_source = "public NFL lobby feed (fallback)"
+                    _dk_response.raise_for_status()
+                    _dk_payload = _dk_response.json()
+                    _dk_source = "contest details endpoint"
+                except Exception as _api_exc:
+                    _dk_api_error = f"{type(_api_exc).__name__}: {_api_exc}"
 
-            _dk_details = _dk_payload.get("contestDetail", _dk_payload) if isinstance(_dk_payload, dict) else None
-            if not isinstance(_dk_details, dict):
-                raise ValueError("DraftKings returned an unexpected contest-details format.")
+                if _dk_payload is None:
+                    _dk_lobby_response = requests.get(
+                        "https://www.draftkings.com/lobby/getcontests?sport=NFL",
+                        headers=_dk_headers,
+                        timeout=12,
+                    )
+                    _dk_lobby_response.raise_for_status()
+                    _dk_lobby_payload = _dk_lobby_response.json()
 
-            _dk_summary = {
-                "contest_id": _contest_id_for_api,
-                "fetched_at": _sticky_datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %I:%M:%S %p ET"),
-                "source": _dk_source,
-                "name": _dk_details.get("contestName") or _dk_details.get("name") or _selected_dk_for_details.get("name"),
-                "entry_fee": _dk_details.get("entryFee") or _dk_details.get("entry_fee") or _selected_dk_for_details.get("entry_fee"),
-                "entries": _dk_details.get("entries") or _dk_details.get("currentEntries") or _dk_details.get("current_entries"),
-                "maximum_entries": _dk_details.get("maximumEntries") or _dk_details.get("maxEntries") or _dk_details.get("maximum_entries"),
-                "prize_pool": _dk_details.get("prizePool") or _dk_details.get("totalPrizes") or _dk_details.get("prize_pool"),
-                "contest_summary": _dk_details.get("contestSummary") or _dk_details.get("contest_summary") or "",
-                "payout_description": _dk_details.get("payoutDescription") or _dk_details.get("payout_description") or "",
-            }
-            st.session_state["dk_contest_details"] = _dk_summary
+                    # Lobby payload shapes vary. Search nested objects for the exact
+                    # contest ID and use only that contest's own details.
+                    _dk_matches = []
+                    def _find_dk_contest(obj):
+                        if isinstance(obj, dict):
+                            _normalized = {str(k).casefold(): v for k, v in obj.items()}
+                            _id_value = next(
+                                (_normalized[k] for k in ("contestid", "contest_id", "id") if k in _normalized),
+                                None,
+                            )
+                            if _id_value is not None and str(_id_value).strip() == _contest_id_for_api:
+                                _dk_matches.append(obj)
+                            for _child in obj.values():
+                                _find_dk_contest(_child)
+                        elif isinstance(obj, list):
+                            for _child in obj:
+                                _find_dk_contest(_child)
+                    _find_dk_contest(_dk_lobby_payload)
+                    if not _dk_matches:
+                        raise ValueError(
+                            "The detailed endpoint was blocked and the public NFL lobby feed did not contain "
+                            f"contest ID {_contest_id_for_api}. Details endpoint error: {_dk_api_error}"
+                        )
+                    _dk_payload = _dk_matches[0]
+                    _dk_source = "public NFL lobby feed (fallback)"
 
-            # Some responses include structured payout tiers. Only accept tiers when
-            # rank and prize values are explicit; never guess a full payout table from prose.
-            _payout_rows = []
-            _rank_keys = ("rank", "place", "position", "finish", "minRank", "min_rank", "startRank")
-            _prize_keys = ("prize", "payout", "winnings", "amount", "prizeAmount", "payoutAmount")
-            def _walk_dk_payout_objects(obj):
-                if isinstance(obj, dict):
-                    normalized = {str(k).casefold(): v for k, v in obj.items()}
-                    rank_value = next((normalized[k.casefold()] for k in _rank_keys if k.casefold() in normalized), None)
-                    prize_value = next((normalized[k.casefold()] for k in _prize_keys if k.casefold() in normalized), None)
-                    if rank_value is not None and prize_value is not None:
-                        try:
-                            rank_num = int(float(str(rank_value).replace(",", "")))
-                            prize_num = float(str(prize_value).replace("$", "").replace(",", ""))
-                            end_value = next((normalized[k.casefold()] for k in ("maxRank", "max_rank", "endRank", "toRank") if k.casefold() in normalized), rank_num)
-                            end_num = int(float(str(end_value).replace(",", "")))
-                            if rank_num >= 1 and end_num >= rank_num and prize_num >= 0:
-                                for rank in range(rank_num, min(end_num, 100000) + 1):
-                                    _payout_rows.append((rank, prize_num))
-                        except (TypeError, ValueError):
-                            pass
-                    for child in obj.values():
-                        _walk_dk_payout_objects(child)
-                elif isinstance(obj, list):
-                    for child in obj:
-                        _walk_dk_payout_objects(child)
-            _walk_dk_payout_objects(_dk_payload)
-            if _payout_rows:
-                _payout_df = pd.DataFrame(_payout_rows, columns=["Rank", "Prize"]).drop_duplicates("Rank", keep="last")
-                _payout_df = _payout_df.sort_values("Rank")
-                _payout_schedule_auto = np.zeros(int(_payout_df["Rank"].max()), dtype=float)
-                _payout_schedule_auto[_payout_df["Rank"].to_numpy(dtype=int) - 1] = _payout_df["Prize"].to_numpy(dtype=float)
-                st.session_state["contest_payout_schedule"] = _payout_schedule_auto
-                st.session_state["contest_payout_source_name"] = "DraftKings contest details API"
-                st.session_state["contest_payout_contest_id"] = _contest_id_for_api
-                st.session_state["contest_payout_auto_loaded"] = True
-                st.success(f"DraftKings returned a structured payout table with {_payout_df['Rank'].nunique():,} ranks.")
-            else:
-                st.session_state["contest_payout_auto_loaded"] = False
-                st.info(
-                    "DraftKings returned contest details, but no complete rank-by-rank payout table was exposed. "
-                    "Review the summary below and upload the payout table CSV to calculate expected prizes."
+                _dk_details = _dk_payload.get("contestDetail", _dk_payload) if isinstance(_dk_payload, dict) else None
+                if not isinstance(_dk_details, dict):
+                    raise ValueError("DraftKings returned an unexpected contest-details format.")
+
+                _dk_summary = {
+                    "contest_id": _contest_id_for_api,
+                    "fetched_at": _sticky_datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %I:%M:%S %p ET"),
+                    "source": _dk_source,
+                    "name": _dk_details.get("contestName") or _dk_details.get("name") or _selected_dk_for_details.get("name"),
+                    "entry_fee": _dk_details.get("entryFee") or _dk_details.get("entry_fee") or _selected_dk_for_details.get("entry_fee"),
+                    "entries": _dk_details.get("entries") or _dk_details.get("currentEntries") or _dk_details.get("current_entries"),
+                    "maximum_entries": _dk_details.get("maximumEntries") or _dk_details.get("maxEntries") or _dk_details.get("maximum_entries"),
+                    "prize_pool": _dk_details.get("prizePool") or _dk_details.get("totalPrizes") or _dk_details.get("prize_pool"),
+                    "contest_summary": _dk_details.get("contestSummary") or _dk_details.get("contest_summary") or "",
+                    "payout_description": _dk_details.get("payoutDescription") or _dk_details.get("payout_description") or "",
+                }
+                st.session_state["dk_contest_details"] = _dk_summary
+
+                # Some responses include structured payout tiers. Only accept tiers when
+                # rank and prize values are explicit; never guess a full payout table from prose.
+                _payout_rows = []
+                _rank_keys = ("rank", "place", "position", "finish", "minRank", "min_rank", "startRank")
+                _prize_keys = ("prize", "payout", "winnings", "amount", "prizeAmount", "payoutAmount")
+                def _walk_dk_payout_objects(obj):
+                    if isinstance(obj, dict):
+                        normalized = {str(k).casefold(): v for k, v in obj.items()}
+                        rank_value = next((normalized[k.casefold()] for k in _rank_keys if k.casefold() in normalized), None)
+                        prize_value = next((normalized[k.casefold()] for k in _prize_keys if k.casefold() in normalized), None)
+                        if rank_value is not None and prize_value is not None:
+                            try:
+                                rank_num = int(float(str(rank_value).replace(",", "")))
+                                prize_num = float(str(prize_value).replace("$", "").replace(",", ""))
+                                end_value = next((normalized[k.casefold()] for k in ("maxRank", "max_rank", "endRank", "toRank") if k.casefold() in normalized), rank_num)
+                                end_num = int(float(str(end_value).replace(",", "")))
+                                if rank_num >= 1 and end_num >= rank_num and prize_num >= 0:
+                                    for rank in range(rank_num, min(end_num, 100000) + 1):
+                                        _payout_rows.append((rank, prize_num))
+                            except (TypeError, ValueError):
+                                pass
+                        for child in obj.values():
+                            _walk_dk_payout_objects(child)
+                    elif isinstance(obj, list):
+                        for child in obj:
+                            _walk_dk_payout_objects(child)
+                _walk_dk_payout_objects(_dk_payload)
+                if _payout_rows:
+                    _payout_df = pd.DataFrame(_payout_rows, columns=["Rank", "Prize"]).drop_duplicates("Rank", keep="last")
+                    _payout_df = _payout_df.sort_values("Rank")
+                    _payout_schedule_auto = np.zeros(int(_payout_df["Rank"].max()), dtype=float)
+                    _payout_schedule_auto[_payout_df["Rank"].to_numpy(dtype=int) - 1] = _payout_df["Prize"].to_numpy(dtype=float)
+                    st.session_state["contest_payout_schedule"] = _payout_schedule_auto
+                    st.session_state["contest_payout_source_name"] = "DraftKings contest details API"
+                    st.session_state["contest_payout_contest_id"] = _contest_id_for_api
+                    st.session_state["contest_payout_auto_loaded"] = True
+                    st.success(f"DraftKings returned a structured payout table with {_payout_df['Rank'].nunique():,} ranks.")
+                else:
+                    st.session_state["contest_payout_auto_loaded"] = False
+                    st.info(
+                        "DraftKings returned contest details, but no complete rank-by-rank payout table was exposed. "
+                        "Review the summary below and upload the payout table CSV to calculate expected prizes."
+                    )
+                st.rerun()
+            except Exception as exc:
+                st.warning(
+                    f"Could not automatically load DraftKings contest details ({type(exc).__name__}: {exc}). "
+                    "The endpoint may be unavailable or its format may have changed; you can still upload the payout CSV."
                 )
-            st.rerun()
-        except Exception as exc:
-            st.warning(
-                f"Could not automatically load DraftKings contest details ({type(exc).__name__}: {exc}). "
-                "The endpoint may be unavailable or its format may have changed; you can still upload the payout CSV."
-            )
 
-_dk_details_display = st.session_state.get("dk_contest_details")
-_current_details_contest_id = str(st.session_state.get("selected_dk_contest", {}).get("id", ""))
-if isinstance(_dk_details_display, dict) and str(_dk_details_display.get("contest_id", "")) == _current_details_contest_id:
-    _detail_cols = st.columns(4)
-    _entry_fee_display = pd.to_numeric(_dk_details_display.get("entry_fee"), errors="coerce")
-    _prize_pool_display = pd.to_numeric(_dk_details_display.get("prize_pool"), errors="coerce")
-    _entries_display = pd.to_numeric(_dk_details_display.get("entries"), errors="coerce")
-    _max_entries_display = pd.to_numeric(_dk_details_display.get("maximum_entries"), errors="coerce")
-    _detail_cols[0].metric("Entry Fee", f"${_entry_fee_display:,.2f}" if pd.notna(_entry_fee_display) else "Not provided")
-    _detail_cols[1].metric("Prize Pool", f"${_prize_pool_display:,.2f}" if pd.notna(_prize_pool_display) else "Not provided")
-    _detail_cols[2].metric("Current Entries", f"{int(_entries_display):,}" if pd.notna(_entries_display) else "Not provided")
-    _detail_cols[3].metric("Max Entries", f"{int(_max_entries_display):,}" if pd.notna(_max_entries_display) else "Not provided")
-    if _dk_details_display.get("contest_summary"):
-        st.write(_dk_details_display["contest_summary"])
-    if _dk_details_display.get("payout_description"):
-        st.write("**DraftKings payout description:** " + str(_dk_details_display["payout_description"]))
-    st.caption("Source: " + str(_dk_details_display.get("source", "DraftKings endpoint")))
-    st.caption("Last fetched: " + str(_dk_details_display.get("fetched_at", "unknown time")))
+    _dk_details_display = st.session_state.get("dk_contest_details")
+    _current_details_contest_id = str(st.session_state.get("selected_dk_contest", {}).get("id", ""))
+    if isinstance(_dk_details_display, dict) and str(_dk_details_display.get("contest_id", "")) == _current_details_contest_id:
+        _detail_cols = st.columns(4)
+        _entry_fee_display = pd.to_numeric(_dk_details_display.get("entry_fee"), errors="coerce")
+        _prize_pool_display = pd.to_numeric(_dk_details_display.get("prize_pool"), errors="coerce")
+        _entries_display = pd.to_numeric(_dk_details_display.get("entries"), errors="coerce")
+        _max_entries_display = pd.to_numeric(_dk_details_display.get("maximum_entries"), errors="coerce")
+        _detail_cols[0].metric("Entry Fee", f"${_entry_fee_display:,.2f}" if pd.notna(_entry_fee_display) else "Not provided")
+        _detail_cols[1].metric("Prize Pool", f"${_prize_pool_display:,.2f}" if pd.notna(_prize_pool_display) else "Not provided")
+        _detail_cols[2].metric("Current Entries", f"{int(_entries_display):,}" if pd.notna(_entries_display) else "Not provided")
+        _detail_cols[3].metric("Max Entries", f"{int(_max_entries_display):,}" if pd.notna(_max_entries_display) else "Not provided")
+        if _dk_details_display.get("contest_summary"):
+            st.write(_dk_details_display["contest_summary"])
+        if _dk_details_display.get("payout_description"):
+            st.write("**DraftKings payout description:** " + str(_dk_details_display["payout_description"]))
+        st.caption("Source: " + str(_dk_details_display.get("source", "DraftKings endpoint")))
+        st.caption("Last fetched: " + str(_dk_details_display.get("fetched_at", "unknown time")))
 
-payout_file = st.file_uploader(
-    "Upload contest payout table CSV",
-    type=["csv"],
-    key="contest_payout_table_upload",
-    help="Use the payout schedule shown in the DraftKings contest details. Include each paid rank."
-)
-if payout_file is not None:
-    try:
-        payout_source = pd.read_csv(payout_file)
-        payout_lookup = {str(c).strip().casefold(): c for c in payout_source.columns}
-        rank_col = next((payout_lookup[k] for k in ("rank", "place", "position", "finish") if k in payout_lookup), None)
-        prize_col = next((payout_lookup[k] for k in ("prize", "payout", "winnings", "amount") if k in payout_lookup), None)
-        if rank_col is None or prize_col is None:
-            st.error("Payout CSV needs a Rank/Place column and a Prize/Payout column.")
-        else:
-            payout_source["_rank"] = pd.to_numeric(
-                payout_source[rank_col].astype(str).str.extract(r"(\d+)")[0], errors="coerce"
-            )
-            payout_source["_prize"] = pd.to_numeric(
-                payout_source[prize_col].astype(str).str.replace(r"[$,]", "", regex=True), errors="coerce"
-            )
-            payout_source = payout_source.dropna(subset=["_rank", "_prize"])
-            payout_source = payout_source[payout_source["_rank"] >= 1].copy()
-            payout_source["_rank"] = payout_source["_rank"].astype(int)
-            payout_source = payout_source.sort_values("_rank").drop_duplicates("_rank", keep="last")
-            if payout_source.empty:
-                st.error("No valid rank/prize rows were found in the payout CSV.")
-            else:
-                payout_schedule = np.zeros(int(payout_source["_rank"].max()), dtype=float)
-                payout_schedule[payout_source["_rank"].to_numpy() - 1] = payout_source["_prize"].to_numpy(dtype=float)
-                st.session_state["contest_payout_schedule"] = payout_schedule
-                st.session_state["contest_payout_source_name"] = getattr(payout_file, "name", "uploaded payout CSV")
-                st.session_state["contest_payout_contest_id"] = str(
-                    st.session_state.get("selected_dk_contest", {}).get("id", "")
-                )
-    except Exception as exc:
-        st.error(f"Could not read payout table: {type(exc).__name__}: {exc}")
-
-# Verified payout schedule supplied from the DraftKings contest details.
-# Keep it scoped to this exact contest ID; never apply it to another contest.
-if (
-    str(st.session_state.get("selected_dk_contest", {}).get("id", "")) == "196537800"
-    and str(st.session_state.get("contest_payout_contest_id", "")) != "196537800"
-):
-    _known_dk_payout_ranges = [
-        (1, 1, 250.00), (2, 2, 150.00), (3, 3, 100.00), (4, 4, 75.00),
-        (5, 5, 50.00), (6, 6, 40.00), (7, 8, 30.00), (9, 10, 25.00),
-        (11, 13, 20.00), (14, 16, 15.00), (17, 20, 10.00), (21, 25, 8.00),
-        (26, 35, 6.00), (36, 45, 5.00), (46, 60, 4.00), (61, 75, 3.00),
-        (76, 100, 2.00), (101, 135, 1.50), (136, 215, 1.00),
-        (216, 425, 0.75), (426, 945, 0.50), (946, 2165, 0.40),
-        (2166, 5385, 0.30), (5386, 14240, 0.20),
-    ]
-    _known_dk_payout_schedule = np.zeros(14240, dtype=float)
-    for _rank_start, _rank_end, _rank_prize in _known_dk_payout_ranges:
-        _known_dk_payout_schedule[_rank_start - 1:_rank_end] = _rank_prize
-    st.session_state["contest_payout_schedule"] = _known_dk_payout_schedule
-    st.session_state["contest_payout_source_name"] = "User-provided DraftKings payout table"
-    st.session_state["contest_payout_contest_id"] = "196537800"
-
-_saved_payouts = st.session_state.get("contest_payout_schedule")
-_current_payout_contest_id = str(st.session_state.get("selected_dk_contest", {}).get("id", ""))
-_payout_matches_selected_contest = (
-    bool(_current_payout_contest_id)
-    and str(st.session_state.get("contest_payout_contest_id", "")) == _current_payout_contest_id
-)
-if _payout_matches_selected_contest and isinstance(_saved_payouts, np.ndarray) and len(_saved_payouts):
-    _paid_positions = int(np.count_nonzero(_saved_payouts > 0))
-    _top_prize = float(np.max(_saved_payouts))
-    st.success(
-        f"Payout table loaded: {_paid_positions:,} paid finishing positions; "
-        f"top prize ${_top_prize:,.2f}. Source: "
-        f"{st.session_state.get('contest_payout_source_name', 'uploaded CSV')}."
+    payout_file = st.file_uploader(
+        "Upload contest payout table CSV",
+        type=["csv"],
+        key="contest_payout_table_upload",
+        help="Use the payout schedule shown in the DraftKings contest details. Include each paid rank."
     )
-else:
-    st.info("No payout table loaded yet. Contest Sim will show ranking metrics, but projected winnings and ROI will remain unavailable.")
+    if payout_file is not None:
+        try:
+            payout_source = pd.read_csv(payout_file)
+            payout_lookup = {str(c).strip().casefold(): c for c in payout_source.columns}
+            rank_col = next((payout_lookup[k] for k in ("rank", "place", "position", "finish") if k in payout_lookup), None)
+            prize_col = next((payout_lookup[k] for k in ("prize", "payout", "winnings", "amount") if k in payout_lookup), None)
+            if rank_col is None or prize_col is None:
+                st.error("Payout CSV needs a Rank/Place column and a Prize/Payout column.")
+            else:
+                payout_source["_rank"] = pd.to_numeric(
+                    payout_source[rank_col].astype(str).str.extract(r"(\d+)")[0], errors="coerce"
+                )
+                payout_source["_prize"] = pd.to_numeric(
+                    payout_source[prize_col].astype(str).str.replace(r"[$,]", "", regex=True), errors="coerce"
+                )
+                payout_source = payout_source.dropna(subset=["_rank", "_prize"])
+                payout_source = payout_source[payout_source["_rank"] >= 1].copy()
+                payout_source["_rank"] = payout_source["_rank"].astype(int)
+                payout_source = payout_source.sort_values("_rank").drop_duplicates("_rank", keep="last")
+                if payout_source.empty:
+                    st.error("No valid rank/prize rows were found in the payout CSV.")
+                else:
+                    payout_schedule = np.zeros(int(payout_source["_rank"].max()), dtype=float)
+                    payout_schedule[payout_source["_rank"].to_numpy() - 1] = payout_source["_prize"].to_numpy(dtype=float)
+                    st.session_state["contest_payout_schedule"] = payout_schedule
+                    st.session_state["contest_payout_source_name"] = getattr(payout_file, "name", "uploaded payout CSV")
+                    st.session_state["contest_payout_contest_id"] = str(
+                        st.session_state.get("selected_dk_contest", {}).get("id", "")
+                    )
+        except Exception as exc:
+            st.error(f"Could not read payout table: {type(exc).__name__}: {exc}")
+
+    # Verified payout schedule supplied from the DraftKings contest details.
+    # Keep it scoped to this exact contest ID; never apply it to another contest.
+    if (
+        str(st.session_state.get("selected_dk_contest", {}).get("id", "")) == "196537800"
+        and str(st.session_state.get("contest_payout_contest_id", "")) != "196537800"
+    ):
+        _known_dk_payout_ranges = [
+            (1, 1, 250.00), (2, 2, 150.00), (3, 3, 100.00), (4, 4, 75.00),
+            (5, 5, 50.00), (6, 6, 40.00), (7, 8, 30.00), (9, 10, 25.00),
+            (11, 13, 20.00), (14, 16, 15.00), (17, 20, 10.00), (21, 25, 8.00),
+            (26, 35, 6.00), (36, 45, 5.00), (46, 60, 4.00), (61, 75, 3.00),
+            (76, 100, 2.00), (101, 135, 1.50), (136, 215, 1.00),
+            (216, 425, 0.75), (426, 945, 0.50), (946, 2165, 0.40),
+            (2166, 5385, 0.30), (5386, 14240, 0.20),
+        ]
+        _known_dk_payout_schedule = np.zeros(14240, dtype=float)
+        for _rank_start, _rank_end, _rank_prize in _known_dk_payout_ranges:
+            _known_dk_payout_schedule[_rank_start - 1:_rank_end] = _rank_prize
+        st.session_state["contest_payout_schedule"] = _known_dk_payout_schedule
+        st.session_state["contest_payout_source_name"] = "User-provided DraftKings payout table"
+        st.session_state["contest_payout_contest_id"] = "196537800"
+
+    _saved_payouts = st.session_state.get("contest_payout_schedule")
+    _current_payout_contest_id = str(st.session_state.get("selected_dk_contest", {}).get("id", ""))
+    _payout_matches_selected_contest = (
+        bool(_current_payout_contest_id)
+        and str(st.session_state.get("contest_payout_contest_id", "")) == _current_payout_contest_id
+    )
+    if _payout_matches_selected_contest and isinstance(_saved_payouts, np.ndarray) and len(_saved_payouts):
+        _paid_positions = int(np.count_nonzero(_saved_payouts > 0))
+        _top_prize = float(np.max(_saved_payouts))
+        st.success(
+            f"Payout table loaded: {_paid_positions:,} paid finishing positions; "
+            f"top prize ${_top_prize:,.2f}. Source: "
+            f"{st.session_state.get('contest_payout_source_name', 'uploaded CSV')}."
+        )
+    else:
+        st.info("No payout table loaded yet. Contest Sim will show ranking metrics, but projected winnings and ROI will remain unavailable.")
+
+
 
 
 # ============================================
