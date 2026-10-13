@@ -1,14 +1,10 @@
-name: Apply Post-Game Learning
+name: Apply SIMMAH Updates
 
 on:
   push:
     branches:
       - feature/salary-csv-upload
     paths:
-      - '.github/scripts/add_postgame_learning.py'
-      - '.github/scripts/add_one_upload_slate_setup.py'
-      - '.github/scripts/add_auto_contest_size.py'
-      - '.github/scripts/add_auto_format_detection.py'
       - '.github/scripts/add_full_roster_stacks.py'
       - '.github/workflows/apply-postgame-learning.yml'
 
@@ -30,18 +26,6 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Apply post-game learning patch
-        run: python .github/scripts/add_postgame_learning.py
-
-      - name: Apply one-upload slate setup patch
-        run: python .github/scripts/add_one_upload_slate_setup.py
-
-      - name: Apply automatic contest size patch
-        run: python .github/scripts/add_auto_contest_size.py
-
-      - name: Apply automatic format detection patch
-        run: python .github/scripts/add_auto_format_detection.py
-
       - name: Apply full-roster stack controls patch
         run: python .github/scripts/add_full_roster_stacks.py
 
@@ -57,5 +41,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add dfs_app.py
-          git commit -m "Apply SIMMAH slate and learning updates [skip ci]"
+          git commit -m "Apply shared full-roster stack and field updates [skip ci]"
           git push origin HEAD:feature/salary-csv-upload
