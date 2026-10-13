@@ -6662,15 +6662,15 @@ if "contest_results_df" in st.session_state and not (platform == "DraftKings" an
         if classic_mode else ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"]
     )
     portfolio_lineup_columns = [col for col in portfolio_lineup_columns if col in results_df.columns]
-    st.caption("Generate 5,000 candidates, then select up to 150 final lineups for your DraftKings contest.")
+    st.caption("Generate 5,000 candidates, then select up to 20 final lineups for your contest.")
 
-    portfolio_limit = min(150, len(results_df))
+    portfolio_limit = min(20, len(results_df))
     portfolio_count = st.number_input(
         "Number of lineups",
         min_value=1,
         max_value=max(1, portfolio_limit),
         value=max(1, portfolio_limit),
-        step=100 if portfolio_limit >= 100 else 1,
+        step=1,
         key="portfolio_count"
     )
 
