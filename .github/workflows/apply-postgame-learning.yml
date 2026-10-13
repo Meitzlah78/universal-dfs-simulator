@@ -9,6 +9,7 @@ on:
       - '.github/scripts/add_one_upload_slate_setup.py'
       - '.github/scripts/add_auto_contest_size.py'
       - '.github/scripts/add_auto_format_detection.py'
+      - '.github/scripts/add_full_roster_stacks.py'
       - '.github/workflows/apply-postgame-learning.yml'
 
 permissions:
@@ -40,6 +41,9 @@ jobs:
 
       - name: Apply automatic format detection patch
         run: python .github/scripts/add_auto_format_detection.py
+
+      - name: Apply full-roster stack controls patch
+        run: python .github/scripts/add_full_roster_stacks.py
 
       - name: Syntax check
         run: python -m py_compile dfs_app.py
