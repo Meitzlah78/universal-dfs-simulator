@@ -6692,6 +6692,44 @@ def delete_and_replace_portfolio_lineup(
 st.divider()
 st.write("## Portfolio")
 
+# Save the generated opponent field before it is lost from this browser session.
+# Classic uses its own field key; Showdown and other formats use contest_field_df.
+_saved_field_key = (
+    "classic_contest_field_df"
+    if platform == "DraftKings" and lineup_mode == "Classic"
+    else "contest_field_df"
+)
+_saved_field_df = st.session_state.get(_saved_field_key)
+_saved_sample_df = st.session_state.get(
+    "classic_contest_field_sample_df"
+    if platform == "DraftKings" and lineup_mode == "Classic"
+    else "contest_field_sample_df"
+)
+if isinstance(_saved_field_df, pd.DataFrame) and not _saved_field_df.empty:
+    st.write("### Save Simulated Opponent Lineups")
+    st.caption(
+        "Download these estimated opponent lineups now so you can compare them "
+        "with your actual contest results later. The field is an estimate, not "
+        "the actual lineups submitted by other DraftKings players."
+    )
+    _field_csv = _saved_field_df.to_csv(index=False).encode("utf-8")
+    st.download_button(
+        "Download Full Simulated Opponent Field (CSV)",
+        data=_field_csv,
+        file_name=f"simulated_opponent_field_{lineup_mode.lower().replace(' ', '_')}.csv",
+        mime="text/csv",
+        key="download_simulated_opponent_field"
+    )
+    if isinstance(_saved_sample_df, pd.DataFrame) and not _saved_sample_df.empty:
+        _sample_csv = _saved_sample_df.to_csv(index=False).encode("utf-8")
+        st.download_button(
+            "Download Representative Field Sample (CSV)",
+            data=_sample_csv,
+            file_name=f"simulated_opponent_sample_{lineup_mode.lower().replace(' ', '_')}.csv",
+            mime="text/csv",
+            key="download_simulated_opponent_sample"
+        )
+
 if "contest_results_df" in st.session_state and not (platform == "DraftKings" and lineup_mode == "Classic"):
 
     results_df = st.session_state["contest_results_df"]
