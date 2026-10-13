@@ -6192,14 +6192,9 @@ if (
         estimated_full_field_size = total_field + 1
     estimated_full_field_size = max(2, estimated_full_field_size)
 
-    if build_clicked:
-        workflow_status.info(
-            f"Step 4 of 4: Scoring {n_candidates:,} candidate lineups against "
-            f"{total_field:,} opponents across {n_sims:,} simulations..."
-        )
     st.info(
-        f"Candidate lineups are ready. Now scoring {n_candidates:,} lineups "
-        f"against {total_field:,} simulated opponents across {n_sims:,} simulations. "
+        f"Step 4 of 4: Scoring {n_candidates:,} candidate lineups against "
+        f"{total_field:,} simulated opponents across {n_sims:,} simulations. "
         "This step can take a while for large contests; watch the progress bar below."
     )
     scoring_status = st.empty()
