@@ -1451,6 +1451,38 @@ def fetch_draftkings_contest_size(contest_id):
     return current_entries, max_entries
 
 
+def extract_slate_games(source_df):
+    """Return compact matchup labels detected from a DK/FD player table."""
+    import re
+    if not isinstance(source_df, pd.DataFrame) or source_df.empty:
+        return []
+    lookup = {str(col).strip().casefold(): col for col in source_df.columns}
+    game_col = lookup.get("game info") or lookup.get("gameinfo") or lookup.get("game")
+    if game_col is None:
+        return []
+    games = []
+    for raw_value in source_df[game_col].dropna().astype(str):
+        value = raw_value.strip().upper()
+        match = re.search(r"\b([A-Z]{2,3})\s*@\s*([A-Z]{2,3})\b", value)
+        if not match:
+            continue
+        label = f"{match.group(1)} @ {match.group(2)}"
+        if label not in games:
+            games.append(label)
+    return games
+
+
+def show_detected_slate_games(source_df):
+    games = extract_slate_games(source_df)
+    if not games:
+        return
+    st.write("#### Games on this slate")
+    if len(games) == 1:
+        st.info(games[0])
+    else:
+        st.caption(" • ".join(games))
+
+
 def get_contest_opponent_target(platform_key, default=MAX_SIMULATED_OPPONENTS):
     """Simulate a representative field capped at a practical size for faster results."""
     contest = st.session_state.get(f"selected_{platform_key}_contest") or {}
@@ -1996,6 +2028,17 @@ if platform == "FanDuel":
         st.stop()
 
     fd_players = apply_external_projection_sources(fd_players, fd_dff_projection_file, fd_draftedge_projection_file, platform_name=("FanDuel Single Game" if lineup_mode == "Single Game" else "FanDuel Full Roster"))
+    fd_valid_projection_count = int(pd.to_numeric(fd_players.get("Projection"), errors="coerce").gt(0).sum())
+    if fd_valid_projection_count == 0 and not fd_players.empty:
+        st.warning(
+            "Players loaded successfully, but DFF/DraftEdge projections are not available for this slate yet. "
+            "Click REFRESH PROJECTIONS + INJURY NEWS later after projections are posted."
+        )
+    elif fd_valid_projection_count < len(fd_players):
+        st.info(
+            f"Players loaded successfully. Projections are available for {fd_valid_projection_count} of {len(fd_players)} players; "
+            "players without a posted external projection will stay out of builds until a refresh finds one."
+        )
     fd_players = exclude_zero_projection_players(fd_players, "FanDuel " + lineup_mode)
     fd_players = apply_injury_statuses(fd_players, "injury_status_fd_" + lineup_mode.replace(" ", "_").lower())
 
@@ -4785,6 +4828,17 @@ else:
         draftedge_projection_file,
         platform_name=("DraftKings Showdown" if lineup_mode == "Showdown" else "DraftKings Classic"),
     )
+    dk_valid_projection_count = int(pd.to_numeric(players_df.get("Projection"), errors="coerce").gt(0).sum())
+    if dk_valid_projection_count == 0 and not players_df.empty:
+        st.warning(
+            "Players loaded successfully, but DFF/DraftEdge projections are not available for this slate yet. "
+            "Click REFRESH PROJECTIONS + INJURY NEWS later after projections are posted."
+        )
+    elif dk_valid_projection_count < len(players_df):
+        st.info(
+            f"Players loaded successfully. Projections are available for {dk_valid_projection_count} of {len(players_df)} players; "
+            "players without a posted external projection will stay out of builds until a refresh finds one."
+        )
 
     def internal_slate_key(frame):
         """Stable identity for an uploaded slate, independent of external projections."""
