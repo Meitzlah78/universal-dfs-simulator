@@ -5,6 +5,11 @@ on:
     # Tuesdays at 11:00 UTC = 7:00 AM Eastern during daylight time.
     - cron: "0 11 * * 2"
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/pbp-manual-trigger'
 
 permissions:
   contents: write
