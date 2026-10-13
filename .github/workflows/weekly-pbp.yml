@@ -2,10 +2,16 @@ name: Weekly NFL PBP Archive
 
 on:
   schedule:
-    # GitHub cron is UTC. Run at both possible UTC hours, then gate to exactly
-    # 12:00 PM America/New_York so daylight-saving changes are handled correctly.
+    # GitHub cron can start late. Fire several times Wednesday afternoon UTC and
+    # let the Eastern-time gate decide whether the archive should run.
     - cron: "0 16 * * 3"
     - cron: "0 17 * * 3"
+    - cron: "0 18 * * 3"
+    - cron: "0 19 * * 3"
+    - cron: "0 20 * * 3"
+    - cron: "0 21 * * 3"
+    - cron: "0 22 * * 3"
+    - cron: "0 23 * * 3"
   workflow_dispatch:
 
 permissions:
@@ -15,7 +21,7 @@ jobs:
   download-previous-week:
     runs-on: ubuntu-latest
     steps:
-      - name: Check for noon Eastern
+      - name: Check Wednesday Eastern window
         id: noon_gate
         shell: bash
         run: |
@@ -26,7 +32,11 @@ jobs:
 
           event = os.environ.get("GITHUB_EVENT_NAME", "")
           now_et = datetime.now(ZoneInfo("America/New_York"))
-          should_run = event == "workflow_dispatch" or (now_et.weekday() == 2 and now_et.hour == 12)
+          # Scheduled runs are allowed any time from noon through 7:59 PM ET.
+          # This protects against GitHub Actions starting the noon cron late.
+          should_run = event == "workflow_dispatch" or (
+              now_et.weekday() == 2 and 12 <= now_et.hour <= 19
+          )
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as handle:
               handle.write(f"run={'true' if should_run else 'false'}\n")
           print(f"Current Eastern time: {now_et:%Y-%m-%d %I:%M %p %Z}")
@@ -120,8 +130,17 @@ jobs:
           out_dir = Path("data/pbp")
           out_dir.mkdir(parents=True, exist_ok=True)
           output = out_dir / f"{season}_week_{week:02d}.csv.gz"
-          weekly.to_csv(output, index=False, compression="gzip")
-          print(f"Archived {len(weekly):,} plays for season {season}, week {week}: {output}")
+
+          # If this week is already archived and the downloaded data is identical,
+          # leave the file untouched. Later scheduled runs then become harmless no-ops.
+          new_bytes = weekly.to_csv(index=False).encode("utf-8")
+          import gzip
+          compressed = gzip.compress(new_bytes, mtime=0)
+          if output.exists() and output.read_bytes() == compressed:
+              print(f"Archive already current for season {season}, week {week}: {output}")
+          else:
+              output.write_bytes(compressed)
+              print(f"Archived {len(weekly):,} plays for season {season}, week {week}: {output}")
           print(f"Games archived: {len(game_ids)}")
           print("Matchups: " + ", ".join(matchups))
           PY
