@@ -4621,7 +4621,7 @@ else:
     # ================================
 
     st.divider()
-    st.write("### Player Pool")
+    st.write("### Player Pool — Stats, Simulation, Exposure & Controls")
 
     player_display = players_df.copy()
 
@@ -4800,8 +4800,7 @@ else:
         else:
             control_display[setting] = default
 
-    st.write("### Player Controls & Exposure")
-    st.caption("Everything is together here. Review current exposure, then change Min/Max Exp % to guide future builds. Lock includes a player; Fade excludes a player.")
+    st.caption("Player stats, simulation results, exposure, and editable controls are all in this one table. Lock includes a player; Fade excludes a player.")
     editable_control_columns = [setting for setting, _ in display_settings]
     disabled_control_columns = [
         column for column in control_display.columns
@@ -7169,33 +7168,8 @@ if "contest_results_df" in st.session_state and not (platform == "DraftKings" an
                 "Captain %": round(100 * captain_appearances / total_lineups, 1)
             })
 
-    st.write("### Final Portfolio Exposure")
-    st.caption(
-        "Exposure is based on your selected final portfolio, not the 5,000 candidates "
-        "or the simulated opponent field."
-    )
-    if exposure_rows:
-        exposure_df = pd.DataFrame(exposure_rows).sort_values(
-            ["Exposure %", "Captain %", "Player"],
-            ascending=[False, False, True]
-        )
-        st.dataframe(
-            exposure_df,
-            use_container_width=True,
-            hide_index=True,
-            column_config={"Player": st.column_config.TextColumn("Player", pinned=True)},
-        )
-        with st.expander("Copy Final Exposure to ChatGPT"):
-            st.caption("Click inside the text box, press Ctrl+A, then Ctrl+C. Paste the copied text into ChatGPT.")
-            st.text_area(
-                "Final exposure data (copy this text)",
-                value=exposure_df.to_csv(index=False, sep="\t", na_rep=""),
-                height=300,
-                key="chatgpt_final_exposure_export",
-                label_visibility="collapsed"
-            )
-    else:
-        st.info("Build a portfolio to see player exposure.")
+    # Final portfolio exposure is already shown in the Player Pool table.
+    # Keep the computed data available internally, but do not render a duplicate table.
 
     export_columns = [
         "Captain", "Captain Sim Pts", "Flex1", "Flex1 Sim Pts",
