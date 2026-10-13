@@ -58,13 +58,52 @@ st.markdown(
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
         margin: 0 !important;
     }
-    /* Keep the page content clear of the fixed reminder bar. */
+    /* Keep the page content clear of the fixed reminder bar, without wasting vertical space. */
     section.main > div.block-container {
-        padding-top: 7rem !important;
+        padding-top: 5.8rem !important;
+        padding-bottom: 1.5rem !important;
+        max-width: 1600px;
+    }
+    /* Tighten default Streamlit spacing so the main workflow is easier to scan. */
+    section.main [data-testid="stVerticalBlock"] {
+        gap: 0.55rem;
+    }
+    section.main [data-testid="stHorizontalBlock"] {
+        gap: 0.75rem;
+    }
+    section.main h1 {
+        margin-top: 0.15rem;
+        margin-bottom: 0.4rem;
+        font-size: 1.7rem;
+    }
+    section.main h2 {
+        margin-top: 0.65rem;
+        margin-bottom: 0.25rem;
+        font-size: 1.25rem;
+    }
+    section.main h3 {
+        margin-top: 0.45rem;
+        margin-bottom: 0.15rem;
+        font-size: 1.05rem;
+    }
+    section.main [data-testid="stCaptionContainer"] {
+        margin-top: -0.15rem;
+        margin-bottom: 0.1rem;
+    }
+    section.main [data-testid="stExpander"] {
+        border-radius: 0.45rem;
+    }
+    section.main [data-testid="stDataFrame"] {
+        margin-top: 0.1rem;
     }
     .st-key-sticky_projection_bar [data-testid="stHorizontalBlock"] {
         align-items: center;
-        gap: 1rem;
+        gap: 0.65rem;
+    }
+    .st-key-sticky_projection_bar [data-testid="stButton"] button {
+        min-height: 2.25rem;
+        padding-top: 0.25rem;
+        padding-bottom: 0.25rem;
     }
     .st-key-sticky_projection_bar p {
         margin-bottom: 0.15rem;
