@@ -9,6 +9,7 @@ on:
       - '.github/scripts/add_fd_role_ownership_field.py'
       - '.github/scripts/remove_dead_duplicate_sim_engine.py'
       - '.github/scripts/use_local_pbp_archive.py'
+      - '.github/scripts/fix_dk_contest_field_size.py'
       - '.github/workflows/apply-postgame-learning.yml'
 
 permissions:
@@ -41,6 +42,9 @@ jobs:
       - name: Prefer saved repo PBP archives before nflverse
         run: python .github/scripts/use_local_pbp_archive.py
 
+      - name: Correct DraftKings pregame contest field size
+        run: python .github/scripts/fix_dk_contest_field_size.py
+
       - name: Syntax check
         run: python -m py_compile dfs_app.py
 
@@ -53,5 +57,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add dfs_app.py
-          git commit -m "Prefer saved PBP archives before nflverse [skip ci]"
+          git commit -m "Correct DraftKings contest simulation field size [skip ci]"
           git push origin HEAD:feature/salary-csv-upload
