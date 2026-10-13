@@ -6,6 +6,7 @@ on:
       - feature/salary-csv-upload
     paths:
       - '.github/scripts/unify_fd_sim_engine.py'
+      - '.github/scripts/add_fd_role_ownership_field.py'
       - '.github/workflows/apply-postgame-learning.yml'
 
 permissions:
@@ -29,6 +30,9 @@ jobs:
       - name: Share historical/PBP simulation engine across DK and FD
         run: python .github/scripts/unify_fd_sim_engine.py
 
+      - name: Add FanDuel MVP/FLEX ownership weighting
+        run: python .github/scripts/add_fd_role_ownership_field.py
+
       - name: Syntax check
         run: python -m py_compile dfs_app.py
 
@@ -41,5 +45,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add dfs_app.py
-          git commit -m "Unify DraftKings and FanDuel simulation engine [skip ci]"
+          git commit -m "Separate FanDuel MVP and FLEX ownership weighting [skip ci]"
           git push origin HEAD:feature/salary-csv-upload
