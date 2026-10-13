@@ -20,47 +20,13 @@ st.set_page_config(
 
 st.title("Universal DFS Simulator")
 
-# Keep the full projection-update message and refresh button in the fixed top bar.
 from datetime import datetime as _sticky_datetime
-
-with st.container(key="sticky_projection_bar"):
-    sticky_message, sticky_right = st.columns([3, 2])
-    with sticky_message:
-        if st.session_state.get("projection_updates_found"):
-            st.markdown(
-                "**PROJECTION UPDATES FOUND — click REFRESH PROJECTIONS to clear the cache "
-                "and reload the latest public projections. Uploaded CSVs still take priority.**"
-            )
-        else:
-            st.markdown("**Uploaded CSVs still take priority.**")
-    with sticky_right:
-        if st.button("REFRESH PROJECTIONS + INJURY NEWS", key="sticky_refresh_projections", use_container_width=True):
-            # Cache functions are defined later in the file, so defer clearing until then.
-            st.session_state["pending_sticky_projection_refresh"] = True
-            st.rerun()
 
 st.markdown(
     """
     <style>
-    .st-key-sticky_projection_bar {
-        position: fixed !important;
-        top: 3.25rem !important;
-        left: 0 !important;
-        right: 0 !important;
-        z-index: 999999 !important;
-        width: 100% !important;
-        box-sizing: border-box !important;
-        padding: 0.45rem 1rem 0.35rem 1rem;
-        background: #000000 !important;
-        color: #ffffff !important;
-        border: 1px solid #b8a45a;
-        border-radius: 0;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
-        margin: 0 !important;
-    }
-    /* Keep the page content clear of the fixed reminder bar, without wasting vertical space. */
     section.main > div.block-container {
-        padding-top: 5.8rem !important;
+        padding-top: 1.5rem !important;
         padding-bottom: 1.5rem !important;
         max-width: 1600px;
     }
@@ -95,23 +61,6 @@ st.markdown(
     }
     section.main [data-testid="stDataFrame"] {
         margin-top: 0.1rem;
-    }
-    .st-key-sticky_projection_bar [data-testid="stHorizontalBlock"] {
-        align-items: center;
-        gap: 0.65rem;
-    }
-    .st-key-sticky_projection_bar [data-testid="stButton"] button {
-        min-height: 2.25rem;
-        padding-top: 0.25rem;
-        padding-bottom: 0.25rem;
-    }
-    .st-key-sticky_projection_bar p {
-        margin-bottom: 0.15rem;
-        color: #ffffff !important;
-    }
-    .st-key-sticky_projection_bar [data-testid="stCaptionContainer"],
-    .st-key-sticky_projection_bar [data-testid="stMarkdownContainer"] {
-        color: #ffffff !important;
     }
     </style>
     """,
@@ -1257,8 +1206,6 @@ def automatic_projection_refresh(platform_name):
     st.session_state["automatic_projection_refresh_time"] = now
     st.session_state["automatic_projection_refresh_status"] = status
     successful = [name for name, loaded in status.items() if loaded]
-    if st.session_state.get("projection_updates_found"):
-        st.warning("PROJECTION UPDATES FOUND — click REFRESH PROJECTIONS to clear the cache and reload the latest public projections. Uploaded CSVs still take priority.")
     if successful:
         st.caption("Automatic projection check: " + ", ".join(successful) + ". Last checked: " + now)
     else:
@@ -1516,21 +1463,22 @@ with st.expander("Projection Accuracy Report", expanded=False):
                     )
         except Exception as exc:
             st.error(f"Could not read the projection accuracy file: {exc}")
-# Process the sticky refresh request only after both cached functions are defined.
-if st.session_state.pop("pending_sticky_projection_refresh", False):
-    download_public_projection_table.clear()
-    fetch_nfl_injury_statuses.clear()
-    st.session_state["projection_updates_found"] = False
-    st.session_state["injury_updates_found"] = False
-    st.session_state["shared_projection_updated_at"] = _sticky_datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %I:%M:%S %p %Z")
-    st.rerun()
-
 platform, lineup_mode = format_options[selected_format]
 automatic_projection_refresh(selected_format)
 # Keep the derived values in session state for existing format-specific logic.
 st.session_state["dfs_platform"] = platform
 st.session_state["lineup_mode_" + platform] = lineup_mode
 st.subheader(selected_format)
+
+refresh_col, _refresh_spacer = st.columns([1, 3])
+with refresh_col:
+    if st.button("REFRESH PROJECTIONS + INJURY NEWS", key="refresh_projections_button", use_container_width=True):
+        download_public_projection_table.clear()
+        fetch_nfl_injury_statuses.clear()
+        st.session_state["projection_updates_found"] = False
+        st.session_state["injury_updates_found"] = False
+        st.session_state["shared_projection_updated_at"] = _sticky_datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %I:%M:%S %p %Z")
+        st.rerun()
 
 # Initialize from the saved slider value; the control itself appears beside SIM.
 aggressiveness = float(st.session_state.get(f"lineup_build_aggressiveness_{platform}_{lineup_mode}", 100 if ((platform == "DraftKings" and lineup_mode == "Showdown") or (platform == "FanDuel" and lineup_mode == "Single Game")) else 50)) / 100.0
