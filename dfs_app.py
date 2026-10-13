@@ -1506,6 +1506,26 @@ if st.session_state.pop("refresh_projections_requested", False):
     st.session_state["shared_projection_updated_at"] = _sticky_datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %I:%M:%S %p %Z")
 
 automatic_projection_refresh(selected_format)
+
+# Turn the sticky refresh button red whenever new projections or injury updates are detected.
+if st.session_state.get("projection_updates_found") or st.session_state.get("injury_updates_found"):
+    st.markdown(
+        """
+        <style>
+        .st-key-sticky_projection_bar button {
+            background-color: #d62828 !important;
+            border-color: #d62828 !important;
+            color: #ffffff !important;
+        }
+        .st-key-sticky_projection_bar button:hover {
+            background-color: #b71c1c !important;
+            border-color: #b71c1c !important;
+            color: #ffffff !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 # Keep the derived values in session state for existing format-specific logic.
 st.session_state["dfs_platform"] = platform
 st.session_state["lineup_mode_" + platform] = lineup_mode
