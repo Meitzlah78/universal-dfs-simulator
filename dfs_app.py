@@ -4788,6 +4788,25 @@ else:
             player_display["Captain Exp %"] = np.nan
             player_display["Flex Exp %"] = np.nan
 
+    # Easy-to-read overall ownership columns.
+    # Ownership % = exposure in the user's current selected portfolio/build.
+    # Proj Own % = ownership observed in the simulated opponent field.
+    if platform == "DraftKings" and lineup_mode == "Showdown":
+        own_captain = pd.to_numeric(player_display.get("Captain Exp %"), errors="coerce")
+        own_flex = pd.to_numeric(player_display.get("Flex Exp %"), errors="coerce")
+        if own_captain is not None and own_flex is not None:
+            player_display["Ownership %"] = (own_captain.fillna(0.0) + own_flex.fillna(0.0)).clip(upper=100.0).round(1)
+            no_own_data = own_captain.isna() & own_flex.isna()
+            player_display.loc[no_own_data, "Ownership %"] = np.nan
+        else:
+            player_display["Ownership %"] = np.nan
+    elif "Exposure %" in player_display.columns:
+        player_display["Ownership %"] = pd.to_numeric(
+            player_display["Exposure %"], errors="coerce"
+        ).round(1)
+    else:
+        player_display["Ownership %"] = np.nan
+
     # Add simulated opponent-field ownership beside the user's own exposure columns.
     # Full-roster formats use overall ownership. Single-game formats show special-slot
     # and FLEX ownership separately so the Player Pool mirrors how the field actually builds.
@@ -4804,6 +4823,7 @@ else:
         ))
         names_for_field = player_display["Name"].astype(str).str.strip()
         overall_field = names_for_field.map(field_own_map)
+        player_display["Proj Own %"] = overall_field.round(1)
         if platform == "DraftKings" and lineup_mode == "Showdown":
             if "Captain/MVP Ownership %" in field_ownership_display.columns:
                 field_captain_map = dict(zip(
@@ -4820,6 +4840,7 @@ else:
             player_display["Field Own %"] = overall_field.round(1)
             player_display = player_display.drop(columns=["Field CPT Own %", "Field FLEX Own %"], errors="ignore")
     else:
+        player_display["Proj Own %"] = np.nan
         if platform == "DraftKings" and lineup_mode == "Showdown":
             player_display["Field CPT Own %"] = np.nan
             player_display["Field FLEX Own %"] = np.nan
