@@ -23,6 +23,7 @@ on:
       - '.github/scripts/auto_fetch_full_dk_payout_scale.py'
       - '.github/scripts/add_sea_den_dime_payout_fallback.py'
       - '.github/scripts/allow_contextual_sim_mean_adjustments.py'
+      - '.github/scripts/blend_historical_mean_into_sim.py'
       - '.github/workflows/apply-postgame-learning.yml'
 
 permissions:
@@ -96,6 +97,9 @@ jobs:
 
       - name: Allow contextual simulation mean adjustments
         run: python .github/scripts/allow_contextual_sim_mean_adjustments.py
+
+      - name: Blend historical player mean into simulation target
+        run: python .github/scripts/blend_historical_mean_into_sim.py
 
       - name: Syntax check
         run: python -m py_compile dfs_app.py
