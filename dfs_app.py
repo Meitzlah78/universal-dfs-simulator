@@ -6681,6 +6681,73 @@ with st.expander("Contest Payout Structure", expanded=False):
     # Verified payout ladder supplied from the DraftKings contest details for
     # NFL Showdown $4K Dime Package [Just $0.10!] (SEA @ DEN).
     # Match the exact contest name so this fallback cannot leak into another contest.
+    # Saved DraftKings payout library fallback. Live DraftKings payout data keeps priority;
+    # this only fills the payout schedule when the selected contest has no valid live scale.
+    def _try_saved_dk_payout_library():
+        _selected = st.session_state.get("selected_dk_contest", {}) or {}
+        _selected_id = str(_selected.get("id", "")).strip()
+        _selected_name = str(_selected.get("name", "")).strip()
+        if not _selected_name:
+            return False
+        _existing = st.session_state.get("contest_payout_schedule")
+        _existing_id = str(st.session_state.get("contest_payout_contest_id", "")).strip()
+        if _selected_id and _existing_id == _selected_id and isinstance(_existing, np.ndarray) and len(_existing):
+            return False
+        try:
+            import json as _json
+            _library_path = Path(__file__).resolve().parent / "data" / "dk_payout_library.json"
+            if not _library_path.exists():
+                _library_path = Path("data/dk_payout_library.json")
+            if not _library_path.exists():
+                return False
+            _library = _json.loads(_library_path.read_text(encoding="utf-8"))
+        except Exception:
+            return False
+
+        try:
+            _selected_fee = float(_selected.get("entry_fee")) if _selected.get("entry_fee") is not None else None
+        except (TypeError, ValueError):
+            _selected_fee = None
+        try:
+            _selected_field = int(_selected.get("field_size")) if _selected.get("field_size") else None
+        except (TypeError, ValueError):
+            _selected_field = None
+
+        for _profile in _library.get("profiles", []):
+            if str(_profile.get("contest_name", "")).strip() != _selected_name:
+                continue
+            _profile_fee = _profile.get("entry_fee")
+            if _selected_fee is not None and _profile_fee is not None and abs(float(_profile_fee) - _selected_fee) > 0.001:
+                continue
+            _profile_field = _profile.get("max_entries")
+            if _selected_field and _profile_field:
+                _tolerance = max(100, int(round(float(_profile_field) * 0.01)))
+                if abs(int(_profile_field) - int(_selected_field)) > _tolerance:
+                    continue
+            _ranges = _profile.get("payout_ranges") or []
+            if not _ranges:
+                continue
+            try:
+                _paid_positions = max(int(r[1]) for r in _ranges)
+                _schedule = np.zeros(_paid_positions, dtype=float)
+                for _start, _end, _amount in _ranges:
+                    _schedule[int(_start) - 1:int(_end)] = float(_amount)
+                _expected_total = _profile.get("verified_total_payout")
+                if _expected_total is not None and abs(float(_schedule.sum()) - float(_expected_total)) > 1.0:
+                    continue
+            except Exception:
+                continue
+            st.session_state["contest_payout_schedule"] = _schedule
+            st.session_state["contest_payout_source_name"] = (
+                "Saved DraftKings payout library: " + str(_profile.get("contest_family") or _selected_name)
+            )
+            st.session_state["contest_payout_contest_id"] = _selected_id
+            st.session_state["contest_payout_auto_loaded"] = True
+            return True
+        return False
+
+    _try_saved_dk_payout_library()
+
     _selected_dk_name = str(st.session_state.get("selected_dk_contest", {}).get("name", "")).strip()
     _selected_dk_id = str(st.session_state.get("selected_dk_contest", {}).get("id", "")).strip()
     if (
