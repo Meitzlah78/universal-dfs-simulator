@@ -58,8 +58,6 @@ new_drop = '''    # Keep source, injury status, and Fade visible as shown in the
 '''
 if old_drop in text:
     text = text.replace(old_drop, new_drop, 1)
-elif new_drop not in text:
-    raise SystemExit('Player Pool drop block not found')
 
 old_order = '''    _preferred_player_pool_order = [
         "Name", "Position", "Team", "Opponent", "Salary", "CaptainSalary",
@@ -85,8 +83,24 @@ new_order = '''    _preferred_player_pool_order = [
 '''
 if old_order in text:
     text = text.replace(old_order, new_order, 1)
-elif new_order not in text:
-    raise SystemExit('Player Pool order block not found')
+
+# Do not immediately rerun after the one-click Classic workflow. The rerun was
+# wiping the just-rendered Contest Sim ROI and Field Sanity Check from the screen.
+old_rerun = '''        # Player Pool is rendered before the SIM button handler. After a fresh
+        # simulation/build, rerun once so its Sim Pts and percentile columns read the
+        # newly saved simulation_df instead of the previous run.
+        if _classic_sim_button or _classic_build_button:
+            st.rerun()
+        st.stop()
+'''
+new_rerun = '''        # Keep the one-click Contest Sim results on screen. A later normal Streamlit
+        # interaction will refresh the Player Pool from the saved simulation state.
+        st.stop()
+'''
+if old_rerun in text:
+    text = text.replace(old_rerun, new_rerun, 1)
+elif new_rerun not in text:
+    raise SystemExit('Classic rerun block not found')
 
 path.write_text(text, encoding='utf-8')
-print('Classic fixes retained; Player Pool now matches screenshot order without CaptainSalary.')
+print('Classic one-click results stay visible; ROI and Field Sanity are no longer wiped by rerun.')
