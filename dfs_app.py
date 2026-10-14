@@ -4788,24 +4788,46 @@ else:
             player_display["Captain Exp %"] = np.nan
             player_display["Flex Exp %"] = np.nan
 
-    # Easy-to-read overall ownership columns.
-    # Ownership % = exposure in the user's current selected portfolio/build.
-    # Proj Own % = ownership observed in the simulated opponent field.
+    # Keep three overall ownership views side by side. Showdown also keeps the
+    # existing Captain Exp % and Flex Exp % columns for the user's portfolio.
+    # Projected Own % = pre-contest ownership estimate.
+    # Mine Own % = exposure in the user's current selected portfolio/build.
+    # Field Own % = ownership observed in the simulated opponent field.
+    ownership_lookup = {str(c).strip().casefold(): c for c in player_display.columns}
+    projected_own_col = next((ownership_lookup[k] for k in (
+        "projected ownership", "projected own", "ownership %", "ownership", "own%", "own"
+    ) if k in ownership_lookup), None)
+    if projected_own_col is not None:
+        player_display["Projected Own %"] = pd.to_numeric(
+            player_display[projected_own_col].astype(str).str.replace("%", "", regex=False),
+            errors="coerce",
+        ).clip(lower=0.0, upper=100.0).round(1)
+    else:
+        # Match the ownership proxy already used by lineup ranking when no
+        # external ownership column is available.
+        projection_values = pd.to_numeric(player_display.get("Projection"), errors="coerce")
+        if projection_values is not None and projection_values.notna().any():
+            projection_ranks = projection_values.rank(pct=True, method="average")
+            player_display["Projected Own %"] = (5.0 + 30.0 * projection_ranks).clip(0.0, 100.0).round(1)
+            player_display.loc[projection_values.isna() | projection_values.le(0), "Projected Own %"] = np.nan
+        else:
+            player_display["Projected Own %"] = np.nan
+
     if platform == "DraftKings" and lineup_mode == "Showdown":
         own_captain = pd.to_numeric(player_display.get("Captain Exp %"), errors="coerce")
         own_flex = pd.to_numeric(player_display.get("Flex Exp %"), errors="coerce")
         if own_captain is not None and own_flex is not None:
-            player_display["Ownership %"] = (own_captain.fillna(0.0) + own_flex.fillna(0.0)).clip(upper=100.0).round(1)
+            player_display["Mine Own %"] = (own_captain.fillna(0.0) + own_flex.fillna(0.0)).clip(upper=100.0).round(1)
             no_own_data = own_captain.isna() & own_flex.isna()
-            player_display.loc[no_own_data, "Ownership %"] = np.nan
+            player_display.loc[no_own_data, "Mine Own %"] = np.nan
         else:
-            player_display["Ownership %"] = np.nan
+            player_display["Mine Own %"] = np.nan
     elif "Exposure %" in player_display.columns:
-        player_display["Ownership %"] = pd.to_numeric(
+        player_display["Mine Own %"] = pd.to_numeric(
             player_display["Exposure %"], errors="coerce"
         ).round(1)
     else:
-        player_display["Ownership %"] = np.nan
+        player_display["Mine Own %"] = np.nan
 
     # Add simulated opponent-field ownership beside the user's own exposure columns.
     # Full-roster formats use overall ownership. Single-game formats show special-slot
@@ -4823,7 +4845,7 @@ else:
         ))
         names_for_field = player_display["Name"].astype(str).str.strip()
         overall_field = names_for_field.map(field_own_map)
-        player_display["Proj Own %"] = overall_field.round(1)
+        player_display["Field Own %"] = overall_field.round(1)
         if platform == "DraftKings" and lineup_mode == "Showdown":
             if "Captain/MVP Ownership %" in field_ownership_display.columns:
                 field_captain_map = dict(zip(
@@ -4840,7 +4862,7 @@ else:
             player_display["Field Own %"] = overall_field.round(1)
             player_display = player_display.drop(columns=["Field CPT Own %", "Field FLEX Own %"], errors="ignore")
     else:
-        player_display["Proj Own %"] = np.nan
+        player_display["Field Own %"] = np.nan
         if platform == "DraftKings" and lineup_mode == "Showdown":
             player_display["Field CPT Own %"] = np.nan
             player_display["Field FLEX Own %"] = np.nan
