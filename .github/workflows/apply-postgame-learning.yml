@@ -25,6 +25,7 @@ on:
       - '.github/scripts/allow_contextual_sim_mean_adjustments.py'
       - '.github/scripts/blend_historical_mean_into_sim.py'
       - '.github/scripts/smooth_historical_percentile_ties.py'
+      - '.github/scripts/fix_field_ownership_player_pool_all_formats.py'
       - '.github/workflows/apply-postgame-learning.yml'
 
 permissions:
@@ -104,6 +105,9 @@ jobs:
 
       - name: Smooth historical percentile ties
         run: python .github/scripts/smooth_historical_percentile_ties.py
+
+      - name: Fix field ownership columns for all formats
+        run: python .github/scripts/fix_field_ownership_player_pool_all_formats.py
 
       - name: Syntax check
         run: python -m py_compile dfs_app.py
