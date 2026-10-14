@@ -6016,8 +6016,8 @@ else:
                 "Number of lineups to show",
                 min_value=1,
                 max_value=min(2500, max(1, len(classic_portfolio_source))),
-                value=min(2500, max(1, len(classic_portfolio_source))),
-                step=100 if len(classic_portfolio_source) >= 100 else 1,
+                value=min(20, max(1, len(classic_portfolio_source))),
+                step=1,
                 key="dk_classic_portfolio_count"
             )
             classic_rank_label = st.selectbox(
