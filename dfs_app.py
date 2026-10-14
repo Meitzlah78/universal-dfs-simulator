@@ -7182,6 +7182,48 @@ if (
     results_df["CashRate"] = cash_rates / selection_n_sims
     results_df["AvgPercentile"] = avg_percentiles / selection_n_sims
 
+    # Diagnostic only: show whether the selected candidates keep their advantage
+    # on the untouched second half of simulations. A large drop from Selection to
+    # Holdout points to selection overfitting rather than a weak opponent field.
+    if holdout_n_sims > 0 and n_candidates > 0:
+        _diag_count = min(20, n_candidates)
+        _diag_idx = np.arange(_diag_count, dtype=np.int32)
+        _diag_candidate_idx = candidate_idx[_diag_idx]
+        _diag_top1 = np.zeros(_diag_count, dtype=np.float64)
+        _diag_top5 = np.zeros(_diag_count, dtype=np.float64)
+        _diag_top10 = np.zeros(_diag_count, dtype=np.float64)
+        _diag_cash = np.zeros(_diag_count, dtype=np.float64)
+        _diag_pct = np.zeros(_diag_count, dtype=np.float64)
+        _diag_batch_size = 128
+        for _diag_start in range(holdout_start, n_sims, _diag_batch_size):
+            _diag_end = min(_diag_start + _diag_batch_size, n_sims)
+            _diag_values = simulation_values[_diag_start:_diag_end]
+            _diag_scores = _diag_values[:, _diag_candidate_idx].sum(axis=2)
+            _diag_field_scores = _diag_values[:, contest_idx].sum(axis=2)
+            if scoring_multiplier != 1.0:
+                _diag_scores[:, :] += _diag_values[:, _diag_candidate_idx[:, 0]] * (scoring_multiplier - 1.0)
+                _diag_field_scores[:, :] += _diag_values[:, contest_idx[:, 0]] * (scoring_multiplier - 1.0)
+            _diag_sorted = np.sort(_diag_field_scores, axis=1)
+            _diag_greater = np.empty_like(_diag_scores, dtype=np.float64)
+            for _r in range(_diag_scores.shape[0]):
+                _diag_greater[_r] = total_field - np.searchsorted(_diag_sorted[_r], _diag_scores[_r], side="right")
+            _diag_percentiles = 1.0 - (_diag_greater / max(1, total_field))
+            _diag_top1 += np.sum(_diag_percentiles >= 0.99, axis=0)
+            _diag_top5 += np.sum(_diag_percentiles >= 0.95, axis=0)
+            _diag_top10 += np.sum(_diag_percentiles >= 0.90, axis=0)
+            _diag_cash += np.sum(_diag_percentiles >= 0.50, axis=0)
+            _diag_pct += np.sum(_diag_percentiles, axis=0)
+        _selection_slice = results_df.iloc[:_diag_count] if "results_df" in locals() else None
+        st.session_state["contest_holdout_diagnostic"] = {
+            "lineups": int(_diag_count),
+            "holdout_sims": int(holdout_n_sims),
+            "top1": float(np.mean(_diag_top1 / holdout_n_sims)),
+            "top5": float(np.mean(_diag_top5 / holdout_n_sims)),
+            "top10": float(np.mean(_diag_top10 / holdout_n_sims)),
+            "cash": float(np.mean(_diag_cash / holdout_n_sims)),
+            "avg_percentile": float(np.mean(_diag_pct / holdout_n_sims)),
+        }
+
     # Field sanity baseline: 20 random opponent lineups should land near 1/5/10%.
     _sanity_n=min(20,total_field)
     if _sanity_n:
