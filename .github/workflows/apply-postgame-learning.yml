@@ -28,6 +28,7 @@ on:
       - '.github/scripts/fix_field_ownership_player_pool_all_formats.py'
       - '.github/scripts/clean_and_reorder_player_pool_columns.py'
       - '.github/scripts/load_saved_dk_payout_library.py'
+      - '.github/scripts/calibrate_showdown_duplicate_tail.py'
       - 'data/dk_payout_library.json'
       - '.github/workflows/apply-postgame-learning.yml'
 
@@ -117,6 +118,9 @@ jobs:
 
       - name: Load saved DraftKings payout library
         run: python .github/scripts/load_saved_dk_payout_library.py
+
+      - name: Calibrate Showdown duplicate tail
+        run: python .github/scripts/calibrate_showdown_duplicate_tail.py
 
       - name: Syntax check
         run: python -m py_compile dfs_app.py
