@@ -129,3 +129,4 @@ if new not in text:
 
 path.write_text(text, encoding="utf-8")
 print("Added default 80% final-portfolio diversification guard while preserving manual exposure controls.")
+# Trigger updater after adding this patch to the workflow.
