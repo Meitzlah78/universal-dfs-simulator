@@ -13,6 +13,7 @@ def replace_required(old, new, label):
     text = text.replace(old, new, 1)
 
 
+# The three-button controls may already be present from an earlier patch.
 replace_required(
 '''    with build_cols[2]:
         st.write("### Run")
@@ -63,12 +64,28 @@ replace_required(
 "DraftKings Classic SIM BUILD CONTEST SIM buttons",
 )
 
-# Put full-roster stack choices above the run buttons so they are selected before BUILD.
-fd_run_anchor = '''    with build_cols[2]:
-        st.write("### Run")
-        _fd_run_cols = st.columns(3)
+# MOVE the existing stack selectors. They already exist later in the BUILD path,
+# so merely checking whether their keys exist would leave them hidden until SIM.
+fd_old_stack = '''        if lineup_mode == "Full Roster":
+            fd_stack_rules = st.multiselect(
+                "Stacks to use in MY lineups",
+                [
+                    "No stack rule",
+                    "QB + 1 teammate",
+                    "QB + 2 teammates",
+                    "QB + 3 teammates",
+                    "QB + 1 teammate + bring-back",
+                    "QB + 2 teammates + bring-back",
+                    "QB + 3 teammates + bring-back",
+                ],
+                default=["QB + 2 teammates + bring-back"],
+                key="fd_full_roster_stack_rules",
+                help="Choose one or more allowed stack types. A lineup is accepted if it matches any selected rule. Opponent lineups ignore these rules."
+            )
+            st.caption("These stack rules affect only your FanDuel builds. Simulated opponents remain ownership-driven.")
+
 '''
-fd_stack_ui = '''    if lineup_mode == "Full Roster":
+fd_prebuild_stack = '''    if lineup_mode == "Full Roster":
         fd_stack_rules = st.multiselect(
             "Stacks to use in MY lineups",
             [
@@ -87,14 +104,36 @@ fd_stack_ui = '''    if lineup_mode == "Full Roster":
         st.caption("Choose your FanDuel Full Roster stack rules before pressing BUILD.")
 
 '''
-if 'key="fd_full_roster_stack_rules"' not in text and fd_run_anchor in text:
-    text = text.replace(fd_run_anchor, fd_stack_ui + fd_run_anchor, 1)
-
-classic_run_anchor = '''        with build_cols[2]:
-            st.write("### Run")
-            _classic_run_cols = st.columns(3)
+fd_run_anchor = '''    with build_cols[2]:
+        st.write("### Run")
+        _fd_run_cols = st.columns(3)
 '''
-classic_stack_ui = '''        dk_classic_stack_rules = st.multiselect(
+if fd_old_stack in text:
+    text = text.replace(fd_old_stack, "", 1)
+if fd_prebuild_stack not in text:
+    if fd_run_anchor not in text:
+        raise SystemExit("Patch anchor not found: FanDuel pre-BUILD stack selector")
+    text = text.replace(fd_run_anchor, fd_prebuild_stack + fd_run_anchor, 1)
+
+classic_old_stack = '''            dk_classic_stack_rules = st.multiselect(
+                "Stacks to use in MY lineups",
+                [
+                    "No stack rule",
+                    "QB + 1 teammate",
+                    "QB + 2 teammates",
+                    "QB + 3 teammates",
+                    "QB + 1 teammate + bring-back",
+                    "QB + 2 teammates + bring-back",
+                    "QB + 3 teammates + bring-back",
+                ],
+                default=["QB + 2 teammates + bring-back"],
+                key="dk_classic_stack_rules",
+                help="Choose one or more allowed stack types. A lineup is accepted if it matches any selected rule. Opponent lineups ignore these rules."
+            )
+            st.caption("These stack rules affect only your DraftKings Classic builds. Simulated opponents remain ownership-driven.")
+
+'''
+classic_prebuild_stack = '''        dk_classic_stack_rules = st.multiselect(
             "Stacks to use in MY lineups",
             [
                 "No stack rule",
@@ -112,9 +151,18 @@ classic_stack_ui = '''        dk_classic_stack_rules = st.multiselect(
         st.caption("Choose your DraftKings Classic stack rules before pressing BUILD.")
 
 '''
-if 'key="dk_classic_stack_rules"' not in text and classic_run_anchor in text:
-    text = text.replace(classic_run_anchor, classic_stack_ui + classic_run_anchor, 1)
+classic_run_anchor = '''        with build_cols[2]:
+            st.write("### Run")
+            _classic_run_cols = st.columns(3)
+'''
+if classic_old_stack in text:
+    text = text.replace(classic_old_stack, "", 1)
+if classic_prebuild_stack not in text:
+    if classic_run_anchor not in text:
+        raise SystemExit("Patch anchor not found: DraftKings Classic pre-BUILD stack selector")
+    text = text.replace(classic_run_anchor, classic_prebuild_stack + classic_run_anchor, 1)
 
+# Add field sanity summaries if they are not already present.
 replace_required(
 '''                    st.metric("Simulated opponent lineups", f"{len(contest_field_df):,}")
                     # Field ownership is already shown in the Player Pool.
@@ -154,4 +202,4 @@ replace_required(
 )
 
 path.write_text(text, encoding="utf-8")
-print("Applied paired workflow controls, pre-BUILD stack selectors, and field sanity summaries")
+print("Applied paired workflow controls and moved full-roster stack selectors before BUILD")
