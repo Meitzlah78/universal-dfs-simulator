@@ -237,7 +237,8 @@ def opponent_field_selection_weights(pool, fallback_scores):
     fallback = np.asarray(fallback_scores, dtype=float)
     lookup = {str(c).strip().casefold(): c for c in pool.columns}
     own_col = next((lookup[k] for k in (
-        "field own %", "ownership %", "projected ownership", "ownership", "own%", "own"
+        "field own %", "projected own %", "ownership %", "projected ownership",
+        "projected own", "ownership", "own%", "own"
     ) if k in lookup), None)
     if own_col is not None:
         ownership = pd.to_numeric(pool[own_col], errors="coerce").fillna(0.0).to_numpy(dtype=float)
@@ -464,6 +465,18 @@ def build_showdown_opponent_field(available_players, simulation_df, players_df,
         salary = int(captain_salaries[captain_idx] + salaries[flex_idx].sum())
         if salary > salary_cap:
             continue
+
+        # Completed large-field Showdown contests show that the public field is not
+        # six random legal players. Most entries use a meaningful amount of the cap,
+        # while low-salary constructions still exist as a smaller contrarian tail.
+        # Keep those low-salary lineups possible, but make them progressively rarer.
+        # This strengthens the simulated public field without making it use the same
+        # ceiling/leverage optimizer as SIMMAH's candidate builder.
+        if salary < 40000:
+            low_salary_acceptance = float(np.exp((salary - 40000) / 4000.0))
+            if rng.random() > low_salary_acceptance:
+                continue
+
         if len(set(teams[picked])) < 2:
             continue
         rows.append((
