@@ -5690,9 +5690,6 @@ with build_cols[2]:
         use_container_width=True
     )
 
-# Keep the contest-scoring bar in the same visible Build workflow area as SIM/BUILD.
-contest_progress_slot = st.empty()
-
 # ============================================
 # BUILD ACTION
 # ============================================
@@ -5999,6 +5996,8 @@ if build_clicked:
 
     workflow_status.info(f"Step 3 of 4: Building up to {dk_opponent_target:,} simulated opponent lineups...")
     field_progress = st.progress(0, text=f"Step 3 of 4: Building opponent lineups (0 of {dk_opponent_target:,})...")
+    # Create Step 4 below Step 3 so Streamlit keeps the build workflow in numeric order.
+    contest_progress_slot = st.empty()
     try:
         # First generate the representative 10,000-lineup sample, then use
         # ownership observed in that sample to estimate a full contest field.
