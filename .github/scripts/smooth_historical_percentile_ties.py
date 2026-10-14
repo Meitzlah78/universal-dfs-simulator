@@ -3,13 +3,8 @@ from pathlib import Path
 path = Path("dfs_app.py")
 text = path.read_text(encoding="utf-8")
 
-old = '''                    # Preserve the historical/sample mean instead of forcing
-                    # simulated outcomes to average the supplied projection.
-                    scores = projection + standardized
-'''
-
-new = '''                    # Center the rescaled historical shape on the blended target mean.
-                    scores = projection + standardized
+marker = "                    scores = projection + standardized\n"
+insert = '''                    scores = projection + standardized
                     # Historical weekly scores are discrete, so repeated sampled values can
                     # make P90/P95/P99 collapse to the exact same number. Add a very small
                     # mean-zero smoothing term only to historical samples. This separates
@@ -21,11 +16,11 @@ new = '''                    # Center the rescaled historical shape on the blend
                         scores = scores + _tie_noise
 '''
 
-if new in text:
+if "_tie_smoothing_std" in text:
     print("Historical percentile tie smoothing already applied.")
-elif old in text:
-    text = text.replace(old, new, 1)
+elif marker in text:
+    text = text.replace(marker, insert, 1)
     path.write_text(text, encoding="utf-8")
     print("Added small mean-zero smoothing to historical samples to separate percentile ties.")
 else:
-    raise SystemExit("Could not find historical re-centering block")
+    raise SystemExit("Could not find historical re-centering line")
