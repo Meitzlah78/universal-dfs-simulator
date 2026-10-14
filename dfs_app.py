@@ -2575,6 +2575,15 @@ def _simulate_scored_player_outcomes(players_df, platform, rng):
                     # includes recency-weighted player history plus slate context,
                     # so we keep the historical shape without snapping back to raw DFF.
                     scores = projection + standardized
+                    # Historical weekly scores are discrete, so repeated sampled values can
+                    # make P90/P95/P99 collapse to the exact same number. Add a very small
+                    # mean-zero smoothing term only to historical samples. This separates
+                    # percentile ties without materially changing the player's mean or spread.
+                    if has_player_history:
+                        _tie_smoothing_std = max(0.05, target_std * 0.04)
+                        _tie_noise = rng.normal(0.0, _tie_smoothing_std, size=n)
+                        _tie_noise = _tie_noise - float(np.mean(_tie_noise))
+                        scores = scores + _tie_noise
                 else:
                     # Sparse/constant historical samples can have a nonzero
                     # raw spread but no usable spread after outlier trimming.
