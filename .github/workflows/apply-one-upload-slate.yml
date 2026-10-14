@@ -47,3 +47,5 @@ jobs:
           git add dfs_app.py
           git commit -m "Apply Classic one-click SIM workflow [skip ci]"
           git push origin HEAD:feature/salary-csv-upload
+
+# Trigger one-click Classic workflow and no-stack speed patch.
