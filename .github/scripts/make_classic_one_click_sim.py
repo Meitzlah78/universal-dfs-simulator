@@ -99,8 +99,18 @@ new_rerun = '''        # Keep the one-click Contest Sim results on screen. A lat
 '''
 if old_rerun in text:
     text = text.replace(old_rerun, new_rerun, 1)
-elif new_rerun not in text:
-    raise SystemExit('Classic rerun block not found')
+
+# DraftKings Classic defaults requested by the user.
+text = text.replace('''                value=(45000, 50000),
+                step=100,
+                format="$%d",
+                key="dk_build_salary_range_" + lineup_mode.replace(" ", "_").lower(),''', '''                value=(47000, 50000),
+                step=100,
+                format="$%d",
+                key="dk_build_salary_range_" + lineup_mode.replace(" ", "_").lower(),''', 1)
+text = text.replace('''            default=["QB + 2 teammates + bring-back"],
+            key="dk_classic_stack_rules",''', '''            default=["No stack rule"],
+            key="dk_classic_stack_rules",''', 1)
 
 path.write_text(text, encoding='utf-8')
-print('Classic one-click results stay visible; ROI and Field Sanity are no longer wiped by rerun.')
+print('Classic defaults set to No stack rule and $47,000 minimum salary.')
