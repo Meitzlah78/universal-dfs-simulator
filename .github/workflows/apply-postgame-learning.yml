@@ -24,6 +24,7 @@ on:
       - '.github/scripts/add_sea_den_dime_payout_fallback.py'
       - '.github/scripts/allow_contextual_sim_mean_adjustments.py'
       - '.github/scripts/blend_historical_mean_into_sim.py'
+      - '.github/scripts/smooth_historical_percentile_ties.py'
       - '.github/workflows/apply-postgame-learning.yml'
 
 permissions:
@@ -100,6 +101,9 @@ jobs:
 
       - name: Blend historical player mean into simulation target
         run: python .github/scripts/blend_historical_mean_into_sim.py
+
+      - name: Smooth historical percentile ties
+        run: python .github/scripts/smooth_historical_percentile_ties.py
 
       - name: Syntax check
         run: python -m py_compile dfs_app.py
