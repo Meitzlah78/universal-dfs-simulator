@@ -535,26 +535,32 @@ def expand_showdown_field_by_ownership(sample_field, full_field_size, seed=20261
         rates = captain_rate if slot == "Captain" else flex_rate
         values = field[slot].astype(str).str.strip().map(rates).fillna(1e-6).to_numpy(dtype=np.float64)
         log_weights += np.log(values)
-    # Calibrate the duplicate distribution to completed large-field DK Showdown data.
-    # Monday BUF@LAR had a normal long tail of unique lineups but also a small set of
-    # very chalky constructions duplicated hundreds of times. A single tempered curve
-    # produced the right average duplicates but made the top lineup far too unique.
-    # Use a flatter base for lineup diversity plus an 8% chalk component concentrated
-    # on the most popular constructions. This preserves the broad field while allowing
-    # realistic 100+ / 300+ duplicate clusters in large contests.
+    # Calibrated from the actual 59,453-entry BUF@LAR DK Dime Package field:
+    # 12,029 unique lineups, median duplicate count 2, max 397, with a broad
+    # duplicate tail (1,340 lineups at 10+ copies and 569 at 20+). The prior
+    # 20-lineup chalk bucket over-concentrated duplication into too few lineups.
+    # Spread the chalk component across a much wider slice of the candidate field
+    # while retaining a small sharper component for the very chalkiest builds.
     centered_log_weights = log_weights - np.max(log_weights)
-    base_weights = np.exp(centered_log_weights * 0.45)
+    base_weights = np.exp(centered_log_weights * 0.38)
     base_weights /= base_weights.sum()
 
-    chalk_count = max(10, min(20, total))
-    chalk_indices = np.argpartition(log_weights, -chalk_count)[-chalk_count:]
-    chalk_weights = np.zeros(total, dtype=np.float64)
-    chalk_strength = np.exp(centered_log_weights[chalk_indices] * 1.30)
-    if chalk_strength.sum() > 0:
-        chalk_weights[chalk_indices] = chalk_strength / chalk_strength.sum()
-        weights = 0.92 * base_weights + 0.08 * chalk_weights
-    else:
-        weights = base_weights
+    broad_count = max(250, min(1800, max(250, total // 5)))
+    broad_count = min(broad_count, total)
+    broad_indices = np.argpartition(log_weights, -broad_count)[-broad_count:]
+    broad_weights = np.zeros(total, dtype=np.float64)
+    broad_strength = np.exp(centered_log_weights[broad_indices] * 0.80)
+    if broad_strength.sum() > 0:
+        broad_weights[broad_indices] = broad_strength / broad_strength.sum()
+
+    top_count = max(10, min(40, total))
+    top_indices = np.argpartition(log_weights, -top_count)[-top_count:]
+    top_weights = np.zeros(total, dtype=np.float64)
+    top_strength = np.exp(centered_log_weights[top_indices] * 1.20)
+    if top_strength.sum() > 0:
+        top_weights[top_indices] = top_strength / top_strength.sum()
+
+    weights = 0.76 * base_weights + 0.20 * broad_weights + 0.04 * top_weights
     weights /= weights.sum()
 
     rng = np.random.default_rng(seed)
