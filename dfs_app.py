@@ -6683,6 +6683,7 @@ with st.expander("Contest Payout Structure", expanded=False):
     # Match the exact contest name so this fallback cannot leak into another contest.
     # Saved DraftKings payout library fallback. Live DraftKings payout data keeps priority;
     # this only fills the payout schedule when the selected contest has no valid live scale.
+    # Saved Showdown profiles are reusable templates across matchups.
     def _try_saved_dk_payout_library():
         _selected = st.session_state.get("selected_dk_contest", {}) or {}
         _selected_id = str(_selected.get("id", "")).strip()
@@ -6695,6 +6696,7 @@ with st.expander("Contest Payout Structure", expanded=False):
             return False
         try:
             import json as _json
+            import re as _re
             _library_path = Path(__file__).resolve().parent / "data" / "dk_payout_library.json"
             if not _library_path.exists():
                 _library_path = Path("data/dk_payout_library.json")
@@ -6704,6 +6706,12 @@ with st.expander("Contest Payout Structure", expanded=False):
         except Exception:
             return False
 
+        def _contest_family(_name):
+            # DraftKings appends the game matchup in the final parenthetical. Remove only
+            # a team-vs-team suffix so contest labels such as [20 Entry Max] stay intact.
+            return _re.sub(r"\s*\([A-Z]{2,4}\s*@\s*[A-Z]{2,4}\)\s*$", "", str(_name or "")).strip()
+
+        _selected_family = _contest_family(_selected_name)
         try:
             _selected_fee = float(_selected.get("entry_fee")) if _selected.get("entry_fee") is not None else None
         except (TypeError, ValueError):
@@ -6712,12 +6720,20 @@ with st.expander("Contest Payout Structure", expanded=False):
             _selected_field = int(_selected.get("field_size")) if _selected.get("field_size") else None
         except (TypeError, ValueError):
             _selected_field = None
+        try:
+            _selected_prize_pool = float(_selected.get("prize_pool")) if _selected.get("prize_pool") is not None else None
+        except (TypeError, ValueError):
+            _selected_prize_pool = None
 
         for _profile in _library.get("profiles", []):
-            if str(_profile.get("contest_name", "")).strip() != _selected_name:
+            _profile_family = str(_profile.get("contest_family") or _contest_family(_profile.get("contest_name", ""))).strip()
+            if _profile_family != _selected_family:
                 continue
             _profile_fee = _profile.get("entry_fee")
             if _selected_fee is not None and _profile_fee is not None and abs(float(_profile_fee) - _selected_fee) > 0.001:
+                continue
+            _profile_pool = _profile.get("prize_pool")
+            if _selected_prize_pool is not None and _profile_pool is not None and abs(float(_profile_pool) - _selected_prize_pool) > 1.0:
                 continue
             _profile_field = _profile.get("max_entries")
             if _selected_field and _profile_field:
@@ -6739,7 +6755,7 @@ with st.expander("Contest Payout Structure", expanded=False):
                 continue
             st.session_state["contest_payout_schedule"] = _schedule
             st.session_state["contest_payout_source_name"] = (
-                "Saved DraftKings payout library: " + str(_profile.get("contest_family") or _selected_name)
+                "Saved DraftKings payout library: " + str(_profile.get("contest_family") or _selected_family)
             )
             st.session_state["contest_payout_contest_id"] = _selected_id
             st.session_state["contest_payout_auto_loaded"] = True
