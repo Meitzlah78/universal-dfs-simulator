@@ -6996,36 +6996,54 @@ if (
             batch_candidate_scores += batch_values[:, candidate_idx[:, 0]] * (scoring_multiplier - 1.0)
             batch_field_scores += batch_values[:, contest_idx[:, 0]] * (scoring_multiplier - 1.0)
 
+        # Score the user's portfolio as entries in the SAME contest. Each candidate
+        # must compete with the other submitted portfolio entries, not only with
+        # simulated opponents. Exclude the candidate itself from its comparison
+        # field so the field size remains opponents + the other user entries.
+        if n_candidates > 1:
+            portfolio_scores = batch_candidate_scores
+            combined_scores = np.concatenate((batch_field_scores, portfolio_scores), axis=1)
+            sorted_combined = np.sort(combined_scores, axis=1)
+        else:
+            portfolio_scores = None
+            sorted_combined = np.sort(batch_field_scores, axis=1)
+
         # Sort every simulation's opponent scores together along the opponent axis.
-        sorted_field = np.sort(batch_field_scores, axis=1)
+        # Candidate-specific searches below correct for the candidate's own score
+        # when the full portfolio was appended to the comparison field.
+        sorted_field = sorted_combined
 
         # Batched binary search: find each candidate's insertion position in its
         # simulation's sorted opponent scores. This preserves searchsorted(side="right")
         # behavior while avoiding a Python loop over every simulation.
         batch_count = batch_end - batch_start
+        comparison_field_size = total_field + max(0, n_candidates - 1)
+        search_field_size = sorted_field.shape[1]
         low = np.zeros((batch_count, n_candidates), dtype=np.int32)
-        high = np.full((batch_count, n_candidates), total_field, dtype=np.int32)
+        high = np.full((batch_count, n_candidates), search_field_size, dtype=np.int32)
         sim_rows = np.arange(batch_count)[:, None]
 
         while np.any(low < high):
             active = low < high
-            mid = np.minimum((low + high) // 2, total_field - 1)
+            mid = np.minimum((low + high) // 2, search_field_size - 1)
             mid_values = sorted_field[sim_rows, mid]
             move_right = (mid_values <= batch_candidate_scores) & active
             move_left = (mid_values > batch_candidate_scores) & active
             low = np.where(move_right, mid + 1, low)
             high = np.where(move_left, mid, high)
 
-        count_greater = total_field - low
-        percentiles = 1.0 - (count_greater / total_field)
+        count_greater = search_field_size - low
+        # The candidate itself is never greater than its own score, so no removal
+        # is needed from count_greater. Percentiles use opponents + other entries.
+        percentiles = 1.0 - (count_greater / max(1, comparison_field_size))
 
         # Find the left insertion point too, so equal-scoring entries can share
         # the prize money for every rank occupied by the tie.
         left_low = np.zeros((batch_count, n_candidates), dtype=np.int32)
-        left_high = np.full((batch_count, n_candidates), total_field, dtype=np.int32)
+        left_high = np.full((batch_count, n_candidates), search_field_size, dtype=np.int32)
         while np.any(left_low < left_high):
             active_left = left_low < left_high
-            mid_left = np.minimum((left_low + left_high) // 2, total_field - 1)
+            mid_left = np.minimum((left_low + left_high) // 2, search_field_size - 1)
             mid_left_values = sorted_field[sim_rows, mid_left]
             move_right_left = (mid_left_values < batch_candidate_scores) & active_left
             move_left_left = (mid_left_values >= batch_candidate_scores) & active_left
@@ -7035,11 +7053,13 @@ if (
         # Convert sampled opponent results to a smoothed full-field rank estimate.
         # The +1 continuity correction prevents a lineup that beats every sampled
         # opponent from being treated as a guaranteed first-place finish.
-        sampled_equal_opponents = low - left_low
+        # Remove the candidate itself from the equal-score count. Other portfolio
+        # entries with the same score remain in the tie and therefore split prizes.
+        sampled_equal_opponents = np.maximum(0, (low - left_low) - 1)
         sampled_rank_equivalent = count_greater + (0.5 * sampled_equal_opponents)
         # Include duplicate/equal-scoring entries in the rank estimate instead
         # of silently treating every tied lineup as if it had no ties.
-        rank_fraction = (sampled_rank_equivalent + 1.0) / (total_field + 1.0)
+        rank_fraction = (sampled_rank_equivalent + 1.0) / (comparison_field_size + 1.0)
         estimated_ranks = 1.0 + rank_fraction * (estimated_full_field_size - 1)
         estimated_ranks = np.clip(estimated_ranks, 1.0, float(estimated_full_field_size))
 
@@ -7047,7 +7067,7 @@ if (
         # Approximate win probability from the estimated chance one field entry
         # outscores this lineup, rather than counting a rounded rank of 1 as a win.
         estimated_tail_probability = np.clip(
-            (count_greater + 1.0) / (total_field + 1.0), 0.0, 1.0
+            (count_greater + 1.0) / (comparison_field_size + 1.0), 0.0, 1.0
         )
         win_probabilities = np.exp(
             -estimated_tail_probability * max(0, estimated_full_field_size - 1)
@@ -7080,7 +7100,7 @@ if (
                 1,
                 np.rint(
                     (sampled_equal_opponents + 1.0)
-                    / (total_field + 1.0)
+                    / (comparison_field_size + 1.0)
                     * estimated_full_field_size
                 ).astype(np.int64),
             )
