@@ -6073,7 +6073,21 @@ with st.expander("Contest Payout Structure", expanded=False):
             f"Selected contest: {_selected_dk_for_details.get('name', 'DraftKings contest')} "
             f"(ID {_selected_dk_for_details['id']})"
         )
-        if st.button("FETCH DRAFTKINGS CONTEST DETAILS", key="fetch_dk_contest_details", use_container_width=True):
+        _fetch_dk_details_clicked = st.button(
+            "FETCH DRAFTKINGS CONTEST DETAILS",
+            key="fetch_dk_contest_details",
+            use_container_width=True,
+        )
+        _selected_contest_id_for_payout = str(_selected_dk_for_details.get("id", "")).strip()
+        _payout_needs_refresh = (
+            bool(_selected_contest_id_for_payout)
+            and (
+                str(st.session_state.get("contest_payout_contest_id", "")) != _selected_contest_id_for_payout
+                or not isinstance(st.session_state.get("contest_payout_schedule"), np.ndarray)
+                or len(st.session_state.get("contest_payout_schedule", [])) == 0
+            )
+        )
+        if _fetch_dk_details_clicked or _payout_needs_refresh:
             try:
                 _contest_id_for_api = str(_selected_dk_for_details["id"]).strip()
                 if not _contest_id_for_api.isdigit():
