@@ -6,6 +6,7 @@ on:
       - feature/salary-csv-upload
     paths:
       - '.github/scripts/add_one_upload_slate_setup.py'
+      - '.github/scripts/make_classic_one_click_sim.py'
       - '.github/workflows/apply-one-upload-slate.yml'
 
 permissions:
@@ -29,6 +30,9 @@ jobs:
       - name: Apply one-upload slate patch
         run: python .github/scripts/add_one_upload_slate_setup.py
 
+      - name: Make Classic SIM one-click
+        run: python .github/scripts/make_classic_one_click_sim.py
+
       - name: Syntax check
         run: python -m py_compile dfs_app.py
 
@@ -41,7 +45,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add dfs_app.py
-          git commit -m "Apply pre-build stack selectors [skip ci]"
+          git commit -m "Apply Classic one-click SIM workflow [skip ci]"
           git push origin HEAD:feature/salary-csv-upload
-
-# Trigger refreshed paired-format patch including pre-BUILD stack selectors.
