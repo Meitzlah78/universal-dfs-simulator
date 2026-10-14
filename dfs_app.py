@@ -6110,11 +6110,8 @@ else:
             else:
                 st.info("Upload a DraftKings salary/template CSV containing player IDs to enable lineup export.")
 
-        # Player Pool is rendered before the SIM button handler. After a fresh
-        # simulation/build, rerun once so its Sim Pts and percentile columns read the
-        # newly saved simulation_df instead of the previous run.
-        if _classic_sim_button or _classic_build_button:
-            st.rerun()
+        # Keep the one-click Contest Sim results on screen. A later normal Streamlit
+        # interaction will refresh the Player Pool from the saved simulation state.
         st.stop()
 
 
