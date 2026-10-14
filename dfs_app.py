@@ -5485,7 +5485,7 @@ else:
                 "Allowed lineup salary range",
                 min_value=0,
                 max_value=50000,
-                value=(45000, 50000),
+                value=(47000, 50000),
                 step=100,
                 format="$%d",
                 key="dk_build_salary_range_" + lineup_mode.replace(" ", "_").lower(),
@@ -5518,7 +5518,7 @@ else:
                 "QB + 2 teammates + bring-back",
                 "QB + 3 teammates + bring-back",
             ],
-            default=["QB + 2 teammates + bring-back"],
+            default=["No stack rule"],
             key="dk_classic_stack_rules",
             help="Choose stack rules before BUILD. These affect only your lineups, not the opponent field.",
         )
