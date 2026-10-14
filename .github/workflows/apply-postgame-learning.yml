@@ -33,6 +33,7 @@ on:
       - '.github/scripts/score_portfolio_entries_together.py'
       - '.github/scripts/use_holdout_sims_for_portfolio_roi.py'
       - '.github/scripts/calibrate_showdown_captain_concentration.py'
+      - '.github/scripts/use_exact_full_field_portfolio_ranks.py'
       - 'data/dk_payout_library.json'
       - '.github/workflows/apply-postgame-learning.yml'
 
@@ -108,6 +109,8 @@ jobs:
         run: python .github/scripts/use_holdout_sims_for_portfolio_roi.py
       - name: Calibrate Showdown Captain concentration
         run: python .github/scripts/calibrate_showdown_captain_concentration.py
+      - name: Use exact full-field ranks for portfolio payouts
+        run: python .github/scripts/use_exact_full_field_portfolio_ranks.py
       - name: Syntax check
         run: python -m py_compile dfs_app.py
       - name: Commit patched app
