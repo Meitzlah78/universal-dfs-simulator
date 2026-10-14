@@ -63,6 +63,58 @@ replace_required(
 "DraftKings Classic SIM BUILD CONTEST SIM buttons",
 )
 
+# Put full-roster stack choices above the run buttons so they are selected before BUILD.
+fd_run_anchor = '''    with build_cols[2]:
+        st.write("### Run")
+        _fd_run_cols = st.columns(3)
+'''
+fd_stack_ui = '''    if lineup_mode == "Full Roster":
+        fd_stack_rules = st.multiselect(
+            "Stacks to use in MY lineups",
+            [
+                "No stack rule",
+                "QB + 1 teammate",
+                "QB + 2 teammates",
+                "QB + 3 teammates",
+                "QB + 1 teammate + bring-back",
+                "QB + 2 teammates + bring-back",
+                "QB + 3 teammates + bring-back",
+            ],
+            default=["QB + 2 teammates + bring-back"],
+            key="fd_full_roster_stack_rules",
+            help="Choose stack rules before BUILD. These affect only your lineups, not the opponent field.",
+        )
+        st.caption("Choose your FanDuel Full Roster stack rules before pressing BUILD.")
+
+'''
+if 'key="fd_full_roster_stack_rules"' not in text and fd_run_anchor in text:
+    text = text.replace(fd_run_anchor, fd_stack_ui + fd_run_anchor, 1)
+
+classic_run_anchor = '''        with build_cols[2]:
+            st.write("### Run")
+            _classic_run_cols = st.columns(3)
+'''
+classic_stack_ui = '''        dk_classic_stack_rules = st.multiselect(
+            "Stacks to use in MY lineups",
+            [
+                "No stack rule",
+                "QB + 1 teammate",
+                "QB + 2 teammates",
+                "QB + 3 teammates",
+                "QB + 1 teammate + bring-back",
+                "QB + 2 teammates + bring-back",
+                "QB + 3 teammates + bring-back",
+            ],
+            default=["QB + 2 teammates + bring-back"],
+            key="dk_classic_stack_rules",
+            help="Choose stack rules before BUILD. These affect only your lineups, not the opponent field.",
+        )
+        st.caption("Choose your DraftKings Classic stack rules before pressing BUILD.")
+
+'''
+if 'key="dk_classic_stack_rules"' not in text and classic_run_anchor in text:
+    text = text.replace(classic_run_anchor, classic_stack_ui + classic_run_anchor, 1)
+
 replace_required(
 '''                    st.metric("Simulated opponent lineups", f"{len(contest_field_df):,}")
                     # Field ownership is already shown in the Player Pool.
@@ -102,5 +154,4 @@ replace_required(
 )
 
 path.write_text(text, encoding="utf-8")
-print("Applied paired workflow controls and field sanity summaries")
-# trigger paired-format patch 2026-10-14
+print("Applied paired workflow controls, pre-BUILD stack selectors, and field sanity summaries")
