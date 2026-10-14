@@ -17,6 +17,7 @@ on:
       - '.github/scripts/auto_fetch_dk_payouts.py'
       - '.github/scripts/add_player_pool_ownership_columns.py'
       - '.github/scripts/prevent_payout_rerun_loop.py'
+      - '.github/scripts/throttle_projection_refresh.py'
       - '.github/workflows/apply-postgame-learning.yml'
 
 permissions:
@@ -72,6 +73,9 @@ jobs:
 
       - name: Prevent payout fetch rerun loop
         run: python .github/scripts/prevent_payout_rerun_loop.py
+
+      - name: Throttle automatic projection refresh
+        run: python .github/scripts/throttle_projection_refresh.py
 
       - name: Syntax check
         run: python -m py_compile dfs_app.py
