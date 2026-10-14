@@ -16,6 +16,7 @@ on:
       - '.github/scripts/show_all_dk_players.py'
       - '.github/scripts/auto_fetch_dk_payouts.py'
       - '.github/scripts/add_player_pool_ownership_columns.py'
+      - '.github/scripts/prevent_payout_rerun_loop.py'
       - '.github/workflows/apply-postgame-learning.yml'
 
 permissions:
@@ -68,6 +69,9 @@ jobs:
 
       - name: Add player pool ownership columns
         run: python .github/scripts/add_player_pool_ownership_columns.py
+
+      - name: Prevent payout fetch rerun loop
+        run: python .github/scripts/prevent_payout_rerun_loop.py
 
       - name: Syntax check
         run: python -m py_compile dfs_app.py
