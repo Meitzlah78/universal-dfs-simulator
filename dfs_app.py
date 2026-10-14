@@ -4601,6 +4601,9 @@ else:
             "players without a posted external projection will stay out of builds until a refresh finds one."
         )
 
+    # Keep the full DraftKings salary-file pool visible even when some players do not yet have projections.
+    all_dk_players_df = players_df.copy()
+
     def internal_slate_key(frame):
         """Stable identity for an uploaded slate, independent of external projections."""
         return tuple(
@@ -4609,9 +4612,8 @@ else:
             .itertuples(index=False, name=None)
         )
 
-    players_df = exclude_zero_projection_players(players_df, "DraftKings " + lineup_mode)
-    internal_key = internal_slate_key(players_df)
-    st.caption("Projection values use the DFF/DraftEdge average when both are available, otherwise the single available source. Players without an external projection or with a zero projection are excluded.")
+    internal_key = internal_slate_key(all_dk_players_df)
+    st.caption("Projection values use the DFF/DraftEdge average when both are available, otherwise the single available source. All salary-file players remain visible; players without a positive external projection stay out of SIM/BUILD until a refresh finds one.")
     if st.session_state.get("nfl_historical_stats_status"):
         st.caption(st.session_state["nfl_historical_stats_status"])
         if st.session_state.get("nfl_historical_players_matched") is not None:
@@ -4637,12 +4639,14 @@ else:
             )
 
     opponent_source = uploaded_df if "uploaded_df" in locals() else None
-    opponent_map = build_opponent_map(opponent_source, players_df["Team"])
-    players_df["Opponent"] = players_df["Team"].map(opponent_map).fillna("—")
+    opponent_map = build_opponent_map(opponent_source, all_dk_players_df["Team"])
+    all_dk_players_df["Opponent"] = all_dk_players_df["Team"].map(opponent_map).fillna("—")
+    all_dk_players_df["CaptainSalary"] = (all_dk_players_df["Salary"] * 1.5).astype(int)
 
-    players_df["CaptainSalary"] = (
-        players_df["Salary"] * 1.5
-    ).astype(int)
+    # Build/simulate only players with a positive external projection.
+    players_df = exclude_zero_projection_players(all_dk_players_df, "DraftKings " + lineup_mode)
+    players_df["Opponent"] = players_df["Team"].map(opponent_map).fillna("—")
+    players_df["CaptainSalary"] = (players_df["Salary"] * 1.5).astype(int)
 
     # Save results by player pool instead of deleting them when the slate changes.
     # This lets a user return to a previously loaded slate and recover its last build.
@@ -4727,7 +4731,7 @@ else:
     st.divider()
     st.write("### Player Pool — Stats, Simulation, Exposure & Controls")
 
-    player_display = players_df.copy()
+    player_display = all_dk_players_df.copy()
 
     # Show exposure from the current slate's built lineups.
     # Classic uses overall exposure only; Showdown uses Captain/Flex exposure.
