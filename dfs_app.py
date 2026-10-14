@@ -6917,6 +6917,9 @@ if (
 
     n_candidates = len(candidate_idx)
     n_sims = len(simulation_df)
+    selection_n_sims = max(1, n_sims // 2)
+    holdout_start = selection_n_sims
+    holdout_n_sims = max(1, n_sims - holdout_start)
     total_field = len(contest_idx)
     # The simulated field is a sample. Scale each sampled percentile to the
     # actual contest size before estimating full-field ranks and payouts.
@@ -6978,8 +6981,8 @@ if (
     simulation_values = simulation_df.to_numpy(dtype=np.float32, copy=False)
     batch_size = 128
     batch_ranges = [
-        (batch_start, min(batch_start + batch_size, n_sims))
-        for batch_start in range(0, n_sims, batch_size)
+        (batch_start, min(batch_start + batch_size, selection_n_sims))
+        for batch_start in range(0, selection_n_sims, batch_size)
     ]
     cpu_count = os.cpu_count() or 2
     max_workers = max(1, min(cpu_count, 4, len(batch_ranges)))
@@ -7166,15 +7169,15 @@ if (
 
     results_df = candidates_df.copy()
 
-    results_df["WinRate"] = win_rates / n_sims
-    results_df["Top1"] = top1_rates / n_sims
-    results_df["Top5"] = top5_rates / n_sims
-    results_df["Top10"] = top10_rates / n_sims
-    results_df["CashRate"] = cash_rates / n_sims
-    results_df["AvgPercentile"] = avg_percentiles / n_sims
+    results_df["WinRate"] = win_rates / selection_n_sims
+    results_df["Top1"] = top1_rates / selection_n_sims
+    results_df["Top5"] = top5_rates / selection_n_sims
+    results_df["Top10"] = top10_rates / selection_n_sims
+    results_df["CashRate"] = cash_rates / selection_n_sims
+    results_df["AvgPercentile"] = avg_percentiles / selection_n_sims
 
     if payout_schedule is not None:
-        results_df["Expected Prize ($)"] = expected_prize_totals / n_sims
+        results_df["Expected Prize ($)"] = expected_prize_totals / selection_n_sims
         selected_contest_for_payout = st.session_state.get("selected_dk_contest", {})
         entry_fee_for_payout = pd.to_numeric(
             selected_contest_for_payout.get("entry_fee"), errors="coerce"
@@ -7757,7 +7760,7 @@ if "contest_results_df" in st.session_state and not (platform == "DraftKings" an
             _portfolio_cumulative_prizes = np.concatenate((
                 [0.0], np.cumsum(_portfolio_rank_prizes, dtype=np.float64)
             ))
-            for _portfolio_batch_start in range(0, n_sims, _portfolio_batch_size):
+            for _portfolio_batch_start in range(holdout_start, n_sims, _portfolio_batch_size):
                 _portfolio_batch_end = min(_portfolio_batch_start + _portfolio_batch_size, n_sims)
                 _portfolio_values = simulation_values[_portfolio_batch_start:_portfolio_batch_end]
                 _portfolio_scores = _portfolio_values[:, _portfolio_slot_indices].sum(axis=2)
@@ -7852,7 +7855,7 @@ if "contest_results_df" in st.session_state and not (platform == "DraftKings" an
                     ),
                     axis=0,
                 )
-            portfolio_df["Expected Prize ($)"] = _portfolio_prize_totals / n_sims
+            portfolio_df["Expected Prize ($)"] = _portfolio_prize_totals / holdout_n_sims
             portfolio_df["Expected Net ($)"] = portfolio_df["Expected Prize ($)"] - float(_portfolio_entry_fee)
             portfolio_df["Expected ROI (%)"] = np.where(
                 float(_portfolio_entry_fee) > 0,
@@ -7860,7 +7863,7 @@ if "contest_results_df" in st.session_state and not (platform == "DraftKings" an
                 np.nan,
             )
             st.session_state["portfolio_df"] = portfolio_df
-            _portfolio_total_prizes = float(_portfolio_prize_totals.sum() / n_sims)
+            _portfolio_total_prizes = float(_portfolio_prize_totals.sum() / holdout_n_sims)
             _portfolio_expected_net = _portfolio_total_prizes - _portfolio_total_fees
             _portfolio_expected_roi = (
                 _portfolio_expected_net / _portfolio_total_fees * 100.0
@@ -7878,8 +7881,9 @@ if "contest_results_df" in st.session_state and not (platform == "DraftKings" an
                 else f"${_portfolio_expected_net:,.2f} / N/A"
             )
             st.caption(
-                "Joint portfolio estimate: the selected entries are scored together against the sampled field, "
-                "including ties between your own entries. Full-field ranks and winnings remain estimates."
+                "Holdout portfolio estimate: lineups are selected using one half of the simulations, then "
+                "ROI is measured on the untouched second half. Entries are scored together and ties are split. "
+                "Full-field ranks and winnings remain estimates."
             )
         else:
             st.info(
