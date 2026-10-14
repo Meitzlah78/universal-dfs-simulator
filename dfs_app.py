@@ -5712,7 +5712,7 @@ with build_cols[0]:
         "Allowed lineup salary range",
         min_value=0,
         max_value=50000,
-        value=(45000, 50000),
+        value=(40000, 50000) if lineup_mode in ("Showdown", "Single Game") else (45000, 50000),
         step=100,
         format="$%d",
         key="dk_build_salary_range_" + lineup_mode.replace(" ", "_").lower(),
