@@ -2382,9 +2382,16 @@ def _simulate_scored_player_outcomes(players_df, platform, rng):
             return_scores=True, historical_name_index=historical_name_index
         )
         has_player_history = historical_result is not None
+        historical_anchor_mean = np.nan
+        historical_games_used = 0
         if historical_result is not None:
             historical_points, recency_weights = historical_result
             probabilities = recency_weights / recency_weights.sum()
+            historical_games_used = int(len(historical_points))
+            try:
+                historical_anchor_mean = float(np.average(historical_points, weights=probabilities))
+            except Exception:
+                historical_anchor_mean = float(np.mean(historical_points)) if len(historical_points) else np.nan
             scores = rng.choice(
                 historical_points, size=n, replace=True, p=probabilities
             ).astype(float)
@@ -2407,6 +2414,29 @@ def _simulate_scored_player_outcomes(players_df, platform, rng):
                 if np.isfinite(candidate) and candidate > 0:
                     projection = float(candidate)
                     break
+
+        # Blend the player's recency-weighted historical fantasy mean directly
+        # into the simulation target. This is the missing link that lets core
+        # players move away from DFF/DraftEdge when their own NFL history supports it.
+        # Keep the source projection as the stronger anchor so old/sparse history
+        # cannot overwhelm current role, matchup, or injury information.
+        if (
+            has_player_history
+            and historical_games_used >= 4
+            and np.isfinite(historical_anchor_mean)
+            and historical_anchor_mean >= 0
+            and np.isfinite(projection)
+            and projection > 0
+        ):
+            _historical_gap = historical_anchor_mean - projection
+            # More history earns slightly more influence. Typical weight is 18-28%.
+            _history_weight = float(np.clip(0.14 + 0.012 * historical_games_used, 0.18, 0.28))
+            _history_points = _historical_gap * _history_weight
+            # Core players may move more than fringe players, but no historical
+            # signal alone can create an unsupported multi-point jump.
+            _history_cap = float(np.clip(0.30 + projection * 0.065, 0.45, 1.35))
+            _history_points = float(np.clip(_history_points, -_history_cap, _history_cap))
+            projection = max(0.01, projection + _history_points)
 
         # Let the simulation mean move away from DFF/DraftEdge when slate context
         # gives us a real reason. The source projection remains the anchor, while
@@ -2541,8 +2571,9 @@ def _simulate_scored_player_outcomes(players_df, platform, rng):
                         (standardized - standardized_mean)
                         * (target_std / standardized_std)
                     )
-                    # Preserve the historical/sample mean instead of forcing
-                    # simulated outcomes to average the supplied projection.
+                    # Center on the blended target mean. The target already
+                    # includes recency-weighted player history plus slate context,
+                    # so we keep the historical shape without snapping back to raw DFF.
                     scores = projection + standardized
                 else:
                     # Sparse/constant historical samples can have a nonzero
