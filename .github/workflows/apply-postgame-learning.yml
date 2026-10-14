@@ -31,6 +31,7 @@ on:
       - '.github/scripts/calibrate_showdown_duplicate_tail.py'
       - '.github/scripts/calibrate_showdown_field_strength.py'
       - '.github/scripts/score_portfolio_entries_together.py'
+      - '.github/scripts/use_holdout_sims_for_portfolio_roi.py'
       - 'data/dk_payout_library.json'
       - '.github/workflows/apply-postgame-learning.yml'
 
@@ -46,93 +47,66 @@ jobs:
         with:
           ref: feature/salary-csv-upload
           fetch-depth: 0
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-
       - name: Share historical/PBP simulation engine across DK and FD
         run: python .github/scripts/unify_fd_sim_engine.py
-
       - name: Add FanDuel MVP/FLEX ownership weighting
         run: python .github/scripts/add_fd_role_ownership_field.py
-
       - name: Remove dead duplicate simulation engine
         run: python .github/scripts/remove_dead_duplicate_sim_engine.py
-
       - name: Prefer saved repo PBP archives before nflverse
         run: python .github/scripts/use_local_pbp_archive.py
-
       - name: Correct DraftKings pregame contest field size
         run: python .github/scripts/fix_dk_contest_field_size.py
-
       - name: Harden DraftKings reserved-entry replacement export
         run: python .github/scripts/harden_dk_replacement_export.py
-
       - name: Point top DraftKings button to Edit Entries
         run: python .github/scripts/rename_dk_edit_entries_button.py
-
       - name: Keep Step 4 directly below Step 3
         run: python .github/scripts/move_step4_below_step3.py
-
       - name: Keep every DraftKings salary-file player visible
         run: python .github/scripts/show_all_dk_players.py
-
       - name: Auto-fetch DraftKings contest payouts
         run: python .github/scripts/auto_fetch_dk_payouts.py
-
       - name: Add player pool ownership columns
         run: python .github/scripts/add_player_pool_ownership_columns.py
-
       - name: Prevent payout fetch rerun loop
         run: python .github/scripts/prevent_payout_rerun_loop.py
-
       - name: Throttle automatic projection refresh
         run: python .github/scripts/throttle_projection_refresh.py
-
       - name: Diversify final portfolio
         run: python .github/scripts/diversify_final_portfolio.py
-
       - name: Set single-game salary minimum
         run: python .github/scripts/set_single_game_salary_min.py
-
       - name: Auto-fetch full DraftKings payout scale
         run: python .github/scripts/auto_fetch_full_dk_payout_scale.py
-
       - name: Add verified SEA DEN Dime payout fallback
         run: python .github/scripts/add_sea_den_dime_payout_fallback.py
-
       - name: Allow contextual simulation mean adjustments
         run: python .github/scripts/allow_contextual_sim_mean_adjustments.py
-
       - name: Blend historical player mean into simulation target
         run: python .github/scripts/blend_historical_mean_into_sim.py
-
       - name: Smooth historical percentile ties
         run: python .github/scripts/smooth_historical_percentile_ties.py
-
       - name: Fix field ownership columns for all formats
         run: python .github/scripts/fix_field_ownership_player_pool_all_formats.py
-
       - name: Clean and reorder Player Pool columns
         run: python .github/scripts/clean_and_reorder_player_pool_columns.py
-
       - name: Load saved DraftKings payout library
         run: python .github/scripts/load_saved_dk_payout_library.py
-
       - name: Calibrate Showdown duplicate tail
         run: python .github/scripts/calibrate_showdown_duplicate_tail.py
-
       - name: Calibrate Showdown public field strength
         run: python .github/scripts/calibrate_showdown_field_strength.py
-
       - name: Score portfolio entries together in Contest Sim
         run: python .github/scripts/score_portfolio_entries_together.py
-
+      - name: Use holdout simulations for portfolio ROI
+        run: python .github/scripts/use_holdout_sims_for_portfolio_roi.py
       - name: Syntax check
         run: python -m py_compile dfs_app.py
-
       - name: Commit patched app
         run: |
           if git diff --quiet -- dfs_app.py; then
