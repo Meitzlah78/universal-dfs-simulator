@@ -35,9 +35,11 @@ def automatic_projection_refresh(platform_name):
     now = effective_check.strftime("%Y-%m-%d %I:%M:%S %p %Z")
 '''
 
-if old not in text:
+if new in text:
+    print("Automatic projection refresh throttle already applied.")
+elif old in text:
+    text = text.replace(old, new, 1)
+    path.write_text(text, encoding="utf-8")
+    print("Throttled automatic projection refresh to one real check per 30 minutes.")
+else:
     raise SystemExit("Could not find automatic projection refresh block")
-
-text = text.replace(old, new, 1)
-path.write_text(text, encoding="utf-8")
-print("Throttled automatic projection refresh to one real check per 30 minutes.")
