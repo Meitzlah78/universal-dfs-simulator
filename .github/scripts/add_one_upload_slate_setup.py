@@ -103,3 +103,4 @@ replace_required(
 
 path.write_text(text, encoding="utf-8")
 print("Applied paired workflow controls and field sanity summaries")
+# trigger paired-format patch 2026-10-14
