@@ -5931,6 +5931,41 @@ else:
                     # Field ownership is already shown in the Player Pool.
                 else:
                     st.error("Could not create valid opponent lineups. Check the player pool and salary range.")
+        # Redisplay the last completed Classic Contest Sim after widget changes
+        # such as changing the Portfolio count or ranking method.
+        if not _classic_contest_button:
+            _saved_classic_comparison = st.session_state.get("classic_contest_comparison_df")
+            _saved_classic_entries = st.session_state.get("classic_contest_entries_df")
+            _saved_classic_field = st.session_state.get("classic_contest_field_df")
+            if isinstance(_saved_classic_comparison, pd.DataFrame) and not _saved_classic_comparison.empty:
+                st.write("### Your Lineups vs. Contest Field")
+                st.dataframe(_saved_classic_comparison, use_container_width=True, hide_index=True)
+                if isinstance(_saved_classic_field, pd.DataFrame) and not _saved_classic_field.empty:
+                    st.metric("Simulated opponent lineups", f"{len(_saved_classic_field):,}")
+                if isinstance(_saved_classic_entries, pd.DataFrame) and not _saved_classic_entries.empty:
+                    _saved_entry_fee = float(classic_contest["entry"])
+                    _saved_total_fees = _saved_entry_fee * len(_saved_classic_entries)
+                    _saved_expected_winnings = float(_saved_classic_entries["Expected Prize ($)"].sum())
+                    _saved_expected_profit = _saved_expected_winnings - _saved_total_fees
+                    _saved_expected_roi = (100.0 * _saved_expected_profit / _saved_total_fees) if _saved_total_fees > 0 else 0.0
+                    st.write("### Classic Contest Sim + ROI")
+                    st.caption(f"{classic_contest_name} · full field {classic_contest['field']:,} · {len(_saved_classic_entries)} of your entries")
+                    _saved_roi_cols = st.columns(5)
+                    _saved_roi_cols[0].metric("Entries", f"{len(_saved_classic_entries)}")
+                    _saved_roi_cols[1].metric("Entry Fees", f"${_saved_total_fees:,.2f}")
+                    _saved_roi_cols[2].metric("Expected Winnings", f"${_saved_expected_winnings:,.2f}")
+                    _saved_roi_cols[3].metric("Expected Profit", f"${_saved_expected_profit:,.2f}")
+                    _saved_roi_cols[4].metric("Expected ROI", f"{_saved_expected_roi:,.1f}%")
+                if all(c in _saved_classic_comparison.columns for c in ["Top1", "Top5", "Top10", "CashRate"]):
+                    _saved_classic_sanity = pd.DataFrame([{
+                        "Top 1%": round(100 * float(_saved_classic_comparison["Top1"].mean()), 2),
+                        "Top 5%": round(100 * float(_saved_classic_comparison["Top5"].mean()), 2),
+                        "Top 10%": round(100 * float(_saved_classic_comparison["Top10"].mean()), 2),
+                        "Cash %": round(100 * float(_saved_classic_comparison["CashRate"].mean()), 2),
+                    }])
+                    st.write("### Field Sanity Check")
+                    st.dataframe(_saved_classic_sanity, use_container_width=True, hide_index=True)
+
         classic_results = st.session_state.get("classic_lineups")
         if classic_results is not None:
             # Never display old lineups that contain a player now marked Out,
