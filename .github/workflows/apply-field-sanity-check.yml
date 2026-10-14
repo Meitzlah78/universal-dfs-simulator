@@ -5,6 +5,7 @@ on:
       - '.github/scripts/add_field_sanity_check.py'
       - '.github/scripts/strengthen_showdown_opponents.py'
       - '.github/scripts/revert_showdown_strength_and_add_holdout_check.py'
+      - '.github/scripts/set_showdown_opponent_min_salary_45000.py'
       - '.github/workflows/apply-field-sanity-check.yml'
 permissions:
   contents: write
@@ -19,6 +20,8 @@ jobs:
         run: python .github/scripts/add_field_sanity_check.py
       - name: Apply latest Showdown diagnostic
         run: python .github/scripts/revert_showdown_strength_and_add_holdout_check.py
+      - name: Set Showdown opponent minimum salary
+        run: python .github/scripts/set_showdown_opponent_min_salary_45000.py
       - name: Syntax check
         run: python -m py_compile dfs_app.py
       - name: Commit app changes
