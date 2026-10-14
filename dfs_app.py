@@ -6254,7 +6254,9 @@ with st.expander("Contest Payout Structure", expanded=False):
                         "DraftKings returned contest details, but no complete rank-by-rank payout table was exposed. "
                         "Review the summary below and upload the payout table CSV to calculate expected prizes."
                     )
-                st.rerun()
+                # Continue into contest scoring on the same run. Restarting the
+                # Streamlit script here can trap the app in a fetch/rerun loop when
+                # DraftKings returns contest details without a complete payout table.
             except Exception as exc:
                 st.warning(
                     f"Could not automatically load DraftKings contest details ({type(exc).__name__}: {exc}). "
