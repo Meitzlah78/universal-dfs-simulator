@@ -112,5 +112,12 @@ text = text.replace('''            default=["QB + 2 teammates + bring-back"],
             key="dk_classic_stack_rules",''', '''            default=["No stack rule"],
             key="dk_classic_stack_rules",''', 1)
 
+# Show 20 Classic portfolio lineups by default, while still allowing the user to raise it.
+text = text.replace('''                value=min(2500, max(1, len(classic_portfolio_source))),
+                step=100 if len(classic_portfolio_source) >= 100 else 1,
+                key="dk_classic_portfolio_count"''', '''                value=min(20, max(1, len(classic_portfolio_source))),
+                step=1,
+                key="dk_classic_portfolio_count"''', 1)
+
 path.write_text(text, encoding='utf-8')
-print('Classic defaults set to No stack rule and $47,000 minimum salary.')
+print('Classic defaults updated: No stack, $47K minimum salary, 20 portfolio lineups.')
