@@ -100,28 +100,17 @@ replace_once(
 "FD one uploader",
 )
 
-# FanDuel player table may be farther down when many entries are present.
-replace_once(
-'''        for line_index, line in enumerate(fd_lines[:60]):
-''',
-'''        for line_index, line in enumerate(fd_lines[:500]):
-''',
-"FD player-header scan",
-)
+replace_once('''        for line_index, line in enumerate(fd_lines[:60]):
+''','''        for line_index, line in enumerate(fd_lines[:500]):
+''',"FD player-header scan")
 
-# Show FanDuel games as soon as its player table is parsed.
-replace_once(
-'''        fd_players["Team"] = fd_raw[fd_team_col].astype(str).str.strip().str.upper()
+replace_once('''        fd_players["Team"] = fd_raw[fd_team_col].astype(str).str.strip().str.upper()
         fd_opponents = build_opponent_map(fd_raw, fd_players["Team"])
-''',
-'''        fd_players["Team"] = fd_raw[fd_team_col].astype(str).str.strip().str.upper()
+''','''        fd_players["Team"] = fd_raw[fd_team_col].astype(str).str.strip().str.upper()
         show_detected_slate_games(fd_raw)
         fd_opponents = build_opponent_map(fd_raw, fd_players["Team"])
-''',
-"FD games display",
-)
+''',"FD games display")
 
-# DraftKings: the My Contests CSV includes the salary/player table below the entries.
 replace_once(
 '''    st.divider()
     st.write("### DraftKings Salary CSV")
@@ -158,7 +147,6 @@ replace_once(
 "DK one uploader",
 )
 
-# DraftKings: let one uploaded slate file contain several entered contests.
 replace_once(
 '''                # No contest dropdown: use the first unique contest in the uploaded entry CSV.
                 # Users can upload a file containing only the contest they want to target.
@@ -173,46 +161,28 @@ replace_once(
                     selected_row = pd.Series({"Contest ID": "", "Contest Name": "", "Entries": len(entry_df), "EntryFee": None})
                 else:
                     contest_summary["Contest Label"] = contest_summary.apply(
-                        lambda row: (
-                            f"{row['Contest Name']} | {int(row['Entries'])} entries | "
-                            f"ID {row['Contest ID']}"
-                        ),
-                        axis=1,
+                        lambda row: (f"{row['Contest Name']} | {int(row['Entries'])} entries | ID {row['Contest ID']}"), axis=1,
                     )
                     selected_label = st.selectbox(
-                        "Contest",
-                        contest_summary["Contest Label"].tolist(),
+                        "Contest", contest_summary["Contest Label"].tolist(),
                         key=f"dk_one_upload_contest_{lineup_mode.lower().replace(' ', '_')}",
                     )
-                    selected_row = contest_summary.loc[
-                        contest_summary["Contest Label"].eq(selected_label)
-                    ].iloc[0]
+                    selected_row = contest_summary.loc[contest_summary["Contest Label"].eq(selected_label)].iloc[0]
 ''',
 "DK contest selector",
 )
 
-# Show DK games after the salary/player table from the same file is parsed.
-replace_once(
-'''                loaded_players["Team"] = uploaded_df[team_col].astype(str).str.strip().str.upper()
+replace_once('''                loaded_players["Team"] = uploaded_df[team_col].astype(str).str.strip().str.upper()
                 loaded_players["Position"] = (
-''',
-'''                loaded_players["Team"] = uploaded_df[team_col].astype(str).str.strip().str.upper()
+''','''                loaded_players["Team"] = uploaded_df[team_col].astype(str).str.strip().str.upper()
                 show_detected_slate_games(uploaded_df)
                 loaded_players["Position"] = (
-''',
-"DK games display",
-)
+''',"DK games display")
 
-# Update the missing-file message to match the new single-upload flow.
-replace_once(
-'''        st.info("Upload your FanDuel salary CSV to build FanDuel lineups.")
-''',
-'''        st.info("Upload your FanDuel slate/entries CSV to load the slate and build lineups.")
-''',
-"FD missing upload message",
-)
+replace_once('''        st.info("Upload your FanDuel salary CSV to build FanDuel lineups.")
+''','''        st.info("Upload your FanDuel slate/entries CSV to load the slate and build lineups.")
+''',"FD missing upload message")
 
-# Clearly explain when the slate loaded before DFF/DraftEdge have posted projections.
 replace_once(
 '''    fd_players = apply_external_projection_sources(fd_players, fd_dff_projection_file, fd_draftedge_projection_file, platform_name=("FanDuel Single Game" if lineup_mode == "Single Game" else "FanDuel Full Roster"))
     fd_players = exclude_zero_projection_players(fd_players, "FanDuel " + lineup_mode)
@@ -220,19 +190,11 @@ replace_once(
 '''    fd_players = apply_external_projection_sources(fd_players, fd_dff_projection_file, fd_draftedge_projection_file, platform_name=("FanDuel Single Game" if lineup_mode == "Single Game" else "FanDuel Full Roster"))
     fd_valid_projection_count = int(pd.to_numeric(fd_players.get("Projection"), errors="coerce").gt(0).sum())
     if fd_valid_projection_count == 0 and not fd_players.empty:
-        st.warning(
-            "Players loaded successfully, but DFF/DraftEdge projections are not available for this slate yet. "
-            "Click REFRESH PROJECTIONS + INJURY NEWS later after projections are posted."
-        )
+        st.warning("Players loaded successfully, but DFF/DraftEdge projections are not available for this slate yet. Click REFRESH PROJECTIONS + INJURY NEWS later after projections are posted.")
     elif fd_valid_projection_count < len(fd_players):
-        st.info(
-            f"Players loaded successfully. Projections are available for {fd_valid_projection_count} of {len(fd_players)} players; "
-            "players without a posted external projection will stay out of builds until a refresh finds one."
-        )
+        st.info(f"Players loaded successfully. Projections are available for {fd_valid_projection_count} of {len(fd_players)} players; players without a posted external projection will stay out of builds until a refresh finds one.")
     fd_players = exclude_zero_projection_players(fd_players, "FanDuel " + lineup_mode)
-''',
-"FD projection availability message",
-)
+''',"FD projection availability message")
 
 replace_once(
 '''    players_df = apply_external_projection_sources(
@@ -252,20 +214,96 @@ replace_once(
     )
     dk_valid_projection_count = int(pd.to_numeric(players_df.get("Projection"), errors="coerce").gt(0).sum())
     if dk_valid_projection_count == 0 and not players_df.empty:
-        st.warning(
-            "Players loaded successfully, but DFF/DraftEdge projections are not available for this slate yet. "
-            "Click REFRESH PROJECTIONS + INJURY NEWS later after projections are posted."
-        )
+        st.warning("Players loaded successfully, but DFF/DraftEdge projections are not available for this slate yet. Click REFRESH PROJECTIONS + INJURY NEWS later after projections are posted.")
     elif dk_valid_projection_count < len(players_df):
-        st.info(
-            f"Players loaded successfully. Projections are available for {dk_valid_projection_count} of {len(players_df)} players; "
-            "players without a posted external projection will stay out of builds until a refresh finds one."
-        )
+        st.info(f"Players loaded successfully. Projections are available for {dk_valid_projection_count} of {len(players_df)} players; players without a posted external projection will stay out of builds until a refresh finds one.")
 
     def internal_slate_key(frame):
+''',"DK projection availability message")
+
+# Match the visible workflow controls across paired formats. The existing pipelines
+# remain intact; these buttons feed the same tested all-in-one execution path.
+replace_once(
+'''    with build_cols[2]:
+        st.write("### Run")
+        fd_run_all_clicked = st.button(
+            "RUN SIM → BUILD → CONTEST SIM",
+            type="primary",
+            use_container_width=True,
+            key="fd_run_all_" + lineup_mode.replace(" ", "_").lower(),
+            help="Run all three FanDuel steps in order, with a progress bar."
+        )
+        fd_sim_clicked = fd_run_all_clicked
+        fd_build_clicked = fd_run_all_clicked
+        fd_contest_clicked = fd_run_all_clicked
 ''',
-"DK projection availability message",
-)
+'''    with build_cols[2]:
+        st.write("### Run")
+        _fd_run_cols = st.columns(3)
+        with _fd_run_cols[0]:
+            fd_sim_button = st.button("SIM", type="primary", use_container_width=True, key="fd_sim_" + lineup_mode.replace(" ", "_").lower())
+        with _fd_run_cols[1]:
+            fd_build_button = st.button("BUILD", use_container_width=True, key="fd_build_" + lineup_mode.replace(" ", "_").lower())
+        with _fd_run_cols[2]:
+            fd_contest_button = st.button("CONTEST SIM", use_container_width=True, key="fd_contest_" + lineup_mode.replace(" ", "_").lower())
+        fd_run_all_clicked = fd_sim_button or fd_build_button or fd_contest_button
+        fd_sim_clicked = fd_run_all_clicked
+        fd_build_clicked = fd_run_all_clicked
+        fd_contest_clicked = fd_run_all_clicked
+''',"FD paired workflow buttons")
+
+replace_once(
+'''        with build_cols[2]:
+            st.write("### Run")
+            classic_run_all = st.button("SIM", type="primary", use_container_width=True, key="dk_classic_run_all")
+''',
+'''        with build_cols[2]:
+            st.write("### Run")
+            _classic_run_cols = st.columns(3)
+            with _classic_run_cols[0]:
+                _classic_sim_button = st.button("SIM", type="primary", use_container_width=True, key="dk_classic_sim")
+            with _classic_run_cols[1]:
+                _classic_build_button = st.button("BUILD", use_container_width=True, key="dk_classic_build")
+            with _classic_run_cols[2]:
+                _classic_contest_button = st.button("CONTEST SIM", use_container_width=True, key="dk_classic_contest")
+            classic_run_all = _classic_sim_button or _classic_build_button or _classic_contest_button
+''',"DK Classic paired workflow buttons")
+
+# Add the same field-sanity summary to full-roster contest comparisons without
+# changing opponent construction strength.
+replace_once(
+'''                    st.metric("Simulated opponent lineups", f"{len(contest_field_df):,}")
+                    # Field ownership is already shown in the Player Pool.
+''',
+'''                    st.metric("Simulated opponent lineups", f"{len(contest_field_df):,}")
+                    if all(c in user_lineups.columns for c in ["Top1", "Top5", "Top10", "CashRate"]):
+                        _classic_sanity = pd.DataFrame([{
+                            "Top 1%": round(100 * float(user_lineups["Top1"].mean()), 2),
+                            "Top 5%": round(100 * float(user_lineups["Top5"].mean()), 2),
+                            "Top 10%": round(100 * float(user_lineups["Top10"].mean()), 2),
+                            "Cash %": round(100 * float(user_lineups["CashRate"].mean()), 2),
+                        }])
+                        st.write("### Field Sanity Check")
+                        st.dataframe(_classic_sanity, use_container_width=True, hide_index=True)
+                    # Field ownership is already shown in the Player Pool.
+''',"DK Classic field sanity")
+
+replace_once(
+'''                        st.dataframe(compared, use_container_width=True, hide_index=True)
+                        # Keep the contest results area consistent with DraftKings Classic and Showdown.
+''',
+'''                        st.dataframe(compared, use_container_width=True, hide_index=True)
+                        if all(c in compared.columns for c in ["Top1", "Top5", "Top10", "CashRate"]):
+                            _fd_sanity = pd.DataFrame([{
+                                "Top 1%": round(100 * float(compared["Top1"].mean()), 2),
+                                "Top 5%": round(100 * float(compared["Top5"].mean()), 2),
+                                "Top 10%": round(100 * float(compared["Top10"].mean()), 2),
+                                "Cash %": round(100 * float(compared["CashRate"].mean()), 2),
+                            }])
+                            st.write("### Field Sanity Check")
+                            st.dataframe(_fd_sanity, use_container_width=True, hide_index=True)
+                        # Keep the contest results area consistent with DraftKings Classic and Showdown.
+''',"FD field sanity")
 
 APP.write_text(text, encoding="utf-8")
-print("Patched one-upload slate setup")
+print("Patched one-upload slate setup and paired workflow controls")
