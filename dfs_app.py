@@ -5153,7 +5153,7 @@ else:
         if required_column not in control_display.columns:
             control_display[required_column] = players_df[required_column].values
     display_settings = [
-        ("Lock", False), ("Fade", False),
+        ("Lock", False),
         ("Min Exposure %", 0), ("Max Exposure %", 100)
     ]
     # Captain exposure limits belong only to Showdown formats.
@@ -5175,7 +5175,31 @@ else:
             aggressiveness_pct=float(aggressiveness) * 100.0,
         )
 
-    st.caption("Player stats, simulation results, exposure, and editable controls are all in this one table. Lock includes a player; Fade excludes a player.")
+    # Keep the visible Player Pool compact and in a consistent left-to-right order.
+    # ProjectionSource and Injury Status still remain in the underlying data for app logic.
+    control_display = control_display.drop(
+        columns=["ProjectionSource", "Injury Status", "Fade"], errors="ignore"
+    )
+    _preferred_player_pool_order = [
+        "Name", "Position", "Team", "Opponent", "Salary", "CaptainSalary",
+        "Projection", "Sim Pts",
+        "Captain Exp %", "MVP Exp %", "Exposure %", "Flex Exp %",
+        "Projected Own %", "Mine Own %",
+        "Field CPT Own %", "Field MVP Own %", "Field FLEX Own %", "Field Own %",
+        "Sim P10", "Sim P25", "Sim P50", "Sim P75", "Sim P90", "Sim P95", "Sim P99",
+        "Cap Hit %",
+        "Lock", "Min Exposure %", "Max Exposure %", "Captain Min %", "Captain Max %",
+    ]
+    _ordered_player_pool_columns = [
+        column for column in _preferred_player_pool_order if column in control_display.columns
+    ]
+    _remaining_player_pool_columns = [
+        column for column in control_display.columns
+        if column not in _ordered_player_pool_columns
+    ]
+    control_display = control_display[_ordered_player_pool_columns + _remaining_player_pool_columns]
+
+    st.caption("Player stats, simulation results, exposure, and editable controls are all in this one table. Lock includes a player.")
     editable_control_columns = [setting for setting, _ in display_settings]
     disabled_control_columns = [
         column for column in control_display.columns
@@ -5189,7 +5213,6 @@ else:
         column_config={
             "Name": st.column_config.TextColumn("Name", pinned=True),
             "Lock": st.column_config.CheckboxColumn("Lock", help="Force this player into lineup builds."),
-            "Fade": st.column_config.CheckboxColumn("Fade", help="Keep this player out of lineup builds."),
             "Min Exposure %": st.column_config.NumberColumn("Min Exp %", min_value=0, max_value=100, step=5, format="%d%%"),
             "Max Exposure %": st.column_config.NumberColumn("Max Exp %", min_value=0, max_value=100, step=5, format="%d%%"),
             "Captain Min %": st.column_config.NumberColumn("CPT Min %", min_value=0, max_value=100, step=5, format="%d%%"),
@@ -5277,7 +5300,7 @@ else:
 
     editor_controls = edited_player_controls.set_index("Name")
     for setting in [
-        "Lock", "Fade", "Min Exposure %", "Max Exposure %"
+        "Lock", "Min Exposure %", "Max Exposure %"
     ] + (
         [] if platform == "DraftKings" and lineup_mode == "Classic"
         else ["Captain Min %", "Captain Max %"]
@@ -5286,7 +5309,7 @@ else:
             editor_controls[setting]
         ).fillna(control_values[setting])
     control_values["Lock"] = control_values["Lock"].astype(bool)
-    control_values["Fade"] = control_values["Fade"].astype(bool)
+    control_values["Fade"] = False
     for setting in ["Min Exposure %", "Max Exposure %", "Captain Min %", "Captain Max %"]:
         control_values[setting] = pd.to_numeric(control_values[setting], errors="coerce").fillna(
             0 if "Min" in setting else 100
