@@ -4,13 +4,11 @@ a='    results_df["AvgPercentile"] = avg_percentiles / selection_n_sims\n\n    i
 b='''    results_df["AvgPercentile"] = avg_percentiles / selection_n_sims
 
     # Field sanity baseline: 20 random opponent lineups should land near 1/5/10%.
-    _sanity_n = min(20, total_field)
+    _sanity_n=min(20,total_field)
     if _sanity_n:
-        _rng = np.random.default_rng(20261014); _idx = contest_idx[_rng.choice(total_field, _sanity_n, replace=False)]
-        _counts = np.zeros(4, dtype=float); _obs = 0
-        for _start in range(0, selection_n_sims, batch_size):
-            _end=min(_start+batch_size,selection_n_sims); _v=simulation_values[_start:_end]
-            _s=_v[:,_idx].sum(axis=2); _f=_v[:,contest_idx].sum(axis=2)
+        _rng=np.random.default_rng(20261014); _idx=contest_idx[_rng.choice(total_field,_sanity_n,replace=False)]; _counts=np.zeros(4); _obs=0
+        for _start in range(0,selection_n_sims,batch_size):
+            _end=min(_start+batch_size,selection_n_sims); _v=simulation_values[_start:_end]; _s=_v[:,_idx].sum(axis=2); _f=_v[:,contest_idx].sum(axis=2)
             if scoring_multiplier != 1.0:
                 _s += _v[:,_idx[:,0]]*(scoring_multiplier-1.0); _f += _v[:,contest_idx[:,0]]*(scoring_multiplier-1.0)
             _sorted=np.sort(_f,axis=1); _greater=total_field-np.sum(_sorted[:,:,None] <= _s[:,None,:],axis=1); _pct=1.0-_greater/max(1,total_field)
@@ -33,4 +31,4 @@ d='''    scoring_status.success(f"Ranking complete — {len(results_df):,} lineu
 if d not in s:
     if c not in s: raise SystemExit('Completion anchor not found')
     s=s.replace(c,d,1)
-p.write_text(s); print('Applied field sanity check')
+p.write_text(s)
