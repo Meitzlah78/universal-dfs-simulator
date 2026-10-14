@@ -21,6 +21,7 @@ on:
       - '.github/scripts/diversify_final_portfolio.py'
       - '.github/scripts/set_single_game_salary_min.py'
       - '.github/scripts/auto_fetch_full_dk_payout_scale.py'
+      - '.github/scripts/add_sea_den_dime_payout_fallback.py'
       - '.github/workflows/apply-postgame-learning.yml'
 
 permissions:
@@ -88,6 +89,9 @@ jobs:
 
       - name: Auto-fetch full DraftKings payout scale
         run: python .github/scripts/auto_fetch_full_dk_payout_scale.py
+
+      - name: Add verified SEA DEN Dime payout fallback
+        run: python .github/scripts/add_sea_den_dime_payout_fallback.py
 
       - name: Syntax check
         run: python -m py_compile dfs_app.py
