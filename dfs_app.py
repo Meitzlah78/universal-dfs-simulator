@@ -5262,18 +5262,17 @@ else:
 
     # Keep the visible Player Pool compact and in a consistent left-to-right order.
     # ProjectionSource and Injury Status still remain in the underlying data for app logic.
-    control_display = control_display.drop(
-        columns=["ProjectionSource", "Injury Status", "Fade"], errors="ignore"
-    )
+    # Keep source, injury status, and Fade visible as shown in the requested Player Pool layout.
+    control_display = control_display.drop(columns=["CaptainSalary"], errors="ignore")
     _preferred_player_pool_order = [
-        "Name", "Position", "Team", "Opponent", "Salary", "CaptainSalary",
-        "Projection", "Sim Pts",
+        "Name", "Position", "Team", "Opponent", "Salary",
+        "Projection", "Sim Pts", "ProjectionSource", "Injury Status",
         "Captain Exp %", "MVP Exp %", "Exposure %", "Flex Exp %",
         "Projected Own %", "Mine Own %",
         "Field CPT Own %", "Field MVP Own %", "Field FLEX Own %", "Field Own %",
         "Sim P10", "Sim P25", "Sim P50", "Sim P75", "Sim P90", "Sim P95", "Sim P99",
-        "Cap Hit %",
-        "Lock", "Min Exposure %", "Max Exposure %", "Captain Min %", "Captain Max %",
+        "Cap Hit %", "Lock", "Fade",
+        "Min Exposure %", "Max Exposure %", "Captain Min %", "Captain Max %",
     ]
     _ordered_player_pool_columns = [
         column for column in _preferred_player_pool_order if column in control_display.columns
