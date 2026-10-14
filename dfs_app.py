@@ -459,6 +459,13 @@ def build_showdown_opponent_field(available_players, simulation_df, players_df,
         # Captain selection uses Captain ownership when available; otherwise it
         # falls back to the same ownership-first overall field weights.
         captain_weights = np.clip(captain_base_weights[picked], 0.01, None)
+        # Real large-field DK Showdown entries concentrate Captain choices more
+        # heavily than FLEX choices. In the completed 59,453-entry BUF@LAR Dime
+        # Package, the top four Captains accounted for about 59.7% of entries,
+        # versus about 45% in our representative field before this calibration.
+        # Sharpen only the Captain probabilities; FLEX/player selection stays
+        # ownership-first and otherwise unchanged.
+        captain_weights = np.power(captain_weights, 1.45)
         captain_weights = captain_weights / captain_weights.sum()
         captain_idx = int(rng.choice(picked, p=captain_weights))
         flex_idx = picked[picked != captain_idx]
