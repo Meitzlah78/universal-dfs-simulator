@@ -3,6 +3,7 @@ from pathlib import Path
 path = Path('dfs_app.py')
 text = path.read_text(encoding='utf-8')
 
+# Keep prior Classic one-click/no-stack changes idempotent.
 old_buttons = '''        with build_cols[2]:
             st.write("### Run")
             _classic_run_cols = st.columns(3)
@@ -26,8 +27,6 @@ new_buttons = '''        with build_cols[2]:
 '''
 if old_buttons in text:
     text = text.replace(old_buttons, new_buttons, 1)
-elif new_buttons not in text:
-    raise SystemExit('Classic run-button block not found')
 
 old_loop = '''            target_lineups = 5000
             # The old 500,000-attempt loop could look frozen after player simulation
@@ -49,45 +48,45 @@ new_loop = '''            target_lineups = 5000
 '''
 if old_loop in text:
     text = text.replace(old_loop, new_loop, 1)
-elif new_loop not in text:
-    raise SystemExit('Classic build-loop settings not found')
 
-old_penalty = '''                    exposure_penalty = np.asarray([
-                        (1.0 + classic_build_counts.get(str(classic_names[i]), 0) / expected_exposure) ** 1.5
-                        for i in choices
-                    ], dtype=float)
-                    weights /= exposure_penalty
+old_drop = '''    control_display = control_display.drop(
+        columns=["ProjectionSource", "Injury Status", "Fade"], errors="ignore"
+    )
 '''
-new_penalty = '''                    if no_stack_rules:
-                        # Avoid the expensive Python exposure loop for every roster slot
-                        # when the user intentionally selected no stacking rules.
-                        exposure_penalty = np.fromiter(
-                            ((1.0 + classic_build_counts.get(str(classic_names[i]), 0) / expected_exposure) ** 1.5 for i in choices),
-                            dtype=float,
-                            count=len(choices),
-                        )
-                    else:
-                        exposure_penalty = np.asarray([
-                            (1.0 + classic_build_counts.get(str(classic_names[i]), 0) / expected_exposure) ** 1.5
-                            for i in choices
-                        ], dtype=float)
-                    weights /= exposure_penalty
+new_drop = '''    # Keep source, injury status, and Fade visible as shown in the requested Player Pool layout.
+    control_display = control_display.drop(columns=["CaptainSalary"], errors="ignore")
 '''
-if old_penalty in text:
-    text = text.replace(old_penalty, new_penalty, 1)
-elif new_penalty not in text:
-    raise SystemExit('Classic exposure block not found')
+if old_drop in text:
+    text = text.replace(old_drop, new_drop, 1)
+elif new_drop not in text:
+    raise SystemExit('Player Pool drop block not found')
 
-old_stack_check = '''                if not full_roster_stack_matches(chosen, classic_pool, dk_classic_stack_rules):
-                    continue
+old_order = '''    _preferred_player_pool_order = [
+        "Name", "Position", "Team", "Opponent", "Salary", "CaptainSalary",
+        "Projection", "Sim Pts",
+        "Captain Exp %", "MVP Exp %", "Exposure %", "Flex Exp %",
+        "Projected Own %", "Mine Own %",
+        "Field CPT Own %", "Field MVP Own %", "Field FLEX Own %", "Field Own %",
+        "Sim P10", "Sim P25", "Sim P50", "Sim P75", "Sim P90", "Sim P95", "Sim P99",
+        "Cap Hit %",
+        "Lock", "Min Exposure %", "Max Exposure %", "Captain Min %", "Captain Max %",
+    ]
 '''
-new_stack_check = '''                if not no_stack_rules and not full_roster_stack_matches(chosen, classic_pool, dk_classic_stack_rules):
-                    continue
+new_order = '''    _preferred_player_pool_order = [
+        "Name", "Position", "Team", "Opponent", "Salary",
+        "Projection", "Sim Pts", "ProjectionSource", "Injury Status",
+        "Captain Exp %", "MVP Exp %", "Exposure %", "Flex Exp %",
+        "Projected Own %", "Mine Own %",
+        "Field CPT Own %", "Field MVP Own %", "Field FLEX Own %", "Field Own %",
+        "Sim P10", "Sim P25", "Sim P50", "Sim P75", "Sim P90", "Sim P95", "Sim P99",
+        "Cap Hit %", "Lock", "Fade",
+        "Min Exposure %", "Max Exposure %", "Captain Min %", "Captain Max %",
+    ]
 '''
-if old_stack_check in text:
-    text = text.replace(old_stack_check, new_stack_check, 1)
-elif new_stack_check not in text:
-    raise SystemExit('Classic stack validation not found')
+if old_order in text:
+    text = text.replace(old_order, new_order, 1)
+elif new_order not in text:
+    raise SystemExit('Player Pool order block not found')
 
 path.write_text(text, encoding='utf-8')
-print('Classic one-click SIM retained; no-stack build path sped up.')
+print('Classic fixes retained; Player Pool now matches screenshot order without CaptainSalary.')
