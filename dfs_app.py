@@ -5996,8 +5996,6 @@ if build_clicked:
 
     workflow_status.info(f"Step 3 of 4: Building up to {dk_opponent_target:,} simulated opponent lineups...")
     field_progress = st.progress(0, text=f"Step 3 of 4: Building opponent lineups (0 of {dk_opponent_target:,})...")
-    # Create Step 4 below Step 3 so Streamlit keeps the build workflow in numeric order.
-    contest_progress_slot = st.empty()
     try:
         # First generate the representative 10,000-lineup sample, then use
         # ownership observed in that sample to estimate a full contest field.
@@ -6052,6 +6050,10 @@ if build_clicked:
         )
 
 
+
+# Step 4 belongs directly below the completed Step 3 field-building section.
+# Keep this unconditional so saved builds can be rescored safely on reruns.
+contest_progress_slot = st.empty()
 
 # Simulated field ownership is displayed in the Player Pool table, so do not render a duplicate table here.
 
