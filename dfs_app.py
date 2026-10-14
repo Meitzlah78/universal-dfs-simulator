@@ -3624,6 +3624,24 @@ if platform == "FanDuel":
         else:
             correlation_strength = 1.0
         st.session_state["active_game_correlation_strength"] = correlation_strength
+    if lineup_mode == "Full Roster":
+        fd_stack_rules = st.multiselect(
+            "Stacks to use in MY lineups",
+            [
+                "No stack rule",
+                "QB + 1 teammate",
+                "QB + 2 teammates",
+                "QB + 3 teammates",
+                "QB + 1 teammate + bring-back",
+                "QB + 2 teammates + bring-back",
+                "QB + 3 teammates + bring-back",
+            ],
+            default=["QB + 2 teammates + bring-back"],
+            key="fd_full_roster_stack_rules",
+            help="Choose stack rules before BUILD. These affect only your lineups, not the opponent field.",
+        )
+        st.caption("Choose your FanDuel Full Roster stack rules before pressing BUILD.")
+
     with build_cols[2]:
         st.write("### Run")
         _fd_run_cols = st.columns(3)
@@ -3703,24 +3721,6 @@ if platform == "FanDuel":
             fd_slots = ["QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "FLEX", "D"]
 
         fd_stack_rules = []
-        if lineup_mode == "Full Roster":
-            fd_stack_rules = st.multiselect(
-                "Stacks to use in MY lineups",
-                [
-                    "No stack rule",
-                    "QB + 1 teammate",
-                    "QB + 2 teammates",
-                    "QB + 3 teammates",
-                    "QB + 1 teammate + bring-back",
-                    "QB + 2 teammates + bring-back",
-                    "QB + 3 teammates + bring-back",
-                ],
-                default=["QB + 2 teammates + bring-back"],
-                key="fd_full_roster_stack_rules",
-                help="Choose one or more allowed stack types. A lineup is accepted if it matches any selected rule. Opponent lineups ignore these rules."
-            )
-            st.caption("These stack rules affect only your FanDuel builds. Simulated opponents remain ownership-driven.")
-
         if fd_build_clicked:
             # A new run must replace this mode's previous build, not leave stale
             # lineups visible if the current build cannot produce valid results.
@@ -5473,6 +5473,23 @@ else:
             STDDEV_WEIGHT = 0.10 * (2.0 * aggressiveness - 1.0)
             st.caption(f"Build style: {aggressiveness_pct}% aggressive · P95 {P95_WEIGHT:.0%} · P99 {P99_WEIGHT:.0%} · average {MEAN_WEIGHT:.0%} · volatility {STDDEV_WEIGHT:+.0%}.")
 
+        dk_classic_stack_rules = st.multiselect(
+            "Stacks to use in MY lineups",
+            [
+                "No stack rule",
+                "QB + 1 teammate",
+                "QB + 2 teammates",
+                "QB + 3 teammates",
+                "QB + 1 teammate + bring-back",
+                "QB + 2 teammates + bring-back",
+                "QB + 3 teammates + bring-back",
+            ],
+            default=["QB + 2 teammates + bring-back"],
+            key="dk_classic_stack_rules",
+            help="Choose stack rules before BUILD. These affect only your lineups, not the opponent field.",
+        )
+        st.caption("Choose your DraftKings Classic stack rules before pressing BUILD.")
+
         with build_cols[2]:
             st.write("### Run")
             _classic_run_cols = st.columns(3)
@@ -5572,23 +5589,6 @@ else:
                 slot: np.asarray([i for i, positions in enumerate(classic_eligible) if positions & eligible], dtype=int)
                 for slot, eligible in roster_slots
             }
-            dk_classic_stack_rules = st.multiselect(
-                "Stacks to use in MY lineups",
-                [
-                    "No stack rule",
-                    "QB + 1 teammate",
-                    "QB + 2 teammates",
-                    "QB + 3 teammates",
-                    "QB + 1 teammate + bring-back",
-                    "QB + 2 teammates + bring-back",
-                    "QB + 3 teammates + bring-back",
-                ],
-                default=["QB + 2 teammates + bring-back"],
-                key="dk_classic_stack_rules",
-                help="Choose one or more allowed stack types. A lineup is accepted if it matches any selected rule. Opponent lineups ignore these rules."
-            )
-            st.caption("These stack rules affect only your DraftKings Classic builds. Simulated opponents remain ownership-driven.")
-
             locked_name_set = set(classic_locked_players)
             locked_indices = {
                 i for i, name in enumerate(classic_names) if name in locked_name_set
