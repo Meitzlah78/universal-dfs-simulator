@@ -19,6 +19,7 @@ on:
       - '.github/scripts/prevent_payout_rerun_loop.py'
       - '.github/scripts/throttle_projection_refresh.py'
       - '.github/scripts/diversify_final_portfolio.py'
+      - '.github/scripts/set_single_game_salary_min.py'
       - '.github/workflows/apply-postgame-learning.yml'
 
 permissions:
@@ -80,6 +81,9 @@ jobs:
 
       - name: Diversify final portfolio
         run: python .github/scripts/diversify_final_portfolio.py
+
+      - name: Set single-game salary minimum
+        run: python .github/scripts/set_single_game_salary_min.py
 
       - name: Syntax check
         run: python -m py_compile dfs_app.py
