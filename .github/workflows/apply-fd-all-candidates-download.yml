@@ -18,7 +18,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Apply corrected candidate download patch
+      - name: Apply candidate download NameError fix
         run: python .github/scripts/add_fd_all_candidates_download.py
       - name: Syntax check
         run: python -m py_compile dfs_app.py
@@ -31,5 +31,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add dfs_app.py
-          git commit -m 'Add FanDuel all-candidates download [skip ci]'
+          git commit -m 'Fix FanDuel all-candidates NameError [skip ci]'
           git push origin HEAD:feature/salary-csv-upload
