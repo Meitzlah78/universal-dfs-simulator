@@ -7745,12 +7745,16 @@ st.write("## Portfolio")
 _saved_field_key = (
     "classic_contest_field_df"
     if platform == "DraftKings" and lineup_mode == "Classic"
+    else "fd_full_contest_field_df"
+    if platform == "FanDuel" and lineup_mode == "Full Roster"
     else "contest_field_df"
 )
 _saved_field_df = st.session_state.get(_saved_field_key)
 _saved_sample_df = st.session_state.get(
     "classic_contest_field_sample_df"
     if platform == "DraftKings" and lineup_mode == "Classic"
+    else "fd_full_contest_field_sample_df"
+    if platform == "FanDuel" and lineup_mode == "Full Roster"
     else "contest_field_sample_df"
 )
 if isinstance(_saved_field_df, pd.DataFrame) and not _saved_field_df.empty:
