@@ -40,8 +40,8 @@ jobs:
         run: python .github/scripts/calibrate_fd_pbp_roles.py
       - name: Add historical QB rushing to FanDuel PBP
         run: python .github/scripts/add_fd_historical_qb_rushing.py
-      - name: Add historical roles for all FanDuel positions
-        run: python .github/scripts/add_fd_historical_all_roles.py
+      # Historical all-position roles are already installed in dfs_app.py. The legacy
+      # installer predates the integrated QB-run allocator and is no longer rerun here.
       - name: Add historical team play mix to FanDuel PBP
         run: python .github/scripts/add_fd_historical_play_mix.py
       - name: Allocate QB rushes and historical TD rates inside PBP
