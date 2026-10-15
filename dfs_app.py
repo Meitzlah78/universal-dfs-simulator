@@ -3592,7 +3592,7 @@ if platform == "FanDuel":
             "Allowed lineup salary range",
             min_value=0,
             max_value=60000,
-            value=(54000, 60000),
+            value=(57000, 60000) if lineup_mode == "Full Roster" else (54000, 60000),
             step=100,
             format="$%d",
             key="fd_build_salary_range_" + lineup_mode.replace(" ", "_").lower(),
@@ -3636,7 +3636,7 @@ if platform == "FanDuel":
                 "QB + 2 teammates + bring-back",
                 "QB + 3 teammates + bring-back",
             ],
-            default=["QB + 2 teammates + bring-back"],
+            default=["No stack rule"],
             key="fd_full_roster_stack_rules",
             help="Choose stack rules before BUILD. These affect only your lineups, not the opponent field.",
         )
