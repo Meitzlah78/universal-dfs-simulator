@@ -53,10 +53,7 @@ new_table = '''    # Let the user override injury status directly in the FanDuel
         _fd_new_manual = dict(zip(_fd_edited_pool["Name"].astype(str), _fd_edited_pool["Injury Status"].astype(str)))
         if _fd_new_manual != _fd_manual_injuries:
             st.session_state[_fd_manual_injury_key] = _fd_new_manual
-            # Apply the override to the active player dataframe immediately. Out players
-            # are excluded from the next SIM/build without waiting for an injury refresh.
-            _fd_status_map = _fd_new_manual
-            fd_players["Injury Status"] = fd_players["Name"].astype(str).map(_fd_status_map).fillna(fd_players.get("Injury Status", "Active"))
+            fd_players["Injury Status"] = fd_players["Name"].astype(str).map(_fd_new_manual).fillna(fd_players.get("Injury Status", "Active"))
             _fd_out_names = set(fd_players.loc[fd_players["Injury Status"].astype(str).str.casefold().eq("out"), "Name"].astype(str))
             if _fd_out_names:
                 fd_players = fd_players[~fd_players["Name"].astype(str).isin(_fd_out_names)].copy()
@@ -68,3 +65,4 @@ s = s.replace(old_table, new_table, 1)
 
 p.write_text(s)
 print("FanDuel Player Pool now has editable injury status and requested Full Roster column order")
+# updater trigger 2026-10-15
