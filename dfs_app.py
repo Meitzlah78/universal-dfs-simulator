@@ -5492,7 +5492,7 @@ if platform == "FanDuel":
                                 _diag_user = np.zeros(_fd_n_user, dtype=float)
                                 for _slot_pos, _slot in enumerate(_fd_roi_slots):
                                     _mult = 1.5 if _slot == "MVP" else 1.0
-                                    _diag_field += _row[_fd_field_matrix[:, _slot_pos]] * _mult
+                                    _diag_field += _row[_fd_diag_field_matrix[:, _slot_pos]] * _mult
                                     _diag_user += _row[_fd_user_matrix[:, _slot_pos]] * _mult
                                 _fd_diag_scenarios.append({
                                     "Opponent Avg Score": float(np.mean(_diag_field)),
