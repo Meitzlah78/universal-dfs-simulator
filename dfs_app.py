@@ -4943,8 +4943,6 @@ if platform == "FanDuel":
                                     choices = choices[feasible]
                             else:
                                 candidate_salary = salary + fd_field_salaries[choices]
-                                _fd_opponent_salary_min = 59000 if lineup_mode == "Full Roster" else fd_salary_range[0]
-                                _fd_opponent_salary_max = 60000 if lineup_mode == "Full Roster" else min(fd_salary_range[1], 60000)
                                 choices = choices[
                                     (candidate_salary >= _fd_opponent_salary_min)
                                     & (candidate_salary <= _fd_opponent_salary_max)
