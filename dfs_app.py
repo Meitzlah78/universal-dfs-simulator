@@ -3400,6 +3400,40 @@ def simulate_fd_play_by_play(players_df, rng, n=SIMULATION_COUNT, correlation_st
         except Exception:
             continue
 
+    # Historical opportunity/efficiency profiles for every offensive position.
+    # These feed the play generator itself; they do not add fantasy points after simulation.
+    _fd_hist_roles = {}
+    if not _fd_hist.empty:
+        for _, _row in pool.iterrows():
+            _name = str(_row.get("Name", ""))
+            _pos = str(_row.get("Position", "")).upper().split("/")[0].strip()
+            if _pos not in {"QB", "RB", "WR", "TE", "K"}:
+                continue
+            try:
+                _matches = _fd_hist_index.get(normalize_projection_player_name(_name), [])
+                if not _matches or not all(isinstance(x, (int, np.integer)) for x in _matches):
+                    continue
+                _rows = _fd_hist.loc[_matches].copy()
+                if _rows.empty:
+                    continue
+                if "season" in _rows.columns and "week" in _rows.columns:
+                    _rows = _rows.sort_values(["season", "week"]).tail(24)
+                def _avg(*cols):
+                    c = next((x for x in cols if x in _rows.columns), None)
+                    return float(pd.to_numeric(_rows[c], errors="coerce").fillna(0).clip(lower=0).mean()) if c else 0.0
+                _fd_hist_roles[_name] = {
+                    "carries": _avg("carries", "rushing_attempts", "rush_attempts"),
+                    "targets": _avg("targets"),
+                    "receptions": _avg("receptions"),
+                    "rush_yards": _avg("rushing_yards", "rush_yards"),
+                    "rec_yards": _avg("receiving_yards", "rec_yards"),
+                    "rush_tds": _avg("rushing_tds", "rushing_touchdowns", "rush_tds"),
+                    "rec_tds": _avg("receiving_tds", "receiving_touchdowns", "rec_tds"),
+                    "pass_attempts": _avg("attempts", "passing_attempts"),
+                }
+            except Exception:
+                continue
+
     stats = {name: {} for name in names}
     stat_keys = ("passing_yards","passing_tds","interceptions","rushing_yards","rushing_tds","receiving_yards","receiving_tds","receptions","fumbles_lost","sacks","def_interceptions","fumble_recoveries","defensive_tds","safeties","blocked_kicks","points_allowed","yards_allowed","fg_under_40","fg_40_49","fg_50_plus","extra_points_made")
     for name in names:
@@ -3440,10 +3474,28 @@ def simulate_fd_play_by_play(players_df, rng, n=SIMULATION_COUNT, correlation_st
             qb_name = str(qbs.iloc[0]["Name"]) if not qbs.empty else None
             rec_names = recs["Name"].astype(str).tolist()
             rb_names = rbs["Name"].astype(str).tolist()
-            rec_w = np.clip(recs["Projection"].to_numpy(dtype=float), 0.05, None) if len(recs) else np.array([])
-            rb_w = np.clip(rbs["Projection"].to_numpy(dtype=float), 0.05, None) if len(rbs) else np.array([])
-            if len(rec_w): rec_w = rec_w / rec_w.sum()
-            if len(rb_w): rb_w = rb_w / rb_w.sum()
+            # Blend current projection with each player's historical opportunity.
+            # Targets determine receiver selection; carries determine RB rush selection.
+            if len(recs):
+                _rec_proj = np.clip(recs["Projection"].to_numpy(dtype=float), 0.05, None)
+                _rec_hist = np.asarray([max(_fd_hist_roles.get(str(x), {}).get("targets", 0.0), 0.0) for x in rec_names], dtype=float)
+                if _rec_hist.sum() > 0:
+                    _rec_hist = _rec_hist / _rec_hist.sum()
+                    _rec_proj = _rec_proj / _rec_proj.sum()
+                    rec_w = 0.70 * _rec_hist + 0.30 * _rec_proj
+                else:
+                    rec_w = _rec_proj / _rec_proj.sum()
+            else: rec_w = np.array([])
+            if len(rbs):
+                _rb_proj = np.clip(rbs["Projection"].to_numpy(dtype=float), 0.05, None)
+                _rb_hist = np.asarray([max(_fd_hist_roles.get(str(x), {}).get("carries", 0.0), 0.0) for x in rb_names], dtype=float)
+                if _rb_hist.sum() > 0:
+                    _rb_hist = _rb_hist / _rb_hist.sum()
+                    _rb_proj = _rb_proj / _rb_proj.sum()
+                    rb_w = 0.75 * _rb_hist + 0.25 * _rb_proj
+                else:
+                    rb_w = _rb_proj / _rb_proj.sum()
+            else: rb_w = np.array([])
             plays_by_sim = np.clip(np.rint(rng.normal(64.0, 6.5, n) * game_pace), 48, 82).astype(int)
             side_sign = 1.0 if side_i == 0 else -1.0
 
@@ -3471,9 +3523,15 @@ def simulate_fd_play_by_play(players_df, rng, n=SIMULATION_COUNT, correlation_st
                             continue
                         target_i = int(rng.choice(len(rec_names), p=rec_w))
                         receiver = rec_names[target_i]
-                        catch_prob = float(np.clip(0.64 + 0.025 * (rec_w[target_i] - np.mean(rec_w)), 0.50, 0.78))
+                        _role = _fd_hist_roles.get(receiver, {})
+                        _hist_targets = float(_role.get("targets", 0.0))
+                        _hist_recs = float(_role.get("receptions", 0.0))
+                        _hist_catch = (_hist_recs / _hist_targets) if _hist_targets > 0 else 0.64
+                        catch_prob = float(np.clip(0.70 * _hist_catch + 0.30 * 0.64, 0.42, 0.88))
                         if rng.random() < catch_prob:
-                            yards = float(np.clip(rng.gamma(2.0, 5.6) * score_env, 0.0, 75.0))
+                            _hist_ypr = float(_role.get("rec_yards", 0.0)) / max(_hist_recs, 1.0) if _hist_recs > 0 else 11.2
+                            _yard_mean = float(np.clip(_hist_ypr, 5.0, 20.0))
+                            yards = float(np.clip(rng.gamma(2.0, _yard_mean / 2.0) * score_env, 0.0, 75.0))
                             stats[qb_name]["passing_yards"][sim_i] += yards
                             stats[receiver]["receiving_yards"][sim_i] += yards
                             stats[receiver]["receptions"][sim_i] += 1
@@ -3486,7 +3544,11 @@ def simulate_fd_play_by_play(players_df, rng, n=SIMULATION_COUNT, correlation_st
                     elif rb_names:
                         runner_i = int(rng.choice(len(rb_names), p=rb_w))
                         runner = rb_names[runner_i]
-                        yards = float(np.clip(rng.normal(4.35 * np.sqrt(score_env), 4.2), -4.0, 45.0))
+                        _rb_role = _fd_hist_roles.get(runner, {})
+                        _rb_carries = float(_rb_role.get("carries", 0.0))
+                        _rb_ypc = float(_rb_role.get("rush_yards", 0.0)) / max(_rb_carries, 1.0) if _rb_carries > 0 else 4.35
+                        _rb_ypc = float(np.clip(_rb_ypc, 2.5, 7.0))
+                        yards = float(np.clip(rng.normal(_rb_ypc * np.sqrt(score_env), max(3.2, _rb_ypc)), -4.0, 45.0))
                         yards = max(yards, -4.0)
                         stats[runner]["rushing_yards"][sim_i] += yards
                         team_yards[sim_i] += max(yards, 0.0)
