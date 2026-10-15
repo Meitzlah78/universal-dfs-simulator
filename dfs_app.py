@@ -4548,7 +4548,7 @@ if platform == "FanDuel":
                         _fd_my_entries = int(_fd_selected.get("your_entries") or 0)
                         if _fd_selected and _fd_fee is not None and _fd_my_entries > 0:
                             _fd_total_fees = float(_fd_fee) * _fd_my_entries
-                            st.write("### FanDuel Contest Sim + ROI")
+                            st.write("### FanDuel Contest Summary")
                             _fd_field_label = _fd_selected.get("field_size") or _fd_selected.get("current_entries")
                             _fd_caption = f"{_fd_selected.get('name', 'Selected FanDuel contest')} · {_fd_my_entries} of your entries"
                             if _fd_field_label:
@@ -4596,6 +4596,25 @@ if platform == "FanDuel":
                                 _fd_roi_cols[3].metric("Expected Profit", f"${_fd_expected_profit:,.2f}")
                                 _fd_roi_cols[4].metric("Expected ROI", f"{_fd_expected_roi:,.1f}%")
                                 st.caption("Uses the supplied Hail Mary payout ladder through 65,000th place. Representative-field ranks are scaled to the full contest field.")
+                                _fd_summary_download = pd.DataFrame([{
+                                    "Contest": _fd_selected.get("name", "Selected FanDuel contest"),
+                                    "Contest ID": _fd_selected.get("id", ""),
+                                    "Field Size": _fd_full_field,
+                                    "My Entries": _fd_my_entries,
+                                    "Entry Fee ($)": float(_fd_fee),
+                                    "Total Entry Fees ($)": round(_fd_total_fees, 2),
+                                    "Expected Winnings ($)": round(_fd_expected_winnings, 2),
+                                    "Expected Profit ($)": round(_fd_expected_profit, 2),
+                                    "Expected ROI (%)": round(_fd_expected_roi, 2),
+                                }])
+                                st.download_button(
+                                    "DOWNLOAD CONTEST SUMMARY",
+                                    data=_fd_summary_download.to_csv(index=False).encode("utf-8"),
+                                    file_name=f"fanduel_{lineup_mode.replace(' ', '_').lower()}_contest_summary.csv",
+                                    mime="text/csv",
+                                    use_container_width=True,
+                                    key="fd_contest_summary_download_" + lineup_mode.replace(" ", "_").lower(),
+                                )
                             else:
                                 _fd_roi_cols[2].metric("Expected Winnings", "Pending payouts")
                                 _fd_roi_cols[3].metric("Expected Profit", "Pending payouts")
