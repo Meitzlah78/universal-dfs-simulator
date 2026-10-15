@@ -5886,7 +5886,32 @@ else:
                                 if int(first) <= int(rank) <= int(last):
                                     return float(prize)
                             return 0.0
-                        user_lineups["Expected Prize ($)"] = user_lineups["Estimated Full Field Rank"].map(_classic_prize)
+                        # Expected prize must average across the lineup's outcome distribution,
+                        # not award the prize from one projected-average rank.
+                        _classic_expected_prizes = []
+                        for _, _lu in user_lineups.iterrows():
+                            _ev = 0.0
+                            _prev_prob = 0.0
+                            # add_field_ranking_metrics stores cumulative finish probabilities.
+                            _bands = [
+                                (0.01, float(_lu.get("Top1", 0.0))),
+                                (0.05, float(_lu.get("Top5", 0.0))),
+                                (0.10, float(_lu.get("Top10", 0.0))),
+                                (float(classic_contest["pays"]) / float(full_field_size), float(_lu.get("CashRate", 0.0))),
+                            ]
+                            _bands = sorted(_bands, key=lambda x: x[0])
+                            for _cutoff, _cum_prob in _bands:
+                                _cum_prob = max(_prev_prob, min(1.0, _cum_prob))
+                                _band_prob = max(0.0, _cum_prob - _prev_prob)
+                                if _band_prob > 0:
+                                    _lo_rank = max(1, int(np.floor(_prev_prob * full_field_size)) + 1)
+                                    _hi_rank = max(_lo_rank, min(full_field_size, int(np.ceil(_cutoff * full_field_size))))
+                                    _band_prizes = [_classic_prize(_r) for _r in range(_lo_rank, _hi_rank + 1)]
+                                    _avg_band_prize = float(np.mean(_band_prizes)) if _band_prizes else 0.0
+                                    _ev += _band_prob * _avg_band_prize
+                                _prev_prob = _cum_prob
+                            _classic_expected_prizes.append(_ev)
+                        user_lineups["Expected Prize ($)"] = _classic_expected_prizes
                         user_lineups["Entry Fee ($)"] = float(classic_contest["entry"])
                         user_lineups["Expected Net ($)"] = user_lineups["Expected Prize ($)"] - float(classic_contest["entry"])
                         user_lineups["Expected ROI (%)"] = 100.0 * user_lineups["Expected Net ($)"] / float(classic_contest["entry"])
