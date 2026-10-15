@@ -13,6 +13,12 @@ on:
     - cron: "0 22 * * 3"
     - cron: "0 23 * * 3"
   workflow_dispatch:
+  # Also run when this workflow is repaired. The path filter prevents the
+  # generated PBP archive commit from recursively triggering another run.
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/weekly-pbp.yml"
 
 permissions:
   contents: write
@@ -32,14 +38,15 @@ jobs:
 
           event = os.environ.get("GITHUB_EVENT_NAME", "")
           now_et = datetime.now(ZoneInfo("America/New_York"))
-          # Scheduled runs are allowed any time from noon through 7:59 PM ET.
-          # This protects against GitHub Actions starting the noon cron late.
-          should_run = event == "workflow_dispatch" or (
+          # Manual runs and workflow-repair pushes run immediately. Scheduled
+          # runs are allowed any time from noon through 7:59 PM ET Wednesday.
+          should_run = event in {"workflow_dispatch", "push"} or (
               now_et.weekday() == 2 and 12 <= now_et.hour <= 19
           )
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as handle:
               handle.write(f"run={'true' if should_run else 'false'}\n")
           print(f"Current Eastern time: {now_et:%Y-%m-%d %I:%M %p %Z}")
+          print(f"Event: {event}")
           print(f"Run archive: {should_run}")
           PY
 
@@ -131,8 +138,7 @@ jobs:
           out_dir.mkdir(parents=True, exist_ok=True)
           output = out_dir / f"{season}_week_{week:02d}.csv.gz"
 
-          # If this week is already archived and the downloaded data is identical,
-          # leave the file untouched. Later scheduled runs then become harmless no-ops.
+          # Deterministic gzip output lets later scheduled runs become no-ops.
           new_bytes = weekly.to_csv(index=False).encode("utf-8")
           import gzip
           compressed = gzip.compress(new_bytes, mtime=0)
