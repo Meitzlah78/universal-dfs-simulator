@@ -8,6 +8,7 @@ on:
       - '.github/scripts/make_fd_full_roster_setup.py'
       - '.github/scripts/fix_fd_player_pool_source.py'
       - '.github/scripts/fix_fd_player_pool_refresh.py'
+      - '.github/scripts/fix_fd_editable_injury_and_columns.py'
       - '.github/workflows/apply-fd-full-roster.yml'
 
 permissions:
@@ -30,6 +31,8 @@ jobs:
         run: python .github/scripts/fix_fd_player_pool_source.py
       - name: Refresh FanDuel Player Pool after SIM
         run: python .github/scripts/fix_fd_player_pool_refresh.py
+      - name: Add editable injury status and requested column order
+        run: python .github/scripts/fix_fd_editable_injury_and_columns.py
       - name: Syntax check
         run: python -m py_compile dfs_app.py
       - name: Commit patched app
@@ -40,6 +43,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No app changes needed"
           else
-            git commit -m "Apply FanDuel Player Pool PBP wiring [skip ci]"
+            git commit -m "Apply FanDuel Player Pool updates [skip ci]"
             git push origin HEAD:feature/salary-csv-upload
           fi
