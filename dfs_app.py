@@ -3280,6 +3280,61 @@ def fetch_fd_nws_weather(team):
     except Exception:
         return None
 
+def apply_fd_correlated_simulations(sim_df, player_pool, strength=1.0, seed=20261015):
+    """Add conservative game/team correlation to FanDuel outcomes only."""
+    if not isinstance(sim_df, pd.DataFrame) or sim_df.empty or not isinstance(player_pool, pd.DataFrame) or player_pool.empty:
+        return sim_df
+    strength = float(np.clip(strength, 0.0, 1.0))
+    if strength <= 0:
+        return sim_df
+    needed = {"Name", "Team", "Opponent", "Position"}
+    if not needed.issubset(player_pool.columns):
+        return sim_df
+    meta = player_pool.drop_duplicates("Name", keep="first").set_index("Name")
+    cols = [c for c in sim_df.columns if c in meta.index]
+    if len(cols) < 2:
+        return sim_df
+    out = sim_df.copy()
+    n = len(out)
+    rng = np.random.default_rng(seed)
+    game_z, team_z = {}, {}
+    for name in cols:
+        row = meta.loc[name]
+        team = str(row.get("Team", "")).strip().upper()
+        opp = str(row.get("Opponent", "")).strip().upper()
+        if not team:
+            continue
+        g = tuple(sorted([team, opp])) if opp else (team,)
+        if g not in game_z: game_z[g] = rng.standard_normal(n)
+        if team not in team_z: team_z[team] = rng.standard_normal(n)
+    for name in cols:
+        row = meta.loc[name]
+        team = str(row.get("Team", "")).strip().upper()
+        opp = str(row.get("Opponent", "")).strip().upper()
+        pos = str(row.get("Position", "")).strip().upper().replace("DST", "D")
+        if not team:
+            continue
+        g = tuple(sorted([team, opp])) if opp else (team,)
+        gz, tz, oz = game_z.get(g), team_z.get(team), team_z.get(opp) if opp else None
+        if gz is None or tz is None:
+            continue
+        if pos == "QB": shock = 0.16 * gz + 0.22 * tz
+        elif pos in {"WR", "TE"}: shock = 0.18 * gz + 0.24 * tz
+        elif pos == "RB": shock = 0.12 * gz + 0.18 * tz - (0.06 * oz if oz is not None else 0.0)
+        elif pos in {"D", "DEF"}: shock = -0.10 * gz + 0.16 * tz - (0.18 * oz if oz is not None else 0.0)
+        elif pos == "K": shock = 0.10 * gz + 0.12 * tz
+        else: shock = 0.12 * gz + 0.15 * tz
+        vals = pd.to_numeric(out[name], errors="coerce").fillna(0.0).to_numpy(dtype=float)
+        old_mean, old_sd = float(np.mean(vals)), float(np.std(vals))
+        if old_sd <= 0: continue
+        vals2 = vals + (shock * strength) * old_sd
+        new_sd = float(np.std(vals2))
+        if new_sd > 0:
+            vals2 = old_mean + (vals2 - float(np.mean(vals2))) * (old_sd / new_sd)
+        out[name] = np.maximum(vals2, 0.0)
+    return out
+
+
 def apply_fd_nws_weather(fd_players):
     frame = fd_players.copy()
     weather_by_team = {}
@@ -3964,6 +4019,7 @@ if platform == "FanDuel":
         with st.spinner(f"Running {SIMULATION_COUNT:,} shared historical/PBP simulations for FanDuel..."):
             rng = np.random.default_rng()
             simulated_scores = _simulate_scored_player_outcomes(fd_players, "FanDuel", rng)
+            simulated_scores = apply_fd_correlated_simulations(simulated_scores, fd_players, correlation_strength)
             player_sim = {}
             for sim_name in fd_players["Name"].astype(str):
                 if sim_name not in simulated_scores.columns:
