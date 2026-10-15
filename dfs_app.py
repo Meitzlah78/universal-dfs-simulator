@@ -3494,6 +3494,23 @@ def simulate_fd_play_by_play(players_df, rng, n=SIMULATION_COUNT, correlation_st
         # comes from the same underlying simulated game script.
         take = rng.integers(0, n, size=requested_n)
         result = result.iloc[take].reset_index(drop=True)
+
+    # Re-center AFTER bootstrap. With only 150 complete PBP scripts, a rare event
+    # for a fringe player can otherwise be over-sampled enough to move a 0.2-point
+    # projection several points. Multiplying a player's whole final distribution
+    # by one positive constant preserves its event shape and shared-script links.
+    if not result.empty:
+        target_map = dict(zip(pool["Name"].astype(str), pool["Projection"].astype(float)))
+        for player_name in result.columns:
+            target = float(target_map.get(str(player_name), 0.0) or 0.0)
+            final_vals = pd.to_numeric(result[player_name], errors="coerce").fillna(0.0).to_numpy(dtype=float)
+            final_mean = float(np.mean(final_vals)) if len(final_vals) else 0.0
+            if target > 0 and final_mean > 0:
+                result[player_name] = np.maximum(final_vals * (target / final_mean), 0.0)
+            elif target > 0 and final_mean <= 0:
+                result[player_name] = np.maximum(
+                    rng.normal(target, max(0.25, target * 0.35), len(result)), 0.0
+                )
     return result
 
 
