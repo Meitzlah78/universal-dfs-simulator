@@ -85,10 +85,8 @@ old_rerun = '''        # Player Pool is rendered before the SIM button handler. 
             st.rerun()
         st.stop()
 '''
-new_rerun = '''        st.stop()
-'''
 if old_rerun in text:
-    text = text.replace(old_rerun, new_rerun, 1)
+    text = text.replace(old_rerun, '''        st.stop()\n''', 1)
 
 text = text.replace('''                value=(45000, 50000),
                 step=100,
@@ -106,18 +104,13 @@ text = text.replace('''                value=min(2500, max(1, len(classic_portfo
                 step=1,
                 key="dk_classic_portfolio_count"''', 1)
 
-# Replace the incorrect single projected-rank prize with an expected prize based
-# on each lineup's simulated probabilities of finishing in each payout band.
 old_prize = '''                        user_lineups["Expected Prize ($)"] = user_lineups["Estimated Full Field Rank"].map(_classic_prize)
                         user_lineups["Entry Fee ($)"] = float(classic_contest["entry"])
 '''
-new_prize = '''                        # Expected prize must average across the lineup's outcome distribution,
-                        # not award the prize from one projected-average rank.
-                        _classic_expected_prizes = []
+new_prize = '''                        _classic_expected_prizes = []
                         for _, _lu in user_lineups.iterrows():
                             _ev = 0.0
                             _prev_prob = 0.0
-                            # add_field_ranking_metrics stores cumulative finish probabilities.
                             _bands = [
                                 (0.01, float(_lu.get("Top1", 0.0))),
                                 (0.05, float(_lu.get("Top5", 0.0))),
@@ -141,6 +134,41 @@ new_prize = '''                        # Expected prize must average across the 
 '''
 if old_prize in text:
     text = text.replace(old_prize, new_prize, 1)
+
+# Tie/duplicate adjustment: estimate how many contest entries share each lineup
+# from field ownership, then split the occupied payout positions equally.
+tie_anchor = '''                        user_lineups["Entry Fee ($)"] = float(classic_contest["entry"])
+'''
+tie_code = '''                        # Split prizes for duplicate/tied lineups. FieldOwn is a lineup-level
+                        # ownership estimate; convert it to an expected duplicate count in the full field.
+                        def _classic_tie_split_prize(rank, tie_count):
+                            _start = max(1, int(rank))
+                            _count = max(1, int(tie_count))
+                            _end = min(full_field_size, _start + _count - 1)
+                            _pool = sum(_classic_prize(_r) for _r in range(_start, _end + 1))
+                            return float(_pool) / float(_count)
+
+                        _tie_adjusted = []
+                        _dup_counts = []
+                        for _, _lu in user_lineups.iterrows():
+                            _own = float(_lu.get("Lineup Ownership Score (%)", _lu.get("FieldOwn", 0.0)))
+                            # Ownership score may be percentage or probability; normalize conservatively.
+                            _own_prob = _own / 100.0 if _own > 1.0 else _own
+                            _dupes = max(1, int(round(max(0.0, _own_prob) * full_field_size)))
+                            _dupes = min(_dupes, full_field_size)
+                            _dup_counts.append(_dupes)
+                            _rank = int(_lu.get("Estimated Full Field Rank", full_field_size))
+                            _single = float(_lu.get("Expected Prize ($)", 0.0))
+                            _rank_prize = _classic_prize(_rank)
+                            _split_prize = _classic_tie_split_prize(_rank, _dupes)
+                            _factor = (_split_prize / _rank_prize) if _rank_prize > 0 else 1.0
+                            _tie_adjusted.append(_single * _factor)
+                        user_lineups["Expected Duplicates"] = _dup_counts
+                        user_lineups["Expected Prize ($)"] = _tie_adjusted
+                        user_lineups["Entry Fee ($)"] = float(classic_contest["entry"])
+'''
+if tie_code not in text and tie_anchor in text:
+    text = text.replace(tie_anchor, tie_code, 1)
 
 # Keep saved results visible after widget reruns.
 anchor = '''        classic_results = st.session_state.get("classic_lineups")
@@ -184,4 +212,4 @@ if persist not in text and anchor in text:
     text = text.replace(anchor, persist, 1)
 
 path.write_text(text, encoding='utf-8')
-print('Classic ROI now uses simulated finish probabilities instead of one projected-average rank.')
+print('Classic ROI now includes estimated duplicate/tie prize splitting.')
