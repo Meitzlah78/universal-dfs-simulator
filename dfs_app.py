@@ -6113,8 +6113,19 @@ else:
             player_display["Field Own %"] = np.nan
             player_display = player_display.drop(columns=["Field CPT Own %", "Field FLEX Own %"], errors="ignore")
 
-    if "simulation_df" in st.session_state:
-        simulation_df = st.session_state["simulation_df"]
+    # Use the active format's saved FanDuel PBP outcomes. The generic simulation_df
+    # belongs to the DraftKings/shared path and can be stale or absent on FanDuel.
+    _active_simulation_df = None
+    if platform == "FanDuel":
+        _fd_pool_sim_key = "fd_simulation_df_" + lineup_mode.replace(" ", "_").lower()
+        _fd_saved_sim = st.session_state.get(_fd_pool_sim_key)
+        if isinstance(_fd_saved_sim, pd.DataFrame) and not _fd_saved_sim.empty:
+            _active_simulation_df = _fd_saved_sim
+    elif isinstance(st.session_state.get("simulation_df"), pd.DataFrame):
+        _active_simulation_df = st.session_state.get("simulation_df")
+
+    if isinstance(_active_simulation_df, pd.DataFrame):
+        simulation_df = _active_simulation_df
 
         # IMPORTANT: simulation_df can be retained in Streamlit session state while
         # the user changes slate, site, or player pool. Never assign its columns to
@@ -6206,7 +6217,7 @@ else:
         else:
             control_display[setting] = default
 
-    if isinstance(st.session_state.get("simulation_df"), pd.DataFrame) and not st.session_state["simulation_df"].empty:
+    if isinstance(_active_simulation_df, pd.DataFrame) and not _active_simulation_df.empty:
         save_automatic_pregame_snapshot(
             control_display,
             selected_format,
@@ -6379,8 +6390,8 @@ else:
 
     player_sim = {}
 
-    if "simulation_df" in st.session_state:
-        simulation_df = st.session_state["simulation_df"]
+    if isinstance(_active_simulation_df, pd.DataFrame) and not _active_simulation_df.empty:
+        simulation_df = _active_simulation_df
 
         for player in players_df["Name"]:
             if player in simulation_df.columns:
