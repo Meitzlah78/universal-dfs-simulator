@@ -3832,6 +3832,10 @@ if platform == "FanDuel":
             target_lineups = 2000
             max_attempts = 150000 if lineup_mode == "Full Roster" else 500000
             salary_min, salary_max = int(fd_salary_range[0]), min(int(fd_salary_range[1]), 60000)
+            fd_build_progress = st.progress(
+                0,
+                text=f"Building FanDuel {lineup_mode} lineups: 0 / {target_lineups:,}"
+            )
             if lineup_mode == "Single Game":
                 slots = ["MVP", "FLEX1", "FLEX2", "FLEX3", "FLEX4", "FLEX5"]
                 mvp_indices = np.flatnonzero((salaries * 1.5 <= salary_max))
