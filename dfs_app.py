@@ -5912,6 +5912,32 @@ else:
                                 _prev_prob = _cum_prob
                             _classic_expected_prizes.append(_ev)
                         user_lineups["Expected Prize ($)"] = _classic_expected_prizes
+                        # Split prizes for duplicate/tied lineups. FieldOwn is a lineup-level
+                        # ownership estimate; convert it to an expected duplicate count in the full field.
+                        def _classic_tie_split_prize(rank, tie_count):
+                            _start = max(1, int(rank))
+                            _count = max(1, int(tie_count))
+                            _end = min(full_field_size, _start + _count - 1)
+                            _pool = sum(_classic_prize(_r) for _r in range(_start, _end + 1))
+                            return float(_pool) / float(_count)
+
+                        _tie_adjusted = []
+                        _dup_counts = []
+                        for _, _lu in user_lineups.iterrows():
+                            _own = float(_lu.get("Lineup Ownership Score (%)", _lu.get("FieldOwn", 0.0)))
+                            # Ownership score may be percentage or probability; normalize conservatively.
+                            _own_prob = _own / 100.0 if _own > 1.0 else _own
+                            _dupes = max(1, int(round(max(0.0, _own_prob) * full_field_size)))
+                            _dupes = min(_dupes, full_field_size)
+                            _dup_counts.append(_dupes)
+                            _rank = int(_lu.get("Estimated Full Field Rank", full_field_size))
+                            _single = float(_lu.get("Expected Prize ($)", 0.0))
+                            _rank_prize = _classic_prize(_rank)
+                            _split_prize = _classic_tie_split_prize(_rank, _dupes)
+                            _factor = (_split_prize / _rank_prize) if _rank_prize > 0 else 1.0
+                            _tie_adjusted.append(_single * _factor)
+                        user_lineups["Expected Duplicates"] = _dup_counts
+                        user_lineups["Expected Prize ($)"] = _tie_adjusted
                         user_lineups["Entry Fee ($)"] = float(classic_contest["entry"])
                         user_lineups["Expected Net ($)"] = user_lineups["Expected Prize ($)"] - float(classic_contest["entry"])
                         user_lineups["Expected ROI (%)"] = 100.0 * user_lineups["Expected Net ($)"] / float(classic_contest["entry"])
