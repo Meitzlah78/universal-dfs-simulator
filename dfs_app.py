@@ -3920,21 +3920,29 @@ if platform == "FanDuel":
                         # instead of rescanning the entire player pool for every choice.
                         remaining_roster = roster[roster_pos + 1:]
                         if remaining_roster:
-                            min_remaining_salary = sum(
-                                fd_slot_salary_bounds[remaining_slot][0]
+                            missing_remaining_slots = [
+                                remaining_slot
                                 for remaining_slot, _remaining_positions in remaining_roster
-                            )
-                            max_remaining_salary = sum(
-                                fd_slot_salary_bounds[remaining_slot][1]
-                                for remaining_slot, _remaining_positions in remaining_roster
-                            )
-                            choices = np.asarray([
-                                i for i in choices
-                                if (
-                                    salary + int(salaries[i]) + max_remaining_salary >= salary_min
-                                    and salary + int(salaries[i]) + min_remaining_salary <= salary_max
+                                if remaining_slot not in fd_slot_salary_bounds
+                            ]
+                            if missing_remaining_slots:
+                                choices = np.asarray([], dtype=int)
+                            else:
+                                min_remaining_salary = sum(
+                                    fd_slot_salary_bounds[remaining_slot][0]
+                                    for remaining_slot, _remaining_positions in remaining_roster
                                 )
-                            ], dtype=int)
+                                max_remaining_salary = sum(
+                                    fd_slot_salary_bounds[remaining_slot][1]
+                                    for remaining_slot, _remaining_positions in remaining_roster
+                                )
+                                choices = np.asarray([
+                                    i for i in choices
+                                    if (
+                                        salary + int(salaries[i]) + max_remaining_salary >= salary_min
+                                        and salary + int(salaries[i]) + min_remaining_salary <= salary_max
+                                    )
+                                ], dtype=int)
                         else:
                             choices = np.asarray([
                                 i for i in choices
@@ -4034,10 +4042,23 @@ if platform == "FanDuel":
                 st.session_state[fd_build_key] = fd_results
                 st.session_state["fd_saved_builds"][fd_signature] = {"lineups": fd_results}
             else:
-                st.error(
-                    "No valid lineups found. Check player positions, salary values, "
-                    "and make sure the uploaded slate has enough players for this contest type."
-                )
+                if lineup_mode == "Full Roster":
+                    missing_slots = [slot for slot, _eligible in roster if not len(eligible_indices.get(slot, []))]
+                    if missing_slots:
+                        st.error(
+                            "No valid FanDuel Full Roster lineups found because the filtered player pool "
+                            f"has no eligible players for: {', '.join(missing_slots)}."
+                        )
+                    else:
+                        st.error(
+                            "No valid lineups found. Check player positions, salary values, "
+                            "and make sure the uploaded slate has enough players for this contest type."
+                        )
+                else:
+                    st.error(
+                        "No valid lineups found. Check player positions, salary values, "
+                        "and make sure the uploaded slate has enough players for this contest type."
+                    )
             if fd_run_all_clicked and results:
                 fd_workflow_status.info("Step 3 of 4: Building the simulated opponent field...")
 
