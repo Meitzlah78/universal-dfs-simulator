@@ -5010,7 +5010,7 @@ if platform == "FanDuel":
                 # with real PBP outcomes. Rerun once now so the visible/exported
                 # P10-P99 values are rebuilt from fd_player_sim_* session state.
                 st.session_state["fd_last_completed_workflow_" + lineup_mode.replace(" ", "_").lower()] = True
-                st.rerun()
+                fd_workflow_status.success("FanDuel SIM complete: contest results and ROI are shown below.")
             else:
                 fd_workflow_status.error("FanDuel SIM stopped before Step 4 produced a contest comparison.")
 
