@@ -5335,6 +5335,16 @@ if platform == "FanDuel":
             fd_display_columns.append("Score")
         if "Salary" in fd_display.columns:
             fd_display_columns.append("Salary")
+        # FanDuel contest comparison already calculates these metrics. Keep them
+        # visible in the post-SIM portfolio table so the completed contest run is
+        # not reduced back to only projection/score/salary after st.rerun().
+        for metric_col in [
+            "ContestScore", "WinRate", "Top1", "Top5", "Top10", "CashRate",
+            "AvgPercentile", "Entry Fee ($)", "Expected Prize ($)",
+            "Expected Net ($)", "Expected ROI (%)", "Estimated Full Field Rank",
+        ]:
+            if metric_col in fd_display.columns:
+                fd_display_columns.append(metric_col)
         fd_display_columns = list(dict.fromkeys(
             col for col in fd_display_columns if col in fd_display.columns
         ))
