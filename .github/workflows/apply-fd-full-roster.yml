@@ -3,7 +3,7 @@ name: Apply FanDuel Full Roster setup
 on:
   push:
     branches:
-      - feature/fd-full-roster
+      - feature/salary-csv-upload
     paths:
       - '.github/scripts/make_fd_full_roster_setup.py'
       - '.github/workflows/apply-fd-full-roster.yml'
@@ -18,7 +18,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: feature/fd-full-roster
+          ref: feature/salary-csv-upload
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -34,6 +34,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No app changes needed"
           else
-            git commit -m "Apply FanDuel Full Roster setup [skip ci]"
-            git push origin HEAD:feature/fd-full-roster
+            git commit -m "Apply FanDuel Full Roster defaults [skip ci]"
+            git push origin HEAD:feature/salary-csv-upload
           fi
