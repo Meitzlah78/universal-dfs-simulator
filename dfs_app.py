@@ -5886,58 +5886,69 @@ else:
                                 if int(first) <= int(rank) <= int(last):
                                     return float(prize)
                             return 0.0
-                        # Expected prize must average across the lineup's outcome distribution,
-                        # not award the prize from one projected-average rank.
-                        _classic_expected_prizes = []
-                        for _, _lu in user_lineups.iterrows():
-                            _ev = 0.0
-                            _prev_prob = 0.0
-                            # add_field_ranking_metrics stores cumulative finish probabilities.
-                            _bands = [
-                                (0.01, float(_lu.get("Top1", 0.0))),
-                                (0.05, float(_lu.get("Top5", 0.0))),
-                                (0.10, float(_lu.get("Top10", 0.0))),
-                                (float(max(last for _, last, _ in classic_contest["payouts"])) / float(full_field_size), float(_lu.get("CashRate", 0.0))),
-                            ]
-                            _bands = sorted(_bands, key=lambda x: x[0])
-                            for _cutoff, _cum_prob in _bands:
-                                _cum_prob = max(_prev_prob, min(1.0, _cum_prob))
-                                _band_prob = max(0.0, _cum_prob - _prev_prob)
-                                if _band_prob > 0:
-                                    _lo_rank = max(1, int(np.floor(_prev_prob * full_field_size)) + 1)
-                                    _hi_rank = max(_lo_rank, min(full_field_size, int(np.ceil(_cutoff * full_field_size))))
-                                    _band_prizes = [_classic_prize(_r) for _r in range(_lo_rank, _hi_rank + 1)]
-                                    _avg_band_prize = float(np.mean(_band_prizes)) if _band_prizes else 0.0
-                                    _ev += _band_prob * _avg_band_prize
-                                _prev_prob = _cum_prob
-                            _classic_expected_prizes.append(_ev)
-                        user_lineups["Expected Prize ($)"] = _classic_expected_prizes
-                        # Split prizes for duplicate/tied lineups. FieldOwn is a lineup-level
-                        # ownership estimate; convert it to an expected duplicate count in the full field.
-                        def _classic_tie_split_prize(rank, tie_count):
-                            _start = max(1, int(rank))
-                            _count = max(1, int(tie_count))
-                            _end = min(full_field_size, _start + _count - 1)
-                            _pool = sum(_classic_prize(_r) for _r in range(_start, _end + 1))
-                            return float(_pool) / float(_count)
+                        # Calculate ROI from actual simulation outcomes instead of coarse
+                        # Top-1/5/10 probability bands. Score the representative opponent
+                        # field and every candidate lineup on the same simulation draws.
+                        _sim_cols = [str(c) for c in sim_df.columns]
+                        _sim_index = {name: i for i, name in enumerate(_sim_cols)}
+                        _sim_values = sim_df.to_numpy(dtype=float, copy=False)
+                        _roi_sims = min(len(_sim_values), 500)
+                        if _roi_sims < len(_sim_values):
+                            _roi_pick = np.linspace(0, len(_sim_values) - 1, _roi_sims, dtype=int)
+                            _roi_values = _sim_values[_roi_pick]
+                        else:
+                            _roi_values = _sim_values
 
-                        _tie_adjusted = []
-                        _dup_counts = []
-                        for _, _lu in user_lineups.iterrows():
-                            _own = float(_lu.get("Lineup Ownership Score (%)", _lu.get("FieldOwn", 0.0)))
-                            # Ownership score may be percentage or probability; normalize conservatively.
-                            _own_prob = _own / 100.0 if _own > 1.0 else _own
-                            _dupes = max(1, int(round(max(0.0, _own_prob) * full_field_size)))
-                            _dupes = min(_dupes, full_field_size)
-                            _dup_counts.append(_dupes)
-                            _rank = int(_lu.get("Estimated Full Field Rank", full_field_size))
-                            _single = float(_lu.get("Expected Prize ($)", 0.0))
-                            _rank_prize = _classic_prize(_rank)
-                            _split_prize = _classic_tie_split_prize(_rank, _dupes)
-                            _factor = (_split_prize / _rank_prize) if _rank_prize > 0 else 1.0
-                            _tie_adjusted.append(_single * _factor)
-                        user_lineups["Expected Duplicates"] = _dup_counts
-                        user_lineups["Expected Prize ($)"] = _tie_adjusted
+                        def _lineup_matrix(_df, _slots):
+                            _mat = np.zeros((len(_sim_cols), len(_df)), dtype=np.float32)
+                            for _j, (_, _row) in enumerate(_df.iterrows()):
+                                for _slot in _slots:
+                                    _name = str(_row.get(_slot, ''))
+                                    _i = _sim_index.get(_name)
+                                    if _i is not None:
+                                        _mat[_i, _j] += 1.0
+                            return _mat
+
+                        _opp_slots = [slot for slot, _ in contest_slots]
+                        _user_slots = [c for c in ["QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "FLEX", "DST"] if c in user_lineups.columns]
+                        _opp_matrix = _lineup_matrix(contest_field_df, _opp_slots)
+                        _user_matrix = _lineup_matrix(user_lineups, _user_slots)
+                        _opp_outcomes = np.asarray(_roi_values @ _opp_matrix, dtype=np.float32)
+                        _user_outcomes = np.asarray(_roi_values @ _user_matrix, dtype=np.float32)
+
+                        def _classic_tie_prize(_start_rank, _end_rank):
+                            _start_rank = max(1, int(_start_rank))
+                            _end_rank = min(full_field_size, max(_start_rank, int(_end_rank)))
+                            _total = 0.0
+                            for _first, _last, _prize in classic_contest["payouts"]:
+                                _a = max(_start_rank, int(_first))
+                                _b = min(_end_rank, int(_last))
+                                if _a <= _b:
+                                    _total += (_b - _a + 1) * float(_prize)
+                            return _total / float(_end_rank - _start_rank + 1)
+
+                        _prize_sums = np.zeros(len(user_lineups), dtype=float)
+                        _rank_sums = np.zeros(len(user_lineups), dtype=float)
+                        _sample_n = max(1, len(contest_field_df))
+                        _full_opponents = max(1, full_field_size - 1)
+                        for _s in range(len(_roi_values)):
+                            _sorted = np.sort(_opp_outcomes[_s])
+                            _scores = _user_outcomes[_s]
+                            _less = np.searchsorted(_sorted, _scores, side="left")
+                            _right = np.searchsorted(_sorted, _scores, side="right")
+                            _better_sample = _sample_n - _right
+                            _equal_sample = _right - _less
+                            _better_full = np.rint((_better_sample / _sample_n) * _full_opponents).astype(int)
+                            _equal_full = np.rint((_equal_sample / _sample_n) * _full_opponents).astype(int)
+                            for _j in range(len(user_lineups)):
+                                _rank_start = 1 + int(_better_full[_j])
+                                _rank_end = min(full_field_size, _rank_start + int(_equal_full[_j]))
+                                _prize_sums[_j] += _classic_tie_prize(_rank_start, _rank_end)
+                                _rank_sums[_j] += (_rank_start + _rank_end) / 2.0
+
+                        _denom = max(1, len(_roi_values))
+                        user_lineups["Expected Prize ($)"] = _prize_sums / _denom
+                        user_lineups["Estimated Full Field Rank"] = np.rint(_rank_sums / _denom).astype(int)
                         user_lineups["Entry Fee ($)"] = float(classic_contest["entry"])
                         user_lineups["Expected Net ($)"] = user_lineups["Expected Prize ($)"] - float(classic_contest["entry"])
                         user_lineups["Expected ROI (%)"] = 100.0 * user_lineups["Expected Net ($)"] / float(classic_contest["entry"])
