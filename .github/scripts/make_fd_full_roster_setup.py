@@ -3,24 +3,28 @@ from pathlib import Path
 path = Path("dfs_app.py")
 text = path.read_text(encoding="utf-8")
 
-# FanDuel Full Roster only. DraftKings is intentionally untouched.
-# Apply a small field-strength adjustment: keep the same DK-style ownership weights,
-# but lean Full Roster opponent selections slightly toward stronger simulated means.
-needle = '''                                weights = np.clip(fd_weights[choices].astype(float), 0.0001, None)
-                                weights /= weights.sum()
-                                picked_idx = int(rng.choice(choices, p=weights))
+# FanDuel only. DraftKings is intentionally untouched.
+# FanDuel's official entry template uses underscore-style names such as
+# contest_name, contest_id, entry_id, and entry_fee.
+needle = '''            fd_name_col = next((fd_entry_lookup[k] for k in ("contest name", "contest") if k in fd_entry_lookup), None)
+            fd_id_col = next((fd_entry_lookup[k] for k in ("contest id", "contestid", "contest_id") if k in fd_entry_lookup), None)
+            fd_entries_col = next((fd_entry_lookup[k] for k in ("entry id", "entryid", "entry_id") if k in fd_entry_lookup), None)
+            fd_fee_col = next((fd_entry_lookup[k] for k in ("entry fee", "entryfee", "entry_fee", "fee") if k in fd_entry_lookup), None)
 '''
-replacement = '''                                weights = np.clip(fd_weights[choices].astype(float), 0.0001, None)
-                                if lineup_mode == "Full Roster":
-                                    _fd_choice_means = np.clip(fd_field_projections[choices].astype(float), 0.01, None)
-                                    _fd_mean_scale = _fd_choice_means / max(float(np.mean(_fd_choice_means)), 0.01)
-                                    # Mild 0.20 power keeps ownership/diversity dominant while
-                                    # removing a little of the weak-lineup bias seen in sanity checks.
-                                    weights = weights * np.power(_fd_mean_scale, 0.20)
-                                weights /= weights.sum()
-                                picked_idx = int(rng.choice(choices, p=weights))
+replacement = '''            fd_name_col = next((fd_entry_lookup[k] for k in (
+                "contest name", "contest_name", "contestname", "contest"
+            ) if k in fd_entry_lookup), None)
+            fd_id_col = next((fd_entry_lookup[k] for k in (
+                "contest id", "contest_id", "contestid"
+            ) if k in fd_entry_lookup), None)
+            fd_entries_col = next((fd_entry_lookup[k] for k in (
+                "entry id", "entry_id", "entryid"
+            ) if k in fd_entry_lookup), None)
+            fd_fee_col = next((fd_entry_lookup[k] for k in (
+                "entry fee", "entry_fee", "entryfee", "fee"
+            ) if k in fd_entry_lookup), None)
 '''
 if needle not in text:
-    raise SystemExit("FanDuel Full Roster field-weight block not found")
+    raise SystemExit("FanDuel contest selector column block not found")
 text = text.replace(needle, replacement, 1)
 path.write_text(text, encoding="utf-8")
