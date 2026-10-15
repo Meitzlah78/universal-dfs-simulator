@@ -3790,7 +3790,9 @@ if platform == "FanDuel":
             )
             fd_slots = ["QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "FLEX", "D"]
 
-        fd_stack_rules = []
+        # Preserve the Full Roster stack selection made above. Single Game has no stack rules.
+        if lineup_mode != "Full Roster":
+            fd_stack_rules = []
         if fd_build_clicked:
             # A new run must replace this mode's previous build, not leave stale
             # lineups visible if the current build cannot produce valid results.
@@ -3823,7 +3825,7 @@ if platform == "FanDuel":
             seen = set()
             player_build_counts = {str(name): 0 for name in names}
             target_lineups = 2000
-            max_attempts = 500000
+            max_attempts = 150000 if lineup_mode == "Full Roster" else 500000
             salary_min, salary_max = int(fd_salary_range[0]), min(int(fd_salary_range[1]), 60000)
             if lineup_mode == "Single Game":
                 slots = ["MVP", "FLEX1", "FLEX2", "FLEX3", "FLEX4", "FLEX5"]
@@ -3904,6 +3906,13 @@ if platform == "FanDuel":
                         if not len(choices):
                             break
                         weights = lineup_scores[choices].copy()
+                        # Full Roster lineups must spend at least $57K by default. Bias
+                        # the random construction toward salary-efficient higher-priced
+                        # players so the builder does not create hundreds of thousands
+                        # of otherwise-valid lineups that finish below the salary floor.
+                        if lineup_mode == "Full Roster":
+                            salary_bias = np.clip(salaries[choices].astype(float) / 5000.0, 0.35, 2.5) ** 2.0
+                            weights *= salary_bias
                         # Build the requested QB stack during generation instead of
                         # relying only on post-build rejection.
                         if lineup_mode == "Full Roster" and slot != "QB" and "QB" in chosen and fd_stack_rules and "No stack rule" not in fd_stack_rules:
