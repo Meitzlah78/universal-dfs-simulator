@@ -4135,8 +4135,14 @@ if platform == "FanDuel":
             # This is already the filtered FanDuel pool. Never apply a shared
             # DraftKings available_players list to FanDuel contest opponents.
             fd_pool["Projection"] = pd.to_numeric(fd_pool["Projection"], errors="coerce").fillna(0.01).clip(lower=0.01)
+            fd_sim_df = st.session_state.get("simulation_df")
+            if isinstance(fd_sim_df, pd.DataFrame) and not fd_sim_df.empty:
+                fd_mean_scores = fd_sim_df.mean(axis=0).to_dict()
+            else:
+                fd_mean_scores = {}
+            fd_pool["MeanPoints"] = fd_pool["Name"].map(fd_mean_scores).fillna(fd_pool["Projection"])
             fd_weights = opponent_field_selection_weights(
-                fd_pool, fd_pool["Projection"].to_numpy(dtype=float)
+                fd_pool, fd_pool["MeanPoints"].to_numpy(dtype=float)
             )
             fd_weights = fd_weights / fd_weights.sum() if fd_weights.sum() else np.full(len(fd_pool), 1 / max(len(fd_pool), 1))
 
@@ -4242,7 +4248,7 @@ if platform == "FanDuel":
                             if "fd_full_field_cache" not in locals():
                                 fd_field_names = fd_pool["Name"].astype(str).to_numpy()
                                 fd_field_salaries = pd.to_numeric(fd_pool["Salary"], errors="coerce").fillna(0).to_numpy(dtype=int)
-                                fd_field_projections = pd.to_numeric(fd_pool["Projection"], errors="coerce").fillna(0.01).clip(lower=0.01).to_numpy(dtype=float)
+                                fd_field_projections = pd.to_numeric(fd_pool["MeanPoints"], errors="coerce").fillna(fd_pool["Projection"]).fillna(0.01).clip(lower=0.01).to_numpy(dtype=float)
                                 fd_field_positions = fd_pool["Eligible"].tolist()
                                 fd_full_field_cache = {
                                     slot: np.asarray([
