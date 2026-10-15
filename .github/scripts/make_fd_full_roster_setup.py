@@ -4,8 +4,8 @@ p = Path("dfs_app.py")
 s = p.read_text()
 
 anchor = "def apply_fd_nws_weather(fd_players):\n"
-helper = r'''def simulate_fd_bottom_up_stats(players_df, rng, n=SIMULATION_COUNT, correlation_strength=1.0):
-    """FanDuel-only bottom-up NFL simulation: game/team stats first, FD points second."""
+helper = r'''def simulate_fd_play_by_play(players_df, rng, n=SIMULATION_COUNT, correlation_strength=1.0):
+    """FanDuel-only play-by-play NFL engine: simulate shared plays, then score player stat lines."""
     if not isinstance(players_df, pd.DataFrame) or players_df.empty:
         return pd.DataFrame()
     pool = players_df.drop_duplicates("Name", keep="first").copy().reset_index(drop=True)
@@ -14,150 +14,162 @@ helper = r'''def simulate_fd_bottom_up_stats(players_df, rng, n=SIMULATION_COUNT
             pool[col] = ""
     pool["Projection"] = pd.to_numeric(pool.get("Projection", 0.0), errors="coerce").fillna(0.01).clip(lower=0.01)
     strength = float(np.clip(correlation_strength, 0.0, 1.0))
-    out = {str(name): np.zeros(n, dtype=float) for name in pool["Name"].astype(str)}
+    names = pool["Name"].astype(str).tolist()
+    stats = {name: {} for name in names}
+    stat_keys = ("passing_yards","passing_tds","interceptions","rushing_yards","rushing_tds","receiving_yards","receiving_tds","receptions","fumbles_lost","sacks","def_interceptions","fumble_recoveries","defensive_tds","safeties","blocked_kicks","points_allowed","yards_allowed","fg_under_40","fg_40_49","fg_50_plus","extra_points_made")
+    for name in names:
+        for key in stat_keys:
+            stats[name][key] = np.zeros(n, dtype=float)
+
+    def pos_mask(frame, token):
+        return frame["Position"].astype(str).str.upper().str.contains(token, regex=True)
 
     teams = [t for t in pool["Team"].astype(str).str.upper().str.strip().unique() if t and t != "NAN"]
     team_rows = {t: pool[pool["Team"].astype(str).str.upper().str.strip().eq(t)].copy() for t in teams}
-    handled = set()
+    opponents = {}
+    for team, rows in team_rows.items():
+        vals = rows["Opponent"].astype(str).str.upper().str.strip()
+        vals = vals[~vals.isin(["", "—", "-", "NAN", "NONE"])]
+        opponents[team] = vals.iloc[0] if len(vals) else ""
 
-    def allocate(total, weights):
-        weights = np.asarray(weights, dtype=float)
-        weights = np.clip(weights, 0.001, None)
-        weights /= weights.sum()
-        # Dirichlet shares vary role from simulation to simulation while preserving hierarchy.
-        alpha = np.clip(weights * 35.0, 0.35, None)
-        shares = rng.dirichlet(alpha, size=n)
-        return shares * np.asarray(total, dtype=float)[:, None]
-
+    handled_games = set()
     for team in teams:
-        if team in handled:
+        opp = opponents.get(team, "")
+        game_key = tuple(sorted([team, opp])) if opp in team_rows and opp != team else (team,)
+        if game_key in handled_games:
             continue
-        rows = team_rows[team]
-        opp_values = rows["Opponent"].astype(str).str.upper().str.strip()
-        opp_values = opp_values[~opp_values.isin(["", "—", "-", "NAN", "NONE"])]
-        opp = opp_values.iloc[0] if len(opp_values) else ""
-        pair = [team] + ([opp] if opp in team_rows and opp != team else [])
-        game_env = np.clip(rng.normal(1.0, 0.13, n), 0.70, 1.35)
-        # Shared pace and scoring environment creates natural cross-team correlation.
-        pace = np.clip(rng.normal(1.0, 0.09, n), 0.78, 1.24)
-        team_edge = rng.normal(0.0, 0.10, n)
+        handled_games.add(game_key)
+        sides = [team] + ([opp] if opp in team_rows and opp != team else [])
+        game_pace = np.clip(rng.normal(1.0, 0.09, n), 0.80, 1.22)
+        game_scoring = np.clip(rng.normal(1.0, 0.13, n), 0.70, 1.35)
+        game_edge = rng.normal(0.0, 1.0, n)
 
-        for side_i, side in enumerate(pair):
-            side_rows = team_rows[side]
-            side_factor = np.clip(game_env * pace * (1.0 + (team_edge if side_i == 0 else -team_edge)), 0.62, 1.48)
-            plays = np.clip(np.rint(rng.normal(64.0, 7.0, n) * pace), 48, 82).astype(int)
-            pass_rate = np.clip(rng.normal(0.58, 0.055, n) - (0.035 * team_edge if side_i == 0 else -0.035 * team_edge), 0.43, 0.72)
-            pass_att = np.clip(np.rint(plays * pass_rate), 18, 58).astype(int)
-            rush_att = np.maximum(plays - pass_att, 12)
-            completions = rng.binomial(pass_att, np.clip(rng.normal(0.65, 0.025, n), 0.54, 0.75))
-            pass_yards = np.maximum(0.0, completions * np.clip(rng.normal(11.0, 1.5, n), 7.0, 15.5) * side_factor)
-            rush_yards = np.maximum(0.0, rush_att * np.clip(rng.normal(4.35, 0.55, n), 2.8, 6.2) * np.sqrt(side_factor))
-            offensive_tds = np.clip(rng.poisson(np.clip(2.45 * side_factor, 0.5, 5.0)), 0, 7)
-            pass_td_share = np.clip(rng.normal(0.68, 0.10, n), 0.35, 0.90)
-            pass_tds = rng.binomial(offensive_tds.astype(int), pass_td_share)
-            rush_tds = offensive_tds - pass_tds
-            interceptions = np.clip(rng.poisson(0.75 / np.clip(side_factor, 0.75, 1.3)), 0, 4)
-            fumbles = rng.binomial(1, 0.10, n)
+        for side_i, side in enumerate(sides):
+            rows = team_rows[side]
+            other = sides[1-side_i] if len(sides) == 2 else ""
+            qbs = rows[pos_mask(rows, "QB")].sort_values("Projection", ascending=False)
+            rbs = rows[pos_mask(rows, "RB")].sort_values("Projection", ascending=False)
+            recs = rows[pos_mask(rows, "WR|TE|RB")].sort_values("Projection", ascending=False)
+            ks = rows[pos_mask(rows, r"(^|/)K($|/)")]
+            defs = rows[pos_mask(rows, r"DST|DEF|^D$")]
+            qb_name = str(qbs.iloc[0]["Name"]) if not qbs.empty else None
+            rec_names = recs["Name"].astype(str).tolist()
+            rb_names = rbs["Name"].astype(str).tolist()
+            rec_w = np.clip(recs["Projection"].to_numpy(dtype=float), 0.05, None) if len(recs) else np.array([])
+            rb_w = np.clip(rbs["Projection"].to_numpy(dtype=float), 0.05, None) if len(rbs) else np.array([])
+            if len(rec_w): rec_w = rec_w / rec_w.sum()
+            if len(rb_w): rb_w = rb_w / rb_w.sum()
+            plays_by_sim = np.clip(np.rint(rng.normal(64.0, 6.5, n) * game_pace), 48, 82).astype(int)
+            side_sign = 1.0 if side_i == 0 else -1.0
 
-            qbs = side_rows[side_rows["Position"].astype(str).str.upper().str.contains("QB")]
-            if not qbs.empty:
-                qb = qbs.sort_values("Projection", ascending=False).iloc[0]
-                qn = str(qb["Name"])
-                qb_rush_share = np.clip(0.08 + float(qb["Projection"]) / 180.0, 0.08, 0.25)
-                qb_stats = {
-                    "passing_yards": pass_yards,
-                    "passing_tds": pass_tds,
-                    "interceptions": interceptions,
-                    "rushing_yards": rush_yards * qb_rush_share,
-                    "rushing_tds": rng.binomial(rush_tds.astype(int), np.clip(qb_rush_share * 1.35, 0.08, 0.38)),
-                    "fumbles_lost": fumbles,
-                }
-                out[qn] = np.asarray(score_nfl_stat_line(qb_stats, "FanDuel"), dtype=float)
+            team_points = np.zeros(n, dtype=float)
+            team_yards = np.zeros(n, dtype=float)
+            giveaways = np.zeros(n, dtype=float)
+            sacks_allowed = np.zeros(n, dtype=float)
+            for sim_i in range(n):
+                score_env = 1.0 + strength * (game_scoring[sim_i] - 1.0)
+                pace_env = 1.0 + strength * (game_pace[sim_i] - 1.0)
+                edge = side_sign * game_edge[sim_i] * strength
+                pass_rate = float(np.clip(0.58 - 0.025 * edge, 0.43, 0.72))
+                for _ in range(int(plays_by_sim[sim_i])):
+                    is_pass = rng.random() < pass_rate
+                    if is_pass and qb_name:
+                        if rng.random() < 0.065:
+                            sacks_allowed[sim_i] += 1
+                            continue
+                        if rng.random() < 0.021:
+                            stats[qb_name]["interceptions"][sim_i] += 1
+                            giveaways[sim_i] += 1
+                            continue
+                        if not rec_names:
+                            continue
+                        target_i = int(rng.choice(len(rec_names), p=rec_w))
+                        receiver = rec_names[target_i]
+                        catch_prob = float(np.clip(0.64 + 0.025 * (rec_w[target_i] - np.mean(rec_w)), 0.50, 0.78))
+                        if rng.random() < catch_prob:
+                            yards = float(np.clip(rng.gamma(2.0, 5.6) * score_env, 0.0, 75.0))
+                            stats[qb_name]["passing_yards"][sim_i] += yards
+                            stats[receiver]["receiving_yards"][sim_i] += yards
+                            stats[receiver]["receptions"][sim_i] += 1
+                            team_yards[sim_i] += yards
+                            td_prob = float(np.clip(0.035 * score_env + max(yards - 20.0, 0.0) * 0.0015, 0.015, 0.18))
+                            if rng.random() < td_prob:
+                                stats[qb_name]["passing_tds"][sim_i] += 1
+                                stats[receiver]["receiving_tds"][sim_i] += 1
+                                team_points[sim_i] += 7
+                    elif rb_names:
+                        runner_i = int(rng.choice(len(rb_names), p=rb_w))
+                        runner = rb_names[runner_i]
+                        yards = float(np.clip(rng.normal(4.35 * np.sqrt(score_env), 4.2), -4.0, 45.0))
+                        yards = max(yards, -4.0)
+                        stats[runner]["rushing_yards"][sim_i] += yards
+                        team_yards[sim_i] += max(yards, 0.0)
+                        if rng.random() < float(np.clip(0.026 * score_env + max(yards - 15.0, 0.0) * 0.002, 0.01, 0.14)):
+                            stats[runner]["rushing_tds"][sim_i] += 1
+                            team_points[sim_i] += 7
+                    if rng.random() < 0.006:
+                        carrier_pool = rec_names if rec_names else rb_names
+                        if carrier_pool:
+                            carrier = str(rng.choice(carrier_pool))
+                            stats[carrier]["fumbles_lost"][sim_i] += 1
+                            giveaways[sim_i] += 1
+                # Kicking comes from possessions that did not become touchdowns.
+                for _, kr in ks.iterrows():
+                    kn = str(kr["Name"])
+                    fg_att = int(np.clip(rng.poisson(1.7 * pace_env), 0, 5))
+                    for _ in range(fg_att):
+                        bucket = rng.random()
+                        if bucket < 0.55: stats[kn]["fg_under_40"][sim_i] += 1
+                        elif bucket < 0.82: stats[kn]["fg_40_49"][sim_i] += 1
+                        else: stats[kn]["fg_50_plus"][sim_i] += 1
+                    stats[kn]["extra_points_made"][sim_i] += max(0, round(team_points[sim_i] / 7.0))
+                    team_points[sim_i] += 3 * fg_att
 
-            receivers = side_rows[side_rows["Position"].astype(str).str.upper().str.contains("WR|TE|RB", regex=True)].copy()
-            if not receivers.empty:
-                rec_weights = receivers["Projection"].to_numpy(dtype=float)
-                rec_yard_alloc = allocate(pass_yards, rec_weights)
-                reception_alloc = allocate(completions, rec_weights)
-                td_alloc = allocate(pass_tds, np.power(np.clip(rec_weights, 0.01, None), 1.15))
-                td_winners = np.argmax(td_alloc, axis=1)
-                rec_tds_matrix = np.zeros((n, len(receivers)), dtype=int)
-                for sim_i in range(n):
-                    if pass_tds[sim_i] > 0:
-                        probs = np.clip(td_alloc[sim_i], 0.001, None); probs /= probs.sum()
-                        winners = rng.choice(len(receivers), size=int(pass_tds[sim_i]), replace=True, p=probs)
-                        for w in winners: rec_tds_matrix[sim_i, w] += 1
-                for j, (_, pr) in enumerate(receivers.iterrows()):
-                    name = str(pr["Name"]); pos = str(pr["Position"]).upper()
-                    stats = {
-                        "receiving_yards": rec_yard_alloc[:, j],
-                        "receiving_tds": rec_tds_matrix[:, j],
-                        "receptions": np.rint(reception_alloc[:, j]).astype(int),
-                        "fumbles_lost": rng.binomial(1, 0.02, n),
-                    }
-                    if "RB" in pos:
-                        rb_pool = side_rows[side_rows["Position"].astype(str).str.upper().str.contains("RB")]
-                        rb_weights = rb_pool["Projection"].to_numpy(dtype=float)
-                        rb_names = rb_pool["Name"].astype(str).tolist()
-                        if name in rb_names:
-                            rush_alloc = allocate(rush_yards * (1.0 - qb_rush_share if not qbs.empty else 0.94), rb_weights)
-                            att_alloc = allocate(rush_att * (1.0 - qb_rush_share if not qbs.empty else 0.94), rb_weights)
-                            rj = rb_names.index(name)
-                            stats["rushing_yards"] = rush_alloc[:, rj]
-                            stats["rushing_tds"] = np.rint(allocate(rush_tds, rb_weights)[:, rj]).astype(int)
-                    out[name] = np.asarray(score_nfl_stat_line(stats, "FanDuel"), dtype=float)
+            # Defense for the opponent receives events generated by this offense.
+            if other and other in team_rows:
+                other_defs = team_rows[other][pos_mask(team_rows[other], r"DST|DEF|^D$")]
+                for _, dr in other_defs.iterrows():
+                    dn = str(dr["Name"])
+                    stats[dn]["sacks"] += sacks_allowed
+                    stats[dn]["def_interceptions"] += np.array([stats[qb_name]["interceptions"][i] if qb_name else 0 for i in range(n)])
+                    stats[dn]["fumble_recoveries"] += np.maximum(giveaways - (stats[qb_name]["interceptions"] if qb_name else 0), 0)
+                    stats[dn]["points_allowed"] = team_points.copy()
+                    stats[dn]["yards_allowed"] = team_yards.copy()
+                    stats[dn]["defensive_tds"] += rng.binomial(1, np.clip(0.025 + 0.025 * giveaways, 0.025, 0.16))
 
-            # Defenses are linked directly to opponent turnovers/scoring environment.
-            defenses = side_rows[side_rows["Position"].astype(str).str.upper().str.contains("D|DST|DEF", regex=True)]
-            for _, dr in defenses.iterrows():
-                dn = str(dr["Name"])
-                points_allowed = np.clip(np.rint(20.5 * side_factor + rng.normal(0, 6, n)), 0, 50)
-                dst_stats = {
-                    "sacks": rng.poisson(2.4, n), "def_interceptions": interceptions,
-                    "fumble_recoveries": fumbles, "defensive_tds": rng.binomial(1, 0.07, n),
-                    "safeties": rng.binomial(1, 0.02, n), "blocked_kicks": rng.binomial(1, 0.03, n),
-                    "points_allowed": points_allowed, "yards_allowed": np.clip(pass_yards + rush_yards, 150, 600), "is_defense": 1,
-                }
-                out[dn] = np.asarray(score_nfl_stat_line(dst_stats, "FanDuel"), dtype=float)
-
-            # Projection calibration changes player baselines, not correlation: each player's
-            # stat-derived FD distribution is shifted/scaled toward the current slate projection.
-            for _, pr in side_rows.iterrows():
-                name = str(pr["Name"]); target = float(pr["Projection"])
-                vals = out.get(name)
-                if vals is None or not np.any(vals):
-                    # Kicker/unsupported positions retain a stat-line fallback.
-                    if "K" in str(pr["Position"]).upper():
-                        stats = {"fg_under_40": rng.poisson(1.0 * side_factor), "fg_40_49": rng.poisson(0.45 * side_factor), "fg_50_plus": rng.poisson(0.22 * side_factor), "extra_points_made": rng.poisson(2.0 * side_factor)}
-                        vals = np.asarray(score_nfl_stat_line(stats, "FanDuel"), dtype=float)
-                    else:
-                        vals = np.maximum(0.0, rng.normal(target, max(0.75, target * 0.35), n))
-                mean = float(np.mean(vals))
-                if mean > 0:
-                    scale = float(np.clip(target / mean, 0.65, 1.55))
-                    vals = vals * scale
-                out[name] = np.maximum(vals, 0.0)
-            handled.add(side)
-        handled.update(pair)
-
+    out = {}
+    for _, row in pool.iterrows():
+        name = str(row["Name"]); pos = str(row["Position"]).upper(); target = float(row["Projection"])
+        line = stats[name].copy()
+        if any(x in pos for x in ("DST", "DEF")) or pos.strip() == "D": line["is_defense"] = 1
+        vals = np.asarray(score_nfl_stat_line(line, "FanDuel"), dtype=float)
+        mean = float(np.mean(vals)) if len(vals) else 0.0
+        # Calibrate only the marginal mean; shared play outcomes/correlation stay intact.
+        if mean > 0 and target > 0:
+            vals *= float(np.clip(target / mean, 0.65, 1.55))
+        elif target > 0:
+            vals = np.maximum(0.0, rng.normal(target, max(0.75, target * 0.35), n))
+        out[name] = np.maximum(vals, 0.0)
     return pd.DataFrame(out)
 
 
 '''
-if "def simulate_fd_bottom_up_stats(" not in s:
+# Replace the earlier FanDuel bottom-up helper with the play-by-play engine.
+start = s.find("def simulate_fd_bottom_up_stats(")
+end = s.find(anchor, start) if start >= 0 else -1
+if start >= 0 and end > start:
+    s = s[:start] + helper + s[end:]
+elif "def simulate_fd_play_by_play(" not in s:
     if anchor not in s:
         raise SystemExit("FanDuel helper anchor not found")
     s = s.replace(anchor, helper + anchor, 1)
 
-old = 'simulated_scores = _simulate_scored_player_outcomes(fd_players, "FanDuel", rng)\n            simulated_scores = apply_fd_correlated_simulations(simulated_scores, fd_players, correlation_strength)'
-old2 = 'simulated_scores = _simulate_scored_player_outcomes(fd_players, "FanDuel", rng)'
-new = 'simulated_scores = simulate_fd_bottom_up_stats(fd_players, rng, SIMULATION_COUNT, correlation_strength)'
+old = 'simulated_scores = simulate_fd_bottom_up_stats(fd_players, rng, SIMULATION_COUNT, correlation_strength)'
+new = 'simulated_scores = simulate_fd_play_by_play(fd_players, rng, SIMULATION_COUNT, correlation_strength)'
 if old in s:
     s = s.replace(old, new, 1)
-elif old2 in s:
-    s = s.replace(old2, new, 1)
 elif new not in s:
     raise SystemExit("FanDuel simulation call not found")
 
 p.write_text(s)
-print("FanDuel now simulates football stats first, then FanDuel fantasy points")
+print("FanDuel now uses shared play-by-play simulation before FanDuel scoring")
