@@ -3340,10 +3340,10 @@ def simulate_fd_play_by_play(players_df, rng, n=SIMULATION_COUNT, correlation_st
     if not isinstance(players_df, pd.DataFrame) or players_df.empty:
         return pd.DataFrame()
     requested_n = max(1, int(n))
-    # A full slate at 10,000 x ~64 literal plays is millions of Python iterations.
-    # Build 1,000 complete correlated game scripts, then resample COMPLETE scripts.
-    # This keeps Step 1 fast without breaking within-game/player correlation.
-    n = min(requested_n, 1000)
+    # Streamlit cannot afford thousands of literal full-slate play loops.
+    # Build 150 complete correlated game scripts, then bootstrap COMPLETE rows.
+    # Whole-row resampling keeps QB/receiver/team/opponent outcomes tied together.
+    n = min(requested_n, 150)
     pool = players_df.drop_duplicates("Name", keep="first").copy().reset_index(drop=True)
     for col in ("Name", "Team", "Opponent", "Position"):
         if col not in pool.columns:
