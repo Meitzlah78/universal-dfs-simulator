@@ -6,6 +6,7 @@ on:
       - feature/salary-csv-upload
     paths:
       - '.github/scripts/make_fd_full_roster_setup.py'
+      - '.github/scripts/fix_fd_player_pool_refresh.py'
       - '.github/workflows/apply-fd-full-roster.yml'
 
 permissions:
@@ -24,6 +25,8 @@ jobs:
           python-version: '3.12'
       - name: Apply FanDuel-only patch
         run: python .github/scripts/make_fd_full_roster_setup.py
+      - name: Refresh FanDuel Player Pool after SIM
+        run: python .github/scripts/fix_fd_player_pool_refresh.py
       - name: Syntax check
         run: python -m py_compile dfs_app.py
       - name: Commit patched app
