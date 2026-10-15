@@ -3941,8 +3941,8 @@ if platform == "FanDuel":
             results = []
             seen = set()
             player_build_counts = {str(name): 0 for name in names}
-            target_lineups = 2000
-            max_attempts = 150000 if lineup_mode == "Full Roster" else 500000
+            target_lineups = 5000 if lineup_mode == "Full Roster" else 2000
+            max_attempts = 30000 if (lineup_mode == "Full Roster" and ((not fd_stack_rules) or ("No stack rule" in fd_stack_rules))) else (100000 if lineup_mode == "Full Roster" else 500000)
             salary_min, salary_max = int(fd_salary_range[0]), min(int(fd_salary_range[1]), 60000)
             fd_build_progress = st.progress(
                 0,
@@ -3976,7 +3976,7 @@ if platform == "FanDuel":
                 }
 
             for build_attempt in range(max_attempts):
-                if build_attempt % 250 == 0:
+                if build_attempt % 250 == 0 and len(results) == 0:
                     fd_build_progress.progress(
                         min(0.99, build_attempt / max_attempts),
                         text=f"Building FanDuel {lineup_mode} lineups: {len(results):,} / {target_lineups:,} (checking valid rosters)"
