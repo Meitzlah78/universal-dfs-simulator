@@ -5742,6 +5742,7 @@ if platform == "FanDuel":
             "ContestScore", "WinRate", "Top1", "Top5", "Top10", "CashRate",
             "AvgPercentile", "Entry Fee ($)", "Expected Prize ($)",
             "Expected Net ($)", "Expected ROI (%)", "Estimated Full Field Rank",
+            "Exact Matches in Final Field", "Estimated Field Copies",
         ]:
             if metric_col in fd_display.columns:
                 fd_display_columns.append(metric_col)
