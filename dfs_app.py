@@ -4739,8 +4739,13 @@ if platform == "FanDuel":
                     )
                 if fd_run_all_clicked:
                     fd_workflow_status.info("Step 4 of 4: Scoring your lineups against the contest field...")
+                fd_step4_status = st.empty()
+                fd_step4_status.info("Step 4 of 4: Scoring your lineups against the contest field...")
+                fd_step4_progress = st.progress(0, text="Step 4 of 4: Preparing FanDuel contest comparison...")
                 user_lineups = st.session_state.get(fd_build_key)
                 if user_lineups is None or user_lineups.empty:
+                    fd_step4_status.error("Step 4 could not run because the current SIM did not produce user lineups.")
+                    fd_step4_progress.empty()
                     st.warning("SIM is running the lineup build and contest comparison together.")
                 else:
                     scores = opponent_df["ProjectedPoints"].to_numpy(dtype=float)
@@ -4776,6 +4781,8 @@ if platform == "FanDuel":
                         compared["FieldRank"] = compared["ProjectedPoints"].apply(lambda score: 1 + int(np.sum(scores > float(score))))
                     compared = add_field_ranking_metrics(compared, scores)
                     st.session_state["fd_contest_comparison_" + lineup_mode.replace(" ", "_").lower()] = compared
+                    fd_step4_progress.progress(1.0, text="Step 4 of 4 complete: FanDuel contest comparison finished.")
+                    fd_step4_status.success("Step 4 of 4 complete: contest comparison finished.")
                     st.write("### FanDuel Lineups vs. Simulated Contest Field")
                     st.caption("This is an estimate using projected points, not actual contest results.")
                     st.dataframe(compared, use_container_width=True, hide_index=True)
@@ -4871,7 +4878,12 @@ if platform == "FanDuel":
             else:
                 st.error("Could not create valid FanDuel opponent lineups. Check the player pool and salary range.")
         if fd_run_all_clicked:
-            fd_workflow_status.success("FanDuel SIM complete: player simulations, lineup build, opponent field, and contest comparison finished.")
+            _fd_step4_key = "fd_contest_comparison_" + lineup_mode.replace(" ", "_").lower()
+            _fd_step4_result = st.session_state.get(_fd_step4_key)
+            if isinstance(_fd_step4_result, pd.DataFrame) and not _fd_step4_result.empty:
+                fd_workflow_status.success("FanDuel SIM complete: all 4 steps finished.")
+            else:
+                fd_workflow_status.error("FanDuel SIM stopped before Step 4 produced a contest comparison.")
 
     fd_results = st.session_state.get(fd_build_key)
     if fd_results is not None:
