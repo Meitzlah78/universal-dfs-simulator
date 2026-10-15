@@ -3884,7 +3884,7 @@ if platform == "FanDuel":
 
     st.write("### Build Settings")
     st.caption("The 5,000-lineup build automatically spreads player exposure while still favoring stronger simulated scores.")
-    build_cols = st.columns([0.75, 0.75, 2.5])
+    build_cols = st.columns([1, 1])
     with build_cols[0]:
         fd_salary_range = st.slider(
             "Allowed lineup salary range",
@@ -3940,8 +3940,9 @@ if platform == "FanDuel":
         )
         st.caption("Choose your FanDuel Full Roster stack rules before pressing BUILD.")
 
-    with build_cols[2]:
-        st.write("### Run")
+    st.write("### Run")
+    _fd_run_left, _fd_run_center, _fd_run_right = st.columns([1, 2, 1])
+    with _fd_run_center:
         fd_sim_button = st.button(
             "SIM",
             type="primary",
@@ -3949,891 +3950,891 @@ if platform == "FanDuel":
             key="fd_sim_" + lineup_mode.replace(" ", "_").lower(),
             help="Runs player simulations, builds your lineups, builds the opponent field, and runs the contest comparison."
         )
-        fd_run_all_clicked = fd_sim_button
-        fd_sim_clicked = fd_sim_button
-        fd_build_clicked = fd_sim_button
-        fd_contest_clicked = fd_sim_button
-        fd_workflow_status = None
-        if fd_run_all_clicked:
-            fd_workflow_status = st.empty()
-            fd_workflow_status.info(
-                f"Step 1 of 4: Running {SIMULATION_COUNT:,} player simulations for FanDuel {lineup_mode}..."
-            )
-        if fd_sim_clicked:
-            with st.spinner(f"Running {SIMULATION_COUNT:,} shared historical/PBP simulations for FanDuel..."):
-                rng = np.random.default_rng()
-                simulated_scores = _simulate_scored_player_outcomes(fd_players, "FanDuel", rng)
-                player_sim = {}
-                for sim_name in fd_players["Name"].astype(str):
-                    if sim_name not in simulated_scores.columns:
-                        continue
-                    values = pd.to_numeric(simulated_scores[sim_name], errors="coerce").dropna().to_numpy(dtype=float)
-                    if not len(values):
-                        continue
-                    player_sim[sim_name] = {
-                        "Mean": float(np.mean(values)),
-                        "P10": float(np.quantile(values, 0.10)),
-                        "P25": float(np.quantile(values, 0.25)),
-                        "P50": float(np.quantile(values, 0.50)),
-                        "P75": float(np.quantile(values, 0.75)),
-                        "P90": float(np.quantile(values, 0.90)),
-                        "P95": float(np.quantile(values, 0.95)),
-                        "P99": float(np.quantile(values, 0.99)),
-                        "StdDev": float(np.std(values)),
-                    }
-                st.session_state["fd_player_sim_" + lineup_mode.replace(" ", "_").lower()] = player_sim
-                st.session_state["fd_simulation_ready_" + lineup_mode.replace(" ", "_").lower()] = True
-            if fd_run_all_clicked:
-                fd_workflow_status.info(
-                    "Step 2 of 4: Preparing rankings and building your candidate lineups..."
-                )
-
-        fd_signature = (
-            "FanDuel",
-            lineup_mode,
-            tuple(fd_players[["Name", "Position", "Team", "Salary", "Projection"]]
-                  .astype(str).itertuples(index=False, name=None))
+    fd_run_all_clicked = fd_sim_button
+    fd_sim_clicked = fd_sim_button
+    fd_build_clicked = fd_sim_button
+    fd_contest_clicked = fd_sim_button
+    fd_workflow_status = None
+    if fd_run_all_clicked:
+        fd_workflow_status = st.empty()
+        fd_workflow_status.info(
+            f"Step 1 of 4: Running {SIMULATION_COUNT:,} player simulations for FanDuel {lineup_mode}..."
         )
-        if "fd_saved_builds" not in st.session_state:
-            st.session_state["fd_saved_builds"] = {}
-        fd_build_key = "fd_lineups_" + lineup_mode.replace(" ", "_").lower()
-        fd_active_key = "fd_active_signature_" + lineup_mode.replace(" ", "_").lower()
-        previous_fd_signature = st.session_state.get(fd_active_key)
-        if previous_fd_signature != fd_signature:
-            if previous_fd_signature is not None and fd_build_key in st.session_state:
-                st.session_state["fd_saved_builds"][previous_fd_signature] = {
-                    "lineups": st.session_state[fd_build_key]
-                }
-            st.session_state.pop(fd_build_key, None)
-            fd_saved = st.session_state["fd_saved_builds"].get(fd_signature, {})
-            if "lineups" in fd_saved:
-                st.session_state[fd_build_key] = fd_saved["lineups"]
-            st.session_state[fd_active_key] = fd_signature
-
-        if lineup_mode == "Single Game":
-            st.caption(
-                "FanDuel Single Game: 1 MVP (1.5x points and salary) plus 5 FLEX players. "
-                "Salary cap: $60,000."
-            )
-            fd_slots = ["MVP", "FLEX1", "FLEX2", "FLEX3", "FLEX4", "FLEX5"]
-        else:
-            st.caption(
-                "FanDuel NFL Full Roster: QB, 2 RB, 3 WR, TE, FLEX (RB/WR/TE), D. "
-                "Salary cap: $60,000."
-            )
-            fd_slots = ["QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "FLEX", "D"]
-
-        # Preserve the Full Roster stack selection made above. Single Game has no stack rules.
-        if lineup_mode != "Full Roster":
-            fd_stack_rules = []
-        if fd_build_clicked:
-            # A new run must replace this mode's previous build, not leave stale
-            # lineups visible if the current build cannot produce valid results.
-            st.session_state.pop(fd_build_key, None)
-            st.session_state.pop("fd_contest_comparison_" + lineup_mode.replace(" ", "_").lower(), None)
-            st.session_state.pop("fd_contest_field_" + lineup_mode.replace(" ", "_").lower(), None)
-            st.session_state.pop("fd_contest_field_ready_" + lineup_mode.replace(" ", "_").lower(), None)
+    if fd_sim_clicked:
+        with st.spinner(f"Running {SIMULATION_COUNT:,} shared historical/PBP simulations for FanDuel..."):
             rng = np.random.default_rng()
-            pool = fd_players.copy()
-            pool["Eligible"] = pool["Position"].apply(
-                lambda value: set(str(value).upper().replace(" ", "").split("/"))
+            simulated_scores = _simulate_scored_player_outcomes(fd_players, "FanDuel", rng)
+            player_sim = {}
+            for sim_name in fd_players["Name"].astype(str):
+                if sim_name not in simulated_scores.columns:
+                    continue
+                values = pd.to_numeric(simulated_scores[sim_name], errors="coerce").dropna().to_numpy(dtype=float)
+                if not len(values):
+                    continue
+                player_sim[sim_name] = {
+                    "Mean": float(np.mean(values)),
+                    "P10": float(np.quantile(values, 0.10)),
+                    "P25": float(np.quantile(values, 0.25)),
+                    "P50": float(np.quantile(values, 0.50)),
+                    "P75": float(np.quantile(values, 0.75)),
+                    "P90": float(np.quantile(values, 0.90)),
+                    "P95": float(np.quantile(values, 0.95)),
+                    "P99": float(np.quantile(values, 0.99)),
+                    "StdDev": float(np.std(values)),
+                }
+            st.session_state["fd_player_sim_" + lineup_mode.replace(" ", "_").lower()] = player_sim
+            st.session_state["fd_simulation_ready_" + lineup_mode.replace(" ", "_").lower()] = True
+        if fd_run_all_clicked:
+            fd_workflow_status.info(
+                "Step 2 of 4: Preparing rankings and building your candidate lineups..."
             )
-            pool = pool.drop_duplicates("Name", keep="first").reset_index(drop=True)
-            names = pool["Name"].astype(str).to_numpy(dtype=object)
-            salaries = pd.to_numeric(pool["Salary"], errors="coerce").fillna(0).to_numpy(dtype=np.int64)
-            projections = pd.to_numeric(pool["Projection"], errors="coerce").fillna(0.01).clip(lower=0.01).to_numpy(dtype=float)
-            sim_means = np.asarray([float(player_sim.get(name, {}).get("Mean", projections[i])) for i, name in enumerate(names)], dtype=float)
-            lineup_scores = np.asarray([
-                float(player_sim.get(name, {}).get("P95", projections[i])) * P95_WEIGHT
-                + float(player_sim.get(name, {}).get("P99", projections[i] * 2.3)) * P99_WEIGHT
-                + sim_means[i] * MEAN_WEIGHT
-                + float(player_sim.get(name, {}).get("StdDev", 0.0)) * STDDEV_WEIGHT
-                for i, name in enumerate(names)
-            ], dtype=float)
-            lineup_scores, fd_ownership_proxy = ownership_adjusted_player_scores(
-                pool, names, np.clip(lineup_scores, 0.01, None), player_sim
-            )
-            eligible_sets = pool["Eligible"].tolist()
-            results = []
-            seen = set()
-            player_build_counts = {str(name): 0 for name in names}
-            target_lineups = 5000 if lineup_mode == "Full Roster" else 2000
-            max_attempts = 30000 if (lineup_mode == "Full Roster" and ((not fd_stack_rules) or ("No stack rule" in fd_stack_rules))) else (100000 if lineup_mode == "Full Roster" else 500000)
-            salary_min, salary_max = int(fd_salary_range[0]), min(int(fd_salary_range[1]), 60000)
-            fd_build_progress = st.progress(
-                0,
-                text=f"Building FanDuel {lineup_mode} lineups: 0 / {target_lineups:,}"
-            )
+
+    fd_signature = (
+        "FanDuel",
+        lineup_mode,
+        tuple(fd_players[["Name", "Position", "Team", "Salary", "Projection"]]
+              .astype(str).itertuples(index=False, name=None))
+    )
+    if "fd_saved_builds" not in st.session_state:
+        st.session_state["fd_saved_builds"] = {}
+    fd_build_key = "fd_lineups_" + lineup_mode.replace(" ", "_").lower()
+    fd_active_key = "fd_active_signature_" + lineup_mode.replace(" ", "_").lower()
+    previous_fd_signature = st.session_state.get(fd_active_key)
+    if previous_fd_signature != fd_signature:
+        if previous_fd_signature is not None and fd_build_key in st.session_state:
+            st.session_state["fd_saved_builds"][previous_fd_signature] = {
+                "lineups": st.session_state[fd_build_key]
+            }
+        st.session_state.pop(fd_build_key, None)
+        fd_saved = st.session_state["fd_saved_builds"].get(fd_signature, {})
+        if "lineups" in fd_saved:
+            st.session_state[fd_build_key] = fd_saved["lineups"]
+        st.session_state[fd_active_key] = fd_signature
+
+    if lineup_mode == "Single Game":
+        st.caption(
+            "FanDuel Single Game: 1 MVP (1.5x points and salary) plus 5 FLEX players. "
+            "Salary cap: $60,000."
+        )
+        fd_slots = ["MVP", "FLEX1", "FLEX2", "FLEX3", "FLEX4", "FLEX5"]
+    else:
+        st.caption(
+            "FanDuel NFL Full Roster: QB, 2 RB, 3 WR, TE, FLEX (RB/WR/TE), D. "
+            "Salary cap: $60,000."
+        )
+        fd_slots = ["QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "FLEX", "D"]
+
+    # Preserve the Full Roster stack selection made above. Single Game has no stack rules.
+    if lineup_mode != "Full Roster":
+        fd_stack_rules = []
+    if fd_build_clicked:
+        # A new run must replace this mode's previous build, not leave stale
+        # lineups visible if the current build cannot produce valid results.
+        st.session_state.pop(fd_build_key, None)
+        st.session_state.pop("fd_contest_comparison_" + lineup_mode.replace(" ", "_").lower(), None)
+        st.session_state.pop("fd_contest_field_" + lineup_mode.replace(" ", "_").lower(), None)
+        st.session_state.pop("fd_contest_field_ready_" + lineup_mode.replace(" ", "_").lower(), None)
+        rng = np.random.default_rng()
+        pool = fd_players.copy()
+        pool["Eligible"] = pool["Position"].apply(
+            lambda value: set(str(value).upper().replace(" ", "").split("/"))
+        )
+        pool = pool.drop_duplicates("Name", keep="first").reset_index(drop=True)
+        names = pool["Name"].astype(str).to_numpy(dtype=object)
+        salaries = pd.to_numeric(pool["Salary"], errors="coerce").fillna(0).to_numpy(dtype=np.int64)
+        projections = pd.to_numeric(pool["Projection"], errors="coerce").fillna(0.01).clip(lower=0.01).to_numpy(dtype=float)
+        sim_means = np.asarray([float(player_sim.get(name, {}).get("Mean", projections[i])) for i, name in enumerate(names)], dtype=float)
+        lineup_scores = np.asarray([
+            float(player_sim.get(name, {}).get("P95", projections[i])) * P95_WEIGHT
+            + float(player_sim.get(name, {}).get("P99", projections[i] * 2.3)) * P99_WEIGHT
+            + sim_means[i] * MEAN_WEIGHT
+            + float(player_sim.get(name, {}).get("StdDev", 0.0)) * STDDEV_WEIGHT
+            for i, name in enumerate(names)
+        ], dtype=float)
+        lineup_scores, fd_ownership_proxy = ownership_adjusted_player_scores(
+            pool, names, np.clip(lineup_scores, 0.01, None), player_sim
+        )
+        eligible_sets = pool["Eligible"].tolist()
+        results = []
+        seen = set()
+        player_build_counts = {str(name): 0 for name in names}
+        target_lineups = 5000 if lineup_mode == "Full Roster" else 2000
+        max_attempts = 30000 if (lineup_mode == "Full Roster" and ((not fd_stack_rules) or ("No stack rule" in fd_stack_rules))) else (100000 if lineup_mode == "Full Roster" else 500000)
+        salary_min, salary_max = int(fd_salary_range[0]), min(int(fd_salary_range[1]), 60000)
+        fd_build_progress = st.progress(
+            0,
+            text=f"Building FanDuel {lineup_mode} lineups: 0 / {target_lineups:,}"
+        )
+        if lineup_mode == "Single Game":
+            slots = ["MVP", "FLEX1", "FLEX2", "FLEX3", "FLEX4", "FLEX5"]
+            mvp_indices = np.flatnonzero((salaries * 1.5 <= salary_max))
+            mvp_weights = lineup_scores[mvp_indices].copy()
+            if len(mvp_weights):
+                mvp_weights /= mvp_weights.sum()
+        else:
+            roster = [
+                ("QB", {"QB"}), ("RB1", {"RB"}), ("RB2", {"RB"}),
+                ("WR1", {"WR"}), ("WR2", {"WR"}), ("WR3", {"WR"}),
+                ("TE", {"TE"}), ("FLEX", {"RB", "WR", "TE"}),
+                ("D", {"D", "DST", "DEF"})
+            ]
+            slots = [slot for slot, _ in roster]
+            eligible_indices = {
+                slot: np.asarray([i for i, positions in enumerate(eligible_sets) if positions & eligible], dtype=int)
+                for slot, eligible in roster
+            }
+            fd_slot_salary_bounds = {
+                slot: (
+                    int(salaries[eligible_indices[slot]].min()),
+                    int(salaries[eligible_indices[slot]].max()),
+                )
+                for slot, _eligible in roster
+                if len(eligible_indices[slot])
+            }
+
+        for build_attempt in range(max_attempts):
+            if build_attempt % 250 == 0 and len(results) == 0:
+                fd_build_progress.progress(
+                    min(0.99, build_attempt / max_attempts),
+                    text=f"Building FanDuel {lineup_mode} lineups: {len(results):,} / {target_lineups:,} (checking valid rosters)"
+                )
+            chosen_indices = []
+            chosen = {}
+            used = set()
+            salary = 0
+            total_points = 0.0
+            total_score = 0.0
             if lineup_mode == "Single Game":
-                slots = ["MVP", "FLEX1", "FLEX2", "FLEX3", "FLEX4", "FLEX5"]
-                mvp_indices = np.flatnonzero((salaries * 1.5 <= salary_max))
-                mvp_weights = lineup_scores[mvp_indices].copy()
-                if len(mvp_weights):
-                    mvp_weights /= mvp_weights.sum()
-            else:
-                roster = [
-                    ("QB", {"QB"}), ("RB1", {"RB"}), ("RB2", {"RB"}),
-                    ("WR1", {"WR"}), ("WR2", {"WR"}), ("WR3", {"WR"}),
-                    ("TE", {"TE"}), ("FLEX", {"RB", "WR", "TE"}),
-                    ("D", {"D", "DST", "DEF"})
-                ]
-                slots = [slot for slot, _ in roster]
-                eligible_indices = {
-                    slot: np.asarray([i for i, positions in enumerate(eligible_sets) if positions & eligible], dtype=int)
-                    for slot, eligible in roster
-                }
-                fd_slot_salary_bounds = {
-                    slot: (
-                        int(salaries[eligible_indices[slot]].min()),
-                        int(salaries[eligible_indices[slot]].max()),
-                    )
-                    for slot, _eligible in roster
-                    if len(eligible_indices[slot])
-                }
-
-            for build_attempt in range(max_attempts):
-                if build_attempt % 250 == 0 and len(results) == 0:
-                    fd_build_progress.progress(
-                        min(0.99, build_attempt / max_attempts),
-                        text=f"Building FanDuel {lineup_mode} lineups: {len(results):,} / {target_lineups:,} (checking valid rosters)"
-                    )
-                chosen_indices = []
-                chosen = {}
-                used = set()
-                salary = 0
-                total_points = 0.0
-                total_score = 0.0
-                if lineup_mode == "Single Game":
-                    if not len(mvp_indices):
+                if not len(mvp_indices):
+                    break
+                mvp_idx = int(rng.choice(mvp_indices, p=mvp_weights))
+                chosen["MVP"] = names[mvp_idx]
+                chosen_indices.append(mvp_idx)
+                used.add(mvp_idx)
+                salary = int(round(salaries[mvp_idx] * 1.5))
+                total_points = sim_means[mvp_idx] * 1.5
+                total_score = lineup_scores[mvp_idx] * 1.5
+                for slot in slots[1:]:
+                    choices = np.asarray([
+                        i for i in range(len(names))
+                        if i not in used and salary + salaries[i] <= salary_max
+                    ], dtype=int)
+                    if not len(choices):
                         break
-                    mvp_idx = int(rng.choice(mvp_indices, p=mvp_weights))
-                    chosen["MVP"] = names[mvp_idx]
-                    chosen_indices.append(mvp_idx)
-                    used.add(mvp_idx)
-                    salary = int(round(salaries[mvp_idx] * 1.5))
-                    total_points = sim_means[mvp_idx] * 1.5
-                    total_score = lineup_scores[mvp_idx] * 1.5
-                    for slot in slots[1:]:
-                        choices = np.asarray([
-                            i for i in range(len(names))
-                            if i not in used and salary + salaries[i] <= salary_max
-                        ], dtype=int)
-                        if not len(choices):
-                            break
-                        weights = lineup_scores[choices].copy()
-                        expected_exposure = max(1.0, target_lineups * len(slots) / max(1, len(names)))
-                        exposure_penalty = np.asarray([
-                            (1.0 + player_build_counts.get(str(names[i]), 0) / expected_exposure) ** 1.5
-                            for i in choices
-                        ], dtype=float)
-                        weights /= exposure_penalty
-                        weights /= weights.sum()
-                        picked = int(rng.choice(choices, p=weights))
-                        chosen[slot] = names[picked]
-                        chosen_indices.append(picked)
-                        used.add(picked)
-                        salary += int(salaries[picked])
-                        total_points += sim_means[picked]
-                        total_score += lineup_scores[picked]
-                else:
-                    for roster_pos, (slot, _) in enumerate(roster):
-                        choices = np.asarray([
-                            i for i in eligible_indices[slot]
-                            if i not in used and salary + salaries[i] <= salary_max
-                        ], dtype=int)
-                        if not len(choices):
-                            break
+                    weights = lineup_scores[choices].copy()
+                    expected_exposure = max(1.0, target_lineups * len(slots) / max(1, len(names)))
+                    exposure_penalty = np.asarray([
+                        (1.0 + player_build_counts.get(str(names[i]), 0) / expected_exposure) ** 1.5
+                        for i in choices
+                    ], dtype=float)
+                    weights /= exposure_penalty
+                    weights /= weights.sum()
+                    picked = int(rng.choice(choices, p=weights))
+                    chosen[slot] = names[picked]
+                    chosen_indices.append(picked)
+                    used.add(picked)
+                    salary += int(salaries[picked])
+                    total_points += sim_means[picked]
+                    total_score += lineup_scores[picked]
+            else:
+                for roster_pos, (slot, _) in enumerate(roster):
+                    choices = np.asarray([
+                        i for i in eligible_indices[slot]
+                        if i not in used and salary + salaries[i] <= salary_max
+                    ], dtype=int)
+                    if not len(choices):
+                        break
 
-                        # Fast salary feasibility: use precomputed slot salary bounds
-                        # instead of rescanning the entire player pool for every choice.
-                        remaining_roster = roster[roster_pos + 1:]
-                        if remaining_roster:
-                            missing_remaining_slots = [
-                                remaining_slot
-                                for remaining_slot, _remaining_positions in remaining_roster
-                                if remaining_slot not in fd_slot_salary_bounds
-                            ]
-                            if missing_remaining_slots:
-                                choices = np.asarray([], dtype=int)
-                            else:
-                                min_remaining_salary = sum(
-                                    fd_slot_salary_bounds[remaining_slot][0]
-                                    for remaining_slot, _remaining_positions in remaining_roster
-                                )
-                                max_remaining_salary = sum(
-                                    fd_slot_salary_bounds[remaining_slot][1]
-                                    for remaining_slot, _remaining_positions in remaining_roster
-                                )
-                                choices = np.asarray([
-                                    i for i in choices
-                                    if (
-                                        salary + int(salaries[i]) + max_remaining_salary >= salary_min
-                                        and salary + int(salaries[i]) + min_remaining_salary <= salary_max
-                                    )
-                                ], dtype=int)
+                    # Fast salary feasibility: use precomputed slot salary bounds
+                    # instead of rescanning the entire player pool for every choice.
+                    remaining_roster = roster[roster_pos + 1:]
+                    if remaining_roster:
+                        missing_remaining_slots = [
+                            remaining_slot
+                            for remaining_slot, _remaining_positions in remaining_roster
+                            if remaining_slot not in fd_slot_salary_bounds
+                        ]
+                        if missing_remaining_slots:
+                            choices = np.asarray([], dtype=int)
                         else:
+                            min_remaining_salary = sum(
+                                fd_slot_salary_bounds[remaining_slot][0]
+                                for remaining_slot, _remaining_positions in remaining_roster
+                            )
+                            max_remaining_salary = sum(
+                                fd_slot_salary_bounds[remaining_slot][1]
+                                for remaining_slot, _remaining_positions in remaining_roster
+                            )
                             choices = np.asarray([
                                 i for i in choices
-                                if salary_min <= salary + int(salaries[i]) <= salary_max
+                                if (
+                                    salary + int(salaries[i]) + max_remaining_salary >= salary_min
+                                    and salary + int(salaries[i]) + min_remaining_salary <= salary_max
+                                )
                             ], dtype=int)
-                        if not len(choices):
-                            break
-
-                        weights = lineup_scores[choices].copy()
-                        # Full Roster lineups must spend at least $57K by default. Bias
-                        # the random construction toward salary-efficient higher-priced
-                        # players so the builder does not create hundreds of thousands
-                        # of otherwise-valid lineups that finish below the salary floor.
-                        if lineup_mode == "Full Roster":
-                            salary_bias = np.clip(salaries[choices].astype(float) / 5000.0, 0.35, 2.5) ** 2.0
-                            weights *= salary_bias
-                        # Build the requested QB stack during generation instead of
-                        # relying only on post-build rejection.
-                        if lineup_mode == "Full Roster" and slot != "QB" and "QB" in chosen and fd_stack_rules and "No stack rule" not in fd_stack_rules:
-                            qb_name = str(chosen.get("QB", ""))
-                            qb_matches = np.flatnonzero(names == qb_name)
-                            if len(qb_matches):
-                                qb_i = int(qb_matches[0])
-                                qb_team = str(pool.iloc[qb_i].get("Team", "")).strip().upper()
-                                qb_opp = str(pool.iloc[qb_i].get("Opponent", "")).strip().upper()
-                                need_same = max([3 if "QB + 3 teammate" in r else 2 if "QB + 2 teammate" in r else 1 for r in fd_stack_rules] or [1])
-                                need_bring = any("bring-back" in r for r in fd_stack_rules)
-                                same_now = 0
-                                bring_now = 0
-                                for picked_name in chosen.values():
-                                    if picked_name == qb_name:
-                                        continue
-                                    hits = np.flatnonzero(names == str(picked_name))
-                                    if not len(hits):
-                                        continue
-                                    row = pool.iloc[int(hits[0])]
-                                    pos = str(row.get("Position", "")).upper().split("/")[0]
-                                    if pos not in {"RB", "WR", "TE"}:
-                                        continue
-                                    team = str(row.get("Team", "")).strip().upper()
-                                    same_now += int(team == qb_team)
-                                    bring_now += int(bool(qb_opp) and team == qb_opp)
-                                skill_slots_left = sum(1 for s, e in roster[roster.index((slot, _)):] if e & {"RB", "WR", "TE"})
-                                forced = []
-                                if same_now < need_same and skill_slots_left <= (need_same - same_now) + (1 if need_bring and bring_now < 1 else 0):
-                                    forced = [i for i in choices if str(pool.iloc[i].get("Team", "")).strip().upper() == qb_team]
-                                elif need_bring and bring_now < 1 and skill_slots_left <= 1:
-                                    forced = [i for i in choices if str(pool.iloc[i].get("Team", "")).strip().upper() == qb_opp]
-                                if forced:
-                                    mask = np.isin(choices, np.asarray(forced, dtype=int))
-                                    weights = np.where(mask, weights * 25.0, weights)
-                        expected_exposure = max(1.0, target_lineups * len(slots) / max(1, len(names)))
-                        exposure_penalty = np.asarray([
-                            (1.0 + player_build_counts.get(str(names[i]), 0) / expected_exposure) ** 1.5
-                            for i in choices
-                        ], dtype=float)
-                        weights /= exposure_penalty
-                        weight_total = weights.sum()
-                        if not np.isfinite(weight_total) or weight_total <= 0:
-                            weights = np.full(len(choices), 1.0 / len(choices), dtype=float)
-                        else:
-                            weights /= weight_total
-                        if lineup_mode == "Full Roster" and rng.random() < 0.25:
-                            picked = int(rng.choice(choices))
-                        else:
-                            picked = int(rng.choice(choices, p=weights))
-                        chosen[slot] = names[picked]
-                        chosen_indices.append(picked)
-                        used.add(picked)
-                        salary += int(salaries[picked])
-                        total_points += sim_means[picked]
-                        total_score += lineup_scores[picked]
-                if len(chosen) != len(slots) or salary < salary_min or salary > salary_max:
-                    continue
-                if lineup_mode == "Full Roster" and not full_roster_stack_matches(chosen, pool, fd_stack_rules):
-                    continue
-                lineup_key = tuple(chosen[slot] for slot in slots)
-                if lineup_key in seen:
-                    continue
-                seen.add(lineup_key)
-                for player_name in set(chosen.values()):
-                    player_build_counts[str(player_name)] = player_build_counts.get(str(player_name), 0) + 1
-                results.append({**chosen, "Salary": salary, "ProjectedPoints": round(total_points, 2), "Score": round(total_score, 2)})
-                if len(results) % 100 == 0 or len(results) >= target_lineups:
-                    fd_build_progress.progress(
-                        min(1.0, len(results) / target_lineups),
-                        text=f"Building FanDuel {lineup_mode} lineups: {len(results):,} / {target_lineups:,}"
-                    )
-                if len(results) >= target_lineups:
-                    break
-            fd_build_progress.empty()
-
-            if results:
-                fd_results = pd.DataFrame(results).sort_values(
-                    "Score", ascending=False
-                ).reset_index(drop=True)
-                st.session_state[fd_build_key] = fd_results
-                st.session_state["fd_saved_builds"][fd_signature] = {"lineups": fd_results}
-            else:
-                if lineup_mode == "Full Roster":
-                    missing_slots = [slot for slot, _eligible in roster if not len(eligible_indices.get(slot, []))]
-                    if missing_slots:
-                        st.error(
-                            "No valid FanDuel Full Roster lineups found because the filtered player pool "
-                            f"has no eligible players for: {', '.join(missing_slots)}."
-                        )
                     else:
-                        st.error(
-                            "No valid lineups found. Check player positions, salary values, "
-                            "and make sure the uploaded slate has enough players for this contest type."
-                        )
+                        choices = np.asarray([
+                            i for i in choices
+                            if salary_min <= salary + int(salaries[i]) <= salary_max
+                        ], dtype=int)
+                    if not len(choices):
+                        break
+
+                    weights = lineup_scores[choices].copy()
+                    # Full Roster lineups must spend at least $57K by default. Bias
+                    # the random construction toward salary-efficient higher-priced
+                    # players so the builder does not create hundreds of thousands
+                    # of otherwise-valid lineups that finish below the salary floor.
+                    if lineup_mode == "Full Roster":
+                        salary_bias = np.clip(salaries[choices].astype(float) / 5000.0, 0.35, 2.5) ** 2.0
+                        weights *= salary_bias
+                    # Build the requested QB stack during generation instead of
+                    # relying only on post-build rejection.
+                    if lineup_mode == "Full Roster" and slot != "QB" and "QB" in chosen and fd_stack_rules and "No stack rule" not in fd_stack_rules:
+                        qb_name = str(chosen.get("QB", ""))
+                        qb_matches = np.flatnonzero(names == qb_name)
+                        if len(qb_matches):
+                            qb_i = int(qb_matches[0])
+                            qb_team = str(pool.iloc[qb_i].get("Team", "")).strip().upper()
+                            qb_opp = str(pool.iloc[qb_i].get("Opponent", "")).strip().upper()
+                            need_same = max([3 if "QB + 3 teammate" in r else 2 if "QB + 2 teammate" in r else 1 for r in fd_stack_rules] or [1])
+                            need_bring = any("bring-back" in r for r in fd_stack_rules)
+                            same_now = 0
+                            bring_now = 0
+                            for picked_name in chosen.values():
+                                if picked_name == qb_name:
+                                    continue
+                                hits = np.flatnonzero(names == str(picked_name))
+                                if not len(hits):
+                                    continue
+                                row = pool.iloc[int(hits[0])]
+                                pos = str(row.get("Position", "")).upper().split("/")[0]
+                                if pos not in {"RB", "WR", "TE"}:
+                                    continue
+                                team = str(row.get("Team", "")).strip().upper()
+                                same_now += int(team == qb_team)
+                                bring_now += int(bool(qb_opp) and team == qb_opp)
+                            skill_slots_left = sum(1 for s, e in roster[roster.index((slot, _)):] if e & {"RB", "WR", "TE"})
+                            forced = []
+                            if same_now < need_same and skill_slots_left <= (need_same - same_now) + (1 if need_bring and bring_now < 1 else 0):
+                                forced = [i for i in choices if str(pool.iloc[i].get("Team", "")).strip().upper() == qb_team]
+                            elif need_bring and bring_now < 1 and skill_slots_left <= 1:
+                                forced = [i for i in choices if str(pool.iloc[i].get("Team", "")).strip().upper() == qb_opp]
+                            if forced:
+                                mask = np.isin(choices, np.asarray(forced, dtype=int))
+                                weights = np.where(mask, weights * 25.0, weights)
+                    expected_exposure = max(1.0, target_lineups * len(slots) / max(1, len(names)))
+                    exposure_penalty = np.asarray([
+                        (1.0 + player_build_counts.get(str(names[i]), 0) / expected_exposure) ** 1.5
+                        for i in choices
+                    ], dtype=float)
+                    weights /= exposure_penalty
+                    weight_total = weights.sum()
+                    if not np.isfinite(weight_total) or weight_total <= 0:
+                        weights = np.full(len(choices), 1.0 / len(choices), dtype=float)
+                    else:
+                        weights /= weight_total
+                    if lineup_mode == "Full Roster" and rng.random() < 0.25:
+                        picked = int(rng.choice(choices))
+                    else:
+                        picked = int(rng.choice(choices, p=weights))
+                    chosen[slot] = names[picked]
+                    chosen_indices.append(picked)
+                    used.add(picked)
+                    salary += int(salaries[picked])
+                    total_points += sim_means[picked]
+                    total_score += lineup_scores[picked]
+            if len(chosen) != len(slots) or salary < salary_min or salary > salary_max:
+                continue
+            if lineup_mode == "Full Roster" and not full_roster_stack_matches(chosen, pool, fd_stack_rules):
+                continue
+            lineup_key = tuple(chosen[slot] for slot in slots)
+            if lineup_key in seen:
+                continue
+            seen.add(lineup_key)
+            for player_name in set(chosen.values()):
+                player_build_counts[str(player_name)] = player_build_counts.get(str(player_name), 0) + 1
+            results.append({**chosen, "Salary": salary, "ProjectedPoints": round(total_points, 2), "Score": round(total_score, 2)})
+            if len(results) % 100 == 0 or len(results) >= target_lineups:
+                fd_build_progress.progress(
+                    min(1.0, len(results) / target_lineups),
+                    text=f"Building FanDuel {lineup_mode} lineups: {len(results):,} / {target_lineups:,}"
+                )
+            if len(results) >= target_lineups:
+                break
+        fd_build_progress.empty()
+
+        if results:
+            fd_results = pd.DataFrame(results).sort_values(
+                "Score", ascending=False
+            ).reset_index(drop=True)
+            st.session_state[fd_build_key] = fd_results
+            st.session_state["fd_saved_builds"][fd_signature] = {"lineups": fd_results}
+        else:
+            if lineup_mode == "Full Roster":
+                missing_slots = [slot for slot, _eligible in roster if not len(eligible_indices.get(slot, []))]
+                if missing_slots:
+                    st.error(
+                        "No valid FanDuel Full Roster lineups found because the filtered player pool "
+                        f"has no eligible players for: {', '.join(missing_slots)}."
+                    )
                 else:
                     st.error(
                         "No valid lineups found. Check player positions, salary values, "
                         "and make sure the uploaded slate has enough players for this contest type."
                     )
-            if fd_run_all_clicked and results:
-                fd_workflow_status.info("Step 3 of 4: Building the simulated opponent field...")
-
-        if fd_contest_clicked:
-            fd_pool = fd_players.copy()
-            fd_pool["Eligible"] = fd_pool["Position"].apply(
-                lambda value: set(str(value).upper().replace(" ", "").split("/"))
-            )
-            # This is already the filtered FanDuel pool. Never apply a shared
-            # DraftKings available_players list to FanDuel contest opponents.
-            fd_pool["Projection"] = pd.to_numeric(fd_pool["Projection"], errors="coerce").fillna(0.01).clip(lower=0.01)
-            fd_sim_df = st.session_state.get("simulation_df")
-            if isinstance(fd_sim_df, pd.DataFrame) and not fd_sim_df.empty:
-                fd_mean_scores = fd_sim_df.mean(axis=0).to_dict()
             else:
-                fd_mean_scores = {}
-            fd_pool["MeanPoints"] = fd_pool["Name"].map(fd_mean_scores).fillna(fd_pool["Projection"])
-            fd_weights = opponent_field_selection_weights(
-                fd_pool, fd_pool["MeanPoints"].to_numpy(dtype=float)
-            )
-            fd_weights = fd_weights / fd_weights.sum() if fd_weights.sum() else np.full(len(fd_pool), 1 / max(len(fd_pool), 1))
-
-            # FanDuel Single Game role weights: MVP and FLEX are modeled separately.
-            # This mirrors the DraftKings Showdown approach: overall ownership drives
-            # field selection, while special-role ownership drives the MVP/CPT slot.
-            fd_role_lookup = {str(c).strip().casefold(): c for c in fd_pool.columns}
-            fd_mvp_col = next((fd_role_lookup[k] for k in (
-                "field mvp own %", "mvp ownership %", "projected mvp ownership",
-                "captain/mvp ownership %", "mvp own %"
-            ) if k in fd_role_lookup), None)
-            fd_flex_col = next((fd_role_lookup[k] for k in (
-                "field flex own %", "flex ownership %", "projected flex ownership",
-                "flex own %"
-            ) if k in fd_role_lookup), None)
-
-            if fd_mvp_col is not None:
-                fd_mvp_weights = pd.to_numeric(fd_pool[fd_mvp_col], errors="coerce").fillna(0.0).to_numpy(dtype=float)
-                if fd_mvp_weights.sum() <= 0:
-                    fd_mvp_weights = fd_weights.copy()
-            else:
-                fd_mvp_weights = fd_weights.copy()
-
-            if fd_flex_col is not None:
-                fd_flex_weights = pd.to_numeric(fd_pool[fd_flex_col], errors="coerce").fillna(0.0).to_numpy(dtype=float)
-                if fd_flex_weights.sum() <= 0:
-                    fd_flex_weights = fd_weights.copy()
-            else:
-                fd_flex_weights = fd_weights.copy()
-
-            rng = np.random.default_rng(123)
-            opponent_rows = []
-            seen_opponents = set()
-            attempts = 0
-            if len(fd_pool) < len(fd_slots):
-                st.error(f"At least {len(fd_slots)} eligible players are required for FanDuel Contest Sim.")
-            else:
-                if fd_opponent_target <= 0:
-                    st.warning("Total contest entries must be greater than your own entries.")
-                fd_field_progress = st.progress(
-                    0,
-                    text=f"Building FanDuel opponent field: 0 / {fd_opponent_target:,}"
+                st.error(
+                    "No valid lineups found. Check player positions, salary values, "
+                    "and make sure the uploaded slate has enough players for this contest type."
                 )
-                with st.spinner(f"Building {fd_opponent_target:,} simulated FanDuel contest entries..."):
-                    while len(opponent_rows) < fd_opponent_target and attempts < max(300000, fd_opponent_target * 15):
-                        attempts += 1
-                        if attempts % 250 == 0 and fd_opponent_target > 0:
-                            accepted_progress = len(opponent_rows) / max(fd_opponent_target, 1)
-                            fd_field_progress.progress(
-                                min(1.0, accepted_progress),
-                                text=f"Building FanDuel opponent field: {len(opponent_rows):,} / {fd_opponent_target:,}"
-                            )
-                            fd_workflow_status.info(
-                                f"Step 3 of 4: Building opponent field — {len(opponent_rows):,} of "
-                                f"{fd_opponent_target:,} lineups..."
-                            )
-                        chosen = {}
-                        used = set()
-                        salary = 0
-                        points = 0.0
-                        if lineup_mode == "Single Game":
-                            mvp_candidates = fd_pool[
-                                (fd_pool["Salary"] * 1.5 <= fd_salary_range[1])
-                                & (fd_pool["Salary"] * 1.5 <= 60000)
+        if fd_run_all_clicked and results:
+            fd_workflow_status.info("Step 3 of 4: Building the simulated opponent field...")
+
+    if fd_contest_clicked:
+        fd_pool = fd_players.copy()
+        fd_pool["Eligible"] = fd_pool["Position"].apply(
+            lambda value: set(str(value).upper().replace(" ", "").split("/"))
+        )
+        # This is already the filtered FanDuel pool. Never apply a shared
+        # DraftKings available_players list to FanDuel contest opponents.
+        fd_pool["Projection"] = pd.to_numeric(fd_pool["Projection"], errors="coerce").fillna(0.01).clip(lower=0.01)
+        fd_sim_df = st.session_state.get("simulation_df")
+        if isinstance(fd_sim_df, pd.DataFrame) and not fd_sim_df.empty:
+            fd_mean_scores = fd_sim_df.mean(axis=0).to_dict()
+        else:
+            fd_mean_scores = {}
+        fd_pool["MeanPoints"] = fd_pool["Name"].map(fd_mean_scores).fillna(fd_pool["Projection"])
+        fd_weights = opponent_field_selection_weights(
+            fd_pool, fd_pool["MeanPoints"].to_numpy(dtype=float)
+        )
+        fd_weights = fd_weights / fd_weights.sum() if fd_weights.sum() else np.full(len(fd_pool), 1 / max(len(fd_pool), 1))
+
+        # FanDuel Single Game role weights: MVP and FLEX are modeled separately.
+        # This mirrors the DraftKings Showdown approach: overall ownership drives
+        # field selection, while special-role ownership drives the MVP/CPT slot.
+        fd_role_lookup = {str(c).strip().casefold(): c for c in fd_pool.columns}
+        fd_mvp_col = next((fd_role_lookup[k] for k in (
+            "field mvp own %", "mvp ownership %", "projected mvp ownership",
+            "captain/mvp ownership %", "mvp own %"
+        ) if k in fd_role_lookup), None)
+        fd_flex_col = next((fd_role_lookup[k] for k in (
+            "field flex own %", "flex ownership %", "projected flex ownership",
+            "flex own %"
+        ) if k in fd_role_lookup), None)
+
+        if fd_mvp_col is not None:
+            fd_mvp_weights = pd.to_numeric(fd_pool[fd_mvp_col], errors="coerce").fillna(0.0).to_numpy(dtype=float)
+            if fd_mvp_weights.sum() <= 0:
+                fd_mvp_weights = fd_weights.copy()
+        else:
+            fd_mvp_weights = fd_weights.copy()
+
+        if fd_flex_col is not None:
+            fd_flex_weights = pd.to_numeric(fd_pool[fd_flex_col], errors="coerce").fillna(0.0).to_numpy(dtype=float)
+            if fd_flex_weights.sum() <= 0:
+                fd_flex_weights = fd_weights.copy()
+        else:
+            fd_flex_weights = fd_weights.copy()
+
+        rng = np.random.default_rng(123)
+        opponent_rows = []
+        seen_opponents = set()
+        attempts = 0
+        if len(fd_pool) < len(fd_slots):
+            st.error(f"At least {len(fd_slots)} eligible players are required for FanDuel Contest Sim.")
+        else:
+            if fd_opponent_target <= 0:
+                st.warning("Total contest entries must be greater than your own entries.")
+            fd_field_progress = st.progress(
+                0,
+                text=f"Building FanDuel opponent field: 0 / {fd_opponent_target:,}"
+            )
+            with st.spinner(f"Building {fd_opponent_target:,} simulated FanDuel contest entries..."):
+                while len(opponent_rows) < fd_opponent_target and attempts < max(300000, fd_opponent_target * 15):
+                    attempts += 1
+                    if attempts % 250 == 0 and fd_opponent_target > 0:
+                        accepted_progress = len(opponent_rows) / max(fd_opponent_target, 1)
+                        fd_field_progress.progress(
+                            min(1.0, accepted_progress),
+                            text=f"Building FanDuel opponent field: {len(opponent_rows):,} / {fd_opponent_target:,}"
+                        )
+                        fd_workflow_status.info(
+                            f"Step 3 of 4: Building opponent field — {len(opponent_rows):,} of "
+                            f"{fd_opponent_target:,} lineups..."
+                        )
+                    chosen = {}
+                    used = set()
+                    salary = 0
+                    points = 0.0
+                    if lineup_mode == "Single Game":
+                        mvp_candidates = fd_pool[
+                            (fd_pool["Salary"] * 1.5 <= fd_salary_range[1])
+                            & (fd_pool["Salary"] * 1.5 <= 60000)
+                        ]
+                        if mvp_candidates.empty:
+                            break
+                        mvp_candidate_indices = mvp_candidates.index.to_numpy(dtype=int)
+                        mvp_weights = np.clip(fd_mvp_weights[mvp_candidate_indices].astype(float), 0.01, None)
+                        mvp_weights = mvp_weights / mvp_weights.sum()
+                        mvp_row = mvp_candidates.iloc[int(rng.choice(len(mvp_candidates), p=mvp_weights))]
+                        mvp = str(mvp_row["Name"])
+                        chosen["MVP"] = mvp
+                        used.add(mvp)
+                        salary = int(float(mvp_row["Salary"]) * 1.5)
+                        points = float(mvp_row["Projection"]) * 1.5
+                        for slot in ["FLEX1", "FLEX2", "FLEX3", "FLEX4", "FLEX5"]:
+                            choices = fd_pool[
+                                (~fd_pool["Name"].isin(used))
+                                & ((fd_pool["Salary"] + salary) <= fd_salary_range[1])
+                                & ((fd_pool["Salary"] + salary) <= 60000)
                             ]
-                            if mvp_candidates.empty:
+                            if choices.empty:
                                 break
-                            mvp_candidate_indices = mvp_candidates.index.to_numpy(dtype=int)
-                            mvp_weights = np.clip(fd_mvp_weights[mvp_candidate_indices].astype(float), 0.01, None)
-                            mvp_weights = mvp_weights / mvp_weights.sum()
-                            mvp_row = mvp_candidates.iloc[int(rng.choice(len(mvp_candidates), p=mvp_weights))]
-                            mvp = str(mvp_row["Name"])
-                            chosen["MVP"] = mvp
-                            used.add(mvp)
-                            salary = int(float(mvp_row["Salary"]) * 1.5)
-                            points = float(mvp_row["Projection"]) * 1.5
-                            for slot in ["FLEX1", "FLEX2", "FLEX3", "FLEX4", "FLEX5"]:
-                                choices = fd_pool[
-                                    (~fd_pool["Name"].isin(used))
-                                    & ((fd_pool["Salary"] + salary) <= fd_salary_range[1])
-                                    & ((fd_pool["Salary"] + salary) <= 60000)
+                            choice_indices = choices.index.to_numpy(dtype=int)
+                            weights = fd_flex_weights[choice_indices].astype(float)
+                            weights = weights / weights.sum() if weights.sum() else np.full(len(choices), 1.0 / len(choices))
+                            picked = choices.iloc[int(rng.choice(len(choices), p=weights))]
+                            name = str(picked["Name"])
+                            chosen[slot] = name
+                            used.add(name)
+                            salary += int(picked["Salary"])
+                            points += float(picked["Projection"])
+                    else:
+                        roster = [
+                            ("QB", {"QB"}), ("RB1", {"RB"}), ("RB2", {"RB"}),
+                            ("WR1", {"WR"}), ("WR2", {"WR"}), ("WR3", {"WR"}),
+                            ("TE", {"TE"}), ("FLEX", {"RB", "WR", "TE"}),
+                            ("D", {"D", "DST", "DEF"})
+                        ]
+                        # Cache these once per field build instead of scanning the
+                        # whole DataFrame nine times for every attempted lineup.
+                        if "fd_full_field_cache" not in locals():
+                            fd_field_names = fd_pool["Name"].astype(str).to_numpy()
+                            fd_field_salaries = pd.to_numeric(fd_pool["Salary"], errors="coerce").fillna(0).to_numpy(dtype=int)
+                            fd_field_projections = pd.to_numeric(fd_pool["MeanPoints"], errors="coerce").fillna(fd_pool["Projection"]).fillna(0.01).clip(lower=0.01).to_numpy(dtype=float)
+                            fd_field_positions = fd_pool["Eligible"].tolist()
+                            fd_full_field_cache = {
+                                slot: np.asarray([
+                                    i for i, positions in enumerate(fd_field_positions)
+                                    if bool(positions & eligible)
+                                ], dtype=int)
+                                for slot, eligible in roster
+                            }
+                            fd_field_slot_bounds = {
+                                slot: (
+                                    int(fd_field_salaries[idxs].min()),
+                                    int(fd_field_salaries[idxs].max())
+                                )
+                                for slot, idxs in fd_full_field_cache.items() if len(idxs)
+                            }
+                        used_indices = set()
+                        for roster_pos, (slot, eligible) in enumerate(roster):
+                            choices = fd_full_field_cache.get(slot, np.asarray([], dtype=int))
+                            if used_indices:
+                                choices = choices[~np.isin(choices, np.fromiter(used_indices, dtype=int))]
+                            if not len(choices):
+                                break
+                            remaining_roster = roster[roster_pos + 1:]
+                            if remaining_roster:
+                                if any(s not in fd_field_slot_bounds for s, _ in remaining_roster):
+                                    choices = np.asarray([], dtype=int)
+                                else:
+                                    min_remaining = sum(fd_field_slot_bounds[s][0] for s, _ in remaining_roster)
+                                    max_remaining = sum(fd_field_slot_bounds[s][1] for s, _ in remaining_roster)
+                                    candidate_salary = salary + fd_field_salaries[choices]
+                                    feasible = (
+                                        (candidate_salary + max_remaining >= fd_salary_range[0])
+                                        & (candidate_salary + min_remaining <= min(fd_salary_range[1], 60000))
+                                    )
+                                    choices = choices[feasible]
+                            else:
+                                candidate_salary = salary + fd_field_salaries[choices]
+                                choices = choices[
+                                    (candidate_salary >= fd_salary_range[0])
+                                    & (candidate_salary <= min(fd_salary_range[1], 60000))
                                 ]
-                                if choices.empty:
-                                    break
-                                choice_indices = choices.index.to_numpy(dtype=int)
-                                weights = fd_flex_weights[choice_indices].astype(float)
-                                weights = weights / weights.sum() if weights.sum() else np.full(len(choices), 1.0 / len(choices))
-                                picked = choices.iloc[int(rng.choice(len(choices), p=weights))]
-                                name = str(picked["Name"])
-                                chosen[slot] = name
-                                used.add(name)
-                                salary += int(picked["Salary"])
-                                points += float(picked["Projection"])
+                            if not len(choices):
+                                break
+                            weights = np.clip(fd_weights[choices].astype(float), 0.0001, None)
+                            if lineup_mode == "Full Roster":
+                                _fd_choice_means = np.clip(fd_field_projections[choices].astype(float), 0.01, None)
+                                _fd_mean_scale = _fd_choice_means / max(float(np.mean(_fd_choice_means)), 0.01)
+                                # 0.10 splits the difference between the original field and
+                                # the 0.20 test that made the FanDuel field slightly too strong.
+                                weights = weights * np.power(_fd_mean_scale, 0.10)
+                            weights /= weights.sum()
+                            picked_idx = int(rng.choice(choices, p=weights))
+                            name = str(fd_field_names[picked_idx])
+                            chosen[slot] = name
+                            used.add(name)
+                            used_indices.add(picked_idx)
+                            salary += int(fd_field_salaries[picked_idx])
+                            points += float(fd_field_projections[picked_idx])
+                    if len(chosen) != len(fd_slots):
+                        continue
+                    if salary < fd_salary_range[0] or salary > fd_salary_range[1] or salary > 60000:
+                        continue
+                    key = tuple(chosen[slot] for slot in fd_slots)
+                    if key in seen_opponents:
+                        continue
+                    seen_opponents.add(key)
+                    opponent_rows.append({**chosen, "Salary": salary, "ProjectedPoints": round(points, 2)})
+                    if len(opponent_rows) % 100 == 0 or len(opponent_rows) >= fd_opponent_target:
+                        fd_field_progress.progress(
+                            min(1.0, len(opponent_rows) / max(fd_opponent_target, 1)),
+                            text=f"Building FanDuel opponent field: {len(opponent_rows):,} / {fd_opponent_target:,}"
+                        )
+            fd_field_progress.empty()
+            opponent_df = pd.DataFrame(opponent_rows)
+            st.session_state["fd_contest_field_" + lineup_mode.replace(" ", "_").lower()] = opponent_df
+            st.session_state["fd_contest_field_ready_" + lineup_mode.replace(" ", "_").lower()] = not opponent_df.empty
+            if not opponent_df.empty:
+                show_field_ownership(opponent_df, fd_slots, "Simulated FanDuel Player Ownership", captain_slot=("MVP" if lineup_mode == "Single Game" else None))
+                st.success(f"Created {len(opponent_df):,} simulated FanDuel opponent lineups.")
+                fd_contest_details = st.session_state.get("selected_fd_contest")
+                if fd_contest_details:
+                    st.info(
+                        f"Contest selected from your FanDuel entry CSV: {fd_contest_details['name']} "
+                        f"(ID {fd_contest_details['id']}). Your file has "
+                        f"{fd_contest_details['your_entries']} entries in this contest. "
+                        "The opponent field is simulated."
+                    )
+                if fd_run_all_clicked:
+                    fd_workflow_status.info("Step 4 of 4: Scoring your lineups against the contest field...")
+                user_lineups = st.session_state.get(fd_build_key)
+                if user_lineups is None or user_lineups.empty:
+                    st.warning("SIM is running the lineup build and contest comparison together.")
+                else:
+                    scores = opponent_df["ProjectedPoints"].to_numpy(dtype=float)
+                    compared = add_lineup_field_ownership(user_lineups.copy())
+                    if lineup_mode == "Full Roster" and len(compared) > 0:
+                        _fd_score_values = pd.to_numeric(compared["ProjectedPoints"], errors="coerce").fillna(0.0).to_numpy(dtype=float)
+                        _fd_batch_count = min(4, len(_fd_score_values))
+                        _fd_batches = [batch for batch in np.array_split(np.arange(len(_fd_score_values)), _fd_batch_count) if len(batch)]
+
+                        def _fd_score_batch(indices):
+                            batch_scores = _fd_score_values[indices]
+                            beats = np.asarray([int(np.sum(scores < score)) for score in batch_scores], dtype=int)
+                            percentiles = np.asarray([round(100.0 * np.mean(scores <= score), 1) for score in batch_scores], dtype=float)
+                            ranks = np.asarray([1 + int(np.sum(scores > score)) for score in batch_scores], dtype=int)
+                            return indices, beats, percentiles, ranks
+
+                        _fd_beats = np.zeros(len(_fd_score_values), dtype=int)
+                        _fd_percentiles = np.zeros(len(_fd_score_values), dtype=float)
+                        _fd_ranks = np.ones(len(_fd_score_values), dtype=int)
+                        with ThreadPoolExecutor(max_workers=4) as _fd_executor:
+                            _fd_futures = [_fd_executor.submit(_fd_score_batch, batch) for batch in _fd_batches]
+                            for _fd_future in as_completed(_fd_futures):
+                                _fd_indices, _fd_b, _fd_p, _fd_r = _fd_future.result()
+                                _fd_beats[_fd_indices] = _fd_b
+                                _fd_percentiles[_fd_indices] = _fd_p
+                                _fd_ranks[_fd_indices] = _fd_r
+                        compared["BeatsOpponents"] = _fd_beats
+                        compared["FieldPercentile"] = _fd_percentiles
+                        compared["FieldRank"] = _fd_ranks
+                    else:
+                        compared["BeatsOpponents"] = compared["ProjectedPoints"].apply(lambda score: int(np.sum(scores < float(score))))
+                        compared["FieldPercentile"] = compared["ProjectedPoints"].apply(lambda score: round(100.0 * np.mean(scores <= float(score)), 1))
+                        compared["FieldRank"] = compared["ProjectedPoints"].apply(lambda score: 1 + int(np.sum(scores > float(score))))
+                    compared = add_field_ranking_metrics(compared, scores)
+                    st.session_state["fd_contest_comparison_" + lineup_mode.replace(" ", "_").lower()] = compared
+                    st.write("### FanDuel Lineups vs. Simulated Contest Field")
+                    st.caption("This is an estimate using projected points, not actual contest results.")
+                    st.dataframe(compared, use_container_width=True, hide_index=True)
+                    if lineup_mode == "Full Roster":
+                        _fd_selected = st.session_state.get("selected_fd_contest") or {}
+                        _fd_fee = _fd_selected.get("entry_fee")
+                        _fd_my_entries = int(_fd_selected.get("your_entries") or 0)
+                        if _fd_selected and _fd_fee is not None and _fd_my_entries > 0:
+                            _fd_total_fees = float(_fd_fee) * _fd_my_entries
+                            st.write("### FanDuel Contest Sim + ROI")
+                            _fd_field_label = _fd_selected.get("field_size") or _fd_selected.get("current_entries")
+                            _fd_caption = f"{_fd_selected.get('name', 'Selected FanDuel contest')} · {_fd_my_entries} of your entries"
+                            if _fd_field_label:
+                                _fd_caption += f" · full field {int(_fd_field_label):,}"
+                            st.caption(_fd_caption)
+                            _fd_roi_cols = st.columns(5)
+                            _fd_roi_cols[0].metric("Entries", f"{_fd_my_entries}")
+                            _fd_roi_cols[1].metric("Entry Fees", f"${_fd_total_fees:,.2f}")
+                            _fd_contest_name = str(_fd_selected.get("name", ""))
+                            if "45K Sun NFL Hail Mary" in _fd_contest_name:
+                                _fd_payout_tiers = [
+                                    (1, 1, 2000.0), (2, 2, 1000.0), (3, 3, 750.0),
+                                    (4, 4, 500.0), (5, 5, 300.0), (6, 6, 200.0),
+                                    (7, 7, 150.0), (8, 8, 125.0), (9, 10, 100.0),
+                                    (11, 12, 75.0), (13, 15, 50.0), (16, 20, 30.0),
+                                    (21, 25, 20.0), (26, 30, 15.0), (31, 40, 10.0),
+                                    (41, 50, 7.50), (51, 75, 5.0), (76, 100, 4.0),
+                                    (101, 150, 3.0), (151, 300, 2.0), (301, 600, 1.50),
+                                    (601, 1000, 1.25), (1001, 3000, 1.0),
+                                    (3001, 7500, 0.80), (7501, 15000, 0.70),
+                                    (15001, 30000, 0.60), (30001, 65000, 0.50),
+                                ]
+                                _fd_full_field = int(_fd_field_label or 65000)
+                                _fd_rep_field = max(len(scores), 1)
+                                _fd_scaled_ranks = 1 + np.floor(
+                                    np.maximum(pd.to_numeric(compared["FieldRank"], errors="coerce").fillna(_fd_rep_field).to_numpy(dtype=float) - 1.0, 0.0)
+                                    * max(_fd_full_field - 1, 0) / max(_fd_rep_field - 1, 1)
+                                ).astype(int)
+                                _fd_scaled_ranks = np.clip(_fd_scaled_ranks, 1, max(_fd_full_field, 1))
+                                def _fd_prize_for_rank(rank):
+                                    for lo, hi, prize in _fd_payout_tiers:
+                                        if lo <= int(rank) <= hi:
+                                            return float(prize)
+                                    return 0.0
+                                compared["Estimated Full Field Rank"] = _fd_scaled_ranks
+                                compared["Expected Prize ($)"] = [_fd_prize_for_rank(r) for r in _fd_scaled_ranks]
+                                compared["Expected Net ($)"] = compared["Expected Prize ($)"] - float(_fd_fee)
+                                compared["Expected ROI (%)"] = 100.0 * compared["Expected Net ($)"] / max(float(_fd_fee), 0.01)
+                                _fd_entry_count = min(_fd_my_entries, len(compared))
+                                _fd_entry_pool = compared.nlargest(_fd_entry_count, "ContestScore") if _fd_entry_count > 0 else compared.iloc[0:0]
+                                _fd_expected_winnings = float(_fd_entry_pool["Expected Prize ($)"].sum())
+                                _fd_expected_profit = _fd_expected_winnings - _fd_total_fees
+                                _fd_expected_roi = 100.0 * _fd_expected_profit / max(_fd_total_fees, 0.01)
+                                _fd_roi_cols[2].metric("Expected Winnings", f"${_fd_expected_winnings:,.2f}")
+                                _fd_roi_cols[3].metric("Expected Profit", f"${_fd_expected_profit:,.2f}")
+                                _fd_roi_cols[4].metric("Expected ROI", f"{_fd_expected_roi:,.1f}%")
+                                st.caption("Uses the supplied Hail Mary payout ladder through 65,000th place. Representative-field ranks are scaled to the full contest field.")
+                            else:
+                                _fd_roi_cols[2].metric("Expected Winnings", "Pending payouts")
+                                _fd_roi_cols[3].metric("Expected Profit", "Pending payouts")
+                                _fd_roi_cols[4].metric("Expected ROI", "Pending payouts")
+                                if not _fd_selected.get("prize_summary"):
+                                    st.caption("Exact FanDuel winnings and ROI require the contest payout ladder. The app will not invent payouts when FanDuel does not expose them.")
+                    if all(c in compared.columns for c in ["Top1", "Top5", "Top10", "CashRate"]):
+                        _fd_sanity = pd.DataFrame([{
+                            "Top 1%": round(100 * float(compared["Top1"].mean()), 2),
+                            "Top 5%": round(100 * float(compared["Top5"].mean()), 2),
+                            "Top 10%": round(100 * float(compared["Top10"].mean()), 2),
+                            "Cash %": round(100 * float(compared["CashRate"].mean()), 2),
+                        }])
+                        st.write("### Field Sanity Check")
+                        st.dataframe(_fd_sanity, use_container_width=True, hide_index=True)
+                    # Keep the contest results area consistent with DraftKings Classic and Showdown.
+            else:
+                st.error("Could not create valid FanDuel opponent lineups. Check the player pool and salary range.")
+        if fd_run_all_clicked:
+            fd_workflow_status.success("FanDuel SIM complete: player simulations, lineup build, opponent field, and contest comparison finished.")
+
+    fd_results = st.session_state.get(fd_build_key)
+    if fd_results is not None:
+        fd_results = remove_out_players_from_lineups(fd_results, fd_slots, "FanDuel")
+        st.session_state[fd_build_key] = fd_results
+        st.write(f"Built {len(fd_results)} FanDuel lineups.")
+
+        # Use the same ranking choices as DraftKings Showdown for both FanDuel formats.
+        fd_comparison_key = "fd_contest_comparison_" + lineup_mode.replace(" ", "_").lower()
+        fd_rank_source = st.session_state.get(fd_comparison_key)
+        if not isinstance(fd_rank_source, pd.DataFrame) or fd_rank_source.empty:
+            fd_rank_source = add_field_ranking_metrics(fd_results, fd_results["ProjectedPoints"].to_numpy(dtype=float))
+        fd_rank_label = st.selectbox(
+            "Rank lineups by", list(PORTFOLIO_METRICS.keys()),
+            key="fd_rank_metric_" + lineup_mode.replace(" ", "_").lower()
+        )
+        fd_rank_column = PORTFOLIO_METRICS[fd_rank_label]
+        fd_rank_source = fd_rank_source.sort_values(fd_rank_column, ascending=False).reset_index(drop=True)
+        fd_rank_count = st.number_input(
+            "Number of lineups to show", min_value=1, max_value=max(1, len(fd_rank_source)),
+            value=min(20, max(1, len(fd_rank_source))), step=1,
+            key="fd_rank_count_" + lineup_mode.replace(" ", "_").lower()
+        )
+        st.caption("Run SIM/contest comparison first for field-based estimates. Without a completed comparison, ranking uses the available lineup results as a temporary estimate.")
+        # Keep all built lineups for export. The display limit only controls
+        # how many rows are shown on screen, not how many get downloaded.
+        fd_all_ranked = fd_rank_source.copy()
+        fd_results = fd_all_ranked.head(int(fd_rank_count)).copy()
+
+        # Use the same player-by-player points layout as the DraftKings Portfolio.
+        fd_display = fd_results.copy()
+        fd_player_means = {
+            str(name): float(values.get("Mean", 0.0))
+            for name, values in player_sim.items()
+        }
+        fd_display_columns = []
+        for slot in fd_slots:
+            if slot not in fd_display.columns:
+                continue
+            multiplier = 1.5 if slot in {"MVP"} else 1.0
+            points_col = slot + " Sim Pts"
+            fd_display[points_col] = fd_display[slot].map(
+                lambda player: round(fd_player_means.get(str(player), 0.0) * multiplier, 2)
+            )
+            fd_display_columns.extend([slot, points_col])
+        if "ProjectedPoints" in fd_display.columns:
+            fd_display_columns.append("ProjectedPoints")
+        if "Score" in fd_display.columns:
+            fd_display_columns.append("Score")
+        if "Salary" in fd_display.columns:
+            fd_display_columns.append("Salary")
+        fd_display_columns = list(dict.fromkeys(
+            col for col in fd_display_columns if col in fd_display.columns
+        ))
+        st.dataframe(
+            fd_display[fd_display_columns] if fd_display_columns else fd_display,
+            use_container_width=True,
+            hide_index=True
+        )
+
+        if "FD_ID" in fd_players.columns:
+            fd_ids = dict(zip(fd_players["Name"], fd_players["FD_ID"].astype(str)))
+            export_slots = (
+                ["MVP", "FLEX", "FLEX", "FLEX", "FLEX", "FLEX"]
+                if lineup_mode == "Single Game"
+                else ["QB", "RB", "RB", "WR", "WR", "WR", "TE", "FLEX", "D"]
+            )
+            export_data = []
+            missing_ids = []
+            for _, lineup in fd_all_ranked.iterrows():
+                row_ids = []
+                for slot in fd_slots:
+                    name = lineup[slot]
+                    player_id = fd_ids.get(name, "")
+                    if not player_id or player_id.lower() == "nan":
+                        missing_ids.append(name)
+                    row_ids.append(player_id)
+                export_data.append(row_ids)
+            if missing_ids:
+                st.warning("Some player IDs are missing, so export is unavailable.")
+            else:
+                export_df = pd.DataFrame(export_data, columns=export_slots)
+                selected_fd_contest = st.session_state.get("selected_fd_contest")
+                if fd_entry_file is None or not selected_fd_contest:
+                    st.warning(
+                        "Upload your FanDuel contest entry template and select the contest above "
+                        "to create a replacement CSV. A lineup-only CSV cannot replace existing entries."
+                    )
+                else:
+                    try:
+                        import csv
+                        import io
+                        fd_template_text = fd_entry_file.getvalue().decode("utf-8-sig", errors="replace")
+                        fd_template_rows = list(csv.reader(io.StringIO(fd_template_text)))
+                        if not fd_template_rows:
+                            raise ValueError("The uploaded FanDuel entry template is empty.")
+                        fd_template_header = [str(c).strip() for c in fd_template_rows[0]]
+                        fd_entry_end = 1
+                        while fd_entry_end < len(fd_template_rows):
+                            row = fd_template_rows[fd_entry_end]
+                            if not row or not str(row[0]).strip():
+                                break
+                            fd_entry_end += 1
+
+                        header_lookup = {}
+                        for i, column in enumerate(fd_template_header):
+                            key_name = str(column).strip().upper()
+                            header_lookup.setdefault(key_name, []).append(i)
+                        if lineup_mode == "Single Game":
+                            slot_aliases = [
+                                ("MVP", {"MVP", "MVP - 1.5X POINTS"}),
+                                ("FLEX1", {"ANYFLEX", "FLEX"}),
+                                ("FLEX2", {"ANYFLEX", "FLEX"}),
+                                ("FLEX3", {"ANYFLEX", "FLEX"}),
+                                ("FLEX4", {"ANYFLEX", "FLEX"}),
+                                ("FLEX5", {"ANYFLEX", "FLEX"}),
+                            ]
                         else:
-                            roster = [
+                            slot_aliases = [
                                 ("QB", {"QB"}), ("RB1", {"RB"}), ("RB2", {"RB"}),
                                 ("WR1", {"WR"}), ("WR2", {"WR"}), ("WR3", {"WR"}),
-                                ("TE", {"TE"}), ("FLEX", {"RB", "WR", "TE"}),
-                                ("D", {"D", "DST", "DEF"})
+                                ("TE", {"TE"}), ("FLEX", {"FLEX"}), ("D", {"D", "DEF", "DST"}),
                             ]
-                            # Cache these once per field build instead of scanning the
-                            # whole DataFrame nine times for every attempted lineup.
-                            if "fd_full_field_cache" not in locals():
-                                fd_field_names = fd_pool["Name"].astype(str).to_numpy()
-                                fd_field_salaries = pd.to_numeric(fd_pool["Salary"], errors="coerce").fillna(0).to_numpy(dtype=int)
-                                fd_field_projections = pd.to_numeric(fd_pool["MeanPoints"], errors="coerce").fillna(fd_pool["Projection"]).fillna(0.01).clip(lower=0.01).to_numpy(dtype=float)
-                                fd_field_positions = fd_pool["Eligible"].tolist()
-                                fd_full_field_cache = {
-                                    slot: np.asarray([
-                                        i for i, positions in enumerate(fd_field_positions)
-                                        if bool(positions & eligible)
-                                    ], dtype=int)
-                                    for slot, eligible in roster
-                                }
-                                fd_field_slot_bounds = {
-                                    slot: (
-                                        int(fd_field_salaries[idxs].min()),
-                                        int(fd_field_salaries[idxs].max())
-                                    )
-                                    for slot, idxs in fd_full_field_cache.items() if len(idxs)
-                                }
-                            used_indices = set()
-                            for roster_pos, (slot, eligible) in enumerate(roster):
-                                choices = fd_full_field_cache.get(slot, np.asarray([], dtype=int))
-                                if used_indices:
-                                    choices = choices[~np.isin(choices, np.fromiter(used_indices, dtype=int))]
-                                if not len(choices):
-                                    break
-                                remaining_roster = roster[roster_pos + 1:]
-                                if remaining_roster:
-                                    if any(s not in fd_field_slot_bounds for s, _ in remaining_roster):
-                                        choices = np.asarray([], dtype=int)
-                                    else:
-                                        min_remaining = sum(fd_field_slot_bounds[s][0] for s, _ in remaining_roster)
-                                        max_remaining = sum(fd_field_slot_bounds[s][1] for s, _ in remaining_roster)
-                                        candidate_salary = salary + fd_field_salaries[choices]
-                                        feasible = (
-                                            (candidate_salary + max_remaining >= fd_salary_range[0])
-                                            & (candidate_salary + min_remaining <= min(fd_salary_range[1], 60000))
-                                        )
-                                        choices = choices[feasible]
-                                else:
-                                    candidate_salary = salary + fd_field_salaries[choices]
-                                    choices = choices[
-                                        (candidate_salary >= fd_salary_range[0])
-                                        & (candidate_salary <= min(fd_salary_range[1], 60000))
-                                    ]
-                                if not len(choices):
-                                    break
-                                weights = np.clip(fd_weights[choices].astype(float), 0.0001, None)
-                                if lineup_mode == "Full Roster":
-                                    _fd_choice_means = np.clip(fd_field_projections[choices].astype(float), 0.01, None)
-                                    _fd_mean_scale = _fd_choice_means / max(float(np.mean(_fd_choice_means)), 0.01)
-                                    # 0.10 splits the difference between the original field and
-                                    # the 0.20 test that made the FanDuel field slightly too strong.
-                                    weights = weights * np.power(_fd_mean_scale, 0.10)
-                                weights /= weights.sum()
-                                picked_idx = int(rng.choice(choices, p=weights))
-                                name = str(fd_field_names[picked_idx])
-                                chosen[slot] = name
-                                used.add(name)
-                                used_indices.add(picked_idx)
-                                salary += int(fd_field_salaries[picked_idx])
-                                points += float(fd_field_projections[picked_idx])
-                        if len(chosen) != len(fd_slots):
-                            continue
-                        if salary < fd_salary_range[0] or salary > fd_salary_range[1] or salary > 60000:
-                            continue
-                        key = tuple(chosen[slot] for slot in fd_slots)
-                        if key in seen_opponents:
-                            continue
-                        seen_opponents.add(key)
-                        opponent_rows.append({**chosen, "Salary": salary, "ProjectedPoints": round(points, 2)})
-                        if len(opponent_rows) % 100 == 0 or len(opponent_rows) >= fd_opponent_target:
-                            fd_field_progress.progress(
-                                min(1.0, len(opponent_rows) / max(fd_opponent_target, 1)),
-                                text=f"Building FanDuel opponent field: {len(opponent_rows):,} / {fd_opponent_target:,}"
-                            )
-                fd_field_progress.empty()
-                opponent_df = pd.DataFrame(opponent_rows)
-                st.session_state["fd_contest_field_" + lineup_mode.replace(" ", "_").lower()] = opponent_df
-                st.session_state["fd_contest_field_ready_" + lineup_mode.replace(" ", "_").lower()] = not opponent_df.empty
-                if not opponent_df.empty:
-                    show_field_ownership(opponent_df, fd_slots, "Simulated FanDuel Player Ownership", captain_slot=("MVP" if lineup_mode == "Single Game" else None))
-                    st.success(f"Created {len(opponent_df):,} simulated FanDuel opponent lineups.")
-                    fd_contest_details = st.session_state.get("selected_fd_contest")
-                    if fd_contest_details:
-                        st.info(
-                            f"Contest selected from your FanDuel entry CSV: {fd_contest_details['name']} "
-                            f"(ID {fd_contest_details['id']}). Your file has "
-                            f"{fd_contest_details['your_entries']} entries in this contest. "
-                            "The opponent field is simulated."
-                        )
-                    if fd_run_all_clicked:
-                        fd_workflow_status.info("Step 4 of 4: Scoring your lineups against the contest field...")
-                    user_lineups = st.session_state.get(fd_build_key)
-                    if user_lineups is None or user_lineups.empty:
-                        st.warning("SIM is running the lineup build and contest comparison together.")
-                    else:
-                        scores = opponent_df["ProjectedPoints"].to_numpy(dtype=float)
-                        compared = add_lineup_field_ownership(user_lineups.copy())
-                        if lineup_mode == "Full Roster" and len(compared) > 0:
-                            _fd_score_values = pd.to_numeric(compared["ProjectedPoints"], errors="coerce").fillna(0.0).to_numpy(dtype=float)
-                            _fd_batch_count = min(4, len(_fd_score_values))
-                            _fd_batches = [batch for batch in np.array_split(np.arange(len(_fd_score_values)), _fd_batch_count) if len(batch)]
-
-                            def _fd_score_batch(indices):
-                                batch_scores = _fd_score_values[indices]
-                                beats = np.asarray([int(np.sum(scores < score)) for score in batch_scores], dtype=int)
-                                percentiles = np.asarray([round(100.0 * np.mean(scores <= score), 1) for score in batch_scores], dtype=float)
-                                ranks = np.asarray([1 + int(np.sum(scores > score)) for score in batch_scores], dtype=int)
-                                return indices, beats, percentiles, ranks
-
-                            _fd_beats = np.zeros(len(_fd_score_values), dtype=int)
-                            _fd_percentiles = np.zeros(len(_fd_score_values), dtype=float)
-                            _fd_ranks = np.ones(len(_fd_score_values), dtype=int)
-                            with ThreadPoolExecutor(max_workers=4) as _fd_executor:
-                                _fd_futures = [_fd_executor.submit(_fd_score_batch, batch) for batch in _fd_batches]
-                                for _fd_future in as_completed(_fd_futures):
-                                    _fd_indices, _fd_b, _fd_p, _fd_r = _fd_future.result()
-                                    _fd_beats[_fd_indices] = _fd_b
-                                    _fd_percentiles[_fd_indices] = _fd_p
-                                    _fd_ranks[_fd_indices] = _fd_r
-                            compared["BeatsOpponents"] = _fd_beats
-                            compared["FieldPercentile"] = _fd_percentiles
-                            compared["FieldRank"] = _fd_ranks
-                        else:
-                            compared["BeatsOpponents"] = compared["ProjectedPoints"].apply(lambda score: int(np.sum(scores < float(score))))
-                            compared["FieldPercentile"] = compared["ProjectedPoints"].apply(lambda score: round(100.0 * np.mean(scores <= float(score)), 1))
-                            compared["FieldRank"] = compared["ProjectedPoints"].apply(lambda score: 1 + int(np.sum(scores > float(score))))
-                        compared = add_field_ranking_metrics(compared, scores)
-                        st.session_state["fd_contest_comparison_" + lineup_mode.replace(" ", "_").lower()] = compared
-                        st.write("### FanDuel Lineups vs. Simulated Contest Field")
-                        st.caption("This is an estimate using projected points, not actual contest results.")
-                        st.dataframe(compared, use_container_width=True, hide_index=True)
-                        if lineup_mode == "Full Roster":
-                            _fd_selected = st.session_state.get("selected_fd_contest") or {}
-                            _fd_fee = _fd_selected.get("entry_fee")
-                            _fd_my_entries = int(_fd_selected.get("your_entries") or 0)
-                            if _fd_selected and _fd_fee is not None and _fd_my_entries > 0:
-                                _fd_total_fees = float(_fd_fee) * _fd_my_entries
-                                st.write("### FanDuel Contest Sim + ROI")
-                                _fd_field_label = _fd_selected.get("field_size") or _fd_selected.get("current_entries")
-                                _fd_caption = f"{_fd_selected.get('name', 'Selected FanDuel contest')} · {_fd_my_entries} of your entries"
-                                if _fd_field_label:
-                                    _fd_caption += f" · full field {int(_fd_field_label):,}"
-                                st.caption(_fd_caption)
-                                _fd_roi_cols = st.columns(5)
-                                _fd_roi_cols[0].metric("Entries", f"{_fd_my_entries}")
-                                _fd_roi_cols[1].metric("Entry Fees", f"${_fd_total_fees:,.2f}")
-                                _fd_contest_name = str(_fd_selected.get("name", ""))
-                                if "45K Sun NFL Hail Mary" in _fd_contest_name:
-                                    _fd_payout_tiers = [
-                                        (1, 1, 2000.0), (2, 2, 1000.0), (3, 3, 750.0),
-                                        (4, 4, 500.0), (5, 5, 300.0), (6, 6, 200.0),
-                                        (7, 7, 150.0), (8, 8, 125.0), (9, 10, 100.0),
-                                        (11, 12, 75.0), (13, 15, 50.0), (16, 20, 30.0),
-                                        (21, 25, 20.0), (26, 30, 15.0), (31, 40, 10.0),
-                                        (41, 50, 7.50), (51, 75, 5.0), (76, 100, 4.0),
-                                        (101, 150, 3.0), (151, 300, 2.0), (301, 600, 1.50),
-                                        (601, 1000, 1.25), (1001, 3000, 1.0),
-                                        (3001, 7500, 0.80), (7501, 15000, 0.70),
-                                        (15001, 30000, 0.60), (30001, 65000, 0.50),
-                                    ]
-                                    _fd_full_field = int(_fd_field_label or 65000)
-                                    _fd_rep_field = max(len(scores), 1)
-                                    _fd_scaled_ranks = 1 + np.floor(
-                                        np.maximum(pd.to_numeric(compared["FieldRank"], errors="coerce").fillna(_fd_rep_field).to_numpy(dtype=float) - 1.0, 0.0)
-                                        * max(_fd_full_field - 1, 0) / max(_fd_rep_field - 1, 1)
-                                    ).astype(int)
-                                    _fd_scaled_ranks = np.clip(_fd_scaled_ranks, 1, max(_fd_full_field, 1))
-                                    def _fd_prize_for_rank(rank):
-                                        for lo, hi, prize in _fd_payout_tiers:
-                                            if lo <= int(rank) <= hi:
-                                                return float(prize)
-                                        return 0.0
-                                    compared["Estimated Full Field Rank"] = _fd_scaled_ranks
-                                    compared["Expected Prize ($)"] = [_fd_prize_for_rank(r) for r in _fd_scaled_ranks]
-                                    compared["Expected Net ($)"] = compared["Expected Prize ($)"] - float(_fd_fee)
-                                    compared["Expected ROI (%)"] = 100.0 * compared["Expected Net ($)"] / max(float(_fd_fee), 0.01)
-                                    _fd_entry_count = min(_fd_my_entries, len(compared))
-                                    _fd_entry_pool = compared.nlargest(_fd_entry_count, "ContestScore") if _fd_entry_count > 0 else compared.iloc[0:0]
-                                    _fd_expected_winnings = float(_fd_entry_pool["Expected Prize ($)"].sum())
-                                    _fd_expected_profit = _fd_expected_winnings - _fd_total_fees
-                                    _fd_expected_roi = 100.0 * _fd_expected_profit / max(_fd_total_fees, 0.01)
-                                    _fd_roi_cols[2].metric("Expected Winnings", f"${_fd_expected_winnings:,.2f}")
-                                    _fd_roi_cols[3].metric("Expected Profit", f"${_fd_expected_profit:,.2f}")
-                                    _fd_roi_cols[4].metric("Expected ROI", f"{_fd_expected_roi:,.1f}%")
-                                    st.caption("Uses the supplied Hail Mary payout ladder through 65,000th place. Representative-field ranks are scaled to the full contest field.")
-                                else:
-                                    _fd_roi_cols[2].metric("Expected Winnings", "Pending payouts")
-                                    _fd_roi_cols[3].metric("Expected Profit", "Pending payouts")
-                                    _fd_roi_cols[4].metric("Expected ROI", "Pending payouts")
-                                    if not _fd_selected.get("prize_summary"):
-                                        st.caption("Exact FanDuel winnings and ROI require the contest payout ladder. The app will not invent payouts when FanDuel does not expose them.")
-                        if all(c in compared.columns for c in ["Top1", "Top5", "Top10", "CashRate"]):
-                            _fd_sanity = pd.DataFrame([{
-                                "Top 1%": round(100 * float(compared["Top1"].mean()), 2),
-                                "Top 5%": round(100 * float(compared["Top5"].mean()), 2),
-                                "Top 10%": round(100 * float(compared["Top10"].mean()), 2),
-                                "Cash %": round(100 * float(compared["CashRate"].mean()), 2),
-                            }])
-                            st.write("### Field Sanity Check")
-                            st.dataframe(_fd_sanity, use_container_width=True, hide_index=True)
-                        # Keep the contest results area consistent with DraftKings Classic and Showdown.
-                else:
-                    st.error("Could not create valid FanDuel opponent lineups. Check the player pool and salary range.")
-            if fd_run_all_clicked:
-                fd_workflow_status.success("FanDuel SIM complete: player simulations, lineup build, opponent field, and contest comparison finished.")
-
-        fd_results = st.session_state.get(fd_build_key)
-        if fd_results is not None:
-            fd_results = remove_out_players_from_lineups(fd_results, fd_slots, "FanDuel")
-            st.session_state[fd_build_key] = fd_results
-            st.write(f"Built {len(fd_results)} FanDuel lineups.")
-
-            # Use the same ranking choices as DraftKings Showdown for both FanDuel formats.
-            fd_comparison_key = "fd_contest_comparison_" + lineup_mode.replace(" ", "_").lower()
-            fd_rank_source = st.session_state.get(fd_comparison_key)
-            if not isinstance(fd_rank_source, pd.DataFrame) or fd_rank_source.empty:
-                fd_rank_source = add_field_ranking_metrics(fd_results, fd_results["ProjectedPoints"].to_numpy(dtype=float))
-            fd_rank_label = st.selectbox(
-                "Rank lineups by", list(PORTFOLIO_METRICS.keys()),
-                key="fd_rank_metric_" + lineup_mode.replace(" ", "_").lower()
-            )
-            fd_rank_column = PORTFOLIO_METRICS[fd_rank_label]
-            fd_rank_source = fd_rank_source.sort_values(fd_rank_column, ascending=False).reset_index(drop=True)
-            fd_rank_count = st.number_input(
-                "Number of lineups to show", min_value=1, max_value=max(1, len(fd_rank_source)),
-                value=min(20, max(1, len(fd_rank_source))), step=1,
-                key="fd_rank_count_" + lineup_mode.replace(" ", "_").lower()
-            )
-            st.caption("Run SIM/contest comparison first for field-based estimates. Without a completed comparison, ranking uses the available lineup results as a temporary estimate.")
-            # Keep all built lineups for export. The display limit only controls
-            # how many rows are shown on screen, not how many get downloaded.
-            fd_all_ranked = fd_rank_source.copy()
-            fd_results = fd_all_ranked.head(int(fd_rank_count)).copy()
-
-            # Use the same player-by-player points layout as the DraftKings Portfolio.
-            fd_display = fd_results.copy()
-            fd_player_means = {
-                str(name): float(values.get("Mean", 0.0))
-                for name, values in player_sim.items()
-            }
-            fd_display_columns = []
-            for slot in fd_slots:
-                if slot not in fd_display.columns:
-                    continue
-                multiplier = 1.5 if slot in {"MVP"} else 1.0
-                points_col = slot + " Sim Pts"
-                fd_display[points_col] = fd_display[slot].map(
-                    lambda player: round(fd_player_means.get(str(player), 0.0) * multiplier, 2)
-                )
-                fd_display_columns.extend([slot, points_col])
-            if "ProjectedPoints" in fd_display.columns:
-                fd_display_columns.append("ProjectedPoints")
-            if "Score" in fd_display.columns:
-                fd_display_columns.append("Score")
-            if "Salary" in fd_display.columns:
-                fd_display_columns.append("Salary")
-            fd_display_columns = list(dict.fromkeys(
-                col for col in fd_display_columns if col in fd_display.columns
-            ))
-            st.dataframe(
-                fd_display[fd_display_columns] if fd_display_columns else fd_display,
-                use_container_width=True,
-                hide_index=True
-            )
-
-            if "FD_ID" in fd_players.columns:
-                fd_ids = dict(zip(fd_players["Name"], fd_players["FD_ID"].astype(str)))
-                export_slots = (
-                    ["MVP", "FLEX", "FLEX", "FLEX", "FLEX", "FLEX"]
-                    if lineup_mode == "Single Game"
-                    else ["QB", "RB", "RB", "WR", "WR", "WR", "TE", "FLEX", "D"]
-                )
-                export_data = []
-                missing_ids = []
-                for _, lineup in fd_all_ranked.iterrows():
-                    row_ids = []
-                    for slot in fd_slots:
-                        name = lineup[slot]
-                        player_id = fd_ids.get(name, "")
-                        if not player_id or player_id.lower() == "nan":
-                            missing_ids.append(name)
-                        row_ids.append(player_id)
-                    export_data.append(row_ids)
-                if missing_ids:
-                    st.warning("Some player IDs are missing, so export is unavailable.")
-                else:
-                    export_df = pd.DataFrame(export_data, columns=export_slots)
-                    selected_fd_contest = st.session_state.get("selected_fd_contest")
-                    if fd_entry_file is None or not selected_fd_contest:
-                        st.warning(
-                            "Upload your FanDuel contest entry template and select the contest above "
-                            "to create a replacement CSV. A lineup-only CSV cannot replace existing entries."
-                        )
-                    else:
-                        try:
-                            import csv
-                            import io
-                            fd_template_text = fd_entry_file.getvalue().decode("utf-8-sig", errors="replace")
-                            fd_template_rows = list(csv.reader(io.StringIO(fd_template_text)))
-                            if not fd_template_rows:
-                                raise ValueError("The uploaded FanDuel entry template is empty.")
-                            fd_template_header = [str(c).strip() for c in fd_template_rows[0]]
-                            fd_entry_end = 1
-                            while fd_entry_end < len(fd_template_rows):
-                                row = fd_template_rows[fd_entry_end]
-                                if not row or not str(row[0]).strip():
-                                    break
-                                fd_entry_end += 1
-
-                            header_lookup = {}
-                            for i, column in enumerate(fd_template_header):
-                                key_name = str(column).strip().upper()
-                                header_lookup.setdefault(key_name, []).append(i)
-                            if lineup_mode == "Single Game":
-                                slot_aliases = [
-                                    ("MVP", {"MVP", "MVP - 1.5X POINTS"}),
-                                    ("FLEX1", {"ANYFLEX", "FLEX"}),
-                                    ("FLEX2", {"ANYFLEX", "FLEX"}),
-                                    ("FLEX3", {"ANYFLEX", "FLEX"}),
-                                    ("FLEX4", {"ANYFLEX", "FLEX"}),
-                                    ("FLEX5", {"ANYFLEX", "FLEX"}),
-                                ]
-                            else:
-                                slot_aliases = [
-                                    ("QB", {"QB"}), ("RB1", {"RB"}), ("RB2", {"RB"}),
-                                    ("WR1", {"WR"}), ("WR2", {"WR"}), ("WR3", {"WR"}),
-                                    ("TE", {"TE"}), ("FLEX", {"FLEX"}), ("D", {"D", "DEF", "DST"}),
-                                ]
-                            roster_column_indices = []
-                            used_indices = set()
-                            for slot_name, aliases in slot_aliases:
-                                index = next(
-                                    (i for alias in aliases for i in header_lookup.get(alias, [])
-                                     if i not in used_indices),
-                                    None
-                                )
-                                if index is None:
-                                    raise ValueError(
-                                        f"Could not find the FanDuel upload column for {slot_name}. "
-                                        "Make sure you uploaded the correct Single Game or Full Roster template."
-                                    )
-                                roster_column_indices.append(index)
-                                used_indices.add(index)
-
-                            entry_id_index = next(
-                                (i for i, name in enumerate(fd_template_header)
-                                 if str(name).strip().casefold() in {"entry id", "entry_id", "entryid"}),
+                        roster_column_indices = []
+                        used_indices = set()
+                        for slot_name, aliases in slot_aliases:
+                            index = next(
+                                (i for alias in aliases for i in header_lookup.get(alias, [])
+                                 if i not in used_indices),
                                 None
                             )
-                            contest_id_index = next(
-                                (i for i, name in enumerate(fd_template_header)
-                                 if str(name).strip().casefold() in {"contest id", "contest_id", "contestid"}),
-                                None
-                            )
-                            contest_name_index = next(
-                                (i for i, name in enumerate(fd_template_header)
-                                 if str(name).strip().casefold() in {"contest name", "contest_name", "contest"}),
-                                None
-                            )
-                            if entry_id_index is None or contest_id_index is None:
-                                raise ValueError("The FanDuel template must include Entry ID and Contest ID columns.")
-
-                            target_id = str(selected_fd_contest.get("id", "")).strip()
-                            target_name = str(selected_fd_contest.get("name", "")).strip()
-                            target_rows = []
-                            for row_index in range(1, fd_entry_end):
-                                row = fd_template_rows[row_index]
-                                row = list(row[:len(fd_template_header)]) + [""] * max(0, len(fd_template_header) - len(row))
-                                if str(row[contest_id_index]).strip() != target_id:
-                                    continue
-                                if contest_name_index is not None and str(row[contest_name_index]).strip() != target_name:
-                                    continue
-                                target_rows.append(row_index)
-
-                            if not target_rows:
+                            if index is None:
                                 raise ValueError(
-                                    "No existing entries match the selected contest in this template. "
-                                    "Please select the contest that matches the uploaded file."
+                                    f"Could not find the FanDuel upload column for {slot_name}. "
+                                    "Make sure you uploaded the correct Single Game or Full Roster template."
                                 )
-                            if len(fd_all_ranked) < len(target_rows):
-                                raise ValueError(
-                                    f"This contest has {len(target_rows)} of your entries, but the build contains "
-                                    f"only {len(fd_all_ranked)} lineups. Build at least that many so every entry is replaced."
-                                )
+                            roster_column_indices.append(index)
+                            used_indices.add(index)
 
-                            # Only replace existing entries; never create extra entries.
-                            # Use the FanDuel ID from the uploaded salary file in each roster cell.
-                            for entry_number, row_index in enumerate(target_rows):
-                                lineup = fd_all_ranked.iloc[entry_number]
-                                row = list(fd_template_rows[row_index][:len(fd_template_header)])
-                                row.extend([""] * (len(fd_template_header) - len(row)))
-                                for slot_index, (slot_name, _) in zip(roster_column_indices, slot_aliases):
-                                    player_name = str(lineup[slot_name])
-                                    player_id = str(fd_ids.get(player_name, "")).strip()
-                                    if not player_id or player_id.lower() == "nan":
-                                        raise ValueError(f"Missing FanDuel player ID for {player_name}.")
-                                    # FanDuel entry templates use slate-prefixed player IDs
-                                    # (for example, 135282-62239). Add the selected slate prefix
-                                    # when the salary file supplies only the numeric player ID.
-                                    if "-" not in player_id and "-" in target_id:
-                                        player_id = target_id.split("-", 1)[0] + "-" + player_id
-                                    row[slot_index] = player_id
-                                fd_template_rows[row_index] = row
+                        entry_id_index = next(
+                            (i for i, name in enumerate(fd_template_header)
+                             if str(name).strip().casefold() in {"entry id", "entry_id", "entryid"}),
+                            None
+                        )
+                        contest_id_index = next(
+                            (i for i, name in enumerate(fd_template_header)
+                             if str(name).strip().casefold() in {"contest id", "contest_id", "contestid"}),
+                            None
+                        )
+                        contest_name_index = next(
+                            (i for i, name in enumerate(fd_template_header)
+                             if str(name).strip().casefold() in {"contest name", "contest_name", "contest"}),
+                            None
+                        )
+                        if entry_id_index is None or contest_id_index is None:
+                            raise ValueError("The FanDuel template must include Entry ID and Contest ID columns.")
 
-                            output = io.StringIO(newline="")
-                            csv.writer(output, lineterminator="\\n").writerows(fd_template_rows)
-                            st.success(
-                                f"Replacement file ready: {len(target_rows)} existing entries will be updated "
-                                f"for {target_name}. Entry IDs and contest details are preserved."
+                        target_id = str(selected_fd_contest.get("id", "")).strip()
+                        target_name = str(selected_fd_contest.get("name", "")).strip()
+                        target_rows = []
+                        for row_index in range(1, fd_entry_end):
+                            row = fd_template_rows[row_index]
+                            row = list(row[:len(fd_template_header)]) + [""] * max(0, len(fd_template_header) - len(row))
+                            if str(row[contest_id_index]).strip() != target_id:
+                                continue
+                            if contest_name_index is not None and str(row[contest_name_index]).strip() != target_name:
+                                continue
+                            target_rows.append(row_index)
+
+                        if not target_rows:
+                            raise ValueError(
+                                "No existing entries match the selected contest in this template. "
+                                "Please select the contest that matches the uploaded file."
                             )
-                            st.download_button(
-                                "DOWNLOAD FANDUEL REPLACEMENT CSV",
-                                output.getvalue().encode("utf-8"),
-                                file_name=("FanDuel_Single_Game_Replacement.csv" if lineup_mode == "Single Game"
-                                           else "FanDuel_Full_Roster_Replacement.csv"),
-                                mime="text/csv",
-                                key="fd_export_" + lineup_mode.replace(" ", "_").lower()
+                        if len(fd_all_ranked) < len(target_rows):
+                            raise ValueError(
+                                f"This contest has {len(target_rows)} of your entries, but the build contains "
+                                f"only {len(fd_all_ranked)} lineups. Build at least that many so every entry is replaced."
                             )
-                        except Exception as exc:
-                            st.error(f"Could not create FanDuel replacement CSV: {exc}")
-            else:
-                st.info("This CSV has no player ID column, so lineup export is unavailable.")
 
-        st.stop()
+                        # Only replace existing entries; never create extra entries.
+                        # Use the FanDuel ID from the uploaded salary file in each roster cell.
+                        for entry_number, row_index in enumerate(target_rows):
+                            lineup = fd_all_ranked.iloc[entry_number]
+                            row = list(fd_template_rows[row_index][:len(fd_template_header)])
+                            row.extend([""] * (len(fd_template_header) - len(row)))
+                            for slot_index, (slot_name, _) in zip(roster_column_indices, slot_aliases):
+                                player_name = str(lineup[slot_name])
+                                player_id = str(fd_ids.get(player_name, "")).strip()
+                                if not player_id or player_id.lower() == "nan":
+                                    raise ValueError(f"Missing FanDuel player ID for {player_name}.")
+                                # FanDuel entry templates use slate-prefixed player IDs
+                                # (for example, 135282-62239). Add the selected slate prefix
+                                # when the salary file supplies only the numeric player ID.
+                                if "-" not in player_id and "-" in target_id:
+                                    player_id = target_id.split("-", 1)[0] + "-" + player_id
+                                row[slot_index] = player_id
+                            fd_template_rows[row_index] = row
+
+                        output = io.StringIO(newline="")
+                        csv.writer(output, lineterminator="\\n").writerows(fd_template_rows)
+                        st.success(
+                            f"Replacement file ready: {len(target_rows)} existing entries will be updated "
+                            f"for {target_name}. Entry IDs and contest details are preserved."
+                        )
+                        st.download_button(
+                            "DOWNLOAD FANDUEL REPLACEMENT CSV",
+                            output.getvalue().encode("utf-8"),
+                            file_name=("FanDuel_Single_Game_Replacement.csv" if lineup_mode == "Single Game"
+                                       else "FanDuel_Full_Roster_Replacement.csv"),
+                            mime="text/csv",
+                            key="fd_export_" + lineup_mode.replace(" ", "_").lower()
+                        )
+                    except Exception as exc:
+                        st.error(f"Could not create FanDuel replacement CSV: {exc}")
+        else:
+            st.info("This CSV has no player ID column, so lineup export is unavailable.")
+
+    st.stop()
 
 else:
 
