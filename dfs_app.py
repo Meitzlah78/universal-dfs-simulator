@@ -5215,6 +5215,110 @@ if platform == "FanDuel":
                         compared["FD Joint Entry"] = False
                         compared.loc[_fd_selected_idx, "FD Joint Entry"] = True
 
+                        # Full Roster final ROI gets a larger representative field without
+                        # slowing candidate construction/ranking. The normal builder remains
+                        # at 10K opponents; only the selected joint portfolio uses up to 50K.
+                        _fd_final_field = opponent_df
+                        if lineup_mode == "Full Roster" and len(opponent_df) < 50000:
+                            _fd_extra_target = 50000 - len(opponent_df)
+                            _fd_extra_rows = []
+                            _fd_extra_attempts = 0
+                            _fd_extra_rng = np.random.default_rng(50123)
+                            _fd_extra_roster = [
+                                ("QB", {"QB"}), ("RB1", {"RB"}), ("RB2", {"RB"}),
+                                ("WR1", {"WR"}), ("WR2", {"WR"}), ("WR3", {"WR"}),
+                                ("TE", {"TE"}), ("FLEX", {"RB", "WR", "TE"}),
+                                ("D", {"D", "DST", "DEF"}),
+                            ]
+                            _fd_final_progress = st.progress(0, text="Building larger final ROI field: 10,000 / 50,000")
+                            while len(_fd_extra_rows) < _fd_extra_target and _fd_extra_attempts < max(600000, _fd_extra_target * 15):
+                                _fd_extra_attempts += 1
+                                _fd_chosen_final = {}
+                                _fd_used_final = set()
+                                _fd_salary_final = 0
+                                _fd_points_final = 0.0
+                                for _fd_pos_final, (_fd_slot_final, _fd_eligible_final) in enumerate(_fd_extra_roster):
+                                    _fd_choices_final = fd_full_field_cache.get(_fd_slot_final, np.asarray([], dtype=int))
+                                    if _fd_used_final:
+                                        _fd_choices_final = _fd_choices_final[~np.isin(_fd_choices_final, np.fromiter(_fd_used_final, dtype=int))]
+                                    if not len(_fd_choices_final):
+                                        break
+                                    _fd_remaining_final = _fd_extra_roster[_fd_pos_final + 1:]
+                                    if _fd_remaining_final:
+                                        if any(s not in fd_field_slot_bounds for s, _ in _fd_remaining_final):
+                                            _fd_choices_final = np.asarray([], dtype=int)
+                                        else:
+                                            _fd_min_remaining_final = sum(fd_field_slot_bounds[s][0] for s, _ in _fd_remaining_final)
+                                            _fd_max_remaining_final = sum(fd_field_slot_bounds[s][1] for s, _ in _fd_remaining_final)
+                                            _fd_candidate_salary_final = _fd_salary_final + fd_field_salaries[_fd_choices_final]
+                                            _fd_choices_final = _fd_choices_final[
+                                                (_fd_candidate_salary_final + _fd_max_remaining_final >= _fd_opponent_salary_min)
+                                                & (_fd_candidate_salary_final + _fd_min_remaining_final <= _fd_opponent_salary_max)
+                                            ]
+                                    else:
+                                        _fd_candidate_salary_final = _fd_salary_final + fd_field_salaries[_fd_choices_final]
+                                        _fd_choices_final = _fd_choices_final[
+                                            (_fd_candidate_salary_final >= _fd_opponent_salary_min)
+                                            & (_fd_candidate_salary_final <= _fd_opponent_salary_max)
+                                        ]
+                                    if not len(_fd_choices_final):
+                                        break
+                                    _fd_weights_final = np.clip(fd_weights[_fd_choices_final].astype(float), 0.0001, None)
+                                    _fd_means_final = np.clip(fd_field_projections[_fd_choices_final].astype(float), 0.01, None)
+                                    _fd_mean_scale_final = _fd_means_final / max(float(np.mean(_fd_means_final)), 0.01)
+                                    _fd_weights_final *= np.power(_fd_mean_scale_final, 0.20)
+                                    _fd_weights_final /= _fd_weights_final.sum()
+                                    _fd_pick_final = int(_fd_extra_rng.choice(_fd_choices_final, p=_fd_weights_final))
+                                    _fd_chosen_final[_fd_slot_final] = str(fd_field_names[_fd_pick_final])
+                                    _fd_used_final.add(_fd_pick_final)
+                                    _fd_salary_final += int(fd_field_salaries[_fd_pick_final])
+                                    _fd_points_final += float(fd_field_projections[_fd_pick_final])
+                                if len(_fd_chosen_final) != len(fd_slots):
+                                    continue
+                                if _fd_salary_final < _fd_opponent_salary_min or _fd_salary_final > _fd_opponent_salary_max:
+                                    continue
+                                _fd_salary_accept_final = {
+                                    60000: 1.00, 59900: 0.90, 59800: 0.72, 59700: 0.58,
+                                    59600: 0.46, 59500: 0.36, 59400: 0.24, 59300: 0.18,
+                                    59200: 0.13, 59100: 0.09, 59000: 0.06,
+                                }.get(int(_fd_salary_final), 0.01 if _fd_salary_final >= 58000 else 0.002)
+                                if _fd_extra_rng.random() > _fd_salary_accept_final:
+                                    continue
+                                _fd_extra_rows.append({**_fd_chosen_final, "Salary": _fd_salary_final, "ProjectedPoints": round(_fd_points_final, 2)})
+                                if len(_fd_extra_rows) % 500 == 0 or len(_fd_extra_rows) >= _fd_extra_target:
+                                    _fd_done_final = len(opponent_df) + len(_fd_extra_rows)
+                                    _fd_final_progress.progress(min(1.0, _fd_done_final / 50000), text=f"Building larger final ROI field: {_fd_done_final:,} / 50,000")
+                            _fd_final_progress.empty()
+                            if _fd_extra_rows:
+                                _fd_final_field = pd.concat([opponent_df, pd.DataFrame(_fd_extra_rows)], ignore_index=True)
+                            st.caption(f"Final joint ROI representative field: {len(_fd_final_field):,} opponents (builder/ranking field remains {len(opponent_df):,}).")
+
+                        # Diagnostic only: estimate exact-roster duplication for selected Full Roster entries.
+                        if lineup_mode == "Full Roster" and len(_fd_selected_idx) and len(_fd_final_field):
+                            _fd_dup_slots = [slot for slot in fd_slots if slot in compared.columns and slot in _fd_final_field.columns]
+                            if _fd_dup_slots:
+                                def _fd_dup_key(frame):
+                                    _keys = []
+                                    for _, _row_dup in frame.iterrows():
+                                        _qb = str(_row_dup.get("QB", ""))
+                                        _rbs = tuple(sorted([str(_row_dup.get("RB1", "")), str(_row_dup.get("RB2", ""))]))
+                                        _wrs = tuple(sorted([str(_row_dup.get("WR1", "")), str(_row_dup.get("WR2", "")), str(_row_dup.get("WR3", ""))]))
+                                        _te = str(_row_dup.get("TE", ""))
+                                        _flex = str(_row_dup.get("FLEX", ""))
+                                        _d = str(_row_dup.get("D", ""))
+                                        _keys.append((_qb, _rbs, _wrs, _te, _flex, _d))
+                                    return _keys
+                                _fd_field_dup_keys = _fd_dup_key(_fd_final_field)
+                                _fd_dup_counts = pd.Series(_fd_field_dup_keys).value_counts()
+                                _fd_selected_dup_keys = _fd_dup_key(compared.iloc[_fd_selected_idx])
+                                _fd_rep_matches = np.asarray([int(_fd_dup_counts.get(k, 0)) for k in _fd_selected_dup_keys], dtype=int)
+                                _fd_dup_scale = max((_fd_full_field_roi - len(_fd_selected_idx)) / max(len(_fd_final_field), 1), 0.0)
+                                _fd_est_field_copies = _fd_rep_matches.astype(float) * _fd_dup_scale
+                                compared["Exact Matches in Final Field"] = np.nan
+                                compared["Estimated Field Copies"] = np.nan
+                                compared.loc[_fd_selected_idx, "Exact Matches in Final Field"] = _fd_rep_matches
+                                compared.loc[_fd_selected_idx, "Estimated Field Copies"] = _fd_est_field_copies
+
                         _fd_columns = {str(name): i for i, name in enumerate(_fd_roi_sim.columns.astype(str))}
                         _fd_roi_slots = [slot for slot in fd_slots if slot in compared.columns and slot in opponent_df.columns]
                         def _fd_matrix_indices(frame):
@@ -5224,7 +5328,7 @@ if platform == "FanDuel":
                             ])
 
                         _fd_user_matrix = _fd_matrix_indices(compared.iloc[_fd_selected_idx])
-                        _fd_field_matrix = _fd_matrix_indices(opponent_df)
+                        _fd_field_matrix = _fd_matrix_indices(_fd_final_field)
                         _fd_valid = (
                             bool(_fd_roi_slots)
                             and np.all(_fd_user_matrix >= 0)
@@ -5263,13 +5367,13 @@ if platform == "FanDuel":
                                 ),
                             )
                             _fd_values = _fd_roi_sim.to_numpy(dtype=float)
-                            _fd_rep_n = max(len(opponent_df), 1)
+                            _fd_rep_n = max(len(_fd_final_field), 1)
                             _fd_full_opponents = max(_fd_full_field_roi - _fd_n_user, 1)
                             _fd_scale = _fd_full_opponents / _fd_rep_n
 
                             for _scenario in _fd_scenario_idx:
                                 _row = _fd_values[_scenario]
-                                _field_scores = np.zeros(len(opponent_df), dtype=float)
+                                _field_scores = np.zeros(len(_fd_final_field), dtype=float)
                                 _user_scores = np.zeros(_fd_n_user, dtype=float)
                                 for _slot_pos, _slot in enumerate(_fd_roi_slots):
                                     _mult = 1.5 if _slot == "MVP" else 1.0
@@ -5640,6 +5744,7 @@ if platform == "FanDuel":
             "ContestScore", "WinRate", "Top1", "Top5", "Top10", "CashRate",
             "AvgPercentile", "Entry Fee ($)", "Expected Prize ($)",
             "Expected Net ($)", "Expected ROI (%)", "Estimated Full Field Rank",
+            "Exact Matches in Final Field", "Estimated Field Copies",
         ]:
             if metric_col in fd_display.columns:
                 fd_display_columns.append(metric_col)
