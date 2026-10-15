@@ -5155,11 +5155,12 @@ if platform == "FanDuel":
                         ]
                         # field_size is the contest capacity returned by FanDuel. Never
                         # substitute the last paid place (65,000) for total field size.
-                        _fd_full_field_roi = int(
-                            _fd_roi_contest.get("field_size")
-                            or _fd_roi_contest.get("current_entries")
-                            or (len(opponent_df) + int(_fd_roi_contest.get("your_entries") or 1))
-                        )
+                        # FanDuel's Hail Mary page shows current entries separately from
+                        # contest capacity. Final rankings/payouts must use the full contest
+                        # capacity (215,568), not the partially filled current-entry count.
+                        _fd_hail_mary_capacity = 215568
+                        _fd_reported_field_size = int(_fd_roi_contest.get("field_size") or 0)
+                        _fd_full_field_roi = max(_fd_hail_mary_capacity, _fd_reported_field_size)
                         _fd_my_entries_roi = max(1, min(
                             int(_fd_roi_contest.get("your_entries") or 1), len(compared)
                         ))
