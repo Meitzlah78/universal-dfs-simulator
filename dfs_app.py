@@ -3884,7 +3884,7 @@ if platform == "FanDuel":
 
     st.write("### Build Settings")
     st.caption("The 5,000-lineup build automatically spreads player exposure while still favoring stronger simulated scores.")
-    build_cols = st.columns([1, 1, 0.65])
+    build_cols = st.columns([0.75, 0.75, 2.5])
     with build_cols[0]:
         fd_salary_range = st.slider(
             "Allowed lineup salary range",
