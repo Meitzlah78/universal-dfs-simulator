@@ -3339,6 +3339,11 @@ def simulate_fd_play_by_play(players_df, rng, n=SIMULATION_COUNT, correlation_st
     """FanDuel-only play-by-play NFL engine: simulate shared plays, then score player stat lines."""
     if not isinstance(players_df, pd.DataFrame) or players_df.empty:
         return pd.DataFrame()
+    requested_n = max(1, int(n))
+    # A full slate at 10,000 x ~64 literal plays is millions of Python iterations.
+    # Build 1,000 complete correlated game scripts, then resample COMPLETE scripts.
+    # This keeps Step 1 fast without breaking within-game/player correlation.
+    n = min(requested_n, 1000)
     pool = players_df.drop_duplicates("Name", keep="first").copy().reset_index(drop=True)
     for col in ("Name", "Team", "Opponent", "Position"):
         if col not in pool.columns:
@@ -3481,7 +3486,13 @@ def simulate_fd_play_by_play(players_df, rng, n=SIMULATION_COUNT, correlation_st
         elif target > 0:
             vals = np.maximum(0.0, rng.normal(target, max(0.75, target * 0.35), n))
         out[name] = np.maximum(vals, 0.0)
-    return pd.DataFrame(out)
+    result = pd.DataFrame(out)
+    if requested_n > n and not result.empty:
+        # Resample row indices once for the entire slate so every player's score
+        # comes from the same underlying simulated game script.
+        take = rng.integers(0, n, size=requested_n)
+        result = result.iloc[take].reset_index(drop=True)
+    return result
 
 
 def apply_fd_nws_weather(fd_players):
