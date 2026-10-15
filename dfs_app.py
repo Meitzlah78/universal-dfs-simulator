@@ -3725,12 +3725,12 @@ if platform == "FanDuel":
         fd_sim_clicked = fd_sim_button
         fd_build_clicked = fd_sim_button
         fd_contest_clicked = fd_sim_button
-        fd_progress_bar = None
         fd_workflow_status = None
         if fd_run_all_clicked:
-            fd_progress_bar = st.progress(2, text="Step 1 of 4: Running player simulations...")
             fd_workflow_status = st.empty()
-            fd_workflow_status.info(f"Step 1 of 4: Running {SIMULATION_COUNT:,} player simulations...")
+            fd_workflow_status.info(
+                f"Step 1 of 4: Running {SIMULATION_COUNT:,} player simulations for FanDuel {lineup_mode}..."
+            )
         if fd_sim_clicked:
             with st.spinner(f"Running {SIMULATION_COUNT:,} shared historical/PBP simulations for FanDuel..."):
                 rng = np.random.default_rng()
@@ -3756,8 +3756,9 @@ if platform == "FanDuel":
                 st.session_state["fd_player_sim_" + lineup_mode.replace(" ", "_").lower()] = player_sim
                 st.session_state["fd_simulation_ready_" + lineup_mode.replace(" ", "_").lower()] = True
             if fd_run_all_clicked:
-                fd_progress_bar.progress(25, text="Step 2 of 4: Building your candidate lineups...")
-                fd_workflow_status.info("Step 2 of 4: Preparing rankings and building your candidate lineups...")
+                fd_workflow_status.info(
+                    "Step 2 of 4: Preparing rankings and building your candidate lineups..."
+                )
 
         fd_signature = (
             "FanDuel",
@@ -3851,17 +3852,10 @@ if platform == "FanDuel":
                 }
 
             for build_attempt in range(max_attempts):
-                if fd_run_all_clicked and (build_attempt % 1000 == 0):
-                    build_progress = min(
-                        49,
-                        25 + int(24 * max(
-                            len(results) / max(target_lineups, 1),
-                            build_attempt / max_attempts
-                        ))
-                    )
-                    fd_progress_bar.progress(
-                        build_progress,
-                        text=f"Step 2 of 4: Building lineups — {len(results):,} of {target_lineups:,} accepted..."
+                if build_attempt % 250 == 0:
+                    fd_build_progress.progress(
+                        min(0.99, build_attempt / max_attempts),
+                        text=f"Building FanDuel {lineup_mode} lineups: {len(results):,} / {target_lineups:,} (checking valid rosters)"
                     )
                 chosen_indices = []
                 chosen = {}
@@ -3919,20 +3913,34 @@ if platform == "FanDuel":
                             for candidate_i in choices:
                                 reserved = used | {int(candidate_i)}
                                 max_remaining_salary = 0
+                                min_remaining_salary = 0
                                 possible = True
-                                temp_reserved = set(reserved)
+                                temp_reserved_max = set(reserved)
+                                temp_reserved_min = set(reserved)
                                 for remaining_slot, _remaining_positions in remaining_roster:
-                                    remaining_choices = [
+                                    remaining_choices_max = [
                                         j for j in eligible_indices[remaining_slot]
-                                        if j not in temp_reserved
+                                        if j not in temp_reserved_max
                                     ]
-                                    if not remaining_choices:
+                                    remaining_choices_min = [
+                                        j for j in eligible_indices[remaining_slot]
+                                        if j not in temp_reserved_min
+                                    ]
+                                    if not remaining_choices_max or not remaining_choices_min:
                                         possible = False
                                         break
-                                    best_j = max(remaining_choices, key=lambda j: int(salaries[j]))
+                                    best_j = max(remaining_choices_max, key=lambda j: int(salaries[j]))
+                                    cheap_j = min(remaining_choices_min, key=lambda j: int(salaries[j]))
                                     max_remaining_salary += int(salaries[best_j])
-                                    temp_reserved.add(int(best_j))
-                                if possible and salary + int(salaries[candidate_i]) + max_remaining_salary >= salary_min:
+                                    min_remaining_salary += int(salaries[cheap_j])
+                                    temp_reserved_max.add(int(best_j))
+                                    temp_reserved_min.add(int(cheap_j))
+                                candidate_total = salary + int(salaries[candidate_i])
+                                if (
+                                    possible
+                                    and candidate_total + max_remaining_salary >= salary_min
+                                    and candidate_total + min_remaining_salary <= salary_max
+                                ):
                                     feasible_choices.append(int(candidate_i))
                             if feasible_choices:
                                 choices = np.asarray(feasible_choices, dtype=int)
@@ -3995,8 +4003,15 @@ if platform == "FanDuel":
                             for i in choices
                         ], dtype=float)
                         weights /= exposure_penalty
-                        weights /= weights.sum()
-                        picked = int(rng.choice(choices, p=weights))
+                        weight_total = weights.sum()
+                        if not np.isfinite(weight_total) or weight_total <= 0:
+                            weights = np.full(len(choices), 1.0 / len(choices), dtype=float)
+                        else:
+                            weights /= weight_total
+                        if lineup_mode == "Full Roster" and rng.random() < 0.25:
+                            picked = int(rng.choice(choices))
+                        else:
+                            picked = int(rng.choice(choices, p=weights))
                         chosen[slot] = names[picked]
                         chosen_indices.append(picked)
                         used.add(picked)
@@ -4014,8 +4029,14 @@ if platform == "FanDuel":
                 for player_name in set(chosen.values()):
                     player_build_counts[str(player_name)] = player_build_counts.get(str(player_name), 0) + 1
                 results.append({**chosen, "Salary": salary, "ProjectedPoints": round(total_points, 2), "Score": round(total_score, 2)})
+                if len(results) % 100 == 0 or len(results) >= target_lineups:
+                    fd_build_progress.progress(
+                        min(1.0, len(results) / target_lineups),
+                        text=f"Building FanDuel {lineup_mode} lineups: {len(results):,} / {target_lineups:,}"
+                    )
                 if len(results) >= target_lineups:
                     break
+            fd_build_progress.empty()
 
             if results:
                 fd_results = pd.DataFrame(results).sort_values(
@@ -4028,14 +4049,8 @@ if platform == "FanDuel":
                     "No valid lineups found. Check player positions, salary values, "
                     "and make sure the uploaded slate has enough players for this contest type."
                 )
-            if fd_run_all_clicked:
-                fd_progress_bar.progress(
-                    50,
-                    text="Step 3 of 4: Building the simulated opponent field..."
-                    if results else "Step 2 of 4: Lineup build did not produce valid lineups."
-                )
-                if results:
-                    fd_workflow_status.info("Step 3 of 4: Building the simulated opponent field...")
+            if fd_run_all_clicked and results:
+                fd_workflow_status.info("Step 3 of 4: Building the simulated opponent field...")
 
         if fd_contest_clicked:
             fd_pool = fd_players.copy()
