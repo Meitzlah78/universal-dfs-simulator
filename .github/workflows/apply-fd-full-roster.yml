@@ -6,6 +6,7 @@ on:
       - feature/salary-csv-upload
     paths:
       - '.github/scripts/make_fd_full_roster_setup.py'
+      - '.github/scripts/fix_fd_player_pool_source.py'
       - '.github/scripts/fix_fd_player_pool_refresh.py'
       - '.github/workflows/apply-fd-full-roster.yml'
 
@@ -25,6 +26,8 @@ jobs:
           python-version: '3.12'
       - name: Apply FanDuel-only patch
         run: python .github/scripts/make_fd_full_roster_setup.py
+      - name: Wire FanDuel Player Pool to mode-specific PBP simulation
+        run: python .github/scripts/fix_fd_player_pool_source.py
       - name: Refresh FanDuel Player Pool after SIM
         run: python .github/scripts/fix_fd_player_pool_refresh.py
       - name: Syntax check
@@ -37,6 +40,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No app changes needed"
           else
-            git commit -m "Apply FanDuel Full Roster defaults [skip ci]"
+            git commit -m "Apply FanDuel Player Pool PBP wiring [skip ci]"
             git push origin HEAD:feature/salary-csv-upload
           fi
