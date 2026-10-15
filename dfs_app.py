@@ -5239,10 +5239,12 @@ if platform == "FanDuel":
                             _fd_holdout_pool = _fd_all_scenarios[_fd_holdout_start:]
                             if len(_fd_holdout_pool) == 0:
                                 _fd_holdout_pool = _fd_all_scenarios
-                            _fd_scenario_count = min(250, len(_fd_holdout_pool))
-                            _fd_scenario_idx = _fd_holdout_pool[
-                                np.linspace(0, len(_fd_holdout_pool) - 1, _fd_scenario_count, dtype=int)
-                            ]
+                            # Top-heavy 200K+ entry GPP ROI is dominated by rare first-place
+                            # outcomes. Use the entire untouched holdout pool for the final joint
+                            # portfolio evaluation instead of only 250 scenarios; otherwise a
+                            # handful of wins can move expected ROI by thousands of percent.
+                            _fd_scenario_count = len(_fd_holdout_pool)
+                            _fd_scenario_idx = _fd_holdout_pool
                             _fd_n_user = len(_fd_selected_idx)
                             _fd_expected_prize = np.zeros(_fd_n_user, dtype=float)
                             _fd_win = np.zeros(_fd_n_user, dtype=float)
