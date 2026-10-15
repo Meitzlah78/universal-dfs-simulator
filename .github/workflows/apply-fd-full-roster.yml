@@ -8,6 +8,7 @@ on:
       - '.github/scripts/fix_fd_player_pool_refresh.py'
       - '.github/scripts/fix_fd_editable_injury_and_columns.py'
       - '.github/scripts/fix_fd_cap_hit.py'
+      - '.github/scripts/calibrate_fd_pbp_roles.py'
       - '.github/workflows/apply-fd-full-roster.yml'
 
 permissions:
@@ -30,6 +31,8 @@ jobs:
         run: python .github/scripts/fix_fd_editable_injury_and_columns.py
       - name: Populate FanDuel Cap Hit from PBP simulations
         run: python .github/scripts/fix_fd_cap_hit.py
+      - name: Calibrate FanDuel PBP player roles
+        run: python .github/scripts/calibrate_fd_pbp_roles.py
       - name: Syntax check
         run: python -m py_compile dfs_app.py
       - name: Commit patched app
