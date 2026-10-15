@@ -4836,7 +4836,7 @@ if platform == "FanDuel":
                             (3001, 7500, 0.80), (7501, 15000, 0.70),
                             (15001, 30000, 0.60), (30001, 65000, 0.50),
                         ]
-                        _fd_full_field_roi = int(_fd_roi_contest.get("field_size") or _fd_roi_contest.get("current_entries") or 65000)
+                        _fd_full_field_roi = int(_fd_roi_contest.get("field_size") or _fd_roi_contest.get("max_entries") or _fd_roi_contest.get("current_entries") or 215568)
                         _fd_payout = np.zeros(_fd_full_field_roi + 1, dtype=float)
                         for _lo, _hi, _prize in _fd_payout_tiers_roi:
                             _fd_payout[max(1, _lo):min(_fd_full_field_roi, _hi) + 1] = float(_prize)
