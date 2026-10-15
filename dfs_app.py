@@ -3430,6 +3430,10 @@ def simulate_fd_play_by_play(players_df, rng, n=SIMULATION_COUNT, correlation_st
                     "rush_tds": _avg("rushing_tds", "rushing_touchdowns", "rush_tds"),
                     "rec_tds": _avg("receiving_tds", "receiving_touchdowns", "rec_tds"),
                     "pass_attempts": _avg("attempts", "passing_attempts"),
+                    "completions": _avg("completions", "passing_completions"),
+                    "pass_yards": _avg("passing_yards", "pass_yards"),
+                    "pass_tds": _avg("passing_tds", "passing_touchdowns", "pass_tds"),
+                    "interceptions": _avg("interceptions", "passing_interceptions"),
                 }
             except Exception:
                 continue
@@ -3521,13 +3525,23 @@ def simulate_fd_play_by_play(players_df, rng, n=SIMULATION_COUNT, correlation_st
                 pace_env = 1.0 + strength * (game_pace[sim_i] - 1.0)
                 edge = side_sign * game_edge[sim_i] * strength
                 pass_rate = float(np.clip(_base_pass_rate - 0.025 * edge, 0.40, 0.74))
+                _qb_hist = _fd_hist_roles.get(qb_name, {}) if qb_name else {}
+                _qa = float(_qb_hist.get("pass_attempts", 0.0))
+                _qc = float(_qb_hist.get("completions", 0.0))
+                _qy = float(_qb_hist.get("pass_yards", 0.0))
+                _qtd = float(_qb_hist.get("pass_tds", 0.0))
+                _qint = float(_qb_hist.get("interceptions", 0.0))
+                _qb_comp_rate = float(np.clip(_qc / max(_qa, 1.0), 0.52, 0.76)) if _qa > 0 else 0.64
+                _qb_ypa = float(np.clip(_qy / max(_qa, 1.0), 5.4, 9.8)) if _qa > 0 else 7.1
+                _qb_td_rate = float(np.clip(_qtd / max(_qa, 1.0), 0.020, 0.090)) if _qa > 0 else 0.045
+                _qb_int_rate = float(np.clip(_qint / max(_qa, 1.0), 0.006, 0.050)) if _qa > 0 else 0.021
                 for _ in range(int(plays_by_sim[sim_i])):
                     is_pass = rng.random() < pass_rate
                     if is_pass and qb_name:
                         if rng.random() < 0.065:
                             sacks_allowed[sim_i] += 1
                             continue
-                        if rng.random() < 0.021:
+                        if rng.random() < _qb_int_rate:
                             stats[qb_name]["interceptions"][sim_i] += 1
                             giveaways[sim_i] += 1
                             continue
@@ -3539,17 +3553,23 @@ def simulate_fd_play_by_play(players_df, rng, n=SIMULATION_COUNT, correlation_st
                         _hist_targets = float(_role.get("targets", 0.0))
                         _hist_recs = float(_role.get("receptions", 0.0))
                         _hist_catch = (_hist_recs / _hist_targets) if _hist_targets > 0 else 0.64
-                        catch_prob = float(np.clip(0.70 * _hist_catch + 0.30 * 0.64, 0.42, 0.88))
+                        # Blend receiver catch history with the QB's own completion rate.
+                        catch_prob = float(np.clip(0.60 * _hist_catch + 0.40 * _qb_comp_rate, 0.42, 0.88))
                         if rng.random() < catch_prob:
                             _hist_ypr = float(_role.get("rec_yards", 0.0)) / max(_hist_recs, 1.0) if _hist_recs > 0 else 11.2
-                            _yard_mean = float(np.clip(_hist_ypr, 5.0, 20.0))
+                            # Reconcile receiver YPR with QB historical YPA/completion rate.
+                            _qb_ypc = _qb_ypa / max(_qb_comp_rate, 0.01)
+                            _yard_mean = float(np.clip(0.65 * _hist_ypr + 0.35 * _qb_ypc, 5.0, 20.0))
                             yards = float(np.clip(rng.gamma(2.0, _yard_mean / 2.0) * score_env, 0.0, 75.0))
                             stats[qb_name]["passing_yards"][sim_i] += yards
                             stats[receiver]["receiving_yards"][sim_i] += yards
                             stats[receiver]["receptions"][sim_i] += 1
                             team_yards[sim_i] += yards
                             _hist_rec_td_rate = float(_role.get("rec_tds", 0.0)) / max(_hist_targets, 1.0) if _hist_targets > 0 else 0.035
-                            td_prob = float(np.clip((0.80 * _hist_rec_td_rate + 0.20 * 0.035) * score_env + max(yards - 20.0, 0.0) * 0.001, 0.006, 0.18))
+                            # A completed pass can score according to both the receiver's
+                            # target TD rate and the QB's historical passing-TD rate.
+                            _qb_td_per_completion = _qb_td_rate / max(_qb_comp_rate, 0.01)
+                            td_prob = float(np.clip((0.55 * _hist_rec_td_rate / max(catch_prob, 0.01) + 0.45 * _qb_td_per_completion) * score_env + max(yards - 20.0, 0.0) * 0.001, 0.006, 0.20))
                             if rng.random() < td_prob:
                                 stats[qb_name]["passing_tds"][sim_i] += 1
                                 stats[receiver]["receiving_tds"][sim_i] += 1
@@ -3573,7 +3593,7 @@ def simulate_fd_play_by_play(players_df, rng, n=SIMULATION_COUNT, correlation_st
                             _run_role = _fd_hist_roles.get(runner, {})
                             _carries = float(_run_role.get("carries", 0.0))
                             _ypc = float(_run_role.get("rush_yards", 0.0)) / max(_carries, 1.0) if _carries > 0 else 4.35
-                            _ypc = float(np.clip(_ypc, 2.5, 7.0))
+                            _ypc = float(np.clip(0.75 * _ypc + 0.25 * 4.25, 2.8, 6.2))
                         else:
                             continue
                         yards = float(np.clip(rng.normal(_ypc * np.sqrt(score_env), max(3.2, abs(_ypc))), -4.0, 45.0))
