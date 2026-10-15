@@ -236,8 +236,13 @@ def opponent_field_selection_weights(pool, fallback_scores):
     """Use ownership as the primary opponent-construction signal for full-roster contests."""
     fallback = np.asarray(fallback_scores, dtype=float)
     lookup = {str(c).strip().casefold(): c for c in pool.columns}
+    # Never feed ownership measured from a previous simulated field back into
+    # the next FanDuel opponent build. That creates a self-reinforcing field and
+    # can make the representative opponents much weaker than the user's lineups.
+    # Prefer true/pregame projected ownership; fall back to the projection-rank
+    # proxy below when no external ownership is available.
     own_col = next((lookup[k] for k in (
-        "field own %", "projected own %", "ownership %", "projected ownership",
+        "projected own %", "ownership %", "projected ownership",
         "projected own", "ownership", "own%", "own"
     ) if k in lookup), None)
     if own_col is not None:
@@ -4943,9 +4948,10 @@ if platform == "FanDuel":
                             if lineup_mode == "Full Roster":
                                 _fd_choice_means = np.clip(fd_field_projections[choices].astype(float), 0.01, None)
                                 _fd_mean_scale = _fd_choice_means / max(float(np.mean(_fd_choice_means)), 0.01)
-                                # 0.10 splits the difference between the original field and
-                                # the 0.20 test that made the FanDuel field slightly too strong.
-                                weights = weights * np.power(_fd_mean_scale, 0.10)
+                                # Full-roster GPP opponents should be competitive rather
+                                # than near-random within each position. Blend ownership with
+                                # simulated mean strength while leaving Single Game untouched.
+                                weights = weights * np.power(_fd_mean_scale, 0.20)
                             weights /= weights.sum()
                             picked_idx = int(rng.choice(choices, p=weights))
                             name = str(fd_field_names[picked_idx])
