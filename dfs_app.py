@@ -5536,8 +5536,8 @@ if platform == "FanDuel":
             str(name): float(values.get("Mean", 0.0))
             for name, values in player_sim.items()
         }
-        if lineup_mode == "Full Roster" and isinstance(compared, pd.DataFrame) and not compared.empty:
-            _fd_all_candidates_export = compared.copy()
+        if lineup_mode == "Full Roster" and isinstance(fd_all_ranked, pd.DataFrame) and not fd_all_ranked.empty:
+            _fd_all_candidates_export = fd_all_ranked.copy()
             st.download_button(
                 "DOWNLOAD ALL CANDIDATE LINEUPS",
                 data=_fd_all_candidates_export.to_csv(index=False).encode("utf-8"),
