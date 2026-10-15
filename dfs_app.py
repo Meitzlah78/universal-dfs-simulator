@@ -4741,8 +4741,8 @@ if platform == "FanDuel":
                     if salary < fd_salary_range[0] or salary > fd_salary_range[1] or salary > 60000:
                         continue
                     key = tuple(chosen[slot] for slot in fd_slots)
-                    if key in seen_opponents:
-                        continue
+                    # Keep duplicates: real FanDuel fields contain repeated lineups,
+                    # and those duplicates must share prizes when they tie.
                     seen_opponents.add(key)
                     opponent_rows.append({**chosen, "Salary": salary, "ProjectedPoints": round(points, 2)})
                     if len(opponent_rows) % 100 == 0 or len(opponent_rows) >= fd_opponent_target:
@@ -4808,11 +4808,103 @@ if platform == "FanDuel":
                         compared["FieldPercentile"] = compared["ProjectedPoints"].apply(lambda score: round(100.0 * np.mean(scores <= float(score)), 1))
                         compared["FieldRank"] = compared["ProjectedPoints"].apply(lambda score: 1 + int(np.sum(scores > float(score))))
                     compared = add_field_ranking_metrics(compared, scores)
+
+                    # TRUE FANDUEL ROI: score user and opponent lineups through the
+                    # same play-by-play outcomes instead of converting one projected
+                    # score into a deterministic full-field rank.
+                    _fd_roi_contest = st.session_state.get("selected_fd_contest") or {}
+                    _fd_roi_name = str(_fd_roi_contest.get("name", ""))
+                    _fd_roi_fee = _fd_roi_contest.get("entry_fee")
+                    _fd_roi_sim = st.session_state.get("fd_simulation_df_" + lineup_mode.replace(" ", "_").lower())
+                    if (
+                        lineup_mode == "Full Roster"
+                        and "45K Sun NFL Hail Mary" in _fd_roi_name
+                        and _fd_roi_fee is not None
+                        and isinstance(_fd_roi_sim, pd.DataFrame)
+                        and not _fd_roi_sim.empty
+                        and len(opponent_df) > 0
+                    ):
+                        _fd_payout_tiers_roi = [
+                            (1, 1, 2000.0), (2, 2, 1000.0), (3, 3, 750.0),
+                            (4, 4, 500.0), (5, 5, 300.0), (6, 6, 200.0),
+                            (7, 7, 150.0), (8, 8, 125.0), (9, 10, 100.0),
+                            (11, 12, 75.0), (13, 15, 50.0), (16, 20, 30.0),
+                            (21, 25, 20.0), (26, 30, 15.0), (31, 40, 10.0),
+                            (41, 50, 7.50), (51, 75, 5.0), (76, 100, 4.0),
+                            (101, 150, 3.0), (151, 300, 2.0), (301, 600, 1.50),
+                            (601, 1000, 1.25), (1001, 3000, 1.0),
+                            (3001, 7500, 0.80), (7501, 15000, 0.70),
+                            (15001, 30000, 0.60), (30001, 65000, 0.50),
+                        ]
+                        _fd_full_field_roi = int(_fd_roi_contest.get("field_size") or _fd_roi_contest.get("current_entries") or 65000)
+                        _fd_payout = np.zeros(_fd_full_field_roi + 1, dtype=float)
+                        for _lo, _hi, _prize in _fd_payout_tiers_roi:
+                            _fd_payout[max(1, _lo):min(_fd_full_field_roi, _hi) + 1] = float(_prize)
+                        _fd_prefix = np.concatenate(([0.0], np.cumsum(_fd_payout[1:])))
+
+                        _fd_columns = {str(name): i for i, name in enumerate(_fd_roi_sim.columns.astype(str))}
+                        _fd_roi_slots = [slot for slot in fd_slots if slot in compared.columns and slot in opponent_df.columns]
+                        def _fd_lineup_indices(frame):
+                            return [
+                                frame[slot].astype(str).map(_fd_columns).fillna(-1).to_numpy(dtype=int)
+                                for slot in _fd_roi_slots
+                            ]
+                        _fd_user_idx = _fd_lineup_indices(compared)
+                        _fd_field_idx = _fd_lineup_indices(opponent_df)
+                        _fd_valid = all(np.all(idx >= 0) for idx in _fd_user_idx + _fd_field_idx)
+                        if _fd_valid and _fd_roi_slots:
+                            _fd_scenario_count = min(250, len(_fd_roi_sim))
+                            _fd_scenario_idx = np.linspace(0, len(_fd_roi_sim) - 1, _fd_scenario_count, dtype=int)
+                            _fd_expected_prize = np.zeros(len(compared), dtype=float)
+                            _fd_win = np.zeros(len(compared), dtype=float)
+                            _fd_top1 = np.zeros(len(compared), dtype=float)
+                            _fd_top5 = np.zeros(len(compared), dtype=float)
+                            _fd_top10 = np.zeros(len(compared), dtype=float)
+                            _fd_cash = np.zeros(len(compared), dtype=float)
+                            _fd_cash_cut = max(1, max(hi for lo, hi, prize in _fd_payout_tiers_roi if prize > 0))
+                            _fd_rep_n = max(len(opponent_df), 1)
+                            _fd_target_opp = max(_fd_full_field_roi - 1, 1)
+                            _fd_scale = _fd_target_opp / _fd_rep_n
+                            _fd_values = _fd_roi_sim.to_numpy(dtype=float)
+                            for _scenario in _fd_scenario_idx:
+                                _row = _fd_values[_scenario]
+                                _field_scores = np.zeros(len(opponent_df), dtype=float)
+                                _user_scores = np.zeros(len(compared), dtype=float)
+                                for _slot, _u_idx, _f_idx in zip(_fd_roi_slots, _fd_user_idx, _fd_field_idx):
+                                    _mult = 1.5 if _slot == "MVP" else 1.0
+                                    _field_scores += _row[_f_idx] * _mult
+                                    _user_scores += _row[_u_idx] * _mult
+                                _sorted = np.sort(_field_scores)
+                                _left = np.searchsorted(_sorted, _user_scores, side="left")
+                                _right = np.searchsorted(_sorted, _user_scores, side="right")
+                                _greater = np.rint((len(_sorted) - _right) * _fd_scale).astype(int)
+                                _equal = np.rint((_right - _left) * _fd_scale).astype(int)
+                                _rank_start = np.clip(_greater + 1, 1, _fd_full_field_roi)
+                                _tie_count = np.maximum(_equal + 1, 1)
+                                _rank_end = np.minimum(_rank_start + _tie_count - 1, _fd_full_field_roi)
+                                _prize_sum = _fd_prefix[_rank_end] - _fd_prefix[_rank_start - 1]
+                                _fd_expected_prize += _prize_sum / _tie_count
+                                _fd_win += (_rank_start == 1)
+                                _fd_top1 += (_rank_start <= max(1, int(np.ceil(_fd_full_field_roi * 0.01))))
+                                _fd_top5 += (_rank_start <= max(1, int(np.ceil(_fd_full_field_roi * 0.05))))
+                                _fd_top10 += (_rank_start <= max(1, int(np.ceil(_fd_full_field_roi * 0.10))))
+                                _fd_cash += (_rank_start <= _fd_cash_cut)
+                            _fd_expected_prize /= _fd_scenario_count
+                            compared["Expected Prize ($)"] = _fd_expected_prize
+                            compared["Expected Net ($)"] = _fd_expected_prize - float(_fd_roi_fee)
+                            compared["Expected ROI (%)"] = 100.0 * compared["Expected Net ($)"] / max(float(_fd_roi_fee), 0.01)
+                            compared["Win %"] = 100.0 * _fd_win / _fd_scenario_count
+                            compared["Top 1%"] = 100.0 * _fd_top1 / _fd_scenario_count
+                            compared["Top 5%"] = 100.0 * _fd_top5 / _fd_scenario_count
+                            compared["Top 10%"] = 100.0 * _fd_top10 / _fd_scenario_count
+                            compared["Cash %"] = 100.0 * _fd_cash / _fd_scenario_count
+                            compared["ContestScore"] = compared["Expected ROI (%)"]
+
                     st.session_state["fd_contest_comparison_" + lineup_mode.replace(" ", "_").lower()] = compared
                     fd_step4_progress.progress(1.0, text="Step 4 of 4 complete: FanDuel contest comparison finished.")
                     fd_step4_status.success("Step 4 of 4 complete: contest comparison finished.")
                     st.write("### FanDuel Lineups vs. Simulated Contest Field")
-                    st.caption("This is an estimate using projected points, not actual contest results.")
+                    st.caption("Contest ROI uses shared FanDuel PBP outcomes when the selected payout ladder is available.")
                     st.dataframe(compared, use_container_width=True, hide_index=True)
                     if lineup_mode == "Full Roster":
                         _fd_selected = st.session_state.get("selected_fd_contest") or {}
@@ -4856,18 +4948,22 @@ if platform == "FanDuel":
                                             return float(prize)
                                     return 0.0
                                 compared["Estimated Full Field Rank"] = _fd_scaled_ranks
-                                compared["Expected Prize ($)"] = [_fd_prize_for_rank(r) for r in _fd_scaled_ranks]
-                                compared["Expected Net ($)"] = compared["Expected Prize ($)"] - float(_fd_fee)
-                                compared["Expected ROI (%)"] = 100.0 * compared["Expected Net ($)"] / max(float(_fd_fee), 0.01)
+                                # True PBP ROI is calculated above. Keep the old projected-rank
+                                # payout only as a fallback if no scenario ROI was available.
+                                if "Expected Prize ($)" not in compared.columns:
+                                    compared["Expected Prize ($)"] = [_fd_prize_for_rank(r) for r in _fd_scaled_ranks]
+                                    compared["Expected Net ($)"] = compared["Expected Prize ($)"] - float(_fd_fee)
+                                    compared["Expected ROI (%)"] = 100.0 * compared["Expected Net ($)"] / max(float(_fd_fee), 0.01)
                                 _fd_entry_count = min(_fd_my_entries, len(compared))
-                                _fd_entry_pool = compared.nlargest(_fd_entry_count, "ContestScore") if _fd_entry_count > 0 else compared.iloc[0:0]
+                                _fd_rank_for_entries = "Expected ROI (%)" if "Expected ROI (%)" in compared.columns else "ContestScore"
+                                _fd_entry_pool = compared.nlargest(_fd_entry_count, _fd_rank_for_entries) if _fd_entry_count > 0 else compared.iloc[0:0]
                                 _fd_expected_winnings = float(_fd_entry_pool["Expected Prize ($)"].sum())
                                 _fd_expected_profit = _fd_expected_winnings - _fd_total_fees
                                 _fd_expected_roi = 100.0 * _fd_expected_profit / max(_fd_total_fees, 0.01)
                                 _fd_roi_cols[2].metric("Expected Winnings", f"${_fd_expected_winnings:,.2f}")
                                 _fd_roi_cols[3].metric("Expected Profit", f"${_fd_expected_profit:,.2f}")
                                 _fd_roi_cols[4].metric("Expected ROI", f"{_fd_expected_roi:,.1f}%")
-                                st.caption("Uses the supplied Hail Mary payout ladder through 65,000th place. Representative-field ranks are scaled to the full contest field.")
+                                st.caption("Uses shared PBP outcomes plus the Hail Mary payout ladder. Duplicate lineups and tied scores split the occupied prizes.")
                                 _fd_summary_download = pd.DataFrame([{
                                     "Contest": _fd_selected.get("name", "Selected FanDuel contest"),
                                     "Contest ID": _fd_selected.get("id", ""),
