@@ -4933,16 +4933,20 @@ if platform == "FanDuel":
                                     min_remaining = sum(fd_field_slot_bounds[s][0] for s, _ in remaining_roster)
                                     max_remaining = sum(fd_field_slot_bounds[s][1] for s, _ in remaining_roster)
                                     candidate_salary = salary + fd_field_salaries[choices]
+                                    _fd_opponent_salary_min = 59000 if lineup_mode == "Full Roster" else fd_salary_range[0]
+                                    _fd_opponent_salary_max = 60000 if lineup_mode == "Full Roster" else min(fd_salary_range[1], 60000)
                                     feasible = (
-                                        (candidate_salary + max_remaining >= fd_salary_range[0])
-                                        & (candidate_salary + min_remaining <= min(fd_salary_range[1], 60000))
+                                        (candidate_salary + max_remaining >= _fd_opponent_salary_min)
+                                        & (candidate_salary + min_remaining <= _fd_opponent_salary_max)
                                     )
                                     choices = choices[feasible]
                             else:
                                 candidate_salary = salary + fd_field_salaries[choices]
+                                _fd_opponent_salary_min = 59000 if lineup_mode == "Full Roster" else fd_salary_range[0]
+                                _fd_opponent_salary_max = 60000 if lineup_mode == "Full Roster" else min(fd_salary_range[1], 60000)
                                 choices = choices[
-                                    (candidate_salary >= fd_salary_range[0])
-                                    & (candidate_salary <= min(fd_salary_range[1], 60000))
+                                    (candidate_salary >= _fd_opponent_salary_min)
+                                    & (candidate_salary <= _fd_opponent_salary_max)
                                 ]
                             if not len(choices):
                                 break
@@ -4964,7 +4968,9 @@ if platform == "FanDuel":
                             points += float(fd_field_projections[picked_idx])
                     if len(chosen) != len(fd_slots):
                         continue
-                    if salary < fd_salary_range[0] or salary > fd_salary_range[1] or salary > 60000:
+                    _fd_opponent_salary_min = 59000 if lineup_mode == "Full Roster" else fd_salary_range[0]
+                    _fd_opponent_salary_max = 60000 if lineup_mode == "Full Roster" else min(fd_salary_range[1], 60000)
+                    if salary < _fd_opponent_salary_min or salary > _fd_opponent_salary_max:
                         continue
                     # Calibrate FanDuel NFL Full Roster salary usage to observed large-field
                     # contest behavior. In a 568k-entry historical contest the average salary
