@@ -3548,23 +3548,40 @@ def simulate_fd_play_by_play(players_df, rng, n=SIMULATION_COUNT, correlation_st
                             stats[receiver]["receiving_yards"][sim_i] += yards
                             stats[receiver]["receptions"][sim_i] += 1
                             team_yards[sim_i] += yards
-                            td_prob = float(np.clip(0.035 * score_env + max(yards - 20.0, 0.0) * 0.0015, 0.015, 0.18))
+                            _hist_rec_td_rate = float(_role.get("rec_tds", 0.0)) / max(_hist_targets, 1.0) if _hist_targets > 0 else 0.035
+                            td_prob = float(np.clip((0.80 * _hist_rec_td_rate + 0.20 * 0.035) * score_env + max(yards - 20.0, 0.0) * 0.001, 0.006, 0.18))
                             if rng.random() < td_prob:
                                 stats[qb_name]["passing_tds"][sim_i] += 1
                                 stats[receiver]["receiving_tds"][sim_i] += 1
                                 team_points[sim_i] += 7
-                    elif rb_names:
-                        runner_i = int(rng.choice(len(rb_names), p=rb_w))
-                        runner = rb_names[runner_i]
-                        _rb_role = _fd_hist_roles.get(runner, {})
-                        _rb_carries = float(_rb_role.get("carries", 0.0))
-                        _rb_ypc = float(_rb_role.get("rush_yards", 0.0)) / max(_rb_carries, 1.0) if _rb_carries > 0 else 4.35
-                        _rb_ypc = float(np.clip(_rb_ypc, 2.5, 7.0))
-                        yards = float(np.clip(rng.normal(_rb_ypc * np.sqrt(score_env), max(3.2, _rb_ypc)), -4.0, 45.0))
-                        yards = max(yards, -4.0)
+                    elif rb_names or qb_name:
+                        # Allocate QB rushing INSIDE the existing run-play pool so it
+                        # replaces an RB carry rather than creating an extra team play.
+                        _qb_carries_hist = float(_fd_hist_roles.get(qb_name, {}).get("carries", 0.0)) if qb_name else 0.0
+                        _rb_carries_hist = float(sum(max(_fd_hist_roles.get(x, {}).get("carries", 0.0), 0.0) for x in rb_names))
+                        _qb_rush_share = float(np.clip(_qb_carries_hist / max(_qb_carries_hist + _rb_carries_hist, 1.0), 0.0, 0.35))
+                        _use_qb = bool(qb_name and rng.random() < _qb_rush_share)
+                        if _use_qb:
+                            runner = qb_name
+                            _run_role = _fd_hist_roles.get(runner, {})
+                            _carries = float(_run_role.get("carries", 0.0))
+                            _ypc = float(_run_role.get("rush_yards", 0.0)) / max(_carries, 1.0) if _carries > 0 else 4.5
+                            _ypc = float(np.clip(_ypc, 2.0, 8.5))
+                        elif rb_names:
+                            runner_i = int(rng.choice(len(rb_names), p=rb_w))
+                            runner = rb_names[runner_i]
+                            _run_role = _fd_hist_roles.get(runner, {})
+                            _carries = float(_run_role.get("carries", 0.0))
+                            _ypc = float(_run_role.get("rush_yards", 0.0)) / max(_carries, 1.0) if _carries > 0 else 4.35
+                            _ypc = float(np.clip(_ypc, 2.5, 7.0))
+                        else:
+                            continue
+                        yards = float(np.clip(rng.normal(_ypc * np.sqrt(score_env), max(3.2, abs(_ypc))), -4.0, 45.0))
                         stats[runner]["rushing_yards"][sim_i] += yards
                         team_yards[sim_i] += max(yards, 0.0)
-                        if rng.random() < float(np.clip(0.026 * score_env + max(yards - 15.0, 0.0) * 0.002, 0.01, 0.14)):
+                        _hist_rush_td_rate = float(_run_role.get("rush_tds", 0.0)) / max(_carries, 1.0) if _carries > 0 else 0.026
+                        _rush_td_prob = float(np.clip((0.80 * _hist_rush_td_rate + 0.20 * 0.026) * score_env + max(yards - 15.0, 0.0) * 0.001, 0.004, 0.16))
+                        if rng.random() < _rush_td_prob:
                             stats[runner]["rushing_tds"][sim_i] += 1
                             team_points[sim_i] += 7
                     if rng.random() < 0.006:
@@ -3573,22 +3590,6 @@ def simulate_fd_play_by_play(players_df, rng, n=SIMULATION_COUNT, correlation_st
                             carrier = str(rng.choice(carrier_pool))
                             stats[carrier]["fumbles_lost"][sim_i] += 1
                             giveaways[sim_i] += 1
-                # Add this QB's historical rushing role as real stat-line events.
-                # These are carries/scrambles, rushing yards and rushing TDs before
-                # FanDuel scoring; no fantasy points are added after the fact.
-                if qb_name and _qb_rush_role:
-                    _mean_qb_carries = float(_qb_rush_role.get("carries", 0.0))
-                    _qb_carries = int(np.clip(rng.poisson(max(_mean_qb_carries * pace_env, 0.0)), 0, 18))
-                    _qb_ypc = float(_qb_rush_role.get("ypc", 4.5))
-                    _qb_td_rate = float(_qb_rush_role.get("td_per_carry", 0.0))
-                    for _ in range(_qb_carries):
-                        _rush_yards = float(np.clip(rng.normal(_qb_ypc, max(2.0, abs(_qb_ypc) * 0.75)), -3.0, 35.0))
-                        stats[qb_name]["rushing_yards"][sim_i] += _rush_yards
-                        team_yards[sim_i] += max(_rush_yards, 0.0)
-                        if rng.random() < _qb_td_rate * score_env:
-                            stats[qb_name]["rushing_tds"][sim_i] += 1
-                            team_points[sim_i] += 7
-
                 # Kicking comes from possessions that did not become touchdowns.
                 for _, kr in ks.iterrows():
                     kn = str(kr["Name"])
