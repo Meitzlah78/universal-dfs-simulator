@@ -1,9 +1,9 @@
-name: Apply FanDuel opponent salary separation
+name: Apply FanDuel Hail Mary capacity fix
 on:
   push:
     branches: [feature/salary-csv-upload]
     paths:
-      - '.github/scripts/separate_fd_opponent_salary.py'
+      - '.github/scripts/fix_fd_hail_mary_field_size.py'
       - '.github/workflows/fix-fd-contest-metric-truth.yml'
   workflow_dispatch:
 permissions:
@@ -19,7 +19,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: python .github/scripts/separate_fd_opponent_salary.py
+      - run: python .github/scripts/fix_fd_hail_mary_field_size.py
       - run: python -m py_compile dfs_app.py
       - name: Commit patch
         run: |
@@ -30,5 +30,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add dfs_app.py
-          git commit -m 'Separate FanDuel opponent salary floor [skip ci]'
+          git commit -m 'Use full FanDuel Hail Mary field capacity [skip ci]'
           git push origin HEAD:feature/salary-csv-upload
