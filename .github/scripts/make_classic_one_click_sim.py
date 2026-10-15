@@ -17,10 +17,7 @@ old_buttons = '''        with build_cols[2]:
 '''
 new_buttons = '''        with build_cols[2]:
             st.write("### Run")
-            _classic_sim_button = st.button(
-                "SIM", type="primary", use_container_width=True, key="dk_classic_sim"
-            )
-            # One-click Classic workflow: SIM -> BUILD -> CONTEST SIM -> ROI.
+            _classic_sim_button = st.button("SIM", type="primary", use_container_width=True, key="dk_classic_sim")
             _classic_build_button = _classic_sim_button
             _classic_contest_button = _classic_sim_button
             classic_run_all = _classic_sim_button
@@ -39,8 +36,6 @@ old_loop = '''            target_lineups = 5000
 '''
 new_loop = '''            target_lineups = 5000
             no_stack_rules = (not dk_classic_stack_rules) or ("No stack rule" in dk_classic_stack_rules)
-            # No-stack builds should be the fast path. Stack builds can need more
-            # attempts because they must satisfy the selected QB correlation rule.
             max_attempts = 30000 if no_stack_rules else 100000
             build_progress = st.progress(0, text=f"Building DraftKings Classic lineups: 0 / {target_lineups:,}")
             expected_exposure = max(1.0, target_lineups * len(roster_slots) / max(1, len(classic_names)))
@@ -53,8 +48,7 @@ old_drop = '''    control_display = control_display.drop(
         columns=["ProjectionSource", "Injury Status", "Fade"], errors="ignore"
     )
 '''
-new_drop = '''    # Keep source, injury status, and Fade visible as shown in the requested Player Pool layout.
-    control_display = control_display.drop(columns=["CaptainSalary"], errors="ignore")
+new_drop = '''    control_display = control_display.drop(columns=["CaptainSalary"], errors="ignore")
 '''
 if old_drop in text:
     text = text.replace(old_drop, new_drop, 1)
@@ -84,7 +78,6 @@ new_order = '''    _preferred_player_pool_order = [
 if old_order in text:
     text = text.replace(old_order, new_order, 1)
 
-# Do not immediately rerun after the one-click Classic workflow.
 old_rerun = '''        # Player Pool is rendered before the SIM button handler. After a fresh
         # simulation/build, rerun once so its Sim Pts and percentile columns read the
         # newly saved simulation_df instead of the previous run.
@@ -92,14 +85,11 @@ old_rerun = '''        # Player Pool is rendered before the SIM button handler. 
             st.rerun()
         st.stop()
 '''
-new_rerun = '''        # Keep the one-click Contest Sim results on screen. A later normal Streamlit
-        # interaction will refresh the Player Pool from the saved simulation state.
-        st.stop()
+new_rerun = '''        st.stop()
 '''
 if old_rerun in text:
     text = text.replace(old_rerun, new_rerun, 1)
 
-# DraftKings Classic defaults requested by the user.
 text = text.replace('''                value=(45000, 50000),
                 step=100,
                 format="$%d",
@@ -110,20 +100,52 @@ text = text.replace('''                value=(45000, 50000),
 text = text.replace('''            default=["QB + 2 teammates + bring-back"],
             key="dk_classic_stack_rules",''', '''            default=["No stack rule"],
             key="dk_classic_stack_rules",''', 1)
-
-# Show 20 Classic portfolio lineups by default.
 text = text.replace('''                value=min(2500, max(1, len(classic_portfolio_source))),
                 step=100 if len(classic_portfolio_source) >= 100 else 1,
                 key="dk_classic_portfolio_count"''', '''                value=min(20, max(1, len(classic_portfolio_source))),
                 step=1,
                 key="dk_classic_portfolio_count"''', 1)
 
-# Persist Classic Contest Sim output across normal Streamlit widget reruns.
+# Replace the incorrect single projected-rank prize with an expected prize based
+# on each lineup's simulated probabilities of finishing in each payout band.
+old_prize = '''                        user_lineups["Expected Prize ($)"] = user_lineups["Estimated Full Field Rank"].map(_classic_prize)
+                        user_lineups["Entry Fee ($)"] = float(classic_contest["entry"])
+'''
+new_prize = '''                        # Expected prize must average across the lineup's outcome distribution,
+                        # not award the prize from one projected-average rank.
+                        _classic_expected_prizes = []
+                        for _, _lu in user_lineups.iterrows():
+                            _ev = 0.0
+                            _prev_prob = 0.0
+                            # add_field_ranking_metrics stores cumulative finish probabilities.
+                            _bands = [
+                                (0.01, float(_lu.get("Top1", 0.0))),
+                                (0.05, float(_lu.get("Top5", 0.0))),
+                                (0.10, float(_lu.get("Top10", 0.0))),
+                                (float(classic_contest["pays"]) / float(full_field_size), float(_lu.get("CashRate", 0.0))),
+                            ]
+                            _bands = sorted(_bands, key=lambda x: x[0])
+                            for _cutoff, _cum_prob in _bands:
+                                _cum_prob = max(_prev_prob, min(1.0, _cum_prob))
+                                _band_prob = max(0.0, _cum_prob - _prev_prob)
+                                if _band_prob > 0:
+                                    _lo_rank = max(1, int(np.floor(_prev_prob * full_field_size)) + 1)
+                                    _hi_rank = max(_lo_rank, min(full_field_size, int(np.ceil(_cutoff * full_field_size))))
+                                    _band_prizes = [_classic_prize(_r) for _r in range(_lo_rank, _hi_rank + 1)]
+                                    _avg_band_prize = float(np.mean(_band_prizes)) if _band_prizes else 0.0
+                                    _ev += _band_prob * _avg_band_prize
+                                _prev_prob = _cum_prob
+                            _classic_expected_prizes.append(_ev)
+                        user_lineups["Expected Prize ($)"] = _classic_expected_prizes
+                        user_lineups["Entry Fee ($)"] = float(classic_contest["entry"])
+'''
+if old_prize in text:
+    text = text.replace(old_prize, new_prize, 1)
+
+# Keep saved results visible after widget reruns.
 anchor = '''        classic_results = st.session_state.get("classic_lineups")
 '''
-persist = '''        # Redisplay the last completed Classic Contest Sim after widget changes
-        # such as changing the Portfolio count or ranking method.
-        if not _classic_contest_button:
+persist = '''        if not _classic_contest_button:
             _saved_classic_comparison = st.session_state.get("classic_contest_comparison_df")
             _saved_classic_entries = st.session_state.get("classic_contest_entries_df")
             _saved_classic_field = st.session_state.get("classic_contest_field_df")
@@ -158,10 +180,8 @@ persist = '''        # Redisplay the last completed Classic Contest Sim after wi
 
         classic_results = st.session_state.get("classic_lineups")
 '''
-if persist not in text:
-    if anchor not in text:
-        raise SystemExit('Classic results anchor not found')
+if persist not in text and anchor in text:
     text = text.replace(anchor, persist, 1)
 
 path.write_text(text, encoding='utf-8')
-print('Classic ROI and Field Sanity now persist across Portfolio and ranking widget reruns.')
+print('Classic ROI now uses simulated finish probabilities instead of one projected-average rank.')
