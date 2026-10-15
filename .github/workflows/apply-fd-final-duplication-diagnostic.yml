@@ -1,0 +1,32 @@
+name: Apply FanDuel final duplication diagnostic
+on:
+  push:
+    branches: [cleanup/fd-stale-code]
+    paths:
+      - '.github/scripts/add_fd_final_duplication_diagnostic.py'
+      - '.github/workflows/apply-fd-final-duplication-diagnostic.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: cleanup/fd-stale-code
+      - name: Apply diagnostic
+        run: python .github/scripts/add_fd_final_duplication_diagnostic.py
+      - name: Syntax check
+        run: python -m py_compile dfs_app.py
+      - name: Verify diagnostic isolation
+        run: |
+          grep -q 'Exact Matches in Final Field' dfs_app.py
+          grep -q 'Estimated Field Copies' dfs_app.py
+          grep -q 'MAX_SIMULATED_OPPONENTS = 10000' dfs_app.py
+      - name: Commit app change
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add dfs_app.py
+          git diff --cached --quiet || git commit -m 'Add FanDuel final duplication diagnostics [skip ci]'
+          git push
