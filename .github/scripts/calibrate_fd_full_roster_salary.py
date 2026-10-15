@@ -8,8 +8,10 @@ new = '''            # Real FanDuel NFL large-field data is heavily concentrated
             # Default Full Roster builds to the range containing ~97% of observed entries.
             value=(59000, 60000) if lineup_mode == "Full Roster" else (54000, 60000),'''
 if old not in text:
-    raise SystemExit("salary slider anchor not found")
-text = text.replace(old, new, 1)
+    if new not in text:
+        raise SystemExit("salary slider anchor not found")
+else:
+    text = text.replace(old, new, 1)
 
 old2 = '''                    if salary < fd_salary_range[0] or salary > fd_salary_range[1] or salary > 60000:
                         continue
@@ -19,7 +21,7 @@ new2 = '''                    if salary < fd_salary_range[0] or salary > fd_sala
                     # Calibrate FanDuel NFL Full Roster salary usage to observed large-field
                     # contest behavior. In a 568k-entry historical contest the average salary
                     # was about $59,781, 41% used the full $60k, 91% used >=$59.5k, and 97%
-                    # used >=$59k.  The sequential player picker otherwise overproduces cheap
+                    # used >=$59k. The sequential player picker otherwise overproduces cheap
                     # lineups, so use an acceptance curve after a legal lineup is assembled.
                     # This changes opponent construction only; Single Game and DraftKings are untouched.
                     if lineup_mode == "Full Roster":
@@ -40,8 +42,10 @@ new2 = '''                    if salary < fd_salary_range[0] or salary > fd_sala
                             continue
                     key = tuple(chosen[slot] for slot in fd_slots)'''
 if old2 not in text:
-    raise SystemExit("opponent acceptance anchor not found")
-text = text.replace(old2, new2, 1)
+    if "_fd_salary_accept = {" not in text:
+        raise SystemExit("opponent acceptance anchor not found")
+else:
+    text = text.replace(old2, new2, 1)
 
 path.write_text(text)
 print("Patched FanDuel Full Roster salary calibration")
