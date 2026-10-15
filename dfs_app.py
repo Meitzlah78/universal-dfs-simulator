@@ -4332,6 +4332,12 @@ if platform == "FanDuel":
                                 if not len(choices):
                                     break
                                 weights = np.clip(fd_weights[choices].astype(float), 0.0001, None)
+                                if lineup_mode == "Full Roster":
+                                    _fd_choice_means = np.clip(fd_field_projections[choices].astype(float), 0.01, None)
+                                    _fd_mean_scale = _fd_choice_means / max(float(np.mean(_fd_choice_means)), 0.01)
+                                    # Mild 0.20 power keeps ownership/diversity dominant while
+                                    # removing a little of the weak-lineup bias seen in sanity checks.
+                                    weights = weights * np.power(_fd_mean_scale, 0.20)
                                 weights /= weights.sum()
                                 picked_idx = int(rng.choice(choices, p=weights))
                                 name = str(fd_field_names[picked_idx])
