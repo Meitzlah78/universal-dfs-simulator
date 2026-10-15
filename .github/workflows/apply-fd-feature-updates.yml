@@ -29,6 +29,8 @@ jobs:
         run: python .github/scripts/fix_fd_player_pool_refresh.py
       - name: Apply editable injury status and column order
         run: python .github/scripts/fix_fd_editable_injury_and_columns.py
+      - name: Show FanDuel contest metrics after SIM
+        run: python .github/scripts/show_fd_contest_metrics.py
       - name: Syntax check
         run: python -m py_compile dfs_app.py
       - name: Commit patched feature app
