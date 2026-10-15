@@ -3481,8 +3481,10 @@ def simulate_fd_play_by_play(players_df, rng, n=SIMULATION_COUNT, correlation_st
         vals = np.asarray(score_nfl_stat_line(line, "FanDuel"), dtype=float)
         mean = float(np.mean(vals)) if len(vals) else 0.0
         # Calibrate only the marginal mean; shared play outcomes/correlation stay intact.
+        # Do not clip this ratio: clipping can leave a player's simulated mean
+        # several points away from the FanDuel target even after calibration.
         if mean > 0 and target > 0:
-            vals *= float(np.clip(target / mean, 0.65, 1.55))
+            vals *= float(target / mean)
         elif target > 0:
             vals = np.maximum(0.0, rng.normal(target, max(0.75, target * 0.35), n))
         out[name] = np.maximum(vals, 0.0)
@@ -4207,8 +4209,10 @@ if platform == "FanDuel":
                     "P99": float(np.quantile(values, 0.99)),
                     "StdDev": float(np.std(values)),
                 }
-            st.session_state["fd_player_sim_" + lineup_mode.replace(" ", "_").lower()] = player_sim
-            st.session_state["fd_simulation_ready_" + lineup_mode.replace(" ", "_").lower()] = True
+            _fd_mode_key = lineup_mode.replace(" ", "_").lower()
+            st.session_state["fd_player_sim_" + _fd_mode_key] = player_sim
+            st.session_state["fd_simulation_df_" + _fd_mode_key] = simulated_scores.copy()
+            st.session_state["fd_simulation_ready_" + _fd_mode_key] = True
             # Keep the already-created Player Pool dataframe wired to THIS run's
             # play-by-play output. On the next normal rerun the same values are
             # restored from session state before the table is drawn.
@@ -4536,11 +4540,18 @@ if platform == "FanDuel":
         # This is already the filtered FanDuel pool. Never apply a shared
         # DraftKings available_players list to FanDuel contest opponents.
         fd_pool["Projection"] = pd.to_numeric(fd_pool["Projection"], errors="coerce").fillna(0.01).clip(lower=0.01)
-        fd_sim_df = st.session_state.get("simulation_df")
+        # Use this FanDuel mode's own PBP outcomes. The shared simulation_df key
+        # belongs to the DraftKings workflow and must never drive FanDuel opponents.
+        _fd_mode_key = lineup_mode.replace(" ", "_").lower()
+        fd_sim_df = st.session_state.get("fd_simulation_df_" + _fd_mode_key)
         if isinstance(fd_sim_df, pd.DataFrame) and not fd_sim_df.empty:
             fd_mean_scores = fd_sim_df.mean(axis=0).to_dict()
         else:
-            fd_mean_scores = {}
+            fd_mean_scores = {
+                str(name): float(values.get("Mean", 0.0))
+                for name, values in player_sim.items()
+                if isinstance(values, dict)
+            }
         fd_pool["MeanPoints"] = fd_pool["Name"].map(fd_mean_scores).fillna(fd_pool["Projection"])
         fd_weights = opponent_field_selection_weights(
             fd_pool, fd_pool["MeanPoints"].to_numpy(dtype=float)
