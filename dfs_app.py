@@ -4829,7 +4829,6 @@ if platform == "FanDuel":
 
         rng = np.random.default_rng(123)
         opponent_rows = []
-        seen_opponents = set()
         attempts = 0
         if len(fd_pool) < len(fd_slots):
             st.error(f"At least {len(fd_slots)} eligible players are required for FanDuel Contest Sim.")
@@ -4994,10 +4993,8 @@ if platform == "FanDuel":
                         }.get(int(salary), 0.01 if salary >= 58000 else 0.002)
                         if rng.random() > _fd_salary_accept:
                             continue
-                    key = tuple(chosen[slot] for slot in fd_slots)
                     # Keep duplicates: real FanDuel fields contain repeated lineups,
                     # and those duplicates must share prizes when they tie.
-                    seen_opponents.add(key)
                     opponent_rows.append({**chosen, "Salary": salary, "ProjectedPoints": round(points, 2)})
                     if len(opponent_rows) % 100 == 0 or len(opponent_rows) >= fd_opponent_target:
                         fd_field_progress.progress(
