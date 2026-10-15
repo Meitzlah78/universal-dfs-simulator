@@ -5189,8 +5189,18 @@ if platform == "FanDuel":
                             and np.all(_fd_field_matrix >= 0)
                         )
                         if _fd_valid:
-                            _fd_scenario_count = min(250, len(_fd_roi_sim))
-                            _fd_scenario_idx = np.linspace(0, len(_fd_roi_sim) - 1, _fd_scenario_count, dtype=int)
+                            # Evaluate final contest results on a deterministic holdout slice of
+                            # PBP outcomes rather than the early scenarios used while generating/
+                            # ranking candidates. This reduces selection leakage in final ROI rates.
+                            _fd_all_scenarios = np.arange(len(_fd_roi_sim), dtype=int)
+                            _fd_holdout_start = len(_fd_all_scenarios) // 2
+                            _fd_holdout_pool = _fd_all_scenarios[_fd_holdout_start:]
+                            if len(_fd_holdout_pool) == 0:
+                                _fd_holdout_pool = _fd_all_scenarios
+                            _fd_scenario_count = min(250, len(_fd_holdout_pool))
+                            _fd_scenario_idx = _fd_holdout_pool[
+                                np.linspace(0, len(_fd_holdout_pool) - 1, _fd_scenario_count, dtype=int)
+                            ]
                             _fd_n_user = len(_fd_selected_idx)
                             _fd_expected_prize = np.zeros(_fd_n_user, dtype=float)
                             _fd_win = np.zeros(_fd_n_user, dtype=float)
@@ -5198,7 +5208,16 @@ if platform == "FanDuel":
                             _fd_top5 = np.zeros(_fd_n_user, dtype=float)
                             _fd_top10 = np.zeros(_fd_n_user, dtype=float)
                             _fd_cash = np.zeros(_fd_n_user, dtype=float)
-                            _fd_cash_cut = max(1, max(hi for lo, hi, prize in _fd_payout_tiers_roi if prize > 0))
+                            # Cash cutoff is the last PAID place that actually exists in this
+                            # contest. Never let a payout ladder extending beyond field size turn
+                            # CashRate into an automatic 100% result.
+                            _fd_cash_cut = max(
+                                1,
+                                min(
+                                    _fd_full_field_roi,
+                                    max(hi for lo, hi, prize in _fd_payout_tiers_roi if prize > 0 and lo <= _fd_full_field_roi),
+                                ),
+                            )
                             _fd_values = _fd_roi_sim.to_numpy(dtype=float)
                             _fd_rep_n = max(len(opponent_df), 1)
                             _fd_full_opponents = max(_fd_full_field_roi - _fd_n_user, 1)
