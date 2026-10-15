@@ -3854,6 +3854,14 @@ if platform == "FanDuel":
                     slot: np.asarray([i for i, positions in enumerate(eligible_sets) if positions & eligible], dtype=int)
                     for slot, eligible in roster
                 }
+                fd_slot_salary_bounds = {
+                    slot: (
+                        int(salaries[eligible_indices[slot]].min()),
+                        int(salaries[eligible_indices[slot]].max()),
+                    )
+                    for slot, _eligible in roster
+                    if len(eligible_indices[slot])
+                }
 
             for build_attempt in range(max_attempts):
                 if build_attempt % 250 == 0:
@@ -3908,55 +3916,32 @@ if platform == "FanDuel":
                         if not len(choices):
                             break
 
-                        # Salary-floor feasibility. Keep only picks that leave a path
-                        # to at least the requested minimum salary with the remaining
-                        # FanDuel roster slots. This prevents 0-lineup builds at $57K+.
-                        if salary_min > 0 and roster_pos < len(roster) - 1:
-                            feasible_choices = []
-                            remaining_roster = roster[roster_pos + 1:]
-                            for candidate_i in choices:
-                                reserved = used | {int(candidate_i)}
-                                max_remaining_salary = 0
-                                min_remaining_salary = 0
-                                possible = True
-                                temp_reserved_max = set(reserved)
-                                temp_reserved_min = set(reserved)
-                                for remaining_slot, _remaining_positions in remaining_roster:
-                                    remaining_choices_max = [
-                                        j for j in eligible_indices[remaining_slot]
-                                        if j not in temp_reserved_max
-                                    ]
-                                    remaining_choices_min = [
-                                        j for j in eligible_indices[remaining_slot]
-                                        if j not in temp_reserved_min
-                                    ]
-                                    if not remaining_choices_max or not remaining_choices_min:
-                                        possible = False
-                                        break
-                                    best_j = max(remaining_choices_max, key=lambda j: int(salaries[j]))
-                                    cheap_j = min(remaining_choices_min, key=lambda j: int(salaries[j]))
-                                    max_remaining_salary += int(salaries[best_j])
-                                    min_remaining_salary += int(salaries[cheap_j])
-                                    temp_reserved_max.add(int(best_j))
-                                    temp_reserved_min.add(int(cheap_j))
-                                candidate_total = salary + int(salaries[candidate_i])
-                                if (
-                                    possible
-                                    and candidate_total + max_remaining_salary >= salary_min
-                                    and candidate_total + min_remaining_salary <= salary_max
-                                ):
-                                    feasible_choices.append(int(candidate_i))
-                            if feasible_choices:
-                                choices = np.asarray(feasible_choices, dtype=int)
-                            else:
-                                break
-                        elif salary_min > 0 and roster_pos == len(roster) - 1:
+                        # Fast salary feasibility: use precomputed slot salary bounds
+                        # instead of rescanning the entire player pool for every choice.
+                        remaining_roster = roster[roster_pos + 1:]
+                        if remaining_roster:
+                            min_remaining_salary = sum(
+                                fd_slot_salary_bounds[remaining_slot][0]
+                                for remaining_slot, _remaining_positions in remaining_roster
+                            )
+                            max_remaining_salary = sum(
+                                fd_slot_salary_bounds[remaining_slot][1]
+                                for remaining_slot, _remaining_positions in remaining_roster
+                            )
                             choices = np.asarray([
                                 i for i in choices
-                                if salary + int(salaries[i]) >= salary_min
+                                if (
+                                    salary + int(salaries[i]) + max_remaining_salary >= salary_min
+                                    and salary + int(salaries[i]) + min_remaining_salary <= salary_max
+                                )
                             ], dtype=int)
-                            if not len(choices):
-                                break
+                        else:
+                            choices = np.asarray([
+                                i for i in choices
+                                if salary_min <= salary + int(salaries[i]) <= salary_max
+                            ], dtype=int)
+                        if not len(choices):
+                            break
 
                         weights = lineup_scores[choices].copy()
                         # Full Roster lineups must spend at least $57K by default. Bias
@@ -4114,13 +4099,9 @@ if platform == "FanDuel":
                                 len(opponent_rows) / max(fd_opponent_target, 1),
                                 attempts / max_field_attempts
                             )
-                            progress_pct = 50 + int(25 * min(field_progress, 1.0))
-                            fd_progress_bar.progress(
-                                min(progress_pct, 75),
-                                text=(
-                                    f"Step 3 of 4: Building opponent field — {len(opponent_rows):,} of "
-                                    f"{fd_opponent_target:,} lineups..."
-                                )
+                            fd_workflow_status.info(
+                                f"Step 3 of 4: Building opponent field — {len(opponent_rows):,} of "
+                                f"{fd_opponent_target:,} lineups..."
                             )
                         chosen = {}
                         used = set()
@@ -4207,7 +4188,6 @@ if platform == "FanDuel":
                             "The opponent field is simulated."
                         )
                     if fd_run_all_clicked:
-                        fd_progress_bar.progress(78, text="Step 4 of 4: Scoring your lineups against the contest field...")
                         fd_workflow_status.info("Step 4 of 4: Scoring your lineups against the contest field...")
                     user_lineups = st.session_state.get(fd_build_key)
                     if user_lineups is None or user_lineups.empty:
@@ -4236,7 +4216,6 @@ if platform == "FanDuel":
                 else:
                     st.error("Could not create valid FanDuel opponent lineups. Check the player pool and salary range.")
             if fd_run_all_clicked:
-                fd_progress_bar.progress(100, text="FanDuel SIM complete.")
                 fd_workflow_status.success("FanDuel SIM complete: player simulations, lineup build, opponent field, and contest comparison finished.")
 
         fd_results = st.session_state.get(fd_build_key)
