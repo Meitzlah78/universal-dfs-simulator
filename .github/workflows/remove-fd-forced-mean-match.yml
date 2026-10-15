@@ -1,0 +1,39 @@
+name: Remove FanDuel forced mean match
+
+on:
+  push:
+    branches:
+      - feature/salary-csv-upload
+    paths:
+      - '.github/scripts/remove_fd_forced_mean_match.py'
+      - '.github/workflows/remove-fd-forced-mean-match.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/salary-csv-upload
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Remove forced FanDuel mean match
+        run: python .github/scripts/remove_fd_forced_mean_match.py
+      - name: Syntax check
+        run: python -m py_compile dfs_app.py
+      - name: Commit patched app
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add dfs_app.py
+          if git diff --cached --quiet; then
+            echo "No app changes needed"
+          else
+            git commit -m "Let FanDuel PBP determine simulated means [skip ci]"
+            git push origin HEAD:feature/salary-csv-upload
+          fi
