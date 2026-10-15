@@ -14,6 +14,7 @@ on:
       - '.github/scripts/add_fd_historical_play_mix.py'
       - '.github/scripts/fix_fd_play_assignment_tds.py'
       - '.github/scripts/calibrate_fd_pbp_efficiency.py'
+      - '.github/scripts/calibrate_fd_backfield_opportunity.py'
       - '.github/workflows/apply-fd-full-roster.yml'
 
 permissions:
@@ -48,6 +49,8 @@ jobs:
         run: python .github/scripts/fix_fd_play_assignment_tds.py
       - name: Calibrate historical QB and rushing efficiency
         run: python .github/scripts/calibrate_fd_pbp_efficiency.py
+      - name: Calibrate historical backfield opportunity
+        run: python .github/scripts/calibrate_fd_backfield_opportunity.py
       - name: Syntax check
         run: python -m py_compile dfs_app.py
       - name: Commit patched app
