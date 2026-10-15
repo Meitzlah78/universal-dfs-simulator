@@ -4830,6 +4830,10 @@ if platform == "FanDuel":
         rng = np.random.default_rng(123)
         opponent_rows = []
         attempts = 0
+        # Opponent salary bounds are fixed for FanDuel Full Roster and independent
+        # of the user's lineup salary range. Compute them once per field build.
+        _fd_opponent_salary_min = 59000 if lineup_mode == "Full Roster" else fd_salary_range[0]
+        _fd_opponent_salary_max = 60000 if lineup_mode == "Full Roster" else min(fd_salary_range[1], 60000)
         if len(fd_pool) < len(fd_slots):
             st.error(f"At least {len(fd_slots)} eligible players are required for FanDuel Contest Sim.")
         else:
@@ -4932,8 +4936,6 @@ if platform == "FanDuel":
                                     min_remaining = sum(fd_field_slot_bounds[s][0] for s, _ in remaining_roster)
                                     max_remaining = sum(fd_field_slot_bounds[s][1] for s, _ in remaining_roster)
                                     candidate_salary = salary + fd_field_salaries[choices]
-                                    _fd_opponent_salary_min = 59000 if lineup_mode == "Full Roster" else fd_salary_range[0]
-                                    _fd_opponent_salary_max = 60000 if lineup_mode == "Full Roster" else min(fd_salary_range[1], 60000)
                                     feasible = (
                                         (candidate_salary + max_remaining >= _fd_opponent_salary_min)
                                         & (candidate_salary + min_remaining <= _fd_opponent_salary_max)
@@ -4967,8 +4969,6 @@ if platform == "FanDuel":
                             points += float(fd_field_projections[picked_idx])
                     if len(chosen) != len(fd_slots):
                         continue
-                    _fd_opponent_salary_min = 59000 if lineup_mode == "Full Roster" else fd_salary_range[0]
-                    _fd_opponent_salary_max = 60000 if lineup_mode == "Full Roster" else min(fd_salary_range[1], 60000)
                     if salary < _fd_opponent_salary_min or salary > _fd_opponent_salary_max:
                         continue
                     # Calibrate FanDuel NFL Full Roster salary usage to observed large-field
