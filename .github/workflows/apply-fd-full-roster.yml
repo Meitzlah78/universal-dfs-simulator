@@ -7,6 +7,7 @@ on:
     paths:
       - '.github/scripts/fix_fd_player_pool_refresh.py'
       - '.github/scripts/fix_fd_editable_injury_and_columns.py'
+      - '.github/scripts/fix_fd_cap_hit.py'
       - '.github/workflows/apply-fd-full-roster.yml'
 
 permissions:
@@ -27,6 +28,8 @@ jobs:
         run: python .github/scripts/fix_fd_player_pool_refresh.py
       - name: Add editable injury status and requested column order
         run: python .github/scripts/fix_fd_editable_injury_and_columns.py
+      - name: Populate FanDuel Cap Hit from PBP simulations
+        run: python .github/scripts/fix_fd_cap_hit.py
       - name: Syntax check
         run: python -m py_compile dfs_app.py
       - name: Commit patched app
