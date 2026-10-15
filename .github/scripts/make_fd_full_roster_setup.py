@@ -3,61 +3,59 @@ from pathlib import Path
 p = Path("dfs_app.py")
 s = p.read_text()
 
-# 1) FanDuel templates already contain an explicit Opponent column. Prefer it.
-old = '''        fd_players["Team"] = fd_raw[fd_team_col].astype(str).str.strip().str.upper()
-        show_detected_slate_games(fd_raw)
-        fd_opponents = build_opponent_map(fd_raw, fd_players["Team"])
-        fd_players["Opponent"] = fd_players["Team"].map(fd_opponents).fillna("—")
-        fd_players["Position"] = fd_raw[fd_pos_col].astype(str).str.strip().str.upper()
+old = '''                if fd_run_all_clicked:
+                    fd_workflow_status.info("Step 4 of 4: Scoring your lineups against the contest field...")
+                user_lineups = st.session_state.get(fd_build_key)
 '''
-new = '''        fd_players["Team"] = fd_raw[fd_team_col].astype(str).str.strip().str.upper()
-        show_detected_slate_games(fd_raw)
-        fd_opponent_col = fd_find_column(fd_raw, ["Opponent", "Opp"])
-        if fd_opponent_col is not None:
-            fd_players["Opponent"] = (
-                fd_raw[fd_opponent_col].astype(str).str.strip().str.upper()
-                .replace({"": np.nan, "NAN": np.nan, "NONE": np.nan, "-": np.nan, "—": np.nan})
-            )
-            # Only use the Game-column fallback for rows where FanDuel did not supply Opponent.
-            fd_opponents = build_opponent_map(fd_raw, fd_players["Team"])
-            fd_players["Opponent"] = fd_players["Opponent"].fillna(fd_players["Team"].map(fd_opponents)).fillna("—")
-        else:
-            fd_opponents = build_opponent_map(fd_raw, fd_players["Team"])
-            fd_players["Opponent"] = fd_players["Team"].map(fd_opponents).fillna("—")
-        fd_players["Position"] = fd_raw[fd_pos_col].astype(str).str.strip().str.upper()
+new = '''                if fd_run_all_clicked:
+                    fd_workflow_status.info("Step 4 of 4: Scoring your lineups against the contest field...")
+                fd_step4_status = st.empty()
+                fd_step4_status.info("Step 4 of 4: Scoring your lineups against the contest field...")
+                fd_step4_progress = st.progress(0, text="Step 4 of 4: Preparing FanDuel contest comparison...")
+                user_lineups = st.session_state.get(fd_build_key)
 '''
 if old not in s:
-    raise SystemExit("FanDuel opponent parsing block not found")
+    raise SystemExit("FanDuel Step 4 start block not found")
 s = s.replace(old, new, 1)
 
-# 2) The Player Pool is rendered before SIM. After Step 1, replace the in-memory
-# display values with the actual play-by-play percentiles so downloads/snapshots
-# from the completed run cannot retain the projection-multiplier placeholders.
-needle = '''            st.session_state["fd_player_sim_" + lineup_mode.replace(" ", "_").lower()] = player_sim
-            st.session_state["fd_simulation_ready_" + lineup_mode.replace(" ", "_").lower()] = True
+old2 = '''                    st.session_state["fd_contest_comparison_" + lineup_mode.replace(" ", "_").lower()] = compared
+                    st.write("### FanDuel Lineups vs. Simulated Contest Field")
 '''
-replacement = '''            st.session_state["fd_player_sim_" + lineup_mode.replace(" ", "_").lower()] = player_sim
-            st.session_state["fd_simulation_ready_" + lineup_mode.replace(" ", "_").lower()] = True
-            # Keep the already-created Player Pool dataframe wired to THIS run's
-            # play-by-play output. On the next normal rerun the same values are
-            # restored from session state before the table is drawn.
-            if "fd_player_display" in locals() and isinstance(fd_player_display, pd.DataFrame):
-                for _sim_key, _sim_label in [
-                    ("Mean", "Sim Pts"), ("P10", "Sim P10"), ("P25", "Sim P25"),
-                    ("P50", "Sim P50"), ("P75", "Sim P75"), ("P90", "Sim P90"),
-                    ("P95", "Sim P95"), ("P99", "Sim P99"),
-                ]:
-                    fd_player_display[_sim_label] = fd_player_display["Name"].astype(str).map(
-                        lambda _name, _key=_sim_key: pd.to_numeric(player_sim.get(str(_name), {}).get(_key), errors="coerce")
-                    )
+new2 = '''                    st.session_state["fd_contest_comparison_" + lineup_mode.replace(" ", "_").lower()] = compared
+                    fd_step4_progress.progress(1.0, text="Step 4 of 4 complete: FanDuel contest comparison finished.")
+                    fd_step4_status.success("Step 4 of 4 complete: contest comparison finished.")
+                    st.write("### FanDuel Lineups vs. Simulated Contest Field")
 '''
-if needle not in s:
-    raise SystemExit("FanDuel simulation session-state block not found")
-s = s.replace(needle, replacement, 1)
+if old2 not in s:
+    raise SystemExit("FanDuel Step 4 completion block not found")
+s = s.replace(old2, new2, 1)
 
-# 3) The old post-hoc correlation helper must not be used on top of play-by-play.
-# Remove any call if an older patch left one behind; event correlation is already inherent.
-s = s.replace('simulated_scores = apply_fd_correlated_simulations(simulated_scores, fd_players, correlation_strength)\n', '')
+old3 = '''                if user_lineups is None or user_lineups.empty:
+                    st.warning("SIM is running the lineup build and contest comparison together.")
+'''
+new3 = '''                if user_lineups is None or user_lineups.empty:
+                    fd_step4_status.error("Step 4 could not run because the current SIM did not produce user lineups.")
+                    fd_step4_progress.empty()
+                    st.warning("SIM is running the lineup build and contest comparison together.")
+'''
+if old3 not in s:
+    raise SystemExit("FanDuel missing-lineups Step 4 block not found")
+s = s.replace(old3, new3, 1)
+
+old4 = '''        if fd_run_all_clicked:
+            fd_workflow_status.success("FanDuel SIM complete: player simulations, lineup build, opponent field, and contest comparison finished.")
+'''
+new4 = '''        if fd_run_all_clicked:
+            _fd_step4_key = "fd_contest_comparison_" + lineup_mode.replace(" ", "_").lower()
+            _fd_step4_result = st.session_state.get(_fd_step4_key)
+            if isinstance(_fd_step4_result, pd.DataFrame) and not _fd_step4_result.empty:
+                fd_workflow_status.success("FanDuel SIM complete: all 4 steps finished.")
+            else:
+                fd_workflow_status.error("FanDuel SIM stopped before Step 4 produced a contest comparison.")
+'''
+if old4 not in s:
+    raise SystemExit("FanDuel workflow completion block not found")
+s = s.replace(old4, new4, 1)
 
 p.write_text(s)
-print("FanDuel opponent parsing and play-by-play Player Pool wiring fixed")
+print("FanDuel Step 4 is explicit, visible, and required before SIM reports complete")
