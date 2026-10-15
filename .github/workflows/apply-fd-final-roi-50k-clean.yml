@@ -1,0 +1,35 @@
+name: Apply 50K FanDuel final ROI field
+on:
+  push:
+    branches: [cleanup/fd-stale-code]
+    paths:
+      - '.github/scripts/add_fd_final_roi_50k_clean.py'
+      - '.github/workflows/apply-fd-final-roi-50k-clean.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: cleanup/fd-stale-code
+      - name: Apply 50K final ROI field
+        run: python .github/scripts/add_fd_final_roi_50k_clean.py
+      - name: Syntax check
+        run: python -m py_compile dfs_app.py
+      - name: Verify isolation
+        run: |
+          grep -q 'Final joint ROI representative field' dfs_app.py
+          grep -q 'MAX_SIMULATED_OPPONENTS = 10000' dfs_app.py
+      - name: Commit app change
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add dfs_app.py
+          if git diff --cached --quiet; then
+            echo 'No app changes to commit'
+          else
+            git commit -m 'Use 50K field for FanDuel final ROI [skip ci]'
+            git push
+          fi
