@@ -6222,14 +6222,17 @@ else:
 build_cols = st.columns([1, 1, 0.65])
 with build_cols[0]:
     st.write("### Build Settings")
+    _fd_full = platform == "FanDuel" and lineup_mode == "Full Roster"
+    _salary_cap = 60000 if _fd_full else 50000
+    _salary_default = (57000, 60000) if _fd_full else ((40000, 50000) if lineup_mode in ("Showdown", "Single Game") else (45000, 50000))
     dk_salary_range = st.slider(
         "Allowed lineup salary range",
         min_value=0,
-        max_value=50000,
-        value=(40000, 50000) if lineup_mode in ("Showdown", "Single Game") else (45000, 50000),
+        max_value=_salary_cap,
+        value=_salary_default,
         step=100,
         format="$%d",
-        key="dk_build_salary_range_" + lineup_mode.replace(" ", "_").lower(),
+        key="dk_build_salary_range_" + platform.lower() + "_" + lineup_mode.replace(" ", "_").lower(),
         help="Only build lineups whose total salary falls inside this range."
     )
 MIN_LINEUP_SALARY, MAX_LINEUP_SALARY = dk_salary_range
