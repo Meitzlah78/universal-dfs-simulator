@@ -5897,7 +5897,7 @@ else:
                                 (0.01, float(_lu.get("Top1", 0.0))),
                                 (0.05, float(_lu.get("Top5", 0.0))),
                                 (0.10, float(_lu.get("Top10", 0.0))),
-                                (float(classic_contest["pays"]) / float(full_field_size), float(_lu.get("CashRate", 0.0))),
+                                (float(max(last for _, last, _ in classic_contest["payouts"])) / float(full_field_size), float(_lu.get("CashRate", 0.0))),
                             ]
                             _bands = sorted(_bands, key=lambda x: x[0])
                             for _cutoff, _cum_prob in _bands:
