@@ -5,8 +5,6 @@ on:
     branches:
       - feature/salary-csv-upload
     paths:
-      - '.github/scripts/make_fd_full_roster_setup.py'
-      - '.github/scripts/fix_fd_player_pool_source.py'
       - '.github/scripts/fix_fd_player_pool_refresh.py'
       - '.github/scripts/fix_fd_editable_injury_and_columns.py'
       - '.github/workflows/apply-fd-full-roster.yml'
@@ -25,10 +23,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Apply FanDuel-only patch
-        run: python .github/scripts/make_fd_full_roster_setup.py
-      - name: Wire FanDuel Player Pool to mode-specific PBP simulation
-        run: python .github/scripts/fix_fd_player_pool_source.py
       - name: Refresh FanDuel Player Pool after SIM
         run: python .github/scripts/fix_fd_player_pool_refresh.py
       - name: Add editable injury status and requested column order
