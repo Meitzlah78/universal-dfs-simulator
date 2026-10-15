@@ -3,45 +3,32 @@ from pathlib import Path
 path = Path("dfs_app.py")
 text = path.read_text(encoding="utf-8")
 
-# FanDuel Full Roster only. DraftKings behavior is intentionally untouched.
-# Existing salary/stack/contest-detail patches are already present in dfs_app.py.
-
-old_reset = '''        fd_stack_rules = []
-        if fd_build_clicked:'''
-new_reset = '''        # Preserve the Full Roster stack selection made above. Single Game has no stack rules.
-        if lineup_mode != "Full Roster":
-            fd_stack_rules = []
-        if fd_build_clicked:'''
-if old_reset in text:
-    text = text.replace(old_reset, new_reset, 1)
-elif new_reset not in text:
-    raise SystemExit("FanDuel stack-rule reset block not found")
-
-old_weights = '''                        weights = lineup_scores[choices].copy()
-                        # Build the requested QB stack during generation instead of
-                        # relying only on post-build rejection.'''
-new_weights = '''                        weights = lineup_scores[choices].copy()
-                        # Full Roster lineups must spend at least $57K by default. Bias
-                        # the random construction toward salary-efficient higher-priced
-                        # players so the builder does not create hundreds of thousands
-                        # of otherwise-valid lineups that finish below the salary floor.
-                        if lineup_mode == "Full Roster":
-                            salary_bias = np.clip(salaries[choices].astype(float) / 5000.0, 0.35, 2.5) ** 2.0
-                            weights *= salary_bias
-                        # Build the requested QB stack during generation instead of
-                        # relying only on post-build rejection.'''
-if old_weights in text:
-    text = text.replace(old_weights, new_weights, 1)
-elif "salary_bias = np.clip(salaries[choices].astype(float) / 5000.0" not in text:
-    raise SystemExit("FanDuel Full Roster choice-weight block not found")
-
-old_attempts = '''            max_attempts = 500000
-            salary_min, salary_max = int(fd_salary_range[0]), min(int(fd_salary_range[1]), 60000)'''
-new_attempts = '''            max_attempts = 150000 if lineup_mode == "Full Roster" else 500000
-            salary_min, salary_max = int(fd_salary_range[0]), min(int(fd_salary_range[1]), 60000)'''
-if old_attempts in text:
-    text = text.replace(old_attempts, new_attempts, 1)
-elif new_attempts not in text:
-    raise SystemExit("FanDuel max-attempt block not found")
+# FanDuel only. DraftKings is intentionally untouched.
+old_buttons = '''        _fd_run_cols = st.columns(3)
+        with _fd_run_cols[0]:
+            fd_sim_button = st.button("SIM", type="primary", use_container_width=True, key="fd_sim_" + lineup_mode.replace(" ", "_").lower())
+        with _fd_run_cols[1]:
+            fd_build_button = st.button("BUILD", use_container_width=True, key="fd_build_" + lineup_mode.replace(" ", "_").lower())
+        with _fd_run_cols[2]:
+            fd_contest_button = st.button("CONTEST SIM", use_container_width=True, key="fd_contest_" + lineup_mode.replace(" ", "_").lower())
+        fd_run_all_clicked = fd_sim_button or fd_build_button or fd_contest_button
+        fd_sim_clicked = fd_run_all_clicked
+        fd_build_clicked = fd_run_all_clicked
+        fd_contest_clicked = fd_run_all_clicked'''
+new_buttons = '''        fd_sim_button = st.button(
+            "SIM",
+            type="primary",
+            use_container_width=True,
+            key="fd_sim_" + lineup_mode.replace(" ", "_").lower(),
+            help="Runs player simulations, builds your lineups, builds the opponent field, and runs the contest comparison."
+        )
+        fd_run_all_clicked = fd_sim_button
+        fd_sim_clicked = fd_sim_button
+        fd_build_clicked = fd_sim_button
+        fd_contest_clicked = fd_sim_button'''
+if old_buttons in text:
+    text = text.replace(old_buttons, new_buttons, 1)
+elif new_buttons not in text:
+    raise SystemExit("FanDuel three-button run block not found")
 
 path.write_text(text, encoding="utf-8")
