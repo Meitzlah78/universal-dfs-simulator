@@ -10,4 +10,4 @@ if old not in text:
 else:
     text = text.replace(old, new, 1)
 path.write_text(text)
-print('FanDuel Hail Mary contest evaluation now uses 215,568-entry capacity.')
+print('FanDuel Hail Mary contest evaluation uses 215,568-entry capacity; continuing active FanDuel patch workflow.')
