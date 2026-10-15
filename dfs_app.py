@@ -3906,7 +3906,8 @@ if platform == "FanDuel":
         fd_player_display[sim_label] = fd_player_display["Name"].astype(str).map(
             lambda name, key=sim_key: pd.to_numeric(player_sim.get(str(name), {}).get(key), errors="coerce")
         )
-    _fd_cap_hits = st.session_state.get("simulation_cap_hit_pct", {})
+    _fd_cap_hit_key = "fd_simulation_cap_hit_pct_" + lineup_mode.replace(" ", "_").lower()
+    _fd_cap_hits = st.session_state.get(_fd_cap_hit_key, {})
     fd_player_display["Cap Hit %"] = fd_player_display["Name"].astype(str).map(
         lambda name: pd.to_numeric(_fd_cap_hits.get(str(name)), errors="coerce")
     )
@@ -4245,6 +4246,18 @@ if platform == "FanDuel":
             _fd_mode_key = lineup_mode.replace(" ", "_").lower()
             st.session_state["fd_player_sim_" + _fd_mode_key] = player_sim
             st.session_state["fd_simulation_df_" + _fd_mode_key] = simulated_scores.copy()
+            # Cap Hit % = share of simulated game outcomes in which the player
+            # finishes tied for the highest raw FanDuel score on the slate.
+            # Split tied top outcomes evenly so the percentages remain meaningful.
+            _fd_scores = simulated_scores.apply(pd.to_numeric, errors="coerce").fillna(0.0)
+            _fd_row_max = _fd_scores.max(axis=1)
+            _fd_top_mask = _fd_scores.eq(_fd_row_max, axis=0)
+            _fd_tie_count = _fd_top_mask.sum(axis=1).clip(lower=1)
+            _fd_cap_hits = {
+                str(_fd_name): float(100.0 * (_fd_top_mask[_fd_name] / _fd_tie_count).mean())
+                for _fd_name in _fd_scores.columns
+            }
+            st.session_state["fd_simulation_cap_hit_pct_" + _fd_mode_key] = _fd_cap_hits
             st.session_state["fd_simulation_ready_" + _fd_mode_key] = True
             # Keep the already-created Player Pool dataframe wired to THIS run's
             # play-by-play output. On the next normal rerun the same values are
