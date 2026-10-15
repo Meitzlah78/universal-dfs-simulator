@@ -3726,8 +3726,11 @@ if platform == "FanDuel":
         fd_build_clicked = fd_sim_button
         fd_contest_clicked = fd_sim_button
         fd_progress_bar = None
+        fd_workflow_status = None
         if fd_run_all_clicked:
-            fd_progress_bar = st.progress(2, text="Starting FanDuel simulation...")
+            fd_progress_bar = st.progress(2, text="Step 1 of 4: Running player simulations...")
+            fd_workflow_status = st.empty()
+            fd_workflow_status.info(f"Step 1 of 4: Running {SIMULATION_COUNT:,} player simulations...")
         if fd_sim_clicked:
             with st.spinner(f"Running {SIMULATION_COUNT:,} shared historical/PBP simulations for FanDuel..."):
                 rng = np.random.default_rng()
@@ -3753,7 +3756,8 @@ if platform == "FanDuel":
                 st.session_state["fd_player_sim_" + lineup_mode.replace(" ", "_").lower()] = player_sim
                 st.session_state["fd_simulation_ready_" + lineup_mode.replace(" ", "_").lower()] = True
             if fd_run_all_clicked:
-                fd_progress_bar.progress(30, text="Shared historical/PBP simulation complete. Building FanDuel lineups...")
+                fd_progress_bar.progress(25, text="Step 2 of 4: Building your candidate lineups...")
+                fd_workflow_status.info("Step 2 of 4: Preparing rankings and building your candidate lineups...")
 
         fd_signature = (
             "FanDuel",
@@ -3849,15 +3853,15 @@ if platform == "FanDuel":
             for build_attempt in range(max_attempts):
                 if fd_run_all_clicked and (build_attempt % 1000 == 0):
                     build_progress = min(
-                        59,
-                        30 + int(29 * max(
+                        49,
+                        25 + int(24 * max(
                             len(results) / max(target_lineups, 1),
                             build_attempt / max_attempts
                         ))
                     )
                     fd_progress_bar.progress(
                         build_progress,
-                        text=f"Building FanDuel lineups: {len(results):,} of {target_lineups:,} accepted (attempt {build_attempt:,} of {max_attempts:,})..."
+                        text=f"Step 2 of 4: Building lineups — {len(results):,} of {target_lineups:,} accepted..."
                     )
                 chosen_indices = []
                 chosen = {}
@@ -3989,10 +3993,12 @@ if platform == "FanDuel":
                 )
             if fd_run_all_clicked:
                 fd_progress_bar.progress(
-                    60,
-                    text="Lineup build complete. Simulating the contest field..."
-                    if results else "Lineup build did not produce valid lineups."
+                    50,
+                    text="Step 3 of 4: Building the simulated opponent field..."
+                    if results else "Step 2 of 4: Lineup build did not produce valid lineups."
                 )
+                if results:
+                    fd_workflow_status.info("Step 3 of 4: Building the simulated opponent field...")
 
         if fd_contest_clicked:
             fd_pool = fd_players.copy()
@@ -4052,12 +4058,12 @@ if platform == "FanDuel":
                                 len(opponent_rows) / max(fd_opponent_target, 1),
                                 attempts / max_field_attempts
                             )
-                            progress_pct = 60 + int(35 * min(field_progress, 1.0))
+                            progress_pct = 50 + int(25 * min(field_progress, 1.0))
                             fd_progress_bar.progress(
-                                min(progress_pct, 95),
+                                min(progress_pct, 75),
                                 text=(
-                                    f"Simulating contest field: {len(opponent_rows):,} of "
-                                    f"{fd_opponent_target:,} opponents (attempt {attempts:,})..."
+                                    f"Step 3 of 4: Building opponent field — {len(opponent_rows):,} of "
+                                    f"{fd_opponent_target:,} lineups..."
                                 )
                             )
                         chosen = {}
@@ -4144,6 +4150,9 @@ if platform == "FanDuel":
                             f"{fd_contest_details['your_entries']} entries in this contest. "
                             "The opponent field is simulated."
                         )
+                    if fd_run_all_clicked:
+                        fd_progress_bar.progress(78, text="Step 4 of 4: Scoring your lineups against the contest field...")
+                        fd_workflow_status.info("Step 4 of 4: Scoring your lineups against the contest field...")
                     user_lineups = st.session_state.get(fd_build_key)
                     if user_lineups is None or user_lineups.empty:
                         st.warning("SIM is running the lineup build and contest comparison together.")
@@ -4171,10 +4180,8 @@ if platform == "FanDuel":
                 else:
                     st.error("Could not create valid FanDuel opponent lineups. Check the player pool and salary range.")
             if fd_run_all_clicked:
-                fd_progress_bar.progress(
-                    100,
-                    text="FanDuel SIM → BUILD → CONTEST SIM finished."
-                )
+                fd_progress_bar.progress(100, text="FanDuel SIM complete.")
+                fd_workflow_status.success("FanDuel SIM complete: player simulations, lineup build, opponent field, and contest comparison finished.")
 
         fd_results = st.session_state.get(fd_build_key)
         if fd_results is not None:
