@@ -22,6 +22,8 @@ jobs:
         run: python .github/scripts/diversify_fd_full_roster_portfolio.py
       - name: Increase FanDuel final ROI holdout sample
         run: python .github/scripts/increase_fd_roi_holdout_samples.py
+      - name: Add larger FanDuel final ROI opponent field
+        run: python .github/scripts/add_fd_final_roi_field.py
       - name: Syntax check
         run: python -m py_compile dfs_app.py
       - name: Commit patch
@@ -33,5 +35,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add dfs_app.py
-          git commit -m 'Stabilize FanDuel Full Roster ROI sampling [skip ci]'
+          git commit -m 'Use 50K FanDuel final ROI opponent field [skip ci]'
           git push origin HEAD:feature/salary-csv-upload
