@@ -3232,10 +3232,18 @@ if platform == "FanDuel":
                 fd_entry_rows.append(normalized_row)
             fd_entry_df = pd.DataFrame(fd_entry_rows, columns=fd_template_header)
             fd_entry_lookup = {str(c).strip().casefold(): c for c in fd_entry_df.columns}
-            fd_name_col = next((fd_entry_lookup[k] for k in ("contest name", "contest") if k in fd_entry_lookup), None)
-            fd_id_col = next((fd_entry_lookup[k] for k in ("contest id", "contestid", "contest_id") if k in fd_entry_lookup), None)
-            fd_entries_col = next((fd_entry_lookup[k] for k in ("entry id", "entryid", "entry_id") if k in fd_entry_lookup), None)
-            fd_fee_col = next((fd_entry_lookup[k] for k in ("entry fee", "entryfee", "entry_fee", "fee") if k in fd_entry_lookup), None)
+            fd_name_col = next((fd_entry_lookup[k] for k in (
+                "contest name", "contest_name", "contestname", "contest"
+            ) if k in fd_entry_lookup), None)
+            fd_id_col = next((fd_entry_lookup[k] for k in (
+                "contest id", "contest_id", "contestid"
+            ) if k in fd_entry_lookup), None)
+            fd_entries_col = next((fd_entry_lookup[k] for k in (
+                "entry id", "entry_id", "entryid"
+            ) if k in fd_entry_lookup), None)
+            fd_fee_col = next((fd_entry_lookup[k] for k in (
+                "entry fee", "entry_fee", "entryfee", "fee"
+            ) if k in fd_entry_lookup), None)
             if fd_name_col is None or fd_id_col is None:
                 st.error("This CSV needs Contest Name and Contest ID columns for the contest selector.")
             else:
