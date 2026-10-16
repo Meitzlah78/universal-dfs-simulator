@@ -97,6 +97,45 @@ def candidate_score(
     }
 
 
+def duplicate_expansion_weights(log_weights: Sequence[float]) -> np.ndarray:
+    """Return the existing calibrated DK full-field duplicate sampling weights.
+
+    This preserves the current BUF@LAR calibration exactly: a broad base mixture,
+    a wider chalk component, and a small sharp top-chalk component.
+    """
+    values = np.asarray(log_weights, dtype=np.float64)
+    if values.ndim != 1:
+        raise ValueError("log_weights must be one-dimensional")
+    total = len(values)
+    if total == 0:
+        return np.asarray([], dtype=np.float64)
+    if not np.all(np.isfinite(values)):
+        raise ValueError("log_weights must be finite")
+
+    centered_log_weights = values - np.max(values)
+    base_weights = np.exp(centered_log_weights * 0.38)
+    base_weights /= base_weights.sum()
+
+    broad_count = max(250, min(1800, max(250, total // 5)))
+    broad_count = min(broad_count, total)
+    broad_indices = np.argpartition(values, -broad_count)[-broad_count:]
+    broad_weights = np.zeros(total, dtype=np.float64)
+    broad_strength = np.exp(centered_log_weights[broad_indices] * 0.80)
+    if broad_strength.sum() > 0:
+        broad_weights[broad_indices] = broad_strength / broad_strength.sum()
+
+    top_count = max(10, min(40, total))
+    top_indices = np.argpartition(values, -top_count)[-top_count:]
+    top_weights = np.zeros(total, dtype=np.float64)
+    top_strength = np.exp(centered_log_weights[top_indices] * 1.20)
+    if top_strength.sum() > 0:
+        top_weights[top_indices] = top_strength / top_strength.sum()
+
+    weights = 0.76 * base_weights + 0.20 * broad_weights + 0.04 * top_weights
+    weights /= weights.sum()
+    return weights
+
+
 def score_lineup_matrix(
     simulation_values: np.ndarray,
     captain_indices: np.ndarray,
