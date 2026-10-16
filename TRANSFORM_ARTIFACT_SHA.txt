@@ -1,0 +1,8 @@
+Verified CI artifact from workflow run 38955673161
+Artifact: dk-showdown-transformed-app
+Artifact id: 12069553467
+Artifact digest: sha256:878ec247f9de3c1fff781ea2450a71cc36550e4f8fe94dd46ad376a8cece3eda
+Transformed dfs_app.py size: 558906 bytes
+Git blob SHA: fd5c5dafaae029772d327097c6a3cc69960b68da
+Source head that produced artifact: e051878128246d81ae634c7664bf0f19700a571a
+All DK engine tests and performance benchmarks passed before artifact upload.
