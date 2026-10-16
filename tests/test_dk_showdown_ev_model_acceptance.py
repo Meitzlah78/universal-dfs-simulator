@@ -1,15 +1,6 @@
 import unittest
 
-from dk_showdown_history import multi_contest_ev_features
-
-
-def ev_model_is_credible(features, min_positive_lift_rate=.60, min_median_lift=0.0):
-    """A model must rank well repeatedly, not merely win aggregate dollars once."""
-    return (
-        features["positive_lift_contest_rate"] >= min_positive_lift_rate
-        and features["median_contest_roi_lift"] > min_median_lift
-        and features["aggregate_top_ev_realized_roi"] > features["aggregate_remaining_realized_roi"]
-    )
+from dk_showdown_history import ev_model_is_credible, multi_contest_ev_features
 
 
 class DKShowdownEVModelAcceptanceTests(unittest.TestCase):
@@ -37,6 +28,16 @@ class DKShowdownEVModelAcceptanceTests(unittest.TestCase):
             {"predicted_roi": [20, 10, 0, -10, -20], "realized_net": [0, 0, 0, 0, 0], "entry_fees": [1] * 5},
         ]
         self.assertFalse(ev_model_is_credible(multi_contest_ev_features(contests)))
+
+    def test_incomplete_or_nonfinite_validation_cannot_be_credible(self):
+        with self.assertRaises(KeyError):
+            ev_model_is_credible({"positive_lift_contest_rate": 1.0})
+        self.assertFalse(ev_model_is_credible({
+            "positive_lift_contest_rate": float("nan"),
+            "median_contest_roi_lift": 10.0,
+            "aggregate_top_ev_realized_roi": 20.0,
+            "aggregate_remaining_realized_roi": 0.0,
+        }))
 
 
 if __name__ == "__main__":
