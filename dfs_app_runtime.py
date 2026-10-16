@@ -1,9 +1,9 @@
-"""Temporary runtime launcher for the validated DK Showdown transforms.
+"""Runtime entry point for the validated DK Showdown transforms.
 
-This keeps the large legacy app source intact while applying the already-tested
-install transforms to a temporary copy before executing Streamlit. It exists so
-we can benchmark the real deployed exhaustive build immediately; once the
-candidate-build choice is settled, the resulting source can be made permanent.
+The large legacy app is loaded from the repository's pinned pre-launch commit,
+then the already-tested install transforms are applied to a cached temporary
+copy before Streamlit executes it. This avoids duplicating the large app file
+while keeping the deployed source deterministic.
 """
 from pathlib import Path
 import os
@@ -11,19 +11,22 @@ import runpy
 import subprocess
 import sys
 import tempfile
+import requests
 
 ROOT = Path(__file__).resolve().parent
-LEGACY = ROOT / "dfs_app_legacy.py"
 CACHE_DIR = Path(tempfile.gettempdir()) / "simmah_runtime"
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 TRANSFORMED = CACHE_DIR / "dfs_app.py"
 STAMP = CACHE_DIR / "source_stamp.txt"
-
-source_stamp = f"{LEGACY.stat().st_mtime_ns}:{LEGACY.stat().st_size}"
+SOURCE_COMMIT = "40f00bce67aff5772b25971d4f2f8153aba386da"
+SOURCE_URL = f"https://raw.githubusercontent.com/Meitzlah78/universal-dfs-simulator/{SOURCE_COMMIT}/dfs_app.py"
+source_stamp = SOURCE_COMMIT
 needs_build = not TRANSFORMED.exists() or not STAMP.exists() or STAMP.read_text() != source_stamp
 
 if needs_build:
-    TRANSFORMED.write_bytes(LEGACY.read_bytes())
+    response = requests.get(SOURCE_URL, timeout=30)
+    response.raise_for_status()
+    TRANSFORMED.write_bytes(response.content)
     env = os.environ.copy()
     env["PYTHONPATH"] = str(ROOT) + os.pathsep + env.get("PYTHONPATH", "")
     for installer in (
