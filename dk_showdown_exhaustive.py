@@ -129,16 +129,14 @@ def fast_exhaustive_showdown_candidates(
             mask &= ~same_team
         if len(locked_idx):
             captain_is_locked = np.any(locked_idx == captain)
-            if captain_is_locked:
-                remaining_locks = locked_idx[locked_idx != captain]
-            else:
-                remaining_locks = locked_idx
+            remaining_locks = locked_idx[locked_idx != captain] if captain_is_locked else locked_idx
             if len(remaining_locks):
                 mask &= np.all(
                     np.any(combos[:, :, None] == remaining_locks[None, None, :], axis=1),
                     axis=1,
                 )
         combos = combos[mask]
+        total_salary = total_salary[mask]
         if not len(combos):
             continue
         legal += len(combos)
@@ -157,7 +155,8 @@ def fast_exhaustive_showdown_candidates(
         best_local = np.argpartition(scores, -take)[-take:] if take < len(scores) else np.arange(len(scores))
         for idx in best_local:
             flex = tuple(int(x) for x in combos[idx])
-            item = (float(scores[idx]), (captain, flex))
+            metrics = (float(total_mean[idx]), float(total_p95[idx]), float(total_p99[idx]), float(total_std[idx]))
+            item = (float(scores[idx]), (captain, flex, int(total_salary[idx]), metrics))
             if len(heap) < keep:
                 heapq.heappush(heap, item)
             elif item[0] > heap[0][0]:
@@ -169,13 +168,20 @@ def fast_exhaustive_showdown_candidates(
 def _heap_to_frame(heap, names, salaries, examined: int, legal: int) -> pd.DataFrame:
     retained = sorted(heap, key=lambda item: item[0], reverse=True)
     rows = []
-    for score, (captain, flex) in retained:
-        rows.append({
+    for score, payload in retained:
+        captain, flex = payload[0], payload[1]
+        salary = payload[2] if len(payload) > 2 else int(round(float(salaries[captain]) * 1.5)) + int(salaries[list(flex)].sum())
+        metrics = payload[3] if len(payload) > 3 else None
+        row = {
             "Captain": names[captain],
             **{f"Flex{i + 1}": names[player] for i, player in enumerate(flex)},
             "CandidateScore": score,
-            "Salary": int(round(float(salaries[captain]) * 1.5)) + int(salaries[list(flex)].sum()),
-        })
+            "Score": score,
+            "Salary": int(salary),
+        }
+        if metrics is not None:
+            row.update({"SimMean": metrics[0], "SimP95": metrics[1], "SimP99": metrics[2], "SimStdDev": metrics[3]})
+        rows.append(row)
     result = pd.DataFrame(rows)
     result.attrs["examined_lineups"] = int(examined)
     result.attrs["legal_lineups"] = int(legal)
