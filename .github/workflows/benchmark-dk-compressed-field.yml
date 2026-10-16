@@ -6,6 +6,7 @@ on:
       - refactor/dk-showdown-engine
     paths:
       - 'benchmarks/benchmark_dk_compressed_field.py'
+      - 'benchmarks/.dk-benchmark-trigger'
       - 'dk_showdown_engine.py'
       - '.github/workflows/benchmark-dk-compressed-field.yml'
   workflow_dispatch:
