@@ -1,13 +1,10 @@
 """Install post-Contest-Sim DK Showdown diversification controls into dfs_app.py.
 
-BUILD and Contest Sim results remain cached. This transform only changes final
-portfolio selection: Portfolio mode uses EV ordering without a hidden overlap
-rule; Min Uniques applies the user's explicit 0..6 requirement after simulation.
-
-It also replaces the Step 4 quadratic candidate-vs-candidate comparison with a
-row-wise sorted-rank calculation. With 5,000 candidates, the legacy expression
-created two 64 x 5000 x 5000 boolean arrays per worker (multi-GB peak memory),
-which can kill Streamlit without a Python traceback.
+BUILD and Contest Sim results remain cached. This transform changes final
+portfolio selection and fixes Step 4 candidate evaluation. Each of the 5,000
+candidate lineups is evaluated independently against the simulated opponent
+field. Candidate lineups are alternatives, not 5,000 entries in one contest,
+so they must not affect one another's rank, tie size, payout, or EV.
 """
 from pathlib import Path
 
@@ -21,12 +18,21 @@ if new_import not in text:
         raise SystemExit("DK engine import anchor not found")
     text = text.replace(import_anchor, new_import + import_anchor, 1)
 
-# Step 4 used broadcasting that scales as O(batch * candidates^2). At 5,000
-# candidates and a 64-simulation batch, each temporary boolean cube is roughly
-# 1.6 GB; two are created, and multiple worker threads can overlap. Compute the
-# same strict/non-strict candidate rank counts one simulation row at a time from
-# a sorted 5,000-value vector instead. Peak temporary memory becomes O(candidates).
-quadratic_anchor = '''            portfolio_left = np.sum(
+# Candidate evaluation is independent: compare every candidate with the same
+# opponent field, never with the other candidate alternatives. This also removes
+# the O(batch * candidates^2) temporary arrays that killed Streamlit at 5,000.
+comparison_size_anchor = '''        comparison_field_size = total_field + max(0, n_candidates - 1)
+'''
+comparison_size_replacement = '''        comparison_field_size = total_field
+'''
+if comparison_size_anchor not in text:
+    raise SystemExit("Step 4 comparison field-size anchor not found")
+text = text.replace(comparison_size_anchor, comparison_size_replacement, 1)
+
+portfolio_competition_anchor = '''            field_left, field_right = dk_weighted_score_bounds(
+                batch_field_scores, contest_multiplicity, batch_candidate_scores
+            )
+            portfolio_left = np.sum(
                 batch_candidate_scores[:, :, None] < batch_candidate_scores[:, None, :],
                 axis=1,
             )
@@ -34,22 +40,20 @@ quadratic_anchor = '''            portfolio_left = np.sum(
                 batch_candidate_scores[:, :, None] <= batch_candidate_scores[:, None, :],
                 axis=1,
             )
+            left_low = field_left + portfolio_left
+            low = field_right + portfolio_right
+            search_field_size = total_field + n_candidates
 '''
-rank_replacement = '''            portfolio_left = np.empty(batch_candidate_scores.shape, dtype=np.int32)
-            portfolio_right = np.empty(batch_candidate_scores.shape, dtype=np.int32)
-            for _row_i in range(batch_candidate_scores.shape[0]):
-                _row_scores = batch_candidate_scores[_row_i]
-                _sorted_candidates = np.sort(_row_scores)
-                portfolio_left[_row_i] = np.searchsorted(
-                    _sorted_candidates, _row_scores, side="left"
-                )
-                portfolio_right[_row_i] = np.searchsorted(
-                    _sorted_candidates, _row_scores, side="right"
-                )
+opponent_only_replacement = '''            field_left, field_right = dk_weighted_score_bounds(
+                batch_field_scores, contest_multiplicity, batch_candidate_scores
+            )
+            left_low = field_left
+            low = field_right
+            search_field_size = total_field
 '''
-if quadratic_anchor not in text:
-    raise SystemExit("quadratic Step 4 candidate comparison anchor not found")
-text = text.replace(quadratic_anchor, rank_replacement, 1)
+if portfolio_competition_anchor not in text:
+    raise SystemExit("Step 4 candidate-vs-candidate competition anchor not found")
+text = text.replace(portfolio_competition_anchor, opponent_only_replacement, 1)
 
 ui_anchor = '''    portfolio_metric = PORTFOLIO_METRICS[
         portfolio_metric_label
@@ -78,8 +82,6 @@ ui_replacement = ui_anchor + '''
             help="0 means no forced diversification; 1 means two selected lineups may share at most 5 of 6 players, etc.",
         )
 
-    # These are explicit user controls from the player table. They are applied
-    # only while selecting the final portfolio from already-simulated lineups.
     post_sim_max_exposure = {}
     post_sim_captain_max_exposure = {}
     if "edited_controls" in locals() and isinstance(edited_controls, pd.DataFrame) and not edited_controls.empty:
@@ -175,11 +177,20 @@ for forbidden in (
     "available_count = max(",
     "batch_candidate_scores[:, :, None] < batch_candidate_scores[:, None, :]",
     "batch_candidate_scores[:, :, None] <= batch_candidate_scores[:, None, :]",
+    "comparison_field_size = total_field + max(0, n_candidates - 1)",
+    "search_field_size = total_field + n_candidates",
 ):
     if forbidden in text:
-        raise SystemExit(f"legacy rule or quadratic Step 4 allocation survived transform: {forbidden}")
+        raise SystemExit(f"legacy candidate competition/diversification rule survived transform: {forbidden}")
 
-if "locked_df=locked_df" not in text:
-    raise SystemExit("locked portfolio was not routed through post-sim selector")
+for required in (
+    "comparison_field_size = total_field",
+    "left_low = field_left",
+    "low = field_right",
+    "search_field_size = total_field",
+    "locked_df=locked_df",
+):
+    if required not in text:
+        raise SystemExit(f"required opponent-only/post-sim behavior missing: {required}")
 
 APP.write_text(text, encoding="utf-8")
