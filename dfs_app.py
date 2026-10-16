@@ -11,6 +11,7 @@ from dk_showdown_engine import (
     duplicate_expansion_weights as dk_duplicate_expansion_weights,
     sample_opponent_batch as dk_sample_opponent_batch,
     score_lineup_matrix as dk_score_lineup_matrix,
+    weighted_score_bounds as dk_weighted_score_bounds,
 )
 from zoneinfo import ZoneInfo
 
@@ -8758,6 +8759,22 @@ if (
     candidate_idx = _candidate_mapped.to_numpy(dtype=np.int16, copy=False)
     contest_idx = _contest_mapped.to_numpy(dtype=np.int16, copy=False)
 
+    # DK Showdown fields contain heavy duplication. Canonicalize FLEX order,
+    # collapse identical opponent lineups once, and retain exact multiplicities.
+    # This prepares the hot scoring path to score unique opponents only.
+    is_dk_showdown = platform == "DraftKings" and lineup_mode != "Classic"
+    if is_dk_showdown and len(contest_idx):
+        _contest_canonical = contest_idx.copy()
+        _contest_canonical[:, 1:] = np.sort(_contest_canonical[:, 1:], axis=1)
+        contest_unique_idx, contest_multiplicity = np.unique(
+            _contest_canonical, axis=0, return_counts=True
+        )
+        contest_unique_idx = contest_unique_idx.astype(np.int16, copy=False)
+        contest_multiplicity = contest_multiplicity.astype(np.int32, copy=False)
+    else:
+        contest_unique_idx = contest_idx
+        contest_multiplicity = np.ones(len(contest_idx), dtype=np.int32)
+
     n_candidates = len(candidate_idx)
     n_sims = len(simulation_df)
     selection_n_sims = max(1, n_sims // 2)
@@ -8839,67 +8856,68 @@ if (
             batch_candidate_scores = dk_score_lineup_matrix(
                 batch_values, candidate_idx[:, 0], candidate_idx[:, 1:]
             )
+            _dk_field_idx = contest_unique_idx if is_dk_showdown else contest_idx
             batch_field_scores = dk_score_lineup_matrix(
-                batch_values, contest_idx[:, 0], contest_idx[:, 1:]
+                batch_values, _dk_field_idx[:, 0], _dk_field_idx[:, 1:]
             )
         else:
             # Preserve the existing generic full-roster scoring path.
             batch_candidate_scores = batch_values[:, candidate_idx].sum(axis=2)
             batch_field_scores = batch_values[:, contest_idx].sum(axis=2)
 
-        # Score the user's portfolio as entries in the SAME contest. Each candidate
-        # must compete with the other submitted portfolio entries, not only with
-        # simulated opponents. Exclude the candidate itself from its comparison
-        # field so the field size remains opponents + the other user entries.
-        if n_candidates > 1:
-            portfolio_scores = batch_candidate_scores
-            combined_scores = np.concatenate((batch_field_scores, portfolio_scores), axis=1)
-            sorted_combined = np.sort(combined_scores, axis=1)
-        else:
-            portfolio_scores = None
-            sorted_combined = np.sort(batch_field_scores, axis=1)
-
-        # Sort every simulation's opponent scores together along the opponent axis.
-        # Candidate-specific searches below correct for the candidate's own score
-        # when the full portfolio was appended to the comparison field.
-        sorted_field = sorted_combined
-
-        # Batched binary search: find each candidate's insertion position in its
-        # simulation's sorted opponent scores. This preserves searchsorted(side="right")
-        # behavior while avoiding a Python loop over every simulation.
-        batch_count = batch_end - batch_start
+        # Score the user's portfolio in the same contest. For DK Showdown, use
+        # exact multiplicity-aware opponent bounds instead of physically sorting
+        # every duplicated opponent score. Portfolio entries still count once.
         comparison_field_size = total_field + max(0, n_candidates - 1)
-        search_field_size = sorted_field.shape[1]
-        low = np.zeros((batch_count, n_candidates), dtype=np.int32)
-        high = np.full((batch_count, n_candidates), search_field_size, dtype=np.int32)
-        sim_rows = np.arange(batch_count)[:, None]
+        if is_dk_showdown:
+            field_left, field_right = dk_weighted_score_bounds(
+                batch_field_scores, contest_multiplicity, batch_candidate_scores
+            )
+            portfolio_left = np.sum(
+                batch_candidate_scores[:, :, None] < batch_candidate_scores[:, None, :],
+                axis=1,
+            )
+            portfolio_right = np.sum(
+                batch_candidate_scores[:, :, None] <= batch_candidate_scores[:, None, :],
+                axis=1,
+            )
+            left_low = field_left + portfolio_left
+            low = field_right + portfolio_right
+            search_field_size = total_field + n_candidates
+        else:
+            if n_candidates > 1:
+                combined_scores = np.concatenate((batch_field_scores, batch_candidate_scores), axis=1)
+                sorted_field = np.sort(combined_scores, axis=1)
+            else:
+                sorted_field = np.sort(batch_field_scores, axis=1)
 
-        while np.any(low < high):
-            active = low < high
-            mid = np.minimum((low + high) // 2, search_field_size - 1)
-            mid_values = sorted_field[sim_rows, mid]
-            move_right = (mid_values <= batch_candidate_scores) & active
-            move_left = (mid_values > batch_candidate_scores) & active
-            low = np.where(move_right, mid + 1, low)
-            high = np.where(move_left, mid, high)
+            batch_count = batch_end - batch_start
+            search_field_size = sorted_field.shape[1]
+            low = np.zeros((batch_count, n_candidates), dtype=np.int32)
+            high = np.full((batch_count, n_candidates), search_field_size, dtype=np.int32)
+            sim_rows = np.arange(batch_count)[:, None]
+            while np.any(low < high):
+                active = low < high
+                mid = np.minimum((low + high) // 2, search_field_size - 1)
+                mid_values = sorted_field[sim_rows, mid]
+                move_right = (mid_values <= batch_candidate_scores) & active
+                move_left = (mid_values > batch_candidate_scores) & active
+                low = np.where(move_right, mid + 1, low)
+                high = np.where(move_left, mid, high)
+
+            left_low = np.zeros((batch_count, n_candidates), dtype=np.int32)
+            left_high = np.full((batch_count, n_candidates), search_field_size, dtype=np.int32)
+            while np.any(left_low < left_high):
+                active_left = left_low < left_high
+                mid_left = np.minimum((left_low + left_high) // 2, search_field_size - 1)
+                mid_left_values = sorted_field[sim_rows, mid_left]
+                move_right_left = (mid_left_values < batch_candidate_scores) & active_left
+                move_left_left = (mid_left_values >= batch_candidate_scores) & active_left
+                left_low = np.where(move_right_left, mid_left + 1, left_low)
+                left_high = np.where(move_left_left, mid_left, left_high)
 
         count_greater = search_field_size - low
-        # The candidate itself is never greater than its own score, so no removal
-        # is needed from count_greater. Percentiles use opponents + other entries.
         percentiles = 1.0 - (count_greater / max(1, comparison_field_size))
-
-        # Find the left insertion point too, so equal-scoring entries can share
-        # the prize money for every rank occupied by the tie.
-        left_low = np.zeros((batch_count, n_candidates), dtype=np.int32)
-        left_high = np.full((batch_count, n_candidates), search_field_size, dtype=np.int32)
-        while np.any(left_low < left_high):
-            active_left = left_low < left_high
-            mid_left = np.minimum((left_low + left_high) // 2, search_field_size - 1)
-            mid_left_values = sorted_field[sim_rows, mid_left]
-            move_right_left = (mid_left_values < batch_candidate_scores) & active_left
-            move_left_left = (mid_left_values >= batch_candidate_scores) & active_left
-            left_low = np.where(move_right_left, mid_left + 1, left_low)
-            left_high = np.where(move_left_left, mid_left, left_high)
 
         # Convert sampled opponent results to a smoothed full-field rank estimate.
         # The +1 continuity correction prevents a lineup that beats every sampled
