@@ -31,6 +31,14 @@ jobs:
         run: |
           grep -q 'batch_valid = (batch_salary' dfs_app.py
           grep -q 'sampled_indices = sampled_indices\[batch_valid\]' dfs_app.py
+      - name: Validate candidate numeric-array transform
+        run: |
+          cp dfs_app.py /tmp/dfs_app.before_numeric_arrays.py
+          python .github/scripts/vectorize_dk_candidate_array_lookups.py
+          grep -q 'flex_salary_values\[sampled_indices\]' dfs_app.py
+          grep -q 'flex_team_values\[sampled_indices\]' dfs_app.py
+          python -m py_compile dfs_app.py dk_showdown_engine.py
+          mv /tmp/dfs_app.before_numeric_arrays.py dfs_app.py
       - name: Compile DK engine and app
         run: python -m py_compile dk_showdown_engine.py dfs_app.py
       - name: Run DK engine and compressed-field parity tests
