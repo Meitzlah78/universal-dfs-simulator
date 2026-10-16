@@ -77,43 +77,56 @@ if signature_anchor not in text:
     raise SystemExit("portfolio selection signature anchor not found")
 text = text.replace(signature_anchor, signature_replacement, 1)
 
-start_marker = '''        else:
-            # Rank candidates by the selected metric, then build a diversified
+# Replace both legacy branches (locked and unlocked) with one selector call.
+# The selector itself preserves locks, counts them toward exposure, and requires
+# newly selected lineups to satisfy Min Uniques relative to locks.
+start_marker = '''        old_portfolio = st.session_state.get("portfolio_df")
+
+        if (
 '''
 end_marker = '''        st.session_state["portfolio_df"] = portfolio_df
 '''
 start = text.find(start_marker)
 if start < 0:
-    raise SystemExit("legacy automatic diversification block start not found")
+    raise SystemExit("legacy portfolio selection block start not found")
 end = text.find(end_marker, start)
 if end < 0:
     raise SystemExit("portfolio state write marker not found")
 
-replacement = '''        else:
-            # Diversification happens only after Contest Sim. Portfolio mode does
-            # not impose a hidden overlap rule or automatic 90% exposure ceiling.
-            # Min Uniques applies exactly the user's requested player difference.
-            requested_uniques = int(min_uniques) if diversification_mode == "Min Uniques" else 0
-            portfolio_df = select_post_sim_portfolio(
-                results_df,
-                int(portfolio_count),
-                metric=selection_metric,
-                min_uniques=requested_uniques,
-                lineup_columns=tuple(portfolio_lineup_columns),
-                max_exposure=post_sim_max_exposure,
-                captain_max_exposure=post_sim_captain_max_exposure,
-            )
-            if len(portfolio_df) < int(portfolio_count):
-                if diversification_mode == "Min Uniques":
-                    st.warning(
-                        f"Only {len(portfolio_df):,} lineups satisfy Min Uniques = {requested_uniques} "
-                        "and the current manual exposure limits. Constraints were not silently relaxed."
-                    )
-                else:
-                    st.warning(
-                        f"Only {len(portfolio_df):,} lineups satisfy the current manual exposure limits. "
-                        "Constraints were not silently relaxed."
-                    )
+replacement = '''        old_portfolio = st.session_state.get("portfolio_df")
+        locked_df = None
+        if (
+            isinstance(old_portfolio, pd.DataFrame)
+            and "Locked" in old_portfolio.columns
+            and all(col in old_portfolio.columns for col in portfolio_lineup_columns)
+        ):
+            locked_df = old_portfolio[old_portfolio["Locked"] == True].copy()
+
+        # Diversification happens only after Contest Sim. Portfolio mode does
+        # not impose a hidden overlap rule or automatic 90% exposure ceiling.
+        # Min Uniques applies exactly the user's requested player difference.
+        requested_uniques = int(min_uniques) if diversification_mode == "Min Uniques" else 0
+        portfolio_df = select_post_sim_portfolio(
+            results_df,
+            int(portfolio_count),
+            metric=selection_metric,
+            min_uniques=requested_uniques,
+            lineup_columns=tuple(portfolio_lineup_columns),
+            max_exposure=post_sim_max_exposure,
+            captain_max_exposure=post_sim_captain_max_exposure,
+            locked_df=locked_df,
+        )
+        if len(portfolio_df) < int(portfolio_count):
+            if diversification_mode == "Min Uniques":
+                st.warning(
+                    f"Only {len(portfolio_df):,} lineups satisfy Min Uniques = {requested_uniques} "
+                    "and the current manual exposure limits. Constraints were not silently relaxed."
+                )
+            else:
+                st.warning(
+                    f"Only {len(portfolio_df):,} lineups satisfy the current manual exposure limits. "
+                    "Constraints were not silently relaxed."
+                )
 
 '''
 text = text[:start] + replacement + text[end:]
@@ -131,8 +144,12 @@ text = text.replace(state_anchor, state_replacement, 1)
 for forbidden in (
     "auto_diversification_pct = 90.0",
     "max_shared_players = max(1, slot_count - 2)",
+    "available_count = max(",
 ):
     if forbidden in text:
         raise SystemExit(f"legacy diversification rule survived transform: {forbidden}")
+
+if "locked_df=locked_df" not in text:
+    raise SystemExit("locked portfolio was not routed through post-sim selector")
 
 APP.write_text(text, encoding="utf-8")
