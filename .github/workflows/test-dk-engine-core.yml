@@ -35,10 +35,10 @@ jobs:
         run: |
           grep -q 'flex_salary_values\[sampled_indices\]' dfs_app.py
           grep -q 'flex_team_values\[sampled_indices\]' dfs_app.py
-          python -m py_compile dfs_app.py dk_showdown_engine.py
+          python -m py_compile dfs_app.py dk_showdown_engine.py nfl_scoring.py
       - name: Compile DK engine and app
-        run: python -m py_compile dk_showdown_engine.py dfs_app.py
-      - name: Run DK engine and compressed-field parity tests
+        run: python -m py_compile dk_showdown_engine.py nfl_scoring.py dfs_app.py
+      - name: Run DK engine, compressed-field, and shared NFL scoring tests
         env:
           PYTHONPATH: ${{ github.workspace }}
         run: >-
@@ -48,6 +48,7 @@ jobs:
           tests/test_dk_weighted_portfolio_parity.py
           tests/test_dk_compressed_end_to_end.py
           tests/test_dk_payout_hotpath.py
+          tests/test_nfl_scoring.py
       - name: Run DK compressed performance benchmark
         env:
           PYTHONPATH: ${{ github.workspace }}
