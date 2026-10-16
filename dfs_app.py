@@ -6,7 +6,10 @@ import requests
 import streamlit as st
 import pandas as pd
 import numpy as np
-from dk_showdown_engine import candidate_score as dk_showdown_candidate_score
+from dk_showdown_engine import (
+    candidate_score as dk_showdown_candidate_score,
+    duplicate_expansion_weights as dk_duplicate_expansion_weights,
+)
 from zoneinfo import ZoneInfo
 
 # Lower defaults keep the simulator responsive while retaining useful variation.
@@ -552,27 +555,7 @@ def expand_showdown_field_by_ownership(sample_field, full_field_size, seed=20261
     # 20-lineup chalk bucket over-concentrated duplication into too few lineups.
     # Spread the chalk component across a much wider slice of the candidate field
     # while retaining a small sharper component for the very chalkiest builds.
-    centered_log_weights = log_weights - np.max(log_weights)
-    base_weights = np.exp(centered_log_weights * 0.38)
-    base_weights /= base_weights.sum()
-
-    broad_count = max(250, min(1800, max(250, total // 5)))
-    broad_count = min(broad_count, total)
-    broad_indices = np.argpartition(log_weights, -broad_count)[-broad_count:]
-    broad_weights = np.zeros(total, dtype=np.float64)
-    broad_strength = np.exp(centered_log_weights[broad_indices] * 0.80)
-    if broad_strength.sum() > 0:
-        broad_weights[broad_indices] = broad_strength / broad_strength.sum()
-
-    top_count = max(10, min(40, total))
-    top_indices = np.argpartition(log_weights, -top_count)[-top_count:]
-    top_weights = np.zeros(total, dtype=np.float64)
-    top_strength = np.exp(centered_log_weights[top_indices] * 1.20)
-    if top_strength.sum() > 0:
-        top_weights[top_indices] = top_strength / top_strength.sum()
-
-    weights = 0.76 * base_weights + 0.20 * broad_weights + 0.04 * top_weights
-    weights /= weights.sum()
+    weights = dk_duplicate_expansion_weights(log_weights)
 
     rng = np.random.default_rng(seed)
     sampled_indices = rng.choice(total, size=full_field_size, replace=True, p=weights)
