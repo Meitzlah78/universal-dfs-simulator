@@ -1,0 +1,29 @@
+name: Benchmark DK Compressed Field
+
+on:
+  push:
+    branches:
+      - refactor/dk-showdown-engine
+    paths:
+      - 'benchmarks/benchmark_dk_compressed_field.py'
+      - 'dk_showdown_engine.py'
+      - '.github/workflows/benchmark-dk-compressed-field.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install benchmark dependency
+        run: pip install numpy
+      - name: Run tonight-sized DK benchmark
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python benchmarks/benchmark_dk_compressed_field.py
