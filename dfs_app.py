@@ -437,8 +437,29 @@ def build_showdown_opponent_field(available_players, simulation_df, players_df,
     # Opponent construction is ownership-first. Projection/sim strength is only
     # the fallback before a usable ownership estimate exists for the slate.
     ownership_pool = players_df.drop_duplicates("Name", keep="first").set_index("Name").reindex(names).reset_index()
-    weights = opponent_field_selection_weights(ownership_pool, means)
-    weights = np.clip(weights, 0.01, None)
+    # DK Showdown needs a stronger public-field fallback than the shared full-roster
+    # helper. Real large-field Showdown contests concentrate heavily around the best
+    # projected/chalk constructions; a soft rank-squared fallback makes opponents too
+    # random and inflates our portfolio's Top-1% and ROI. Keep true external ownership
+    # first, but when it is absent use a DK-only projection-rank curve.
+    _own_lookup = {str(c).strip().casefold(): c for c in ownership_pool.columns}
+    _own_col = next((_own_lookup[k] for k in (
+        "projected own %", "ownership %", "projected ownership",
+        "projected own", "ownership", "own%", "own"
+    ) if k in _own_lookup), None)
+    if _own_col is not None:
+        _external_ownership = pd.to_numeric(
+            ownership_pool[_own_col], errors="coerce"
+        ).fillna(0.0).to_numpy(dtype=float)
+    else:
+        _external_ownership = np.zeros(len(ownership_pool), dtype=float)
+    if np.clip(_external_ownership, 0.0, None).sum() > 0:
+        weights = np.clip(_external_ownership, 0.01, None)
+    else:
+        _ranks = pd.Series(means).rank(pct=True).to_numpy(dtype=float)
+        # Sharper than the shared 0.10 + rank^2 fallback, but retains a nonzero
+        # contrarian tail. This is intentionally scoped to DK Showdown only.
+        weights = np.clip(0.02 + _ranks ** 3.25, 0.01, None)
     weights /= weights.sum()
 
     cpt_lookup = {str(c).strip().casefold(): c for c in ownership_pool.columns}
