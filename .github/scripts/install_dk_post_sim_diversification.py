@@ -3,6 +3,11 @@
 BUILD and Contest Sim results remain cached. This transform only changes final
 portfolio selection: Portfolio mode uses EV ordering without a hidden overlap
 rule; Min Uniques applies the user's explicit 0..6 requirement after simulation.
+
+It also replaces the Step 4 quadratic candidate-vs-candidate comparison with a
+row-wise sorted-rank calculation. With 5,000 candidates, the legacy expression
+created two 64 x 5000 x 5000 boolean arrays per worker (multi-GB peak memory),
+which can kill Streamlit without a Python traceback.
 """
 from pathlib import Path
 
@@ -15,6 +20,36 @@ if new_import not in text:
     if import_anchor not in text:
         raise SystemExit("DK engine import anchor not found")
     text = text.replace(import_anchor, new_import + import_anchor, 1)
+
+# Step 4 used broadcasting that scales as O(batch * candidates^2). At 5,000
+# candidates and a 64-simulation batch, each temporary boolean cube is roughly
+# 1.6 GB; two are created, and multiple worker threads can overlap. Compute the
+# same strict/non-strict candidate rank counts one simulation row at a time from
+# a sorted 5,000-value vector instead. Peak temporary memory becomes O(candidates).
+quadratic_anchor = '''            portfolio_left = np.sum(
+                batch_candidate_scores[:, :, None] < batch_candidate_scores[:, None, :],
+                axis=1,
+            )
+            portfolio_right = np.sum(
+                batch_candidate_scores[:, :, None] <= batch_candidate_scores[:, None, :],
+                axis=1,
+            )
+'''
+rank_replacement = '''            portfolio_left = np.empty(batch_candidate_scores.shape, dtype=np.int32)
+            portfolio_right = np.empty(batch_candidate_scores.shape, dtype=np.int32)
+            for _row_i in range(batch_candidate_scores.shape[0]):
+                _row_scores = batch_candidate_scores[_row_i]
+                _sorted_candidates = np.sort(_row_scores)
+                portfolio_left[_row_i] = np.searchsorted(
+                    _sorted_candidates, _row_scores, side="left"
+                )
+                portfolio_right[_row_i] = np.searchsorted(
+                    _sorted_candidates, _row_scores, side="right"
+                )
+'''
+if quadratic_anchor not in text:
+    raise SystemExit("quadratic Step 4 candidate comparison anchor not found")
+text = text.replace(quadratic_anchor, rank_replacement, 1)
 
 ui_anchor = '''    portfolio_metric = PORTFOLIO_METRICS[
         portfolio_metric_label
@@ -77,9 +112,6 @@ if signature_anchor not in text:
     raise SystemExit("portfolio selection signature anchor not found")
 text = text.replace(signature_anchor, signature_replacement, 1)
 
-# Replace both legacy branches (locked and unlocked) with one selector call.
-# The selector itself preserves locks, counts them toward exposure, and requires
-# newly selected lineups to satisfy Min Uniques relative to locks.
 start_marker = '''        old_portfolio = st.session_state.get("portfolio_df")
 
         if (
@@ -102,9 +134,6 @@ replacement = '''        old_portfolio = st.session_state.get("portfolio_df")
         ):
             locked_df = old_portfolio[old_portfolio["Locked"] == True].copy()
 
-        # Diversification happens only after Contest Sim. Portfolio mode does
-        # not impose a hidden overlap rule or automatic 90% exposure ceiling.
-        # Min Uniques applies exactly the user's requested player difference.
         requested_uniques = int(min_uniques) if diversification_mode == "Min Uniques" else 0
         portfolio_df = select_post_sim_portfolio(
             results_df,
@@ -140,14 +169,15 @@ if state_anchor not in text:
     raise SystemExit("portfolio control state anchor not found")
 text = text.replace(state_anchor, state_replacement, 1)
 
-# Fail closed if the hidden legacy diversification rules survived.
 for forbidden in (
     "auto_diversification_pct = 90.0",
     "max_shared_players = max(1, slot_count - 2)",
     "available_count = max(",
+    "batch_candidate_scores[:, :, None] < batch_candidate_scores[:, None, :]",
+    "batch_candidate_scores[:, :, None] <= batch_candidate_scores[:, None, :]",
 ):
     if forbidden in text:
-        raise SystemExit(f"legacy diversification rule survived transform: {forbidden}")
+        raise SystemExit(f"legacy rule or quadratic Step 4 allocation survived transform: {forbidden}")
 
 if "locked_df=locked_df" not in text:
     raise SystemExit("locked portfolio was not routed through post-sim selector")
