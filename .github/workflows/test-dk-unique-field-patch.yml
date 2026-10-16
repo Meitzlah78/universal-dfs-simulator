@@ -27,5 +27,7 @@ jobs:
         run: |
           python .github/scripts/wire_dk_unique_field_indices.py
           python .github/scripts/wire_dk_unique_field_scoring.py
+          python .github/scripts/wire_dk_weighted_rank_hotpath.py
           python -m py_compile dfs_app.py
           grep -q 'contest_unique_idx if is_dk_showdown else contest_idx' dfs_app.py
+          grep -q 'dk_weighted_score_bounds' dfs_app.py
