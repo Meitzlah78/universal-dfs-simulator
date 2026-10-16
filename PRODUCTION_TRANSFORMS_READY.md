@@ -1,6 +1,6 @@
 # DK Showdown production transforms — ready
 
-Validated source state: `cce6dc631736da8c01e3773d1b0e83a3f66e82fc`.
+Validated source state: `8cdb001bc3cb1e2b4630ca6bcc5bb63641d758a7`.
 
 Permanent installation order on this safety branch:
 
@@ -21,9 +21,19 @@ Required live behavior after installation:
 - No hidden two-unique overlap rule.
 - Changing post-sim diversification reselects from already-simulated results rather than rebuilding candidates or the field.
 
-Do not promote if either legacy marker survives:
+Final pre-install validation gate:
+
+- Python syntax workflow: PASS on `8cdb001b`.
+- DK Showdown field calibration workflow: PASS on `8cdb001b`.
+- DK Engine Core workflow: PASS on `8cdb001b`.
+- Regression test explicitly verifies that changing Min Uniques reselects only from the already-scored Contest Sim candidate pool.
+
+Do not promote if any legacy marker survives:
 
 - `auto_diversification_pct = 90.0`
 - `max_shared_players = max(1, slot_count - 2)`
+- `available_count = max(` from the legacy separate locked-portfolio branch.
+
+The transformed live source must contain `locked_df=locked_df` in the post-sim selector call.
 
 `main` is intentionally not targeted by this installation checkpoint.
