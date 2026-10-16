@@ -8,6 +8,7 @@ import pandas as pd
 import numpy as np
 from dk_showdown_engine import (
     candidate_score as dk_showdown_candidate_score,
+    duplicate_expansion_counts as dk_duplicate_expansion_counts,
     duplicate_expansion_weights as dk_duplicate_expansion_weights,
     opponent_lineup_means as dk_opponent_lineup_means,
     opponent_quality_acceptance as dk_opponent_quality_acceptance,
@@ -589,10 +590,8 @@ def expand_showdown_field_by_ownership(sample_field, full_field_size, seed=20261
     # 20-lineup chalk bucket over-concentrated duplication into too few lineups.
     # Spread the chalk component across a much wider slice of the candidate field
     # while retaining a small sharper component for the very chalkiest builds.
-    weights = dk_duplicate_expansion_weights(log_weights)
-
-    rng = np.random.default_rng(seed)
-    sampled_indices = rng.choice(total, size=full_field_size, replace=True, p=weights)
+    multiplicities = dk_duplicate_expansion_counts(log_weights, full_field_size, seed=seed)
+    sampled_indices = np.repeat(np.arange(total, dtype=np.int64), multiplicities)
     expanded = field.iloc[sampled_indices].copy().reset_index(drop=True)
     expanded["Salary"] = pd.to_numeric(expanded["Salary"], errors="coerce").fillna(0).astype(int)
     return expanded

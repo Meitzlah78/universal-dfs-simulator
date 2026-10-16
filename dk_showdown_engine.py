@@ -102,8 +102,40 @@ def duplicate_expansion_weights(log_weights: Sequence[float]) -> np.ndarray:
     top_idx = np.argpartition(values, -top_count)[-top_count:]
     top = np.zeros(total); strength = np.exp(centered[top_idx] * 1.20)
     if strength.sum() > 0: top[top_idx] = strength / strength.sum()
-    weights = 0.76 * base + 0.20 * broad + 0.04 * top
+    weights = 0.57 * base + 0.25 * broad + 0.18 * top
     return weights / weights.sum()
+
+
+def duplicate_expansion_counts(log_weights: Sequence[float], full_field_size: int, seed: int = 20261012, singleton_share: float = 0.106) -> np.ndarray:
+    """Allocate full-field multiplicities with a preserved low-owned tail.
+
+    Real DK Showdown fields are polarized: many constructions appear once while
+    a large share of entries sit in heavily duplicated chalk.  Redrawing every
+    entry from a representative sample suppresses the singleton tail.  Preserve
+    the least-popular representative constructions once, then allocate the
+    remaining entries with the calibrated chalk distribution.
+    """
+    values = np.asarray(log_weights, dtype=np.float64)
+    total = len(values)
+    size = int(full_field_size)
+    if total == 0 or size <= 0:
+        return np.zeros(total, dtype=np.int64)
+    if size <= total:
+        counts = np.zeros(total, dtype=np.int64)
+        counts[np.argsort(values)[:size]] = 1
+        return counts
+    weights = duplicate_expansion_weights(values)
+    reserve = min(total, max(0, int(round(size * float(singleton_share)))))
+    tail_idx = np.argsort(weights)[:reserve]
+    counts = np.zeros(total, dtype=np.int64)
+    counts[tail_idx] = 1
+    remaining_mask = np.ones(total, dtype=bool)
+    remaining_mask[tail_idx] = False
+    remaining_weights = weights[remaining_mask]
+    remaining_weights /= remaining_weights.sum()
+    rng = np.random.default_rng(seed)
+    counts[remaining_mask] = rng.multinomial(size - reserve, remaining_weights)
+    return counts
 
 def sample_opponent_batch(rng: np.random.Generator, captain_weights: np.ndarray, flex_weights: np.ndarray, batch_size: int, flex_count: int = DK_FLEX_COUNT) -> tuple[np.ndarray, np.ndarray]:
     """Fast weighted Captain + FLEX sampling for a whole opponent batch."""
