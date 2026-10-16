@@ -124,7 +124,7 @@ def duplicate_expansion_weights(log_weights: Sequence[float]) -> np.ndarray:
     if broad_strength.sum() > 0:
         broad_weights[broad_indices] = broad_strength / broad_strength.sum()
 
-    top_count = max(10, min(40, total))
+    top_count = min(max(10, min(40, total)), total)
     top_indices = np.argpartition(values, -top_count)[-top_count:]
     top_weights = np.zeros(total, dtype=np.float64)
     top_strength = np.exp(centered_log_weights[top_indices] * 1.20)
