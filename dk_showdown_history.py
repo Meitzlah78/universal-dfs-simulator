@@ -34,19 +34,15 @@ def walk_forward_batches(contests: Iterable[Mapping[str, Any]], min_training_con
     ordered = sorted(rows, key=lambda c: _utc(c["lock_time"]))
     batches = []
     for lock_utc, grouped in groupby(ordered, key=lambda c: _utc(c["lock_time"])):
-        targets = list(grouped)
-        training = [c for c in ordered if _utc(c["lock_time"]) < lock_utc]
-        if len(training) >= min_training_contests:
-            batches.append({"lock_time": lock_utc, "training": training, "targets": targets})
+        targets = list(grouped); training = [c for c in ordered if _utc(c["lock_time"]) < lock_utc]
+        if len(training) >= min_training_contests: batches.append({"lock_time": lock_utc, "training": training, "targets": targets})
     return batches
 
 
 def walk_forward_splits(contests: Iterable[Mapping[str, Any]], min_training_contests: int = 1) -> list[dict[str, Any]]:
-    """Compatibility view: one target per split, backed by same-lock batches."""
     splits = []
     for batch in walk_forward_batches(contests, min_training_contests=min_training_contests):
-        for target in batch["targets"]:
-            splits.append({"training": batch["training"], "target": target})
+        for target in batch["targets"]: splits.append({"training": batch["training"], "target": target})
     return splits
 
 
@@ -70,6 +66,28 @@ def captain_behavior_features(captains: Iterable[Any]) -> dict[str, float]:
     if not values: raise ValueError("at least one captain is required")
     counts = Counter(values); entries = len(values); ordered = sorted(counts.values(), reverse=True)
     return {"captain_unique_count": float(len(counts)), "captain_top1_mass": ordered[0] / entries, "captain_top4_mass": sum(ordered[:4]) / entries}
+
+
+def payout_shape_features(field_size: int, entry_fee: float, payouts: Iterable[float]) -> dict[str, float]:
+    """Describe contest economics using only information known before lock."""
+    if int(field_size) != field_size or field_size <= 0: raise ValueError("field_size must be a positive integer")
+    if not np.isfinite(entry_fee) or entry_fee <= 0: raise ValueError("entry_fee must be positive and finite")
+    prizes = np.asarray(list(payouts), dtype=float)
+    if prizes.size == 0: raise ValueError("at least one payout is required")
+    if prizes.size > field_size: raise ValueError("payout count cannot exceed field size")
+    if not np.isfinite(prizes).all() or (prizes < 0).any(): raise ValueError("payouts must be finite and non-negative")
+    total_prizes = float(prizes.sum()); prize_pool = float(field_size * entry_fee)
+    paid_places = int(np.count_nonzero(prizes > 0)); first = float(prizes[0])
+    top10_count = max(1, int(np.ceil(field_size * 0.10)))
+    top1pct_count = max(1, int(np.ceil(field_size * 0.01)))
+    return {
+        "field_size": float(field_size), "entry_fee": float(entry_fee), "paid_places": float(paid_places),
+        "paid_rate": paid_places / field_size, "first_prize": first, "first_prize_multiple": first / entry_fee,
+        "first_prize_pool_share": first / total_prizes if total_prizes > 0 else 0.0,
+        "top1pct_prize_pool_share": float(prizes[:top1pct_count].sum() / total_prizes) if total_prizes > 0 else 0.0,
+        "top10pct_prize_pool_share": float(prizes[:top10_count].sum() / total_prizes) if total_prizes > 0 else 0.0,
+        "listed_prize_pool": total_prizes, "entry_pool": prize_pool, "listed_return_rate": total_prizes / prize_pool,
+    }
 
 
 def _validated_ev_arrays(predicted_roi, realized_net, entry_fees):
