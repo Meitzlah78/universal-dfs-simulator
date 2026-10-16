@@ -23,12 +23,11 @@ jobs:
         with:
           python-version: '3.11'
       - run: pip install numpy pandas pytest
-      - name: Apply validated numeric-array transform
-        run: python .github/scripts/vectorize_dk_candidate_array_lookups.py
+      - name: Apply benchmarked DK scoring batch size
+        run: python .github/scripts/set_dk_scoring_batch_64.py
       - name: Verify and compile transformed app
         run: |
-          grep -q 'flex_salary_values\[sampled_indices\]' dfs_app.py
-          grep -q 'flex_team_values\[sampled_indices\]' dfs_app.py
+          grep -q 'batch_size = 64 if is_dk_showdown else 128' dfs_app.py
           python -m py_compile dfs_app.py dk_showdown_engine.py
       - name: Run DK parity tests
         env:
@@ -48,6 +47,6 @@ jobs:
           if git diff --cached --quiet; then
             echo 'No app changes to commit.'
           else
-            git commit -m 'Use numeric arrays for DK candidate metadata'
+            git commit -m 'Use 64-scenario DK Showdown scoring batches'
             git push origin HEAD:refactor/dk-showdown-engine
           fi
