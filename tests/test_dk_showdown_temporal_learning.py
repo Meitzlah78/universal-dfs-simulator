@@ -1,7 +1,7 @@
 import unittest
 from datetime import datetime, timezone
 
-from dk_showdown_history import eligible_training_contests, walk_forward_splits
+from dk_showdown_history import eligible_training_contests, walk_forward_batches, walk_forward_splits
 
 
 class DKShowdownTemporalLearningTests(unittest.TestCase):
@@ -26,18 +26,25 @@ class DKShowdownTemporalLearningTests(unittest.TestCase):
         self.assertEqual([s["target"]["id"] for s in splits], ["12", "13"])
         self.assertEqual([c["id"] for c in splits[0]["training"]], ["10", "11"])
         self.assertEqual([c["id"] for c in splits[1]["training"]], ["10", "11", "12"])
-        for split in splits:
-            target_time = split["target"]["lock_time"]
-            self.assertTrue(all(c["lock_time"] < target_time for c in split["training"]))
 
-    def test_walk_forward_same_lock_contests_cannot_train_each_other(self):
-        lock = datetime(2026, 10, 12, 20, 0, tzinfo=timezone.utc)
-        contests = [{"id": "old", "lock_time": datetime(2026, 10, 11, 20, 0, tzinfo=timezone.utc)}, {"id": "a", "lock_time": lock}, {"id": "b", "lock_time": lock}]
-        splits = walk_forward_splits(contests)
-        same_lock = [s for s in splits if s["target"]["id"] in {"a", "b"}]
-        self.assertEqual(len(same_lock), 2)
-        for split in same_lock:
-            self.assertEqual([c["id"] for c in split["training"]], ["old"])
+    def test_different_games_with_same_lock_are_one_evaluation_batch(self):
+        lock = datetime(2026, 10, 12, 20, 15, tzinfo=timezone.utc)
+        contests = [
+            {"id": "old-game", "game": "SEA-DEN", "lock_time": datetime(2026, 10, 11, 20, 15, tzinfo=timezone.utc)},
+            {"id": "buf-lar", "game": "BUF-LAR", "lock_time": lock},
+            {"id": "tb-dal", "game": "TB-DAL", "lock_time": lock},
+        ]
+        batches = walk_forward_batches(contests)
+        batch = next(b for b in batches if b["lock_time"] == lock)
+        self.assertEqual([c["id"] for c in batch["training"]], ["old-game"])
+        self.assertCountEqual([c["id"] for c in batch["targets"]], ["buf-lar", "tb-dal"])
+
+    def test_same_lock_games_become_training_for_later_games(self):
+        lock = datetime(2026, 10, 12, 20, 15, tzinfo=timezone.utc)
+        later = datetime(2026, 10, 13, 20, 15, tzinfo=timezone.utc)
+        contests = [{"id": "old", "lock_time": datetime(2026, 10, 11, 20, 15, tzinfo=timezone.utc)}, {"id": "game-a", "lock_time": lock}, {"id": "game-b", "lock_time": lock}, {"id": "future", "lock_time": later}]
+        future_batch = next(b for b in walk_forward_batches(contests) if b["lock_time"] == later)
+        self.assertCountEqual([c["id"] for c in future_batch["training"]], ["old", "game-a", "game-b"])
 
     def test_naive_target_time_is_rejected(self):
         with self.assertRaises(ValueError): eligible_training_contests([], datetime(2026, 10, 12, 20, 15))
