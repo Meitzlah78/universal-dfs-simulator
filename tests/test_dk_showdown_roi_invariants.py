@@ -5,12 +5,17 @@ import numpy as np
 from dk_showdown_engine import weighted_score_bounds
 
 
-def tied_prize(left, right, payout_by_rank):
-    """Prize for one candidate added to an opponent field with [left,right) ties."""
+def tied_prize_from_weighted_bounds(left, right, field_size, payout_by_rank):
+    """Prize after converting ascending weighted bounds to contest rank bounds."""
     payout = np.asarray(payout_by_rank, dtype=np.float64)
     prefix = np.concatenate(([0.0], np.cumsum(payout)))
-    start = np.asarray(left, dtype=np.int64)
-    stop = np.asarray(right, dtype=np.int64) + 1  # include candidate itself
+    # weighted_score_bounds reports counts below (< candidate) and at-or-below
+    # (<= candidate) in ascending score order. Contest payout ranks run in the
+    # opposite direction, so convert to counts strictly ahead / ahead-or-tied.
+    count_greater = int(field_size) - np.asarray(right, dtype=np.int64)
+    count_greater_or_equal = int(field_size) - np.asarray(left, dtype=np.int64)
+    start = count_greater
+    stop = count_greater_or_equal + 1  # include candidate itself in the tie
     safe_start = np.clip(start, 0, len(payout))
     safe_stop = np.clip(stop, 0, len(payout))
     prize_sum = prefix[safe_stop] - prefix[safe_start]
@@ -28,7 +33,7 @@ class DKShowdownROIInvariantTests(unittest.TestCase):
         candidate = np.array([[110.0]], dtype=np.float32)
         left, right = weighted_score_bounds(unique_scores, counts, candidate)
         payout = np.array([250.0, 150.0, 100.0, 75.0, 50.0, 40.0, 30.0, 30.0, 25.0, 25.0])
-        actual = tied_prize(left, right, payout)[0, 0]
+        actual = tied_prize_from_weighted_bounds(left, right, counts.sum(), payout)[0, 0]
         self.assertEqual(actual, (150.0 + 100.0 + 75.0 + 50.0) / 4.0)
 
     def test_duplicate_tie_crossing_cash_line_shares_unpaid_ranks(self):
@@ -40,7 +45,7 @@ class DKShowdownROIInvariantTests(unittest.TestCase):
         candidate = np.array([[90.0]], dtype=np.float32)
         left, right = weighted_score_bounds(unique_scores, counts, candidate)
         payout = np.array([100.0, 60.0, 40.0, 20.0, 10.0, 8.0, 6.0])
-        actual = tied_prize(left, right, payout)[0, 0]
+        actual = tied_prize_from_weighted_bounds(left, right, counts.sum(), payout)[0, 0]
         self.assertEqual(actual, (10.0 + 8.0 + 6.0) / 6.0)
 
     def test_entry_fee_roi_identity(self):
