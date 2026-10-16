@@ -17,7 +17,9 @@ if new_import not in text:
         raise SystemExit("DK engine import anchor not found")
     text = text.replace(import_anchor, new_import + import_anchor, 1)
 
-start_marker = "    showdown_base_scores = {"
+# Anchor to the current production Showdown ranking/build block, not an older
+# dict-based version of showdown_base_scores.
+start_marker = "        showdown_base_scores = np.asarray(["
 end_marker = "    st.session_state[\"candidates_ready\"] = True"
 start = text.find(start_marker)
 if start < 0:
@@ -27,35 +29,57 @@ if end < 0:
     raise SystemExit("legacy DK Showdown candidate block end not found")
 end += len(end_marker)
 
-replacement = '''    showdown_base_scores = {
-        name: float(player_sim[name].get("P95", 0.0))
-        for name in available_players
-        if name in player_sim
-    }
-    _, showdown_ownership_proxy = ownership_adjusted_player_scores(
-        showdown_base_scores,
-        players_df,
-        control_map,
-        available_players,
-        upside_scores={name: float(player_sim[name].get("P99", 0.0)) for name in available_players if name in player_sim},
-    )
-    showdown_pool = players_df[players_df["Name"].isin(available_players)].copy()
-    showdown_controls = edited_controls[edited_controls["Name"].isin(available_players)].copy()
-    CANDIDATE_COUNT = 5000
-    candidates_df = dk_build_showdown_candidates(
-        showdown_pool,
-        player_sim,
-        showdown_ownership_proxy,
-        controls=showdown_controls,
-        candidate_count=CANDIDATE_COUNT,
-        salary_floor=0,
-        salary_cap=50000,
-    )
-    st.session_state["dk_exhaustive_build_stats"] = {
-        "examined": int(candidates_df.attrs.get("examined_lineups", 0)),
-        "legal": int(candidates_df.attrs.get("legal_lineups", 0)),
-        "retained": int(candidates_df.attrs.get("retained_lineups", len(candidates_df))),
-    }
+replacement = '''        showdown_base_scores = np.asarray([
+            player_sim[p]["P95"] * P95_WEIGHT
+            + player_sim[p]["P99"] * P99_WEIGHT
+            + player_sim[p]["Mean"] * MEAN_WEIGHT
+            + player_sim[p].get("StdDev", 0.0) * STDDEV_WEIGHT
+            for p in available_players
+        ], dtype=float)
+        _, showdown_ownership_proxy = ownership_adjusted_player_scores(
+            players_df[players_df["Name"].isin(available_players)].drop_duplicates("Name"),
+            available_players, showdown_base_scores, player_sim
+        )
+        showdown_ownership_by_name = {
+            name: float(showdown_ownership_proxy[i])
+            for i, name in enumerate(available_players)
+        }
+        showdown_pool = players_df[players_df["Name"].isin(available_players)].copy()
+        showdown_controls = edited_controls[edited_controls["Name"].isin(available_players)].copy()
+        CANDIDATE_COUNT = 5000
+        candidate_progress = st.progress(0, text="Exhaustively screening legal Showdown lineups...")
+        candidates_df = dk_build_showdown_candidates(
+            showdown_pool,
+            player_sim,
+            showdown_ownership_by_name,
+            controls=showdown_controls,
+            candidate_count=CANDIDATE_COUNT,
+            salary_floor=int(MIN_LINEUP_SALARY),
+            salary_cap=int(min(SALARY_CAP, MAX_LINEUP_SALARY)),
+            p95_weight=P95_WEIGHT,
+            p99_weight=P99_WEIGHT,
+            mean_weight=MEAN_WEIGHT,
+            stddev_weight=STDDEV_WEIGHT,
+        )
+        st.session_state["dk_exhaustive_build_stats"] = {
+            "examined": int(candidates_df.attrs.get("examined_lineups", 0)),
+            "legal": int(candidates_df.attrs.get("legal_lineups", 0)),
+            "retained": int(candidates_df.attrs.get("retained_lineups", len(candidates_df))),
+        }
+        candidate_progress.progress(
+            1.0,
+            text=(
+                f"Exhaustive candidate search complete: {len(candidates_df):,} retained "
+                f"from {st.session_state['dk_exhaustive_build_stats']['legal']:,} legal lineups"
+            ),
+        )
+    except Exception as exc:
+        workflow_status.error(
+            f"Step 2 failed while ranking players or building candidate lineups: {type(exc).__name__}: {exc}"
+        )
+        st.exception(exc)
+        st.stop()
+
     st.session_state["candidates_df"] = candidates_df
     st.session_state["candidates_ready"] = True'''
 
