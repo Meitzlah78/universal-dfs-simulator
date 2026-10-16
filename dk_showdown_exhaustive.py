@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import heapq
 import itertools
-from typing import Callable, Mapping
+from typing import Callable, Mapping, Collection
 
 import numpy as np
 import pandas as pd
@@ -70,13 +70,14 @@ def fast_exhaustive_showdown_candidates(
     mean_weight: float = 0.15,
     stddev_weight: float = 0.10,
     require_two_teams: bool = True,
+    locked_players: Collection[str] | None = None,
+    captain_eligible: Mapping[str, bool] | None = None,
 ) -> pd.DataFrame:
     """Exhaustively prescreen Showdown lineups using vectorized captain batches.
 
-    Each captain's entire five-FLEX combination space is built as compact integer
-    arrays, filtered and scored with NumPy, then only that captain batch's best K
-    is merged into a global K-sized heap. This avoids millions of Python score
-    calls and never materializes the full lineup universe as a DataFrame.
+    Locks are hard roster constraints. ``captain_eligible`` is also a hard
+    constraint and is intended for the existing Captain Max %=0 control. No
+    portfolio exposure or uniqueness diversification is applied here.
     """
     required = {"Name", "Salary", "Team"}
     missing = required.difference(players.columns)
@@ -93,6 +94,15 @@ def fast_exhaustive_showdown_candidates(
     if n < 6:
         raise ValueError("Showdown requires at least six players")
 
+    name_to_index = {str(name): i for i, name in enumerate(names)}
+    locked = {str(name) for name in (locked_players or ())}
+    missing_locks = locked.difference(name_to_index)
+    if missing_locks:
+        raise ValueError("locked players missing from eligible pool: " + ", ".join(sorted(missing_locks)))
+    if len(locked) > 6:
+        raise ValueError("Showdown cannot lock more than six players")
+    locked_idx = np.asarray([name_to_index[name] for name in locked], dtype=np.int32)
+
     def metric(key: str) -> np.ndarray:
         return np.asarray([float(player_sim[str(name)].get(key, 0.0)) for name in names], dtype=np.float64)
 
@@ -103,6 +113,9 @@ def fast_exhaustive_showdown_candidates(
     all_indices = np.arange(n, dtype=np.int32)
 
     for captain in range(n):
+        captain_name = str(names[captain])
+        if captain_eligible is not None and not bool(captain_eligible.get(captain_name, True)):
+            continue
         flex_pool = all_indices[all_indices != captain]
         combos = np.fromiter(
             (i for combo in itertools.combinations(flex_pool.tolist(), 5) for i in combo),
@@ -114,6 +127,17 @@ def fast_exhaustive_showdown_candidates(
         if require_two_teams:
             same_team = np.all(teams[combos] == teams[captain], axis=1)
             mask &= ~same_team
+        if len(locked_idx):
+            captain_is_locked = np.any(locked_idx == captain)
+            if captain_is_locked:
+                remaining_locks = locked_idx[locked_idx != captain]
+            else:
+                remaining_locks = locked_idx
+            if len(remaining_locks):
+                mask &= np.all(
+                    np.any(combos[:, :, None] == remaining_locks[None, None, :], axis=1),
+                    axis=1,
+                )
         combos = combos[mask]
         if not len(combos):
             continue
