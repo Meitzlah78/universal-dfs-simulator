@@ -55,3 +55,7 @@ jobs:
         env:
           PYTHONPATH: ${{ github.workspace }}
         run: python benchmarks/benchmark_dk_candidate_filters.py
+      - name: Run DK scoring batch-size benchmark
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python benchmarks/benchmark_dk_scoring_batch_sizes.py
