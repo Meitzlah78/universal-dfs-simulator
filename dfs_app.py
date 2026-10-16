@@ -9058,20 +9058,27 @@ if (
         for _diag_start in range(holdout_start, n_sims, _diag_batch_size):
             _diag_end = min(_diag_start + _diag_batch_size, n_sims)
             _diag_values = simulation_values[_diag_start:_diag_end]
-            if scoring_multiplier == 1.5 and _diag_candidate_idx.shape[1] == 6:
+            if is_dk_showdown:
                 _diag_scores = dk_score_lineup_matrix(
                     _diag_values, _diag_candidate_idx[:, 0], _diag_candidate_idx[:, 1:]
                 )
                 _diag_field_scores = dk_score_lineup_matrix(
-                    _diag_values, contest_idx[:, 0], contest_idx[:, 1:]
+                    _diag_values, contest_unique_idx[:, 0], contest_unique_idx[:, 1:]
                 )
+                _, _diag_right = dk_weighted_score_bounds(
+                    _diag_field_scores, contest_multiplicity, _diag_scores
+                )
+                _diag_greater = total_field - _diag_right
             else:
                 _diag_scores = _diag_values[:, _diag_candidate_idx].sum(axis=2)
                 _diag_field_scores = _diag_values[:, contest_idx].sum(axis=2)
-            _diag_sorted = np.sort(_diag_field_scores, axis=1)
-            _diag_greater = np.empty_like(_diag_scores, dtype=np.float64)
-            for _r in range(_diag_scores.shape[0]):
-                _diag_greater[_r] = total_field - np.searchsorted(_diag_sorted[_r], _diag_scores[_r], side="right")
+                if scoring_multiplier != 1.0:
+                    _diag_scores += _diag_values[:, _diag_candidate_idx[:, 0]] * (scoring_multiplier - 1.0)
+                    _diag_field_scores += _diag_values[:, contest_idx[:, 0]] * (scoring_multiplier - 1.0)
+                _diag_sorted = np.sort(_diag_field_scores, axis=1)
+                _diag_greater = total_field - np.sum(
+                    _diag_sorted[:, :, None] <= _diag_scores[:, None, :], axis=1
+                )
             _diag_percentiles = 1.0 - (_diag_greater / max(1, total_field))
             _diag_top1 += np.sum(_diag_percentiles >= 0.99, axis=0)
             _diag_top5 += np.sum(_diag_percentiles >= 0.95, axis=0)
@@ -9094,10 +9101,16 @@ if (
     if _sanity_n:
         _rng=np.random.default_rng(20261014); _idx=contest_idx[_rng.choice(total_field,_sanity_n,replace=False)]; _counts=np.zeros(4); _obs=0
         for _start in range(0,selection_n_sims,batch_size):
-            _end=min(_start+batch_size,selection_n_sims); _v=simulation_values[_start:_end]; _s=_v[:,_idx].sum(axis=2); _f=_v[:,contest_idx].sum(axis=2)
-            if scoring_multiplier != 1.0:
-                _s += _v[:,_idx[:,0]]*(scoring_multiplier-1.0); _f += _v[:,contest_idx[:,0]]*(scoring_multiplier-1.0)
-            _sorted=np.sort(_f,axis=1); _greater=total_field-np.sum(_sorted[:,:,None] <= _s[:,None,:],axis=1); _pct=1.0-_greater/max(1,total_field)
+            _end=min(_start+batch_size,selection_n_sims); _v=simulation_values[_start:_end]
+            if is_dk_showdown:
+                _s=dk_score_lineup_matrix(_v,_idx[:,0],_idx[:,1:]); _f=dk_score_lineup_matrix(_v,contest_unique_idx[:,0],contest_unique_idx[:,1:])
+                _,_right=dk_weighted_score_bounds(_f,contest_multiplicity,_s); _greater=total_field-_right
+            else:
+                _s=_v[:,_idx].sum(axis=2); _f=_v[:,contest_idx].sum(axis=2)
+                if scoring_multiplier != 1.0:
+                    _s += _v[:,_idx[:,0]]*(scoring_multiplier-1.0); _f += _v[:,contest_idx[:,0]]*(scoring_multiplier-1.0)
+                _sorted=np.sort(_f,axis=1); _greater=total_field-np.sum(_sorted[:,:,None] <= _s[:,None,:],axis=1)
+            _pct=1.0-_greater/max(1,total_field)
             _counts += [np.sum(_pct>=.99),np.sum(_pct>=.95),np.sum(_pct>=.90),np.sum(_pct>=.50)]; _obs += _pct.size
         st.session_state["field_sanity_check"]={"Lineups":_sanity_n,"Top 1%":100*_counts[0]/_obs,"Top 5%":100*_counts[1]/_obs,"Top 10%":100*_counts[2]/_obs,"Cash %":100*_counts[3]/_obs}
 
