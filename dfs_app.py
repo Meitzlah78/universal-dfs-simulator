@@ -8033,7 +8033,7 @@ if build_clicked:
                     dtype=np.int32,
                 )
                 batch_salary = int(captain_salary_map.get(captain, 0)) + sampled_salaries.sum(axis=1, dtype=np.int32)
-                batch_valid = (batch_salary >= int(min_salary)) & (batch_salary <= int(max_salary)) & (batch_salary <= int(SALARY_CAP))
+                batch_valid = (batch_salary >= int(MIN_LINEUP_SALARY)) & (batch_salary <= int(min(SALARY_CAP, MAX_LINEUP_SALARY)))
 
                 if locked_players:
                     locked_names = np.asarray([str(name) for name in locked_players], dtype=object)
@@ -8047,9 +8047,7 @@ if build_clicked:
                     dtype=object,
                 )
                 batch_valid &= np.any(sampled_teams != captain_team, axis=1)
-                sampled_indices = sampled_indices[batch_valid]
-
-                for sampled_idx in sampled_indices:
+                for sampled_row, sampled_idx in enumerate(sampled_indices):
                     if len(captain_candidates) >= per_captain_candidate_limit:
                         break
                     sampled = flex_names[sampled_idx]
@@ -8057,42 +8055,13 @@ if build_clicked:
                     flex_key = tuple(sorted(flex_players))
                     if flex_key in seen_flex_groups:
                         continue
+                    # Preserve the original search semantics: every first-seen FLEX group
+                    # consumes its seen slot even when it later fails a lineup rule.
                     seen_flex_groups.add(flex_key)
-
-                    lineup_players = [
-                        captain
-                    ] + list(flex_players)
-
-                    # LOCK CHECK
-                    if not all(
-                        p in lineup_players
-                        for p in locked_players
-                    ):
+                    if not bool(batch_valid[sampled_row]):
                         continue
 
-                    # SALARY CHECK
-                    total_salary = (
-                        captain_salary_map[captain]
-                        + sum(
-                            salary_map[p]
-                            for p in flex_players
-                        )
-                    )
-
-                    if total_salary < MIN_LINEUP_SALARY or total_salary > min(SALARY_CAP, MAX_LINEUP_SALARY):
-                        continue
-
-                    # DraftKings Showdown requires players
-                    # from both teams
-                    lineup_teams = set(
-                        players_df.loc[
-                            players_df["Name"].isin(lineup_players),
-                            "Team"
-                        ]
-                    )
-
-                    if len(lineup_teams) < 2:
-                        continue
+                    total_salary = int(batch_salary[sampled_row])
 
                     # ========================================
                     # SIMULATION SCORE
