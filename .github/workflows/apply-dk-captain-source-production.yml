@@ -1,0 +1,38 @@
+name: Apply DK captain source production patch
+
+on:
+  push:
+    branches: [refactor/dk-showdown-engine]
+    paths:
+      - '.github/scripts/fix_dk_captain_source_ownership.py'
+      - '.github/workflows/apply-dk-captain-source-production.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/dk-showdown-engine
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply source-aware captain ownership fix
+        run: python .github/scripts/fix_dk_captain_source_ownership.py
+      - name: Compile app
+        run: python -m py_compile dfs_app.py
+      - name: Verify production markers
+        run: |
+          grep -q 'has_external_captain_ownership = False' dfs_app.py
+          grep -q 'if not has_external_captain_ownership:' dfs_app.py
+      - name: Commit production patch
+        run: |
+          if git diff --quiet -- dfs_app.py; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add dfs_app.py
+          git commit -m 'Use source-aware DK captain ownership'
+          git push origin HEAD:refactor/dk-showdown-engine
