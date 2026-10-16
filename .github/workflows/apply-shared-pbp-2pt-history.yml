@@ -1,0 +1,39 @@
+name: Apply shared PBP 2PT history
+
+on:
+  push:
+    branches:
+      - feature/fd-full-roster
+    paths:
+      - '.github/scripts/extend_shared_pbp_2pt_history.py'
+      - '.github/workflows/apply-shared-pbp-2pt-history.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/fd-full-roster
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply shared PBP patch
+        run: python .github/scripts/extend_shared_pbp_2pt_history.py
+      - name: Syntax check
+        run: python -m py_compile dfs_app.py
+      - name: Commit patched app
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add dfs_app.py
+          if git diff --cached --quiet; then
+            echo "No app changes needed"
+          else
+            git commit -m "Extend shared PBP history with 2PT conversions [skip ci]"
+            git push origin HEAD:feature/fd-full-roster
+          fi
