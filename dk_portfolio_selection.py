@@ -39,13 +39,14 @@ def select_post_sim_portfolio(
     lineup_columns: Sequence[str] = SHOWDOWN_SLOTS,
     max_exposure: Mapping[str, float] | None = None,
     captain_max_exposure: Mapping[str, float] | None = None,
+    locked_df: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     """Select the best already-simulated lineups under explicit user constraints.
 
-    ``min_uniques=0`` means no forced diversification. Higher values require every
-    newly selected lineup to differ from every previously selected lineup by at
-    least that many players. ``max_exposure`` and ``captain_max_exposure`` are
-    explicit user limits expressed as percentages of the requested portfolio.
+    Locked lineups are authoritative: they are retained even if they conflict with
+    each other or with current exposure/uniqueness limits. Every newly selected
+    lineup must satisfy Min Uniques relative to locked and newly selected lineups,
+    and must not worsen an exposure limit that is not already exceeded by locks.
 
     There is deliberately no hidden exposure ceiling or automatic uniqueness rule.
     Candidate generation is unaffected by every option in this function.
@@ -65,47 +66,69 @@ def select_post_sim_portfolio(
 
     max_exposure = dict(max_exposure or {})
     captain_max_exposure = dict(captain_max_exposure or {})
-    player_limits = {
-        str(player): _exposure_limit(int(lineup_count), percent)
-        for player, percent in max_exposure.items()
-    }
-    captain_limits = {
-        str(player): _exposure_limit(int(lineup_count), percent)
-        for player, percent in captain_max_exposure.items()
-    }
+    player_limits = {str(player): _exposure_limit(int(lineup_count), percent) for player, percent in max_exposure.items()}
+    captain_limits = {str(player): _exposure_limit(int(lineup_count), percent) for player, percent in captain_max_exposure.items()}
 
     ranked = results_df.drop_duplicates(subset=list(lineup_columns), keep="first").copy()
     ranked[metric] = pd.to_numeric(ranked[metric], errors="coerce")
     ranked = ranked[ranked[metric].notna()].sort_values(metric, ascending=False, kind="stable")
-
-    selected_indices: list[int] = []
-    selected_players: list[frozenset[str]] = []
-    player_counts: dict[str, int] = {}
-    captain_counts: dict[str, int] = {}
     captain_column = lineup_columns[0] if lineup_columns else None
 
-    for index, row in ranked.iterrows():
+    locked = pd.DataFrame(columns=ranked.columns)
+    if isinstance(locked_df, pd.DataFrame) and not locked_df.empty:
+        locked_missing = [column for column in lineup_columns if column not in locked_df.columns]
+        if locked_missing:
+            raise KeyError("locked_df missing lineup columns: " + ", ".join(locked_missing))
+        locked = locked_df.drop_duplicates(subset=list(lineup_columns), keep="first").head(int(lineup_count)).copy()
+        for column in ranked.columns:
+            if column not in locked.columns:
+                locked[column] = pd.NA
+        locked = locked[ranked.columns]
+
+    selected_rows: list[pd.Series] = []
+    selected_players: list[frozenset[str]] = []
+    selected_keys: set[tuple[str, ...]] = set()
+    player_counts: dict[str, int] = {}
+    captain_counts: dict[str, int] = {}
+
+    for _, row in locked.iterrows():
+        players = _lineup_players(row, lineup_columns)
+        key = tuple(str(row[column]) for column in lineup_columns)
+        selected_rows.append(row.copy())
+        selected_players.append(players)
+        selected_keys.add(key)
+        for player in players:
+            player_counts[player] = player_counts.get(player, 0) + 1
+        if captain_column:
+            captain = str(row[captain_column])
+            captain_counts[captain] = captain_counts.get(captain, 0) + 1
+
+    for _, row in ranked.iterrows():
+        if len(selected_rows) >= int(lineup_count):
+            break
+        key = tuple(str(row[column]) for column in lineup_columns)
+        if key in selected_keys:
+            continue
         players = _lineup_players(row, lineup_columns)
         if min_uniques and any(min_unique_players(players, prior) < min_uniques for prior in selected_players):
             continue
-        if any(
-            player_counts.get(player, 0) >= player_limits.get(player, int(lineup_count))
-            for player in players
-        ):
+        if any(player_counts.get(player, 0) >= player_limits.get(player, int(lineup_count)) for player in players):
             continue
         captain = str(row[captain_column]) if captain_column else ""
         if captain_counts.get(captain, 0) >= captain_limits.get(captain, int(lineup_count)):
             continue
 
-        selected_indices.append(index)
+        selected_rows.append(row.copy())
         selected_players.append(players)
+        selected_keys.add(key)
         for player in players:
             player_counts[player] = player_counts.get(player, 0) + 1
         if captain_column:
             captain_counts[captain] = captain_counts.get(captain, 0) + 1
-        if len(selected_indices) >= int(lineup_count):
-            break
 
-    portfolio = ranked.loc[selected_indices].copy().reset_index(drop=True)
-    portfolio["Locked"] = False
+    if selected_rows:
+        portfolio = pd.DataFrame(selected_rows).reset_index(drop=True)
+    else:
+        portfolio = ranked.iloc[0:0].copy().reset_index(drop=True)
+    portfolio["Locked"] = [True] * len(locked) + [False] * max(0, len(portfolio) - len(locked))
     return portfolio
