@@ -5,9 +5,11 @@ on:
     branches:
       - refactor/dk-showdown-engine
       - 'refactor/dk-*'
+      - install/dk-showdown-live-transform-test
   pull_request:
     branches:
       - refactor/dk-showdown-engine
+      - install/dk-showdown-production-transforms
   workflow_dispatch:
 
 permissions:
@@ -110,3 +112,19 @@ jobs:
         env:
           PYTHONPATH: ${{ github.workspace }}
         run: python benchmarks/benchmark_dk_candidate_array_lookups.py
+      - name: Build permanent transformed app artifact
+        run: |
+          python .github/scripts/install_dk_exhaustive_build.py
+          python .github/scripts/install_dk_post_sim_diversification.py
+          grep -q 'candidates_df = dk_build_showdown_candidates(' dfs_app.py
+          grep -q 'select_post_sim_portfolio(' dfs_app.py
+          grep -q 'locked_df=locked_df' dfs_app.py
+          ! grep -q 'auto_diversification_pct = 90.0' dfs_app.py
+          ! grep -q 'max_shared_players = max(1, slot_count - 2)' dfs_app.py
+          python -m py_compile dfs_app.py dk_showdown_exhaustive.py dk_showdown_build.py dk_portfolio_selection.py
+      - name: Upload permanent transformed app artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dk-showdown-transformed-app
+          path: dfs_app.py
+          if-no-files-found: error
