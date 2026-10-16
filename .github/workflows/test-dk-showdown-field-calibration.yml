@@ -8,6 +8,7 @@ on:
       - 'dk_showdown_engine.py'
       - 'dk_showdown_history.py'
       - 'dk_portfolio_selection.py'
+      - 'dk_showdown_exhaustive.py'
       - 'tests/test_dk_showdown_field_realism.py'
       - 'tests/test_dk_showdown_actual_field_targets.py'
       - 'tests/test_dk_showdown_latest_actual_field.py'
@@ -26,6 +27,7 @@ on:
       - 'tests/test_dk_showdown_ev_portfolio_selection.py'
       - 'tests/test_dk_showdown_ev_selection_behavior.py'
       - 'tests/test_dk_showdown_post_sim_diversification.py'
+      - 'tests/test_dk_showdown_exhaustive.py'
       - 'tests/test_dk_showdown_temporal_learning.py'
       - 'tests/test_dk_showdown_walk_forward_protocol.py'
       - 'tests/test_dk_showdown_history_features.py'
@@ -47,8 +49,8 @@ jobs:
           python-version: '3.12'
       - name: Install dependencies
         run: python -m pip install --disable-pip-version-check numpy pandas
-      - name: Compile DK engine, history, portfolio selection and app
-        run: python -m py_compile dfs_app.py dk_showdown_engine.py dk_showdown_history.py dk_portfolio_selection.py
+      - name: Compile DK engine, history, portfolio selection, exhaustive builder and app
+        run: python -m py_compile dfs_app.py dk_showdown_engine.py dk_showdown_history.py dk_portfolio_selection.py dk_showdown_exhaustive.py
       - name: Verify DK field calibration, historical learning, payout economics, EV selection and contest behavior
         run: >-
           python -m unittest
@@ -70,6 +72,7 @@ jobs:
           tests.test_dk_showdown_ev_portfolio_selection
           tests.test_dk_showdown_ev_selection_behavior
           tests.test_dk_showdown_post_sim_diversification
+          tests.test_dk_showdown_exhaustive
           tests.test_dk_showdown_temporal_learning
           tests.test_dk_showdown_walk_forward_protocol
           tests.test_dk_showdown_history_features
