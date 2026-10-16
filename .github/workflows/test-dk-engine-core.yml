@@ -1,0 +1,31 @@
+name: Test DK Engine Core
+
+on:
+  push:
+    branches:
+      - refactor/dk-showdown-engine
+      - 'refactor/dk-*'
+  pull_request:
+    branches:
+      - refactor/dk-showdown-engine
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dk-engine-core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install test dependencies
+        run: pip install numpy pandas pytest
+      - name: Compile DK engine and app
+        run: python -m py_compile dk_showdown_engine.py dfs_app.py
+      - name: Run DK engine parity tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m pytest -q tests/test_dk_showdown_engine.py
