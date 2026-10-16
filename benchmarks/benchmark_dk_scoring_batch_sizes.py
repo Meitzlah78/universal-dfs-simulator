@@ -5,7 +5,6 @@ Correctness is asserted against the 128-scenario baseline before timings are rep
 """
 from concurrent.futures import ThreadPoolExecutor
 from time import perf_counter
-import os
 import numpy as np
 
 from dk_showdown_engine import score_lineup_matrix, weighted_score_bounds
@@ -30,11 +29,14 @@ def lineups(n):
 
 candidate_idx = lineups(CANDIDATES)
 field_idx = lineups(UNIQUE_FIELD)
-counts = rng.multinomial(FIELD_ENTRIES, np.full(UNIQUE_FIELD, 1.0 / UNIQUE_FIELD)).astype(np.int32)
-counts[counts == 0] = 1
-# Keep total multiplicity realistic after forcing positive unique counts.
-counts[0] += FIELD_ENTRIES - int(counts.sum())
-assert counts[0] > 0 and int(counts.sum()) == FIELD_ENTRIES
+# Every compressed row must have positive multiplicity. Allocate one entry to
+# each unique lineup first, then distribute the remaining field entries.
+counts = np.ones(UNIQUE_FIELD, dtype=np.int32)
+counts += rng.multinomial(
+    FIELD_ENTRIES - UNIQUE_FIELD,
+    np.full(UNIQUE_FIELD, 1.0 / UNIQUE_FIELD),
+).astype(np.int32)
+assert np.all(counts > 0) and int(counts.sum()) == FIELD_ENTRIES
 
 
 def run(batch_size):
@@ -45,7 +47,6 @@ def run(batch_size):
         cand = score_lineup_matrix(sims, candidate_idx)
         field = score_lineup_matrix(sims, field_idx)
         left, right = weighted_score_bounds(field, counts, cand)
-        # Preserve portfolio self/tie contribution used by the app.
         pleft = np.sum(cand[:, :, None] < cand[:, None, :], axis=1)
         pright = np.sum(cand[:, :, None] <= cand[:, None, :], axis=1)
         return start, left + pleft, right + pright
