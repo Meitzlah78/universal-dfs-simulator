@@ -1,0 +1,28 @@
+name: Benchmark DK Portfolio Bounds
+
+on:
+  push:
+    branches:
+      - refactor/dk-showdown-engine
+    paths:
+      - 'benchmarks/benchmark_dk_portfolio_bounds.py'
+      - '.github/workflows/benchmark-dk-portfolio-bounds.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install benchmark dependencies
+        run: pip install numpy
+      - name: Run portfolio bounds parity benchmark
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python benchmarks/benchmark_dk_portfolio_bounds.py
