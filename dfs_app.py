@@ -7966,6 +7966,12 @@ if build_clicked:
             available_players, showdown_base_scores, player_sim
         )
         ownership_index = {name: i for i, name in enumerate(available_players)}
+        # Build the name->ownership lookup once. Candidate scoring reuses it thousands
+        # of times, so rebuilding this dictionary inside every candidate loop wastes CPU.
+        showdown_ownership_by_name = {
+            name: float(showdown_ownership_proxy[index])
+            for name, index in ownership_index.items()
+        }
         showdown_rankings = {
             p: float(showdown_adjusted_scores[i]) for i, p in enumerate(available_players)
         }
@@ -8109,7 +8115,7 @@ if build_clicked:
                     captain,
                     flex_players,
                     player_sim,
-                    {name: float(showdown_ownership_proxy[index]) for name, index in ownership_index.items()},
+                    showdown_ownership_by_name,
                     P95_WEIGHT,
                     P99_WEIGHT,
                     MEAN_WEIGHT,
