@@ -40,7 +40,10 @@ def candidate_score(captain: str, flex: Sequence[str], player_sim: Mapping[str, 
     lineup_ownership = float(ownership_proxy[str(captain)]) * rules.captain_points_multiplier + sum(float(ownership_proxy[p]) for p in flex_players)
     lineup_upside = max(0.0, total_p99 - total_p95)
     ownership_tax = max(0.0, lineup_ownership - 15.0 * 6.5) * 0.06
-    upside_credit = min(ownership_tax, lineup_upside * 0.08)
+    # Upside can soften a chalk penalty, but must not erase it entirely.  The old
+    # cap let ordinary lineup-level P99-P95 spread cancel the whole ownership tax,
+    # making identical fantasy profiles score the same regardless of leverage.
+    upside_credit = min(ownership_tax * 0.35, lineup_upside * 0.03)
     return {"SimMean": total_mean, "SimP95": total_p95, "SimP99": total_p99, "Score": raw_score - ownership_tax + upside_credit}
 
 def opponent_lineup_means(captain_indices: Sequence[int], flex_indices: np.ndarray, player_means: Sequence[float], rules: ShowdownRules = ShowdownRules()) -> np.ndarray:
