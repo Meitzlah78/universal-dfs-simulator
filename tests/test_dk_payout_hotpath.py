@@ -46,7 +46,9 @@ def test_prefix_payout_preserves_ties_crossing_cash_line():
     expected = payout_by_expanding_ranks(ranks, ties, payout, field_size=20)
     actual = payout_from_prefix(ranks, ties, payout, field_size=20)
     np.testing.assert_allclose(actual, expected, rtol=0.0, atol=0.0)
-    assert actual[0, 0] < payout[-1]
+    # The six-way tie occupies ranks 7-12. Ranks 11-12 are unpaid, so the
+    # available prizes at 7-10 are shared across all six tied entries.
+    assert actual[0, 0] == (6.0 + 4.0 + 2.0 + 1.0) / 6.0
 
 
 def test_prefix_payout_handles_ties_beyond_schedule():
