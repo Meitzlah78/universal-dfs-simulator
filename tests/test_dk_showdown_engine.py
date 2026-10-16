@@ -10,6 +10,7 @@ from dk_showdown_engine import (
     lineup_salary,
     sample_opponent_batch,
     score_lineup_matrix,
+    score_showdown_chunks,
 )
 
 
@@ -91,6 +92,45 @@ def test_vectorized_scores_match_legacy_loop_math():
         for l in range(len(captains)):
             legacy[s,l] = simulations[s,captains[l]]*1.5 + sum(simulations[s,p] for p in flex[l])
     np.testing.assert_allclose(score_lineup_matrix(simulations, captains, flex), legacy)
+
+
+def test_score_lineup_matrix_preserves_float32_for_hot_path():
+    simulations = np.arange(42, dtype=np.float32).reshape(6, 7)
+    captains = np.array([0, 6], dtype=np.int16)
+    flex = np.array([[1,2,3,4,5],[0,1,2,3,4]], dtype=np.int16)
+    scores = score_lineup_matrix(simulations, captains, flex)
+    assert scores.dtype == np.float32
+
+
+def test_chunked_showdown_scores_equal_one_shot_matrix():
+    rng = np.random.default_rng(2026)
+    simulations = rng.normal(size=(19, 8)).astype(np.float32)
+    lineups = np.array([
+        [0,1,2,3,4,5],
+        [6,0,1,2,3,4],
+        [7,1,2,3,4,5],
+    ], dtype=np.int16)
+    expected = score_lineup_matrix(simulations, lineups[:, 0], lineups[:, 1:])
+    chunks = list(score_showdown_chunks(simulations, lineups, chunk_size=4))
+    actual = np.concatenate([scores for _, _, scores in chunks], axis=0)
+    assert [(start, end) for start, end, _ in chunks] == [(0,4),(4,8),(8,12),(12,16),(16,19)]
+    np.testing.assert_allclose(actual, expected, rtol=0.0, atol=0.0)
+
+
+def test_chunked_showdown_scoring_rejects_bad_inputs():
+    values = np.ones((3, 7), dtype=np.float32)
+    try:
+        list(score_showdown_chunks(values, np.ones((2, 5), dtype=np.int16)))
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("Expected ValueError for a lineup matrix without six columns")
+    try:
+        list(score_showdown_chunks(values, np.ones((2, 6), dtype=np.int16), chunk_size=0))
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("Expected ValueError for zero chunk size")
 
 
 def test_exact_duplicates_ignore_flex_order_but_not_captain():
