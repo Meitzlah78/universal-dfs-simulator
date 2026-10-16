@@ -3,7 +3,8 @@ import unittest
 
 import pandas as pd
 
-from dk_showdown_exhaustive import exhaustive_showdown_candidates
+from dk_showdown_exhaustive import exhaustive_showdown_candidates, fast_exhaustive_showdown_candidates
+from dk_showdown_engine import candidate_score
 
 
 class ExhaustiveShowdownBuilderTests(unittest.TestCase):
@@ -15,6 +16,11 @@ class ExhaustiveShowdownBuilderTests(unittest.TestCase):
             "Projection": [20, 18, 16, 14, 12, 10, 8],
         })
         self.proj = self.players["Projection"].tolist()
+        self.sim = {
+            name: {"Mean": p, "P95": p * 1.5, "P99": p * 1.8, "StdDev": p * 0.35}
+            for name, p in zip(self.players["Name"], self.proj)
+        }
+        self.own = {name: 8.0 + i * 7.0 for i, name in enumerate(self.players["Name"])}
 
     def score(self, captain, flex):
         return self.proj[captain] * 1.5 + sum(self.proj[i] for i in flex)
@@ -40,6 +46,23 @@ class ExhaustiveShowdownBuilderTests(unittest.TestCase):
         for _, row in result.iterrows():
             roster = [row["Captain"], row["Flex1"], row["Flex2"], row["Flex3"], row["Flex4"], row["Flex5"]]
             self.assertEqual(len(set(roster)), 6)
+
+    def test_fast_prescreen_matches_production_candidate_score_ranking(self):
+        weights = dict(p95_weight=.30, p99_weight=.55, mean_weight=.15, stddev_weight=.10)
+        names = self.players["Name"].tolist()
+
+        def production_score(captain, flex):
+            return candidate_score(names[captain], [names[i] for i in flex], self.sim, self.own, **weights)["Score"]
+
+        scalar = exhaustive_showdown_candidates(self.players, production_score, keep=10, salary_cap=100000)
+        fast = fast_exhaustive_showdown_candidates(
+            self.players, self.sim, self.own, keep=10, salary_cap=100000, **weights
+        )
+        scalar_keys = list(zip(scalar["Captain"], scalar["Flex1"], scalar["Flex2"], scalar["Flex3"], scalar["Flex4"], scalar["Flex5"]))
+        fast_keys = list(zip(fast["Captain"], fast["Flex1"], fast["Flex2"], fast["Flex3"], fast["Flex4"], fast["Flex5"]))
+        self.assertEqual(fast_keys, scalar_keys)
+        self.assertEqual(fast.attrs["examined_lineups"], scalar.attrs["examined_lineups"])
+        self.assertEqual(fast.attrs["legal_lineups"], scalar.attrs["legal_lineups"])
 
 
 if __name__ == "__main__":
