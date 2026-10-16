@@ -9490,6 +9490,20 @@ if "contest_results_df" in st.session_state and not (platform == "DraftKings" an
         portfolio_metric_label
     ]
 
+    # For DraftKings Showdown with a verified payout table, portfolio membership
+    # is decided by selection-half contest EV.  The dropdown remains a display/
+    # inspection sort only; changing it must not rebuild the set of lineups.
+    _selection_payout_contest = st.session_state.get("selected_dk_contest", {})
+    _selection_contest_id = str(_selection_payout_contest.get("id", ""))
+    _selection_has_verified_payout = (
+        is_dk_showdown
+        and _selection_contest_id
+        and str(st.session_state.get("contest_payout_contest_id", "")) == _selection_contest_id
+        and "Expected ROI (%)" in results_df.columns
+        and pd.to_numeric(results_df["Expected ROI (%)"], errors="coerce").notna().any()
+    )
+    selection_metric = "Expected ROI (%)" if _selection_has_verified_payout else portfolio_metric
+
     current_control_signature = tuple(
         sorted(
             (
@@ -9504,7 +9518,7 @@ if "contest_results_df" in st.session_state and not (platform == "DraftKings" an
         "portfolio_df" not in st.session_state
         or st.session_state.get("portfolio_count_used") != portfolio_count
         or st.session_state.get("portfolio_control_signature") != current_control_signature
-        or st.session_state.get("portfolio_metric_used") != portfolio_metric
+        or st.session_state.get("portfolio_metric_used") != selection_metric
     ):
 
         old_portfolio = st.session_state.get("portfolio_df")
@@ -9528,8 +9542,9 @@ if "contest_results_df" in st.session_state and not (platform == "DraftKings" an
                 results_df
                 .drop_duplicates(subset=lineup_columns, keep="first")
                 .sort_values(
-                    portfolio_metric,
-                    ascending=False
+                    selection_metric,
+                    ascending=False,
+                    kind="stable"
                 )
                 .copy()
             )
@@ -9578,7 +9593,7 @@ if "contest_results_df" in st.session_state and not (platform == "DraftKings" an
             ranked_df = (
                 results_df
                 .drop_duplicates(subset=portfolio_lineup_columns, keep="first")
-                .sort_values(portfolio_metric, ascending=False, kind="stable")
+                .sort_values(selection_metric, ascending=False, kind="stable")
                 .reset_index(drop=True)
             )
 
@@ -9593,9 +9608,9 @@ if "contest_results_df" in st.session_state and not (platform == "DraftKings" an
             selected_player_counts = {}
 
             # Default portfolio diversification guard. A player may still exceed
-            # 80% when the user explicitly locks that player or sets Min Exposure
-            # above 80%. A lower manual Max Exposure always remains authoritative.
-            auto_diversification_pct = 80.0
+            # 90% when the user explicitly locks that player or sets Min Exposure
+            # above 90%. A lower manual Max Exposure always remains authoritative.
+            auto_diversification_pct = 90.0
 
             def portfolio_player_limit(player_name):
                 settings = control_map.get(str(player_name), {})
@@ -9669,7 +9684,7 @@ if "contest_results_df" in st.session_state and not (platform == "DraftKings" an
 
         st.session_state["portfolio_df"] = portfolio_df
         st.session_state["portfolio_count_used"] = portfolio_count
-        st.session_state["portfolio_metric_used"] = portfolio_metric
+        st.session_state["portfolio_metric_used"] = selection_metric
         st.session_state["portfolio_control_signature"] = current_control_signature
 
     # Changing the sort option must reorder the existing pool, not select a new one.
@@ -9686,7 +9701,7 @@ if "contest_results_df" in st.session_state and not (platform == "DraftKings" an
             portfolio_metric, ascending=False, kind="stable"
         ).reset_index(drop=True)
     st.session_state["portfolio_df"] = portfolio_df.copy()
-    st.session_state["portfolio_metric_used"] = portfolio_metric
+    st.session_state["portfolio_metric_used"] = selection_metric
     portfolio_df = add_lineup_field_ownership(portfolio_df)
 
     # Add each lineup's total salary to the portfolio display and export.
