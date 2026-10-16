@@ -111,3 +111,13 @@ def multi_contest_ev_features(contests: Iterable[Mapping[str, Any]], top_fractio
         if rest.size: rest_nets.append(float(net[rest].sum())); rest_fees.append(float(fees[rest].sum()))
     finite_lifts = np.asarray([x for x in lifts if np.isfinite(x)], dtype=float)
     return {"contests": float(len(rows)), "positive_lift_contest_rate": float(np.mean(finite_lifts > 0)) if finite_lifts.size else float("nan"), "median_contest_roi_lift": float(np.median(finite_lifts)) if finite_lifts.size else float("nan"), "aggregate_top_ev_realized_roi": float(100.0 * sum(top_nets) / sum(top_fees)), "aggregate_remaining_realized_roi": float(100.0 * sum(rest_nets) / sum(rest_fees)) if rest_fees else float("nan")}
+
+
+def ev_model_is_credible(features: Mapping[str, Any], min_positive_lift_rate: float = .60, min_median_lift: float = 0.0) -> bool:
+    """Require repeatable held-out ranking skill before trusting an EV model."""
+    required = ("positive_lift_contest_rate", "median_contest_roi_lift", "aggregate_top_ev_realized_roi", "aggregate_remaining_realized_roi")
+    missing = [key for key in required if key not in features]
+    if missing: raise KeyError("EV credibility features missing: " + ", ".join(missing))
+    values = np.asarray([features[key] for key in required], dtype=float)
+    if not np.isfinite(values).all(): return False
+    return bool(features["positive_lift_contest_rate"] >= min_positive_lift_rate and features["median_contest_roi_lift"] > min_median_lift and features["aggregate_top_ev_realized_roi"] > features["aggregate_remaining_realized_roi"])
