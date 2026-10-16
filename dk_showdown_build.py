@@ -1,0 +1,63 @@
+"""Production adapter for fast exhaustive DraftKings Showdown candidate builds."""
+
+from __future__ import annotations
+
+from typing import Mapping
+
+import pandas as pd
+
+from dk_showdown_exhaustive import fast_exhaustive_showdown_candidates
+
+
+def build_showdown_candidates(
+    players: pd.DataFrame,
+    player_sim: Mapping[str, Mapping[str, float]],
+    ownership_proxy: Mapping[str, float],
+    controls: pd.DataFrame | None = None,
+    candidate_count: int = 5000,
+    salary_floor: int = 0,
+    salary_cap: int = 50000,
+    p95_weight: float = 0.30,
+    p99_weight: float = 0.55,
+    mean_weight: float = 0.15,
+    stddev_weight: float = 0.10,
+) -> pd.DataFrame:
+    """Build the strongest legal candidate pool without portfolio diversification.
+
+    Only hard eligibility controls are applied here. Exposure spreading and Min
+    Uniques belong after Contest Sim, not in candidate generation.
+    """
+    pool = players.copy()
+    required = {"Name", "Salary", "Team"}
+    missing = required.difference(pool.columns)
+    if missing:
+        raise KeyError("missing player columns: " + ", ".join(sorted(missing)))
+
+    locked_names: set[str] = set()
+    captain_eligible_names: set[str] | None = None
+    if controls is not None and not controls.empty and "Name" in controls.columns:
+        ctl = controls.drop_duplicates("Name", keep="last").set_index("Name")
+        if "Fade" in ctl.columns:
+            faded = set(ctl.index[ctl["Fade"].fillna(False).astype(bool)])
+            pool = pool[~pool["Name"].isin(faded)].copy()
+        if "Lock" in ctl.columns:
+            locked_names = set(ctl.index[ctl["Lock"].fillna(False).astype(bool)])
+        if "Captain Max %" in ctl.columns:
+            cpt_max = pd.to_numeric(ctl["Captain Max %"], errors="coerce").fillna(100.0)
+            captain_eligible_names = set(ctl.index[cpt_max > 0])
+
+    return fast_exhaustive_showdown_candidates(
+        pool,
+        player_sim,
+        ownership_proxy,
+        keep=candidate_count,
+        salary_cap=salary_cap,
+        salary_floor=salary_floor,
+        p95_weight=p95_weight,
+        p99_weight=p99_weight,
+        mean_weight=mean_weight,
+        stddev_weight=stddev_weight,
+        require_two_teams=True,
+        locked_names=locked_names,
+        captain_eligible_names=captain_eligible_names,
+    )
