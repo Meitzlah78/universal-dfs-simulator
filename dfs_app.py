@@ -7,6 +7,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from zoneinfo import ZoneInfo
+from nfl_stat_normalization import historical_two_point_conversions
 
 # Lower defaults keep the simulator responsive while retaining useful variation.
 SIMULATION_COUNT = 10000
@@ -3064,6 +3065,8 @@ def _historical_player_average(player_name, position, platform, historical, retu
             for output_col, source_col in stats_map.items():
                 if source_col in rows.columns:
                     stat_line[output_col] = pd.to_numeric(pd.Series([game[source_col]]), errors="coerce").fillna(0).iloc[0]
+            # Normalize all offensive 2PT roles into the shared scoring field.
+            stat_line["two_point_conversions"] = historical_two_point_conversions(game)
             scores.append(float(score_nfl_stat_line(stat_line, platform)))
         points = np.asarray(scores, dtype=float)
     else:
