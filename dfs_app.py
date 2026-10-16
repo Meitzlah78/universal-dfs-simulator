@@ -8827,6 +8827,22 @@ if (
             f"not exact full-field results."
         )
 
+    # Payout schedule metadata is invariant across scoring batches. Build it once
+    # so all worker threads reuse the same paid-position count and prefix sums.
+    paid_positions = (
+        min(int(np.count_nonzero(payout_schedule > 0)), estimated_full_field_size)
+        if payout_schedule is not None
+        else int(np.ceil(estimated_full_field_size * 0.10))
+    )
+    if payout_schedule is not None and len(payout_schedule) > 0:
+        rank_axis = np.arange(1, len(payout_schedule) + 1, dtype=np.int64)
+        rank_prizes = np.where(rank_axis <= estimated_full_field_size, payout_schedule, 0.0)
+        cumulative_prizes = np.concatenate(
+            ([0.0], np.cumsum(rank_prizes, dtype=np.float64))
+        )
+    else:
+        cumulative_prizes = None
+
     progress = contest_progress_slot.progress(
         0,
         text=(
@@ -8956,11 +8972,6 @@ if (
         # award the average payout across every rank occupied by that tie.
         # This handles duplicate lineups and other equal-scoring entries more
         # realistically than assigning a single interpolated rank prize.
-        paid_positions = (
-            min(int(np.count_nonzero(payout_schedule > 0)), estimated_full_field_size)
-            if payout_schedule is not None
-            else int(np.ceil(estimated_full_field_size * 0.10))
-        )
         batch_cash = np.sum(estimated_ranks <= paid_positions, axis=0, dtype=np.float64)
         if payout_schedule is not None and len(payout_schedule) > 0:
             # Scale the observed tie rate from the sampled field to the full
@@ -8981,9 +8992,6 @@ if (
                 estimated_full_field_size,
                 tie_start_ranks + estimated_tie_sizes - 1,
             )
-            rank_axis = np.arange(1, len(payout_schedule) + 1, dtype=np.int64)
-            rank_prizes = np.where(rank_axis <= estimated_full_field_size, payout_schedule, 0.0)
-            cumulative_prizes = np.concatenate(([0.0], np.cumsum(rank_prizes, dtype=np.float64)))
             safe_start = np.clip(tie_start_ranks - 1, 0, len(payout_schedule))
             safe_end = np.clip(tie_end_ranks, 0, len(payout_schedule))
             prize_sums = cumulative_prizes[safe_end] - cumulative_prizes[safe_start]
