@@ -28,7 +28,9 @@ class DKShowdownOwnershipPriorityTests(unittest.TestCase):
         })
         col = pick_column(pool, FLEX_ALIASES)
         self.assertEqual(col, "Field FLEX Own %")
-        weights = pd.to_numeric(pool[col]).to_numpy(dtype=float)
+        # pandas 3 can expose a read-only NumPy view.  The production builder
+        # does not normalize this array in place, so make the test copy explicit.
+        weights = pd.to_numeric(pool[col]).to_numpy(dtype=float, copy=True)
         weights /= weights.sum()
         np.testing.assert_allclose(weights, [0.60, 0.25, 0.15])
 
