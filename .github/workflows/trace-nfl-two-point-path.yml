@@ -1,0 +1,23 @@
+name: Trace NFL Two Point Path
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - refactor/dk-showdown-engine
+    paths:
+      - .github/workflows/trace-nfl-two-point-path.yml
+
+jobs:
+  trace:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trace conversion and scoring references
+        run: |
+          echo '=== two point / conversion references ==='
+          grep -nEi 'two[_ -]?point|conversion' dfs_app.py nfl_scoring.py || true
+          echo '=== score_nfl_stat_line call sites ==='
+          grep -n 'score_nfl_stat_line' dfs_app.py || true
+          echo '=== FD PBP function boundaries and scoring-stat assignments ==='
+          grep -nE 'def simulate_fd_play_by_play|passing_tds|receiving_tds|rushing_tds|stat_line|player_stats|two_point' dfs_app.py | head -n 300 || true
