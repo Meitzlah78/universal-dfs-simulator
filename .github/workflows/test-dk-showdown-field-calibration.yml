@@ -25,6 +25,7 @@ on:
       - 'tests/test_dk_showdown_ev_portfolio_selection.py'
       - 'tests/test_dk_showdown_ev_selection_behavior.py'
       - 'tests/test_dk_showdown_temporal_learning.py'
+      - 'tests/test_dk_showdown_walk_forward_protocol.py'
       - 'tests/test_dk_showdown_history_features.py'
       - 'tests/test_dk_showdown_history_construction_features.py'
       - 'tests/test_dk_showdown_ev_calibration.py'
@@ -65,6 +66,7 @@ jobs:
           tests.test_dk_showdown_ev_portfolio_selection
           tests.test_dk_showdown_ev_selection_behavior
           tests.test_dk_showdown_temporal_learning
+          tests.test_dk_showdown_walk_forward_protocol
           tests.test_dk_showdown_history_features
           tests.test_dk_showdown_history_construction_features
           tests.test_dk_showdown_ev_calibration
