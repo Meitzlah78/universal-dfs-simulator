@@ -36,6 +36,21 @@ class DKShowdownPostSimDiversificationTests(unittest.TestCase):
         select_post_sim_portfolio(self.pool, 3, min_uniques=2)
         pd.testing.assert_frame_equal(self.pool, original)
 
+    def test_changing_diversification_only_reselects_scored_lineups(self):
+        original = self.pool.copy(deep=True)
+        no_forced_uniques = select_post_sim_portfolio(self.pool, 2, min_uniques=0)
+        two_uniques = select_post_sim_portfolio(self.pool, 2, min_uniques=2)
+        lineup_columns = ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"]
+        scored_keys = set(map(tuple, self.pool[lineup_columns].astype(str).to_numpy()))
+        for portfolio in (no_forced_uniques, two_uniques):
+            selected_keys = set(map(tuple, portfolio[lineup_columns].astype(str).to_numpy()))
+            self.assertTrue(selected_keys.issubset(scored_keys))
+        self.assertNotEqual(
+            no_forced_uniques.iloc[1][lineup_columns].astype(str).tolist(),
+            two_uniques.iloc[1][lineup_columns].astype(str).tolist(),
+        )
+        pd.testing.assert_frame_equal(self.pool, original)
+
     def test_no_hidden_exposure_cap(self):
         result = select_post_sim_portfolio(self.pool, 4, min_uniques=0)
         self.assertEqual(len(result), 4)
