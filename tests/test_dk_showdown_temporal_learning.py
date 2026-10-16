@@ -1,11 +1,7 @@
 import unittest
 from datetime import datetime, timezone
 
-
-def eligible_training_contests(contests, target_lock):
-    """Only contests locked strictly before the target can teach its field model."""
-    target = target_lock.astimezone(timezone.utc)
-    return [contest for contest in contests if contest["lock_time"].astimezone(timezone.utc) < target]
+from dk_showdown_history import eligible_training_contests
 
 
 class DKShowdownTemporalLearningTests(unittest.TestCase):
@@ -35,6 +31,20 @@ class DKShowdownTemporalLearningTests(unittest.TestCase):
         ]
         eligible = eligible_training_contests(contests, target)
         self.assertEqual([contest["id"] for contest in eligible], ["earlier-et"])
+
+    def test_naive_target_time_is_rejected(self):
+        with self.assertRaises(ValueError):
+            eligible_training_contests([], datetime(2026, 10, 12, 20, 15))
+
+    def test_naive_historical_time_is_rejected(self):
+        target = datetime(2026, 10, 12, 20, 15, tzinfo=timezone.utc)
+        with self.assertRaises(ValueError):
+            eligible_training_contests([{"id": "bad", "lock_time": datetime(2026, 10, 11, 20, 15)}], target)
+
+    def test_missing_historical_lock_time_is_rejected(self):
+        target = datetime(2026, 10, 12, 20, 15, tzinfo=timezone.utc)
+        with self.assertRaises(KeyError):
+            eligible_training_contests([{"id": "bad"}], target)
 
 
 if __name__ == "__main__":
