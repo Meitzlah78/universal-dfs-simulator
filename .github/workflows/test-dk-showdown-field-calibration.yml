@@ -30,6 +30,7 @@ on:
       - 'tests/test_dk_showdown_history_construction_features.py'
       - 'tests/test_dk_showdown_payout_shape_features.py'
       - 'tests/test_dk_showdown_ev_calibration.py'
+      - 'tests/test_dk_showdown_ev_model_acceptance.py'
       - '.github/workflows/test-dk-showdown-field-calibration.yml'
 
 jobs:
@@ -72,3 +73,4 @@ jobs:
           tests.test_dk_showdown_history_construction_features
           tests.test_dk_showdown_payout_shape_features
           tests.test_dk_showdown_ev_calibration
+          tests.test_dk_showdown_ev_model_acceptance
