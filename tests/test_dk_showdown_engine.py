@@ -4,6 +4,7 @@ import pandas as pd
 from dk_showdown_engine import (
     ShowdownRules,
     candidate_score,
+    duplicate_expansion_weights,
     exact_duplicate_counts,
     lineup_key,
     lineup_salary,
@@ -53,6 +54,42 @@ def test_candidate_score_matches_existing_app_formula():
     assert actual["SimP95"] == total_p95
     assert actual["SimP99"] == total_p99
     assert actual["Score"] == raw_score - ownership_tax + upside_credit
+
+
+def test_duplicate_expansion_weights_match_existing_calibration():
+    log_weights = np.linspace(-8.0, 0.0, 500, dtype=np.float64)
+    centered = log_weights - np.max(log_weights)
+    base = np.exp(centered * 0.38)
+    base /= base.sum()
+
+    total = len(log_weights)
+    broad_count = min(max(250, min(1800, max(250, total // 5))), total)
+    broad_indices = np.argpartition(log_weights, -broad_count)[-broad_count:]
+    broad = np.zeros(total, dtype=np.float64)
+    broad_strength = np.exp(centered[broad_indices] * 0.80)
+    if broad_strength.sum() > 0:
+        broad[broad_indices] = broad_strength / broad_strength.sum()
+
+    top_count = max(10, min(40, total))
+    top_indices = np.argpartition(log_weights, -top_count)[-top_count:]
+    top = np.zeros(total, dtype=np.float64)
+    top_strength = np.exp(centered[top_indices] * 1.20)
+    if top_strength.sum() > 0:
+        top[top_indices] = top_strength / top_strength.sum()
+
+    expected = 0.76 * base + 0.20 * broad + 0.04 * top
+    expected /= expected.sum()
+    actual = duplicate_expansion_weights(log_weights)
+    np.testing.assert_allclose(actual, expected, rtol=0.0, atol=1e-15)
+    assert np.isclose(actual.sum(), 1.0)
+
+
+def test_duplicate_expansion_weights_handle_small_and_empty_fields():
+    assert duplicate_expansion_weights([]).size == 0
+    weights = duplicate_expansion_weights([0.0, -1.0, -2.0])
+    assert weights.shape == (3,)
+    assert np.all(weights > 0)
+    assert np.isclose(weights.sum(), 1.0)
 
 
 def test_vectorized_scores_match_legacy_loop_math():
