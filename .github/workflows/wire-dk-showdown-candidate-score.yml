@@ -32,3 +32,4 @@ jobs:
           git diff --cached --quiet && exit 0
           git commit -m "Wire DK Showdown candidate scoring to engine [skip ci]"
           git push origin HEAD:refactor/dk-showdown-engine
+      # safe integration trigger
