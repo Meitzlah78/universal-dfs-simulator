@@ -1,0 +1,43 @@
+name: Apply DK EV Portfolio Selection
+
+on:
+  push:
+    branches:
+      - refactor/dk-showdown-engine
+    paths:
+      - '.github/workflows/apply-dk-ev-portfolio-selection.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/dk-showdown-engine
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Apply EV-driven portfolio selection
+        run: python .github/scripts/apply_dk_ev_portfolio_selection.py
+      - name: Compile transformed app
+        run: python -m py_compile dfs_app.py dk_showdown_engine.py
+      - name: Verify selection wiring
+        run: |
+          grep -q 'selection_metric = "Expected ROI (%)" if _selection_has_verified_payout else portfolio_metric' dfs_app.py
+          grep -q 'sort_values(selection_metric' dfs_app.py
+          grep -q 'auto_diversification_pct = 90.0' dfs_app.py
+      - name: Commit transformed app
+        run: |
+          if git diff --quiet -- dfs_app.py; then
+            echo 'No app change produced'
+            exit 1
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add dfs_app.py
+          git commit -m 'Select DK Showdown portfolios by contest EV'
+          git push origin HEAD:refactor/dk-showdown-engine
