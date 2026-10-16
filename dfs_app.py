@@ -8011,6 +8011,16 @@ if build_clicked:
             captain_attempts = 0
             max_captain_attempts = max(500, per_captain_candidate_limit * 8)
             flex_names = np.asarray(flex_pool, dtype=object)
+            # Precompute numeric FLEX metadata once per captain. Candidate batches can
+            # then index NumPy arrays directly instead of rebuilding Python dict rows.
+            flex_salary_values = np.asarray(
+                [int(salary_map.get(str(name), 0)) for name in flex_names],
+                dtype=np.int32,
+            )
+            flex_team_values = np.asarray(
+                [str(team_map.get(str(name), '')) for name in flex_names],
+                dtype=object,
+            )
             flex_log_weights = np.log(np.clip(flex_rank_weights, 1e-300, None))
             while (
                 len(captain_candidates) < per_captain_candidate_limit
@@ -8028,11 +8038,10 @@ if build_clicked:
                 # Reject invalid DK Showdown candidates in one NumPy batch before
                 # entering the remaining duplicate/scoring Python loop.
                 sampled_names = flex_names[sampled_indices]
-                sampled_salaries = np.asarray(
-                    [[int(salary_map.get(str(name), 0)) for name in row] for row in sampled_names],
-                    dtype=np.int32,
+                batch_salary = (
+                    int(captain_salary_map.get(captain, 0))
+                    + flex_salary_values[sampled_indices].sum(axis=1, dtype=np.int32)
                 )
-                batch_salary = int(captain_salary_map.get(captain, 0)) + sampled_salaries.sum(axis=1, dtype=np.int32)
                 batch_valid = (batch_salary >= int(MIN_LINEUP_SALARY)) & (batch_salary <= int(min(SALARY_CAP, MAX_LINEUP_SALARY)))
 
                 if locked_players:
@@ -8042,11 +8051,10 @@ if build_clicked:
                     batch_valid &= np.all(flex_has_locked | captain_locked[None, :], axis=1)
 
                 captain_team = str(team_map.get(captain, ''))
-                sampled_teams = np.asarray(
-                    [[str(team_map.get(str(name), '')) for name in row] for row in sampled_names],
-                    dtype=object,
+                batch_valid &= np.any(
+                    flex_team_values[sampled_indices] != captain_team,
+                    axis=1,
                 )
-                batch_valid &= np.any(sampled_teams != captain_team, axis=1)
                 for sampled_row, sampled_idx in enumerate(sampled_indices):
                     if len(captain_candidates) >= per_captain_candidate_limit:
                         break
