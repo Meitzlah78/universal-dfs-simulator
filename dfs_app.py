@@ -20,7 +20,7 @@ TRANSFORMED = CACHE_DIR / "dfs_app.py"
 STAMP = CACHE_DIR / "source_stamp.txt"
 SOURCE_COMMIT = "40f00bce67aff5772b25971d4f2f8153aba386da"
 SOURCE_URL = f"https://raw.githubusercontent.com/Meitzlah78/universal-dfs-simulator/{SOURCE_COMMIT}/dfs_app.py"
-TRANSFORM_REVISION = "opponent-only-step4-v1"
+TRANSFORM_REVISION = "historical-field-calibration-v2"
 source_stamp = SOURCE_COMMIT + ":" + TRANSFORM_REVISION
 needs_build = not TRANSFORMED.exists() or not STAMP.exists() or STAMP.read_text() != source_stamp
 
@@ -31,6 +31,7 @@ if needs_build:
     env = os.environ.copy()
     env["PYTHONPATH"] = str(ROOT) + os.pathsep + env.get("PYTHONPATH", "")
     for installer in (
+        ROOT / ".github/scripts/install_dk_historical_field_calibration.py",
         ROOT / ".github/scripts/install_dk_exhaustive_build.py",
         ROOT / ".github/scripts/install_dk_post_sim_diversification.py",
     ):
