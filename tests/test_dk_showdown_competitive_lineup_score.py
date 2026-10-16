@@ -46,6 +46,29 @@ class DKShowdownCompetitiveLineupScoreTests(unittest.TestCase):
         punt = candidate_score("CPT", common + ["PUNT"], players, ownership, 0.45, 0.25, 0.20, 0.10)
         self.assertGreater(good["Score"], punt["Score"])
 
+    def test_bad_uniqueness_cannot_beat_competitive_chalk(self):
+        """A nearly unowned lineup still needs a credible fantasy ceiling.
+
+        Completed-contest backtests showed that uniqueness by itself is not
+        leverage: some old optimizer constructions were unique because they
+        combined too many weak pieces.  Keep enough ownership benefit to reward
+        a true leverage play, but never let an implausible low-owned lineup beat
+        a materially stronger six-player construction.
+        """
+        names = ["CPT", "A", "B", "C", "D", "STRONG", "WEIRD"]
+        players = {name: self._stats(11, 19, 28, 7) for name in names}
+        players["STRONG"] = self._stats(18, 30, 43, 10)
+        players["WEIRD"] = self._stats(2, 5, 9, 3)
+        ownership = {name: 14.0 for name in names}
+        ownership["STRONG"] = 65.0
+        ownership["WEIRD"] = 0.2
+        common = ["A", "B", "C", "D"]
+        strong = candidate_score("CPT", common + ["STRONG"], players, ownership, 0.45, 0.25, 0.20, 0.10)
+        weird = candidate_score("CPT", common + ["WEIRD"], players, ownership, 0.45, 0.25, 0.20, 0.10)
+        self.assertGreater(strong["SimMean"], weird["SimMean"])
+        self.assertGreater(strong["SimP95"], weird["SimP95"])
+        self.assertGreater(strong["Score"], weird["Score"])
+
 
 if __name__ == "__main__":
     unittest.main()
