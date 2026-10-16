@@ -9,6 +9,8 @@ import numpy as np
 from dk_showdown_engine import (
     candidate_score as dk_showdown_candidate_score,
     duplicate_expansion_weights as dk_duplicate_expansion_weights,
+    opponent_lineup_means as dk_opponent_lineup_means,
+    opponent_quality_acceptance as dk_opponent_quality_acceptance,
     sample_opponent_batch as dk_sample_opponent_batch,
     score_lineup_matrix as dk_score_lineup_matrix,
     weighted_score_bounds as dk_weighted_score_bounds,
@@ -484,10 +486,10 @@ def build_showdown_opponent_field(available_players, simulation_df, players_df,
     max_attempts = max(200000, int(target) * 10)
 
     captain_weights = np.clip(captain_base_weights, 0.01, None)
-    # Completed large-field DK Showdown data is materially more concentrated at
-    # Captain than a straight ownership draw. BUF@LAR put about 59.7% of entries
-    # on its top four Captains. Sharpen Captain only; FLEX remains ownership-first.
-    captain_weights = np.power(captain_weights, 1.45)
+    # External Field CPT Own % is already role-specific. Only sharpen the fallback
+    # curve when no usable external Captain ownership exists.
+    if not has_external_captain_ownership:
+        captain_weights = np.power(captain_weights, 1.45)
     captain_weights /= captain_weights.sum()
     batch_size = min(4096, max(512, int(target)))
     while len(rows) < target and attempts < max_attempts:
@@ -514,11 +516,15 @@ def build_showdown_opponent_field(available_players, simulation_df, players_df,
             default=0.06,
         )
         salary_draw = rng.random(n)
+        lineup_means = dk_opponent_lineup_means(captain_batch, flex_batch, means)
+        quality_acceptance = dk_opponent_quality_acceptance(lineup_means)
+        quality_draw = rng.random(n)
         valid = np.flatnonzero(
             (salary_batch <= salary_cap)
             & (salary_batch >= 45000)
             & multi_team
             & (salary_draw <= salary_acceptance)
+            & (quality_draw <= quality_acceptance)
         )
         for i in valid:
             f = flex_batch[i]
