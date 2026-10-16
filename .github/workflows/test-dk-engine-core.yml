@@ -27,17 +27,14 @@ jobs:
         run: pip install numpy pandas pytest
       - name: Prepare transformed Simmah source
         run: |
-          if grep -q 'from dfs_app_runtime import' dfs_app.py; then
-            cp /tmp/does-not-exist /tmp/ignore 2>/dev/null || true
+          if grep -q 'Runtime entry point for the validated DK Showdown transforms' dfs_app.py || grep -q 'from dfs_app_runtime import' dfs_app.py; then
             python - <<'PY'
           from pathlib import Path
           import urllib.request
           url = 'https://raw.githubusercontent.com/Meitzlah78/universal-dfs-simulator/b91d513860e54bb35db19292538ef345e390c3f8/dfs_app.py'
           Path('/tmp/dfs_app.py').write_bytes(urllib.request.urlopen(url).read())
           PY
-            cp /tmp/dfs_app.py /tmp/dfs_app.original.py
-            cp /tmp/dfs_app.py dfs_app.ci.py
-            cp dfs_app.ci.py dfs_app.py
+            cp /tmp/dfs_app.py dfs_app.py
             python .github/scripts/install_dk_exhaustive_build.py
             python .github/scripts/install_dk_post_sim_diversification.py
           fi
