@@ -2,106 +2,33 @@ name: Wire DK Showdown Candidate Score
 
 on:
   push:
-    branches: [refactor/dk-showdown-engine]
-    paths: ['.github/workflows/wire-dk-showdown-candidate-score.yml']
-  workflow_dispatch:
+    branches:
+      - refactor/dk-showdown-engine
+    paths:
+      - .github/workflows/wire-dk-showdown-candidate-score.yml
 
 permissions:
   contents: write
 
 jobs:
-  wire-engine:
+  wire:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/dk-showdown-engine
-      - name: Wire tested candidate scoring helper
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          path = Path('dfs_app.py')
-          text = path.read_text()
-          import_anchor = 'import numpy as np\n'
-          import_line = 'from dk_showdown_engine import candidate_score as dk_showdown_candidate_score\n'
-          if import_line not in text:
-              if import_anchor not in text:
-                  raise SystemExit('SAFE_ABORT: numpy import anchor not found')
-              text = text.replace(import_anchor, import_anchor + import_line, 1)
-          old = '''                total_mean = (
-                    player_sim[captain]["Mean"] * 1.5
-                    + sum(
-                        player_sim[p]["Mean"]
-                        for p in flex_players
-                    )
-                )
-
-                total_p95 = (
-                    player_sim[captain]["P95"] * 1.5
-                    + sum(
-                        player_sim[p]["P95"]
-                        for p in flex_players
-                    )
-                )
-
-                total_p99 = (
-                    player_sim[captain]["P99"] * 1.5
-                    + sum(
-                        player_sim[p]["P99"]
-                        for p in flex_players
-                    )
-                )
-
-                raw_score = (
-                    total_p95 * P95_WEIGHT
-                    + total_p99 * P99_WEIGHT
-                    + total_mean * MEAN_WEIGHT
-                    + (
-                        player_sim[captain].get("StdDev", 0.0) * 1.5
-                        + sum(player_sim[p].get("StdDev", 0.0) for p in flex_players)
-                    ) * STDDEV_WEIGHT
-                )
-                lineup_ownership = (
-                    showdown_ownership_proxy[ownership_index[captain]] * 1.5
-                    + sum(showdown_ownership_proxy[ownership_index[p]] for p in flex_players)
-                )
-                lineup_upside = max(0.0, total_p99 - total_p95)
-                ownership_tax = max(0.0, lineup_ownership - 15.0 * 6.5) * 0.06
-                upside_credit = min(ownership_tax, lineup_upside * 0.08)
-                score = raw_score - ownership_tax + upside_credit
-'''
-          new = '''                _candidate_metrics = dk_showdown_candidate_score(
-                    captain,
-                    flex_players,
-                    player_sim,
-                    {name: float(showdown_ownership_proxy[index]) for name, index in ownership_index.items()},
-                    P95_WEIGHT,
-                    P99_WEIGHT,
-                    MEAN_WEIGHT,
-                    STDDEV_WEIGHT,
-                )
-                total_mean = _candidate_metrics["SimMean"]
-                total_p95 = _candidate_metrics["SimP95"]
-                total_p99 = _candidate_metrics["SimP99"]
-                score = _candidate_metrics["Score"]
-'''
-          count = text.count(old)
-          if count != 1:
-              raise SystemExit(f'SAFE_ABORT: expected one legacy scoring block, found {count}')
-          path.write_text(text.replace(old, new, 1))
-          PY
-      - name: Verify syntax and engine tests
+      - name: Patch candidate score
+        run: python .github/scripts/wire_dk_candidate_score.py
+      - name: Verify
         run: |
           python -m py_compile dfs_app.py dk_showdown_engine.py
           python -m pip install -q numpy pandas pytest
           PYTHONPATH="$GITHUB_WORKSPACE" python -m pytest -q tests/test_dk_showdown_engine.py
-          grep -q 'from dk_showdown_engine import candidate_score as dk_showdown_candidate_score' dfs_app.py
-          grep -q '_candidate_metrics = dk_showdown_candidate_score(' dfs_app.py
-      - name: Commit wiring
+      - name: Commit
         run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git config user.name github-actions-bot
+          git config user.email github-actions-bot@users.noreply.github.com
           git add dfs_app.py
           git diff --cached --quiet && exit 0
-          git commit -m 'Wire DK Showdown candidate scoring to engine [skip ci]'
+          git commit -m "Wire DK Showdown candidate scoring to engine [skip ci]"
           git push origin HEAD:refactor/dk-showdown-engine
