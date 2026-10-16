@@ -6,6 +6,7 @@ import requests
 import streamlit as st
 import pandas as pd
 import numpy as np
+from dk_showdown_engine import candidate_score as dk_showdown_candidate_score
 from zoneinfo import ZoneInfo
 
 # Lower defaults keep the simulator responsive while retaining useful variation.
@@ -8104,47 +8105,20 @@ if build_clicked:
                 # SIMULATION SCORE
                 # ========================================
 
-                total_mean = (
-                    player_sim[captain]["Mean"] * 1.5
-                    + sum(
-                        player_sim[p]["Mean"]
-                        for p in flex_players
-                    )
+                _candidate_metrics = dk_showdown_candidate_score(
+                    captain,
+                    flex_players,
+                    player_sim,
+                    {name: float(showdown_ownership_proxy[index]) for name, index in ownership_index.items()},
+                    P95_WEIGHT,
+                    P99_WEIGHT,
+                    MEAN_WEIGHT,
+                    STDDEV_WEIGHT,
                 )
-
-                total_p95 = (
-                    player_sim[captain]["P95"] * 1.5
-                    + sum(
-                        player_sim[p]["P95"]
-                        for p in flex_players
-                    )
-                )
-
-                total_p99 = (
-                    player_sim[captain]["P99"] * 1.5
-                    + sum(
-                        player_sim[p]["P99"]
-                        for p in flex_players
-                    )
-                )
-
-                raw_score = (
-                    total_p95 * P95_WEIGHT
-                    + total_p99 * P99_WEIGHT
-                    + total_mean * MEAN_WEIGHT
-                    + (
-                        player_sim[captain].get("StdDev", 0.0) * 1.5
-                        + sum(player_sim[p].get("StdDev", 0.0) for p in flex_players)
-                    ) * STDDEV_WEIGHT
-                )
-                lineup_ownership = (
-                    showdown_ownership_proxy[ownership_index[captain]] * 1.5
-                    + sum(showdown_ownership_proxy[ownership_index[p]] for p in flex_players)
-                )
-                lineup_upside = max(0.0, total_p99 - total_p95)
-                ownership_tax = max(0.0, lineup_ownership - 15.0 * 6.5) * 0.06
-                upside_credit = min(ownership_tax, lineup_upside * 0.08)
-                score = raw_score - ownership_tax + upside_credit
+                total_mean = _candidate_metrics["SimMean"]
+                total_p95 = _candidate_metrics["SimP95"]
+                total_p99 = _candidate_metrics["SimP99"]
+                score = _candidate_metrics["Score"]
 
                 captain_candidates.append({
                     "Captain": captain,
