@@ -1,0 +1,39 @@
+name: Apply DK captain ownership source fix
+
+on:
+  push:
+    branches: [refactor/dk-showdown-engine]
+    paths:
+      - '.github/scripts/fix_dk_showdown_captain_source.py'
+      - 'tests/test_dk_showdown_captain_source_behavior.py'
+
+permissions:
+  contents: write
+
+jobs:
+  apply-fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/dk-showdown-engine
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply source-aware captain calibration
+        run: python .github/scripts/fix_dk_showdown_captain_source.py
+      - name: Verify syntax and source behavior
+        run: |
+          python -m py_compile dfs_app.py dk_showdown_engine.py
+          python -m unittest tests.test_dk_showdown_captain_source_behavior tests.test_dk_showdown_captain_calibration
+      - name: Commit production fix
+        run: |
+          if git diff --quiet -- dfs_app.py; then
+            echo "No production change needed"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add dfs_app.py
+          git commit -m "Use real DK captain ownership without resharpening"
+          git push origin HEAD:refactor/dk-showdown-engine
