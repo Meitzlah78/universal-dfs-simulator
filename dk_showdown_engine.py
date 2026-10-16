@@ -91,6 +91,51 @@ def score_lineup_matrix(simulation_values: np.ndarray, captain_indices: np.ndarr
     flex_scores = values[:, flex].sum(axis=2)
     return captain_scores + flex_scores
 
+def weighted_score_bounds(unique_scores: np.ndarray, multiplicities: np.ndarray, candidate_scores: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Return expanded-field left/right search positions without expanding duplicates.
+
+    unique_scores is simulations-by-unique-lineups. multiplicities contains the
+    number of contest entries represented by each unique lineup. candidate_scores
+    is simulations-by-candidates. Returned arrays match np.searchsorted on the
+    physically expanded opponent field for every simulation and candidate.
+    """
+    scores = np.asarray(unique_scores)
+    counts = np.asarray(multiplicities, dtype=np.int64)
+    candidates = np.asarray(candidate_scores)
+    if scores.ndim != 2:
+        raise ValueError("unique_scores must have shape (simulations, unique_lineups)")
+    if counts.ndim != 1 or counts.shape[0] != scores.shape[1]:
+        raise ValueError("multiplicities must match unique_scores columns")
+    if candidates.ndim != 2 or candidates.shape[0] != scores.shape[0]:
+        raise ValueError("candidate_scores must have the same simulation rows")
+    if np.any(counts < 1):
+        raise ValueError("multiplicities must be positive")
+
+    order = np.argsort(scores, axis=1, kind="stable")
+    sorted_scores = np.take_along_axis(scores, order, axis=1)
+    sorted_counts = counts[order]
+    cumulative = np.cumsum(sorted_counts, axis=1, dtype=np.int64)
+    sims, n_candidates = candidates.shape
+    rows = np.arange(sims)[:, None]
+
+    def _positions(side: str) -> np.ndarray:
+        low = np.zeros((sims, n_candidates), dtype=np.int32)
+        high = np.full((sims, n_candidates), sorted_scores.shape[1], dtype=np.int32)
+        while np.any(low < high):
+            active = low < high
+            mid = np.minimum((low + high) // 2, sorted_scores.shape[1] - 1)
+            values = sorted_scores[rows, mid]
+            if side == "right":
+                move_right = (values <= candidates) & active
+            else:
+                move_right = (values < candidates) & active
+            low = np.where(move_right, mid + 1, low)
+            high = np.where(active & ~move_right, mid, high)
+        before = np.maximum(low - 1, 0)
+        return np.where(low > 0, cumulative[rows, before], 0)
+
+    return _positions("left"), _positions("right")
+
 def score_showdown_chunks(simulation_values: np.ndarray, lineup_indices: np.ndarray, chunk_size: int = 128, rules: ShowdownRules = ShowdownRules()):
     """Yield (start, end, scores) for Showdown simulation chunks.
 
