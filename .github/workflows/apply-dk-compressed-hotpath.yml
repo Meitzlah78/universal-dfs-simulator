@@ -6,6 +6,14 @@ on:
       - refactor/dk-apply-compressed-hotpath
     paths:
       - '.github/workflows/apply-dk-compressed-hotpath.yml'
+      - '.github/scripts/wire_dk_unique_field_indices.py'
+      - '.github/scripts/wire_dk_unique_field_scoring.py'
+      - '.github/scripts/wire_dk_weighted_rank_hotpath.py'
+      - 'dk_showdown_engine.py'
+      - 'tests/test_dk_showdown_engine.py'
+      - 'tests/test_dk_weighted_field.py'
+      - 'tests/test_dk_weighted_portfolio_parity.py'
+      - 'tests/test_dk_unique_field_patch.py'
   workflow_dispatch:
 
 permissions:
