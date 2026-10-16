@@ -1,6 +1,11 @@
 name: Apply DK Compressed Hotpath
 
 on:
+  push:
+    branches:
+      - refactor/dk-apply-compressed-hotpath
+    paths:
+      - '.github/workflows/apply-dk-compressed-hotpath.yml'
   workflow_dispatch:
 
 permissions:
