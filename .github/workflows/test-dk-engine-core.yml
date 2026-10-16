@@ -45,14 +45,34 @@ jobs:
           fi
           python -m py_compile dfs_app.py dk_showdown_engine.py dk_showdown_exhaustive.py dk_showdown_build.py nfl_scoring.py
           mv /tmp/dfs_app.original.py dfs_app.py
+      - name: Verify post-sim diversification live source transform
+        run: |
+          cp dfs_app.py /tmp/dfs_app.original.py
+          python .github/scripts/install_dk_post_sim_diversification.py
+          grep -q 'from dk_portfolio_selection import select_post_sim_portfolio' dfs_app.py
+          grep -q 'Diversification after Contest Sim' dfs_app.py
+          grep -q 'Minimum unique players' dfs_app.py
+          grep -q 'portfolio_diversification_mode_used' dfs_app.py
+          grep -q 'portfolio_min_uniques_used' dfs_app.py
+          grep -q 'select_post_sim_portfolio(' dfs_app.py
+          if grep -q 'auto_diversification_pct = 90.0' dfs_app.py; then
+            echo 'hidden 90 percent exposure ceiling survived transform' >&2
+            exit 1
+          fi
+          if grep -q 'max_shared_players = max(1, slot_count - 2)' dfs_app.py; then
+            echo 'hidden two-unique overlap rule survived transform' >&2
+            exit 1
+          fi
+          python -m py_compile dfs_app.py dk_portfolio_selection.py
+          mv /tmp/dfs_app.original.py dfs_app.py
       - name: Verify installed candidate numeric-array optimization
         run: |
           grep -q 'flex_salary_values\[sampled_indices\]' dfs_app.py
           grep -q 'flex_team_values\[sampled_indices\]' dfs_app.py
           python -m py_compile dfs_app.py dk_showdown_engine.py dk_showdown_exhaustive.py dk_showdown_build.py nfl_scoring.py
       - name: Compile DK engine and app
-        run: python -m py_compile dk_showdown_engine.py dk_showdown_exhaustive.py dk_showdown_build.py nfl_scoring.py dfs_app.py
-      - name: Run DK engine, exhaustive builder, production build adapter, compressed-field, and shared NFL scoring tests
+        run: python -m py_compile dk_showdown_engine.py dk_showdown_exhaustive.py dk_showdown_build.py dk_portfolio_selection.py nfl_scoring.py dfs_app.py
+      - name: Run DK engine, exhaustive builder, production build adapter, post-sim diversification, compressed-field, and shared NFL scoring tests
         env:
           PYTHONPATH: ${{ github.workspace }}
         run: >-
@@ -60,6 +80,7 @@ jobs:
           tests/test_dk_showdown_engine.py
           tests/test_dk_showdown_exhaustive.py
           tests/test_dk_showdown_build.py
+          tests/test_dk_showdown_post_sim_diversification.py
           tests/test_dk_weighted_field.py
           tests/test_dk_weighted_portfolio_parity.py
           tests/test_dk_compressed_end_to_end.py
