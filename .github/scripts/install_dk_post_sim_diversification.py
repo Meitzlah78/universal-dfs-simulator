@@ -42,6 +42,24 @@ ui_replacement = ui_anchor + '''
             key="post_sim_min_uniques",
             help="0 means no forced diversification; 1 means two selected lineups may share at most 5 of 6 players, etc.",
         )
+
+    # These are explicit user controls from the player table. They are applied
+    # only while selecting the final portfolio from already-simulated lineups.
+    post_sim_max_exposure = {}
+    post_sim_captain_max_exposure = {}
+    if "edited_controls" in locals() and isinstance(edited_controls, pd.DataFrame) and not edited_controls.empty:
+        if "Name" in edited_controls.columns and "Max Exposure %" in edited_controls.columns:
+            post_sim_max_exposure = {
+                str(row["Name"]): float(row["Max Exposure %"])
+                for _, row in edited_controls.iterrows()
+                if pd.notna(row.get("Name")) and pd.notna(row.get("Max Exposure %"))
+            }
+        if "Name" in edited_controls.columns and "Captain Max %" in edited_controls.columns:
+            post_sim_captain_max_exposure = {
+                str(row["Name"]): float(row["Captain Max %"])
+                for _, row in edited_controls.iterrows()
+                if pd.notna(row.get("Name")) and pd.notna(row.get("Captain Max %"))
+            }
 '''
 if ui_anchor not in text:
     raise SystemExit("portfolio metric UI anchor not found")
@@ -82,12 +100,20 @@ replacement = '''        else:
                 metric=selection_metric,
                 min_uniques=requested_uniques,
                 lineup_columns=tuple(portfolio_lineup_columns),
+                max_exposure=post_sim_max_exposure,
+                captain_max_exposure=post_sim_captain_max_exposure,
             )
-            if diversification_mode == "Min Uniques" and len(portfolio_df) < int(portfolio_count):
-                st.warning(
-                    f"Only {len(portfolio_df):,} lineups satisfy Min Uniques = {requested_uniques}. "
-                    "The requirement was not silently relaxed."
-                )
+            if len(portfolio_df) < int(portfolio_count):
+                if diversification_mode == "Min Uniques":
+                    st.warning(
+                        f"Only {len(portfolio_df):,} lineups satisfy Min Uniques = {requested_uniques} "
+                        "and the current manual exposure limits. Constraints were not silently relaxed."
+                    )
+                else:
+                    st.warning(
+                        f"Only {len(portfolio_df):,} lineups satisfy the current manual exposure limits. "
+                        "Constraints were not silently relaxed."
+                    )
 
 '''
 text = text[:start] + replacement + text[end:]
