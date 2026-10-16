@@ -466,9 +466,11 @@ def build_showdown_opponent_field(available_players, simulation_df, players_df,
     cpt_col = next((cpt_lookup[k] for k in (
         "field cpt own %", "field captain own %", "captain ownership %", "cpt ownership %"
     ) if k in cpt_lookup), None)
+    has_external_captain_ownership = False
     if cpt_col is not None:
         captain_base_weights = pd.to_numeric(ownership_pool[cpt_col], errors="coerce").fillna(0.0).to_numpy(dtype=float)
-        if captain_base_weights.sum() <= 0:
+        has_external_captain_ownership = bool(np.clip(captain_base_weights, 0.0, None).sum() > 0)
+        if not has_external_captain_ownership:
             captain_base_weights = weights.copy()
     else:
         captain_base_weights = weights.copy()
