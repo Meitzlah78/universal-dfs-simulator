@@ -495,7 +495,29 @@ def build_showdown_opponent_field(available_players, simulation_df, players_df,
         salary_batch = captain_salaries[captain_batch] + salaries[flex_batch].sum(axis=1)
         picked_teams = teams[flex_batch]
         multi_team = np.any(picked_teams != teams[captain_batch][:, None], axis=1)
-        valid = np.flatnonzero((salary_batch <= salary_cap) & (salary_batch >= 49000) & multi_team)
+        # Match completed DK Showdown salary behavior instead of hard-cutting at $49K.
+        # BUF@LAR: mean $49,459; P5 $48,200; P10 $48,700; P25 $49,300;
+        # median $49,700; P75 $49,900; P90/P95 $50,000. Keep a small real
+        # low-salary tail while strongly favoring near-cap public constructions.
+        salary_left = salary_cap - salary_batch
+        salary_acceptance = np.select(
+            [
+                salary_left <= 100,
+                salary_left <= 300,
+                salary_left <= 700,
+                salary_left <= 1300,
+                salary_left <= 1800,
+            ],
+            [1.00, 0.92, 0.72, 0.42, 0.20],
+            default=0.06,
+        )
+        salary_draw = rng.random(n)
+        valid = np.flatnonzero(
+            (salary_batch <= salary_cap)
+            & (salary_batch >= 45000)
+            & multi_team
+            & (salary_draw <= salary_acceptance)
+        )
         for i in valid:
             f = flex_batch[i]
             rows.append((names[captain_batch[i]], names[f[0]], names[f[1]], names[f[2]], names[f[3]], names[f[4]], int(salary_batch[i])))
