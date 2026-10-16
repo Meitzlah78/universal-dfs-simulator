@@ -9,6 +9,7 @@ import numpy as np
 from dk_showdown_engine import (
     candidate_score as dk_showdown_candidate_score,
     duplicate_expansion_weights as dk_duplicate_expansion_weights,
+    sample_opponent_batch as dk_sample_opponent_batch,
 )
 from zoneinfo import ZoneInfo
 
@@ -457,47 +458,23 @@ def build_showdown_opponent_field(available_players, simulation_df, players_df,
     attempts = 0
     max_attempts = max(200000, int(target) * 10)
 
+    captain_weights = np.clip(captain_base_weights, 0.01, None)
+    captain_weights /= captain_weights.sum()
+    batch_size = min(4096, max(512, int(target)))
     while len(rows) < target and attempts < max_attempts:
-        attempts += 1
-        if progress_bar is not None and (attempts % 1000 == 0 or len(rows) >= target):
-            progress_bar.progress(
-                min(0.99, attempts / max_attempts),
-                text=f"Building opponent lineups: {len(rows):,} of {target:,} accepted (attempt {attempts:,})"
-            )
-        # Build the public field the same way we learned from the completed
-        # Showdown study: choose Captain from Captain ownership first, then choose
-        # five FLEX players from overall field ownership. Choosing six players first
-        # and only then assigning Captain distorts both Captain ownership and lineup
-        # construction.
-        captain_weights = np.clip(captain_base_weights, 0.01, None)
-        captain_weights = captain_weights / captain_weights.sum()
-        captain_idx = int(rng.choice(len(names), p=captain_weights))
-
-        flex_weights = weights.copy()
-        flex_weights[captain_idx] = 0.0
-        if flex_weights.sum() <= 0:
-            continue
-        flex_weights /= flex_weights.sum()
-        flex_idx = rng.choice(len(names), size=5, replace=False, p=flex_weights)
-        picked = np.concatenate(([captain_idx], flex_idx))
-
-        salary = int(captain_salaries[captain_idx] + salaries[flex_idx].sum())
-        if salary > salary_cap:
-            continue
-
-        # Diagnostic based on the real completed field: salary was concentrated
-        # close to the cap, with a median near $49.7K. Require $49K+ opponents.
-        # This affects only the simulated opponent field, never the user's BUILD.
-        if salary < 49000:
-            continue
-
-        if len(set(teams[picked])) < 2:
-            continue
-        rows.append((
-            names[captain_idx],
-            names[flex_idx[0]], names[flex_idx[1]], names[flex_idx[2]],
-            names[flex_idx[3]], names[flex_idx[4]], salary
-        ))
+        n = min(batch_size, max_attempts - attempts)
+        captain_batch, flex_batch = dk_sample_opponent_batch(rng, captain_weights, weights, n)
+        attempts += n
+        salary_batch = captain_salaries[captain_batch] + salaries[flex_batch].sum(axis=1)
+        picked_teams = teams[flex_batch]
+        multi_team = np.any(picked_teams != teams[captain_batch][:, None], axis=1)
+        valid = np.flatnonzero((salary_batch <= salary_cap) & (salary_batch >= 49000) & multi_team)
+        for i in valid:
+            f = flex_batch[i]
+            rows.append((names[captain_batch[i]], names[f[0]], names[f[1]], names[f[2]], names[f[3]], names[f[4]], int(salary_batch[i])))
+            if len(rows) >= target: break
+        if progress_bar is not None:
+            progress_bar.progress(min(0.99, attempts / max_attempts), text=f"Building opponent lineups: {len(rows):,} of {target:,} accepted (attempt {attempts:,})")
 
     return pd.DataFrame.from_records(rows, columns=columns)
 
