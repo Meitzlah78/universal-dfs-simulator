@@ -8857,7 +8857,10 @@ if (
     # All simulations and opponents are retained; parallelism changes only how
     # the work is scheduled, not the amount of work performed.
     simulation_values = simulation_df.to_numpy(dtype=np.float32, copy=False)
-    batch_size = 128
+    # Production-shaped benchmark: 64-scenario batches were fastest with the
+    # existing four-worker DK Showdown scoring path. Scheduling only; scoring
+    # and rank semantics are unchanged.
+    batch_size = 64 if is_dk_showdown else 128
     batch_ranges = [
         (batch_start, min(batch_start + batch_size, selection_n_sims))
         for batch_start in range(0, selection_n_sims, batch_size)
