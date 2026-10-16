@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections import Counter
 from datetime import datetime, timezone
+from itertools import groupby
 from typing import Iterable, Mapping, Any
 
 import numpy as np
@@ -23,19 +24,29 @@ def eligible_training_contests(contests: Iterable[Mapping[str, Any]], target_loc
     return eligible
 
 
-def walk_forward_splits(contests: Iterable[Mapping[str, Any]], min_training_contests: int = 1) -> list[dict[str, Any]]:
-    """Create strict chronological train/test splits, one held-out contest at a time."""
+def walk_forward_batches(contests: Iterable[Mapping[str, Any]], min_training_contests: int = 1) -> list[dict[str, Any]]:
+    """Hold out every contest/game sharing a lock time as one evaluation batch."""
     if min_training_contests < 1: raise ValueError("min_training_contests must be positive")
     rows = list(contests)
     for contest in rows:
         if "lock_time" not in contest: raise KeyError("historical contest is missing lock_time")
         _utc(contest["lock_time"])
     ordered = sorted(rows, key=lambda c: _utc(c["lock_time"]))
-    splits = []
-    for target in ordered:
-        training = eligible_training_contests(ordered, target["lock_time"])
+    batches = []
+    for lock_utc, grouped in groupby(ordered, key=lambda c: _utc(c["lock_time"])):
+        targets = list(grouped)
+        training = [c for c in ordered if _utc(c["lock_time"]) < lock_utc]
         if len(training) >= min_training_contests:
-            splits.append({"training": training, "target": target})
+            batches.append({"lock_time": lock_utc, "training": training, "targets": targets})
+    return batches
+
+
+def walk_forward_splits(contests: Iterable[Mapping[str, Any]], min_training_contests: int = 1) -> list[dict[str, Any]]:
+    """Compatibility view: one target per split, backed by same-lock batches."""
+    splits = []
+    for batch in walk_forward_batches(contests, min_training_contests=min_training_contests):
+        for target in batch["targets"]:
+            splits.append({"training": batch["training"], "target": target})
     return splits
 
 
@@ -43,11 +54,7 @@ def field_behavior_features(lineup_keys: Iterable[Any]) -> dict[str, float]:
     keys = list(lineup_keys)
     if not keys: raise ValueError("at least one lineup is required")
     counts = Counter(keys); entries = len(keys); unique = len(counts); duplicate_counts = list(counts.values())
-    return {"entries": float(entries), "unique_lineups": float(unique), "unique_rate": unique / entries,
-            "singleton_entry_mass": sum(c for c in duplicate_counts if c == 1) / entries,
-            "ten_plus_duplicate_entry_mass": sum(c for c in duplicate_counts if c >= 10) / entries,
-            "twenty_plus_duplicate_entry_mass": sum(c for c in duplicate_counts if c >= 20) / entries,
-            "max_duplicates": float(max(duplicate_counts))}
+    return {"entries": float(entries), "unique_lineups": float(unique), "unique_rate": unique / entries, "singleton_entry_mass": sum(c for c in duplicate_counts if c == 1) / entries, "ten_plus_duplicate_entry_mass": sum(c for c in duplicate_counts if c >= 10) / entries, "twenty_plus_duplicate_entry_mass": sum(c for c in duplicate_counts if c >= 20) / entries, "max_duplicates": float(max(duplicate_counts))}
 
 
 def salary_behavior_features(salaries: Iterable[float]) -> dict[str, float]:
