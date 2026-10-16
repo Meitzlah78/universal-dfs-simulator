@@ -1,0 +1,41 @@
+name: Install DK Showdown field ownership columns
+
+on:
+  push:
+    branches: [refactor/dk-showdown-engine]
+    paths:
+      - '.github/scripts/install_dk_showdown_field_ownership_columns.py'
+      - '.github/workflows/install-dk-showdown-field-ownership-columns.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/dk-showdown-engine
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install test dependencies
+        run: python -m pip install --disable-pip-version-check numpy pandas
+      - name: Install field ownership priority
+        run: python .github/scripts/install_dk_showdown_field_ownership_columns.py
+      - name: Compile DK app
+        run: python -m py_compile dfs_app.py dk_showdown_engine.py
+      - name: Run DK field tests
+        run: python -m unittest tests.test_dk_showdown_field_realism tests.test_dk_showdown_actual_field_targets tests.test_dk_showdown_captain_calibration
+      - name: Commit installed change
+        run: |
+          if git diff --quiet; then
+            echo 'No change needed.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add dfs_app.py
+          git commit -m 'Use DK Showdown field ownership columns'
+          git push origin HEAD:refactor/dk-showdown-engine
