@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Mapping
 
+import numpy as np
 import pandas as pd
 
 from dk_showdown_exhaustive import fast_exhaustive_showdown_candidates
@@ -66,19 +67,36 @@ def build_showdown_candidates(
     if result.empty:
         return result
 
-    roster_cols = ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"]
-    multipliers = [1.5, 1.0, 1.0, 1.0, 1.0, 1.0]
-    for output_col, metric in (("SimMean", "Mean"), ("SimP95", "P95"), ("SimP99", "P99")):
-        values = []
-        for row in result[roster_cols].itertuples(index=False, name=None):
-            values.append(sum(float(player_sim.get(str(name), {}).get(metric, 0.0)) * mult for name, mult in zip(row, multipliers)))
-        result[output_col] = values
-    result["Score"] = pd.to_numeric(result["CandidateScore"], errors="coerce")
-
-    # Preserve exhaustive diagnostics through the adapter for UI/debugging.
-    result.attrs.update({
+    # Keep the exhaustive diagnostics before adding derived columns; pandas can
+    # otherwise drop attrs during intermediate dataframe operations.
+    diagnostics = {
         "examined_lineups": result.attrs.get("examined_lineups", 0),
         "legal_lineups": result.attrs.get("legal_lineups", 0),
         "retained_lineups": result.attrs.get("retained_lineups", len(result)),
-    })
+    }
+
+    # The old handoff iterated 5,000 Python rows three separate times after the
+    # exhaustive search had already completed. Build a compact numeric lookup and
+    # calculate all three metrics in vectorized arrays instead. This reduces the
+    # post-build CPU/object churn at the exact Streamlit handoff boundary.
+    roster_cols = ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"]
+    multipliers = np.asarray([1.5, 1.0, 1.0, 1.0, 1.0, 1.0], dtype=np.float64)
+    roster = result[roster_cols].to_numpy(dtype=object, copy=False)
+    unique_names = pd.unique(roster.ravel())
+    name_to_index = {str(name): i for i, name in enumerate(unique_names)}
+    indices = np.fromiter(
+        (name_to_index[str(name)] for name in roster.ravel()),
+        dtype=np.int32,
+        count=roster.size,
+    ).reshape(roster.shape)
+
+    for output_col, metric in (("SimMean", "Mean"), ("SimP95", "P95"), ("SimP99", "P99")):
+        lookup = np.asarray(
+            [float(player_sim.get(str(name), {}).get(metric, 0.0)) for name in unique_names],
+            dtype=np.float64,
+        )
+        result[output_col] = (lookup[indices] * multipliers).sum(axis=1)
+
+    result["Score"] = pd.to_numeric(result["CandidateScore"], errors="coerce")
+    result.attrs.update(diagnostics)
     return result
