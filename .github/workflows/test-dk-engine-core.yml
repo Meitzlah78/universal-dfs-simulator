@@ -43,3 +43,7 @@ jobs:
         env:
           PYTHONPATH: ${{ github.workspace }}
         run: python benchmarks/benchmark_dk_portfolio_bounds.py
+      - name: Run DK candidate filter benchmark
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python benchmarks/benchmark_dk_candidate_filters.py
