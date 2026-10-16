@@ -36,7 +36,9 @@ jobs:
       - name: Verify exhaustive Showdown live source transform
         run: |
           cp dfs_app.py /tmp/dfs_app.original.py
-          python .github/scripts/install_dk_exhaustive_build.py
+          if ! grep -q 'candidates_df = dk_build_showdown_candidates(' dfs_app.py; then
+            python .github/scripts/install_dk_exhaustive_build.py
+          fi
           grep -q 'from dk_showdown_build import build_showdown_candidates as dk_build_showdown_candidates' dfs_app.py
           grep -q 'candidates_df = dk_build_showdown_candidates(' dfs_app.py
           grep -q 'CANDIDATE_COUNT = 5000' dfs_app.py
@@ -50,7 +52,9 @@ jobs:
       - name: Verify post-sim diversification live source transform
         run: |
           cp dfs_app.py /tmp/dfs_app.original.py
-          python .github/scripts/install_dk_post_sim_diversification.py
+          if ! grep -q 'select_post_sim_portfolio(' dfs_app.py; then
+            python .github/scripts/install_dk_post_sim_diversification.py
+          fi
           grep -q 'from dk_portfolio_selection import select_post_sim_portfolio' dfs_app.py
           grep -q 'Diversification after Contest Sim' dfs_app.py
           grep -q 'Minimum unique players' dfs_app.py
@@ -112,15 +116,20 @@ jobs:
         env:
           PYTHONPATH: ${{ github.workspace }}
         run: python benchmarks/benchmark_dk_candidate_array_lookups.py
-      - name: Build permanent transformed app artifact
+      - name: Build or verify permanent transformed app artifact
         run: |
-          python .github/scripts/install_dk_exhaustive_build.py
-          python .github/scripts/install_dk_post_sim_diversification.py
+          if ! grep -q 'candidates_df = dk_build_showdown_candidates(' dfs_app.py; then
+            python .github/scripts/install_dk_exhaustive_build.py
+          fi
+          if ! grep -q 'select_post_sim_portfolio(' dfs_app.py; then
+            python .github/scripts/install_dk_post_sim_diversification.py
+          fi
           grep -q 'candidates_df = dk_build_showdown_candidates(' dfs_app.py
           grep -q 'select_post_sim_portfolio(' dfs_app.py
           grep -q 'locked_df=locked_df' dfs_app.py
           ! grep -q 'auto_diversification_pct = 90.0' dfs_app.py
           ! grep -q 'max_shared_players = max(1, slot_count - 2)' dfs_app.py
+          ! grep -q 'available_count = max(' dfs_app.py
           python -m py_compile dfs_app.py dk_showdown_exhaustive.py dk_showdown_build.py dk_portfolio_selection.py
       - name: Upload permanent transformed app artifact
         uses: actions/upload-artifact@v4
