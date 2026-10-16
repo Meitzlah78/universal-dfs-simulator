@@ -26,12 +26,24 @@ class DKShowdownContestEndToEndTests(unittest.TestCase):
         candidates = 12
 
         log_popularity = rng.normal(-14.0, 2.0, size=unique_count)
-        counts = duplicate_expansion_counts(log_popularity, full_field_size, seed=17)
-        self.assertEqual(int(counts.sum()), full_field_size)
+        all_counts = duplicate_expansion_counts(log_popularity, full_field_size, seed=17)
+        self.assertEqual(int(all_counts.sum()), full_field_size)
+
+        # Expansion allocates entry mass to representative constructions; rows with
+        # zero entries are not part of the compressed contest field and must be
+        # removed before weighted_score_bounds, exactly as production does.
+        active = all_counts > 0
+        counts = all_counts[active]
+        self.assertTrue(np.all(counts > 0))
 
         # Round scores to deliberately create ties, as real DK scoring does.
-        unique_scores = np.round(rng.normal(75.0, 15.0, size=(sims, unique_count)) * 4.0) / 4.0
-        candidate_scores = np.round(rng.normal(80.0, 15.0, size=(sims, candidates)) * 4.0) / 4.0
+        all_unique_scores = np.round(
+            rng.normal(75.0, 15.0, size=(sims, unique_count)) * 4.0
+        ) / 4.0
+        unique_scores = all_unique_scores[:, active]
+        candidate_scores = np.round(
+            rng.normal(80.0, 15.0, size=(sims, candidates)) * 4.0
+        ) / 4.0
 
         left, right = weighted_score_bounds(unique_scores, counts, candidate_scores)
 
