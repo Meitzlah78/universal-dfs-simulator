@@ -42,42 +42,62 @@ class DKShowdownPostSimDiversificationTests(unittest.TestCase):
         self.assertTrue((result["Captain"] == "A").all())
 
     def test_manual_player_max_exposure_is_authoritative(self):
-        result = select_post_sim_portfolio(
-            self.pool,
-            4,
-            min_uniques=0,
-            max_exposure={"F": 0.0, "E": 25.0},
-        )
+        result = select_post_sim_portfolio(self.pool, 4, min_uniques=0, max_exposure={"F": 0.0, "E": 25.0})
         self.assertFalse(result[["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"]].eq("F").any().any())
         exposure_e = int(result[["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"]].eq("E").sum().sum())
         self.assertLessEqual(exposure_e, 1)
 
     def test_manual_captain_max_exposure_is_authoritative(self):
-        pool = pd.concat([
-            self.pool,
-            pd.DataFrame([
-                {"Captain": "M", "Flex1": "B", "Flex2": "C", "Flex3": "D", "Flex4": "E", "Flex5": "F", "Expected ROI (%)": 10.0},
-                {"Captain": "N", "Flex1": "B", "Flex2": "C", "Flex3": "D", "Flex4": "E", "Flex5": "G", "Expected ROI (%)": 9.0},
-            ]),
-        ], ignore_index=True)
-        result = select_post_sim_portfolio(
-            pool,
-            4,
-            min_uniques=0,
-            captain_max_exposure={"A": 50.0},
-        )
+        pool = pd.concat([self.pool, pd.DataFrame([
+            {"Captain": "M", "Flex1": "B", "Flex2": "C", "Flex3": "D", "Flex4": "E", "Flex5": "F", "Expected ROI (%)": 10.0},
+            {"Captain": "N", "Flex1": "B", "Flex2": "C", "Flex3": "D", "Flex4": "E", "Flex5": "G", "Expected ROI (%)": 9.0},
+        ])], ignore_index=True)
+        result = select_post_sim_portfolio(pool, 4, min_uniques=0, captain_max_exposure={"A": 50.0})
         self.assertEqual(int((result["Captain"] == "A").sum()), 2)
         self.assertEqual(len(result), 4)
 
     def test_exposure_constraints_are_post_sim_only(self):
         original = self.pool.copy(deep=True)
-        select_post_sim_portfolio(
-            self.pool,
-            3,
-            max_exposure={"A": 0.0},
-            captain_max_exposure={"A": 0.0},
-        )
+        select_post_sim_portfolio(self.pool, 3, max_exposure={"A": 0.0}, captain_max_exposure={"A": 0.0})
         pd.testing.assert_frame_equal(self.pool, original)
+
+    def test_locked_lineup_is_retained_even_when_current_limits_conflict(self):
+        locked = self.pool.iloc[[0]].copy()
+        result = select_post_sim_portfolio(
+            self.pool,
+            2,
+            max_exposure={"F": 0.0},
+            captain_max_exposure={"A": 0.0},
+            locked_df=locked,
+        )
+        self.assertEqual(result.iloc[0]["Flex5"], "F")
+        self.assertTrue(bool(result.iloc[0]["Locked"]))
+
+    def test_new_lineup_must_satisfy_uniques_relative_to_lock(self):
+        locked = self.pool.iloc[[0]].copy()
+        result = select_post_sim_portfolio(self.pool, 2, min_uniques=2, locked_df=locked)
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result.iloc[1]["Expected ROI (%)"], 30.0)
+        self.assertGreaterEqual(min_unique_players(result.iloc[0][0:6], result.iloc[1][0:6]), 2)
+
+    def test_locked_lineup_counts_toward_exposure(self):
+        locked = self.pool.iloc[[0]].copy()
+        result = select_post_sim_portfolio(self.pool, 3, max_exposure={"E": 34.0}, locked_df=locked)
+        exposure_e = int(result[["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"]].eq("E").sum().sum())
+        self.assertEqual(exposure_e, 1)
+
+    def test_locked_duplicates_are_not_readded(self):
+        locked = self.pool.iloc[[0]].copy()
+        result = select_post_sim_portfolio(self.pool, 2, locked_df=locked)
+        keys = result[["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"]].astype(str).agg("|".join, axis=1)
+        self.assertEqual(keys.nunique(), len(result))
+        self.assertEqual(int(result["Locked"].sum()), 1)
+
+    def test_conflicting_locked_lineups_are_kept(self):
+        locked = self.pool.iloc[[0, 1]].copy()
+        result = select_post_sim_portfolio(self.pool, 2, min_uniques=2, locked_df=locked)
+        self.assertEqual(len(result), 2)
+        self.assertTrue(result["Locked"].all())
 
     def test_invalid_uniques_rejected(self):
         with self.assertRaises(ValueError):
