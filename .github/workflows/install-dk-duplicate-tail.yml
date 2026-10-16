@@ -29,7 +29,29 @@ jobs:
       - name: Compile engine and app
         run: python -m py_compile dk_showdown_engine.py dfs_app.py
       - name: Verify calibrated duplicate entry mass
-        run: python -m unittest tests.test_dk_showdown_expansion_shape
+        run: |
+          python - <<'PY'
+          import numpy as np
+          from dk_showdown_engine import duplicate_expansion_counts
+          values = np.random.default_rng(20261016).normal(-14.0, 2.0, size=10_000)
+          counts = duplicate_expansion_counts(values, 47_271, seed=7)
+          positive = counts[counts > 0]
+          singleton = positive[positive == 1].sum() / counts.sum()
+          ten_plus = positive[positive >= 10].sum() / counts.sum()
+          twenty_plus = positive[positive >= 20].sum() / counts.sum()
+          unique_rate = len(positive) / counts.sum()
+          print(f'unique={unique_rate:.4f} singleton={singleton:.4f} 10+={ten_plus:.4f} 20+={twenty_plus:.4f} max={positive.max()}')
+          assert 0.09 <= singleton <= 0.13
+          assert 0.48 <= ten_plus <= 0.66
+          assert 0.32 <= twenty_plus <= 0.50
+          assert 0.18 <= unique_rate <= 0.25
+          assert positive.max() > 300
+          PY
+          python -m unittest \
+            tests.test_dk_showdown_field_realism \
+            tests.test_dk_showdown_actual_field_targets \
+            tests.test_dk_showdown_latest_actual_field \
+            tests.test_dk_showdown_duplicate_calibration
       - name: Verify production wiring
         run: |
           grep -q 'duplicate_expansion_counts' dk_showdown_engine.py
