@@ -8737,15 +8737,26 @@ if (
         for i, player in enumerate(simulation_df.columns)
     }
 
-    candidate_idx = np.array([
-        [player_index[row[col]] for col in lineup_cols]
-        for _, row in candidates_df.iterrows()
-    ], dtype=np.int16)
+    # Build compact lineup index matrices with vectorized pandas mapping.
+    # This avoids Python iterrows() across thousands of candidate/field rows.
+    _candidate_names = candidates_df.loc[:, lineup_cols]
+    _contest_names = contest_field_df.loc[:, lineup_cols]
+    _candidate_mapped = _candidate_names.apply(lambda col: col.map(player_index))
+    _contest_mapped = _contest_names.apply(lambda col: col.map(player_index))
 
-    contest_idx = np.array([
-        [player_index[row[col]] for col in lineup_cols]
-        for _, row in contest_field_df.iterrows()
-    ], dtype=np.int16)
+    if _candidate_mapped.isna().any().any() or _contest_mapped.isna().any().any():
+        _known_players = set(player_index)
+        _missing = sorted(
+            {str(v) for v in _candidate_names.to_numpy().ravel() if v not in _known_players}
+            | {str(v) for v in _contest_names.to_numpy().ravel() if v not in _known_players}
+        )
+        raise ValueError(
+            "Contest scoring contains players missing from simulation_df: "
+            + ", ".join(_missing[:10])
+        )
+
+    candidate_idx = _candidate_mapped.to_numpy(dtype=np.int16, copy=False)
+    contest_idx = _contest_mapped.to_numpy(dtype=np.int16, copy=False)
 
     n_candidates = len(candidate_idx)
     n_sims = len(simulation_df)
