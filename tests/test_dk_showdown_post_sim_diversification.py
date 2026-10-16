@@ -41,6 +41,44 @@ class DKShowdownPostSimDiversificationTests(unittest.TestCase):
         self.assertEqual(len(result), 4)
         self.assertTrue((result["Captain"] == "A").all())
 
+    def test_manual_player_max_exposure_is_authoritative(self):
+        result = select_post_sim_portfolio(
+            self.pool,
+            4,
+            min_uniques=0,
+            max_exposure={"F": 0.0, "E": 25.0},
+        )
+        self.assertFalse(result[["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"]].eq("F").any().any())
+        exposure_e = int(result[["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"]].eq("E").sum().sum())
+        self.assertLessEqual(exposure_e, 1)
+
+    def test_manual_captain_max_exposure_is_authoritative(self):
+        pool = pd.concat([
+            self.pool,
+            pd.DataFrame([
+                {"Captain": "M", "Flex1": "B", "Flex2": "C", "Flex3": "D", "Flex4": "E", "Flex5": "F", "Expected ROI (%)": 10.0},
+                {"Captain": "N", "Flex1": "B", "Flex2": "C", "Flex3": "D", "Flex4": "E", "Flex5": "G", "Expected ROI (%)": 9.0},
+            ]),
+        ], ignore_index=True)
+        result = select_post_sim_portfolio(
+            pool,
+            4,
+            min_uniques=0,
+            captain_max_exposure={"A": 50.0},
+        )
+        self.assertEqual(int((result["Captain"] == "A").sum()), 2)
+        self.assertEqual(len(result), 4)
+
+    def test_exposure_constraints_are_post_sim_only(self):
+        original = self.pool.copy(deep=True)
+        select_post_sim_portfolio(
+            self.pool,
+            3,
+            max_exposure={"A": 0.0},
+            captain_max_exposure={"A": 0.0},
+        )
+        pd.testing.assert_frame_equal(self.pool, original)
+
     def test_invalid_uniques_rejected(self):
         with self.assertRaises(ValueError):
             select_post_sim_portfolio(self.pool, 2, min_uniques=-1)
