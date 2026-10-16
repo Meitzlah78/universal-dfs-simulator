@@ -33,18 +33,18 @@ def build_showdown_candidates(
     if missing:
         raise KeyError("missing player columns: " + ", ".join(sorted(missing)))
 
-    locked_names: set[str] = set()
-    captain_eligible_names: set[str] | None = None
+    locked_players: set[str] = set()
+    captain_eligible: dict[str, bool] | None = None
     if controls is not None and not controls.empty and "Name" in controls.columns:
         ctl = controls.drop_duplicates("Name", keep="last").set_index("Name")
         if "Fade" in ctl.columns:
             faded = set(ctl.index[ctl["Fade"].fillna(False).astype(bool)])
             pool = pool[~pool["Name"].isin(faded)].copy()
         if "Lock" in ctl.columns:
-            locked_names = set(ctl.index[ctl["Lock"].fillna(False).astype(bool)])
+            locked_players = set(ctl.index[ctl["Lock"].fillna(False).astype(bool)])
         if "Captain Max %" in ctl.columns:
             cpt_max = pd.to_numeric(ctl["Captain Max %"], errors="coerce").fillna(100.0)
-            captain_eligible_names = set(ctl.index[cpt_max > 0])
+            captain_eligible = {str(name): bool(value > 0) for name, value in cpt_max.items()}
 
     return fast_exhaustive_showdown_candidates(
         pool,
@@ -58,6 +58,6 @@ def build_showdown_candidates(
         mean_weight=mean_weight,
         stddev_weight=stddev_weight,
         require_two_teams=True,
-        locked_names=locked_names,
-        captain_eligible_names=captain_eligible_names,
+        locked_players=locked_players,
+        captain_eligible=captain_eligible,
     )
