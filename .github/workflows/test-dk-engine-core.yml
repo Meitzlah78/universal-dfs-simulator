@@ -31,15 +31,18 @@ jobs:
             python - <<'PY'
           from pathlib import Path
           import urllib.request
-          url = 'https://raw.githubusercontent.com/Meitzlah78/universal-dfs-simulator/b91d513860e54bb35db19292538ef345e390c3f8/dfs_app.py'
+          url = 'https://raw.githubusercontent.com/Meitzlah78/universal-dfs-simulator/40f00bce67aff5772b25971d4f2f8153aba386da/dfs_app.py'
           Path('/tmp/dfs_app.py').write_bytes(urllib.request.urlopen(url).read())
           PY
             cp /tmp/dfs_app.py dfs_app.py
+            python .github/scripts/install_dk_historical_field_calibration.py
             python .github/scripts/install_dk_exhaustive_build.py
             python .github/scripts/install_dk_post_sim_diversification.py
           fi
       - name: Verify transformed Showdown source
         run: |
+          grep -q 'from dk_showdown_field_calibration import' dfs_app.py
+          grep -q 'calibrated_duplicate_expansion_counts as dk_duplicate_expansion_counts' dfs_app.py
           grep -q 'from dk_showdown_build import build_showdown_candidates as dk_build_showdown_candidates' dfs_app.py
           grep -q 'candidates_df = dk_build_showdown_candidates(' dfs_app.py
           grep -q 'CANDIDATE_COUNT = 5000' dfs_app.py
@@ -50,13 +53,16 @@ jobs:
           grep -q 'select_post_sim_portfolio(' dfs_app.py
           ! grep -q 'auto_diversification_pct = 90.0' dfs_app.py
           ! grep -q 'max_shared_players = max(1, slot_count - 2)' dfs_app.py
-          python -m py_compile dfs_app.py dk_showdown_engine.py dk_showdown_exhaustive.py dk_showdown_build.py dk_portfolio_selection.py nfl_scoring.py
-      - name: Run DK engine, exhaustive builder, production build adapter, post-sim diversification, compressed-field, and shared NFL scoring tests
+          python -m py_compile dfs_app.py dk_showdown_engine.py dk_showdown_field_calibration.py dk_showdown_exhaustive.py dk_showdown_build.py dk_portfolio_selection.py nfl_scoring.py
+      - name: Run DK engine, field calibration, exhaustive builder, post-sim diversification, compressed-field, and scoring tests
         env:
           PYTHONPATH: ${{ github.workspace }}
         run: >-
           python -m pytest -q
           tests/test_dk_showdown_engine.py
+          tests/test_dk_showdown_expansion_shape.py
+          tests/test_dk_showdown_latest_actual_field.py
+          tests/test_dk_showdown_production_wiring.py
           tests/test_dk_showdown_exhaustive.py
           tests/test_dk_showdown_build.py
           tests/test_dk_showdown_post_sim_diversification.py
