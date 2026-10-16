@@ -39,7 +39,7 @@ def test_candidate_score_matches_existing_app_formula():
     raw_score = total_p95*p95_weight + total_p99*p99_weight + total_mean*mean_weight + total_stddev*stddev_weight
     lineup_ownership = ownership[captain]*1.5 + sum(ownership[p] for p in flex)
     tax = max(0.0, lineup_ownership - 15.0*6.5)*0.06
-    credit = min(tax, max(0.0, total_p99-total_p95)*0.08)
+    credit = min(tax*0.35, max(0.0, total_p99-total_p95)*0.03)
     actual = candidate_score(captain, flex, player_sim, ownership, p95_weight, p99_weight, mean_weight, stddev_weight)
     assert actual == {"SimMean": total_mean, "SimP95": total_p95, "SimP99": total_p99, "Score": raw_score-tax+credit}
 
