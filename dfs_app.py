@@ -10,6 +10,7 @@ from dk_showdown_engine import (
     candidate_score as dk_showdown_candidate_score,
     duplicate_expansion_weights as dk_duplicate_expansion_weights,
     sample_opponent_batch as dk_sample_opponent_batch,
+    score_lineup_matrix as dk_score_lineup_matrix,
 )
 from zoneinfo import ZoneInfo
 
@@ -8823,12 +8824,17 @@ if (
 
     def score_batch(batch_start, batch_end):
         batch_values = simulation_values[batch_start:batch_end]
-        batch_candidate_scores = batch_values[:, candidate_idx].sum(axis=2)
-        batch_field_scores = batch_values[:, contest_idx].sum(axis=2)
-
-        if scoring_multiplier != 1.0:
-            batch_candidate_scores += batch_values[:, candidate_idx[:, 0]] * (scoring_multiplier - 1.0)
-            batch_field_scores += batch_values[:, contest_idx[:, 0]] * (scoring_multiplier - 1.0)
+        if scoring_multiplier == 1.5 and candidate_idx.shape[1] == 6:
+            batch_candidate_scores = dk_score_lineup_matrix(
+                batch_values, candidate_idx[:, 0], candidate_idx[:, 1:]
+            )
+            batch_field_scores = dk_score_lineup_matrix(
+                batch_values, contest_idx[:, 0], contest_idx[:, 1:]
+            )
+        else:
+            # Preserve the existing generic full-roster scoring path.
+            batch_candidate_scores = batch_values[:, candidate_idx].sum(axis=2)
+            batch_field_scores = batch_values[:, contest_idx].sum(axis=2)
 
         # Score the user's portfolio as entries in the SAME contest. Each candidate
         # must compete with the other submitted portfolio entries, not only with
@@ -9023,11 +9029,16 @@ if (
         for _diag_start in range(holdout_start, n_sims, _diag_batch_size):
             _diag_end = min(_diag_start + _diag_batch_size, n_sims)
             _diag_values = simulation_values[_diag_start:_diag_end]
-            _diag_scores = _diag_values[:, _diag_candidate_idx].sum(axis=2)
-            _diag_field_scores = _diag_values[:, contest_idx].sum(axis=2)
-            if scoring_multiplier != 1.0:
-                _diag_scores[:, :] += _diag_values[:, _diag_candidate_idx[:, 0]] * (scoring_multiplier - 1.0)
-                _diag_field_scores[:, :] += _diag_values[:, contest_idx[:, 0]] * (scoring_multiplier - 1.0)
+            if scoring_multiplier == 1.5 and _diag_candidate_idx.shape[1] == 6:
+                _diag_scores = dk_score_lineup_matrix(
+                    _diag_values, _diag_candidate_idx[:, 0], _diag_candidate_idx[:, 1:]
+                )
+                _diag_field_scores = dk_score_lineup_matrix(
+                    _diag_values, contest_idx[:, 0], contest_idx[:, 1:]
+                )
+            else:
+                _diag_scores = _diag_values[:, _diag_candidate_idx].sum(axis=2)
+                _diag_field_scores = _diag_values[:, contest_idx].sum(axis=2)
             _diag_sorted = np.sort(_diag_field_scores, axis=1)
             _diag_greater = np.empty_like(_diag_scores, dtype=np.float64)
             for _r in range(_diag_scores.shape[0]):
