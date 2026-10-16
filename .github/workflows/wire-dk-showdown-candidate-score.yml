@@ -115,3 +115,5 @@ jobs:
           fi
           git commit -m 'Wire DK Showdown candidate scoring to engine [skip ci]'
           git push origin HEAD:refactor/dk-showdown-engine
+
+# Trigger: 2026-10-16
