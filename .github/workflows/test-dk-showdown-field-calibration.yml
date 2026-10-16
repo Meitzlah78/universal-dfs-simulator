@@ -21,6 +21,7 @@ on:
       - 'tests/test_dk_showdown_contest_end_to_end.py'
       - 'tests/test_dk_showdown_production_wiring.py'
       - 'tests/test_dk_showdown_competitive_lineup_score.py'
+      - 'tests/test_dk_showdown_ev_portfolio_selection.py'
       - '.github/workflows/test-dk-showdown-field-calibration.yml'
 
 jobs:
@@ -37,7 +38,7 @@ jobs:
         run: python -m pip install --disable-pip-version-check numpy pandas
       - name: Compile DK engine and app
         run: python -m py_compile dfs_app.py dk_showdown_engine.py
-      - name: Verify DK field calibration, competitive scoring, production wiring and contest end-to-end behavior
+      - name: Verify DK field calibration, competitive scoring, EV selection, production wiring and contest end-to-end behavior
         run: >-
           python -m unittest
           tests.test_dk_showdown_field_realism
@@ -55,3 +56,4 @@ jobs:
           tests.test_dk_showdown_contest_end_to_end
           tests.test_dk_showdown_production_wiring
           tests.test_dk_showdown_competitive_lineup_score
+          tests.test_dk_showdown_ev_portfolio_selection
