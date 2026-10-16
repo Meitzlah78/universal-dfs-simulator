@@ -25,7 +25,9 @@ def build_showdown_candidates(
     """Build the strongest legal candidate pool without portfolio diversification.
 
     Only hard eligibility controls are applied here. Exposure spreading and Min
-    Uniques belong after Contest Sim, not in candidate generation.
+    Uniques belong after Contest Sim, not in candidate generation. The returned
+    schema intentionally matches the live Showdown candidate table so Contest Sim
+    can consume this builder without a second translation layer.
     """
     pool = players.copy()
     required = {"Name", "Salary", "Team"}
@@ -46,7 +48,7 @@ def build_showdown_candidates(
             cpt_max = pd.to_numeric(ctl["Captain Max %"], errors="coerce").fillna(100.0)
             captain_eligible = {str(name): bool(value > 0) for name, value in cpt_max.items()}
 
-    return fast_exhaustive_showdown_candidates(
+    result = fast_exhaustive_showdown_candidates(
         pool,
         player_sim,
         ownership_proxy,
@@ -61,3 +63,22 @@ def build_showdown_candidates(
         locked_players=locked_players,
         captain_eligible=captain_eligible,
     )
+    if result.empty:
+        return result
+
+    roster_cols = ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"]
+    multipliers = [1.5, 1.0, 1.0, 1.0, 1.0, 1.0]
+    for output_col, metric in (("SimMean", "Mean"), ("SimP95", "P95"), ("SimP99", "P99")):
+        values = []
+        for row in result[roster_cols].itertuples(index=False, name=None):
+            values.append(sum(float(player_sim.get(str(name), {}).get(metric, 0.0)) * mult for name, mult in zip(row, multipliers)))
+        result[output_col] = values
+    result["Score"] = pd.to_numeric(result["CandidateScore"], errors="coerce")
+
+    # Preserve exhaustive diagnostics through the adapter for UI/debugging.
+    result.attrs.update({
+        "examined_lineups": result.attrs.get("examined_lineups", 0),
+        "legal_lineups": result.attrs.get("legal_lineups", 0),
+        "retained_lineups": result.attrs.get("retained_lineups", len(result)),
+    })
+    return result
