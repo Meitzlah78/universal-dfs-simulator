@@ -1,0 +1,46 @@
+name: Install DK opponent quality
+
+on:
+  push:
+    branches: [refactor/dk-showdown-engine]
+    paths:
+      - '.github/scripts/install_dk_opponent_quality.py'
+      - '.github/workflows/install-dk-opponent-quality.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/dk-showdown-engine
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply production patch
+        run: python .github/scripts/install_dk_opponent_quality.py
+      - name: Compile engine and app
+        run: python -m py_compile dk_showdown_engine.py dfs_app.py
+      - name: Run opponent quality tests
+        run: python -m unittest tests.test_dk_showdown_opponent_quality
+      - name: Verify production wiring
+        run: |
+          grep -q 'dk_opponent_quality_acceptance' dfs_app.py
+          grep -q 'quality_draw <= quality_acceptance' dfs_app.py
+          grep -q 'if not has_external_captain_ownership' dfs_app.py
+      - name: Commit production patch
+        run: |
+          if git diff --quiet -- dfs_app.py; then
+            echo 'No production changes needed.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add dfs_app.py
+          git commit -m 'Apply DK Showdown opponent quality filter'
+          git push origin HEAD:refactor/dk-showdown-engine
