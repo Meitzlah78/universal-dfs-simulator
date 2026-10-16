@@ -4,6 +4,7 @@ on:
   push:
     branches: [refactor/dk-showdown-engine]
     paths: ['.github/workflows/wire-dk-showdown-candidate-score.yml']
+  workflow_dispatch:
 
 permissions:
   contents: write
