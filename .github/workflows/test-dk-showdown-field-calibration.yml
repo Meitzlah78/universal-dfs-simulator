@@ -9,8 +9,10 @@ on:
       - 'tests/test_dk_showdown_field_realism.py'
       - 'tests/test_dk_showdown_actual_field_targets.py'
       - 'tests/test_dk_showdown_captain_calibration.py'
+      - 'tests/test_dk_showdown_captain_source_behavior.py'
       - 'tests/test_dk_showdown_ownership_priority.py'
       - 'tests/test_dk_showdown_duplicate_calibration.py'
+      - 'tests/test_dk_showdown_expansion_shape.py'
       - '.github/workflows/test-dk-showdown-field-calibration.yml'
 
 jobs:
@@ -33,5 +35,7 @@ jobs:
           tests.test_dk_showdown_field_realism
           tests.test_dk_showdown_actual_field_targets
           tests.test_dk_showdown_captain_calibration
+          tests.test_dk_showdown_captain_source_behavior
           tests.test_dk_showdown_ownership_priority
           tests.test_dk_showdown_duplicate_calibration
+          tests.test_dk_showdown_expansion_shape
