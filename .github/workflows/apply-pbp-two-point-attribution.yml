@@ -1,0 +1,41 @@
+name: Apply PBP Two Point Attribution
+
+on:
+  push:
+    branches:
+      - refactor/dk-showdown-engine
+    paths:
+      - '.github/scripts/add_pbp_two_point_attribution.py'
+      - '.github/workflows/apply-pbp-two-point-attribution.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/dk-showdown-engine
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply 2PT attribution patch
+        run: python .github/scripts/add_pbp_two_point_attribution.py
+      - name: Syntax check
+        run: python -m py_compile dfs_app.py nfl_scoring.py dk_showdown_engine.py
+      - name: Run DK engine tests
+        run: python -m unittest discover -s tests -p 'test_*.py'
+      - name: Commit attribution fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add dfs_app.py
+          if git diff --cached --quiet; then
+            echo "No app changes needed"
+          else
+            git commit -m "Attribute simulated NFL two-point conversions [skip ci]"
+            git push origin HEAD:refactor/dk-showdown-engine
+          fi
