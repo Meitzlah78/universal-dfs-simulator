@@ -17,8 +17,6 @@ if new_import not in text:
         raise SystemExit("DK engine import anchor not found")
     text = text.replace(import_anchor, new_import + import_anchor, 1)
 
-# Anchor to the current production Showdown ranking/build block, not an older
-# dict-based version of showdown_base_scores.
 start_marker = "        showdown_base_scores = np.asarray(["
 end_marker = "    st.session_state[\"candidates_ready\"] = True"
 start = text.find(start_marker)
@@ -62,6 +60,7 @@ replacement = '''        showdown_base_scores = np.asarray([
             stddev_weight=STDDEV_WEIGHT,
         )
         st.session_state["dk_exhaustive_build_stats"] = {
+            "method": "Exhaustive",
             "examined": int(candidates_df.attrs.get("examined_lineups", 0)),
             "legal": int(candidates_df.attrs.get("legal_lineups", 0)),
             "retained": int(candidates_df.attrs.get("retained_lineups", len(candidates_df))),
@@ -72,6 +71,11 @@ replacement = '''        showdown_base_scores = np.asarray([
                 f"Exhaustive candidate search complete: {len(candidates_df):,} retained "
                 f"from {st.session_state['dk_exhaustive_build_stats']['legal']:,} legal lineups"
             ),
+        )
+        build_stats = st.session_state["dk_exhaustive_build_stats"]
+        st.success(
+            f"Build Method: EXHAUSTIVE | Examined: {build_stats['examined']:,} | "
+            f"Legal: {build_stats['legal']:,} | Candidates retained: {build_stats['retained']:,}"
         )
     except Exception as exc:
         workflow_status.error(
