@@ -1,12 +1,9 @@
 name: Wire DK Showdown Candidate Score
 
 on:
-  workflow_dispatch:
   push:
-    paths:
-      - '.github/workflows/wire-dk-showdown-candidate-score.yml'
-    branches:
-      - refactor/dk-showdown-engine
+    branches: [refactor/dk-showdown-engine]
+    paths: ['.github/workflows/wire-dk-showdown-candidate-score.yml']
 
 permissions:
   contents: write
@@ -19,8 +16,8 @@ jobs:
         with:
           ref: refactor/dk-showdown-engine
       - name: Wire tested candidate scoring helper
-        shell: python
         run: |
+          python - <<'PY'
           from pathlib import Path
           path = Path('dfs_app.py')
           text = path.read_text()
@@ -30,7 +27,6 @@ jobs:
               if import_anchor not in text:
                   raise SystemExit('SAFE_ABORT: numpy import anchor not found')
               text = text.replace(import_anchor, import_anchor + import_line, 1)
-
           old = '''                total_mean = (
                     player_sim[captain]["Mean"] * 1.5
                     + sum(
@@ -77,10 +73,7 @@ jobs:
                     captain,
                     flex_players,
                     player_sim,
-                    {
-                        name: float(showdown_ownership_proxy[index])
-                        for name, index in ownership_index.items()
-                    },
+                    {name: float(showdown_ownership_proxy[index]) for name, index in ownership_index.items()},
                     P95_WEIGHT,
                     P99_WEIGHT,
                     MEAN_WEIGHT,
@@ -91,12 +84,11 @@ jobs:
                 total_p99 = _candidate_metrics["SimP99"]
                 score = _candidate_metrics["Score"]
 '''
-          if old not in text:
-              raise SystemExit('SAFE_ABORT: exact legacy candidate scoring block not found')
-          if text.count(old) != 1:
-              raise SystemExit(f'SAFE_ABORT: expected one legacy scoring block, found {text.count(old)}')
-          text = text.replace(old, new, 1)
-          path.write_text(text)
+          count = text.count(old)
+          if count != 1:
+              raise SystemExit(f'SAFE_ABORT: expected one legacy scoring block, found {count}')
+          path.write_text(text.replace(old, new, 1))
+          PY
       - name: Verify syntax and engine tests
         run: |
           python -m py_compile dfs_app.py dk_showdown_engine.py
@@ -106,14 +98,9 @@ jobs:
           grep -q '_candidate_metrics = dk_showdown_candidate_score(' dfs_app.py
       - name: Commit wiring
         run: |
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add dfs_app.py
-          if git diff --cached --quiet; then
-            echo 'No wiring change needed.'
-            exit 0
-          fi
+          git diff --cached --quiet && exit 0
           git commit -m 'Wire DK Showdown candidate scoring to engine [skip ci]'
           git push origin HEAD:refactor/dk-showdown-engine
-
-# Trigger: 2026-10-16
