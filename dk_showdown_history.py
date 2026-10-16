@@ -1,15 +1,12 @@
-"""Historical-contest helpers for DK Showdown calibration.
-
-Completed contests may inform a future field model only when their lock time is
-strictly earlier than the target slate. Keep this rule in one production helper
-so backtests and future learning code cannot silently use same-slate/future data.
-"""
+"""Historical-contest helpers for DK Showdown calibration."""
 
 from __future__ import annotations
 
 from collections import Counter
 from datetime import datetime, timezone
 from typing import Iterable, Mapping, Any
+
+import numpy as np
 
 
 def _utc(value: datetime) -> datetime:
@@ -35,31 +32,55 @@ def eligible_training_contests(
 
 
 def field_behavior_features(lineup_keys: Iterable[Any]) -> dict[str, float]:
-    """Summarize construction/duplication behavior without using contest results.
-
-    lineup_keys should identify complete roster constructions (including CPT).
-    The returned features describe how entrants built lineups; scores, ranks,
-    prizes, and winning status are intentionally not accepted by this helper.
-    """
+    """Summarize construction/duplication behavior without contest outcomes."""
     keys = list(lineup_keys)
     if not keys:
         raise ValueError("at least one lineup is required")
-
     counts = Counter(keys)
     entries = len(keys)
     unique = len(counts)
     duplicate_counts = list(counts.values())
-
-    singleton_entries = sum(count for count in duplicate_counts if count == 1)
-    ten_plus_entries = sum(count for count in duplicate_counts if count >= 10)
-    twenty_plus_entries = sum(count for count in duplicate_counts if count >= 20)
-
     return {
         "entries": float(entries),
         "unique_lineups": float(unique),
         "unique_rate": unique / entries,
-        "singleton_entry_mass": singleton_entries / entries,
-        "ten_plus_duplicate_entry_mass": ten_plus_entries / entries,
-        "twenty_plus_duplicate_entry_mass": twenty_plus_entries / entries,
+        "singleton_entry_mass": sum(c for c in duplicate_counts if c == 1) / entries,
+        "ten_plus_duplicate_entry_mass": sum(c for c in duplicate_counts if c >= 10) / entries,
+        "twenty_plus_duplicate_entry_mass": sum(c for c in duplicate_counts if c >= 20) / entries,
         "max_duplicates": float(max(duplicate_counts)),
+    }
+
+
+def salary_behavior_features(salaries: Iterable[float]) -> dict[str, float]:
+    """Describe historical salary usage without looking at lineup results."""
+    values = np.asarray(list(salaries), dtype=float)
+    if values.size == 0:
+        raise ValueError("at least one salary is required")
+    if not np.isfinite(values).all() or (values < 0).any():
+        raise ValueError("salaries must be finite and non-negative")
+    q05, q10, q25, q50, q75, q90, q95 = np.percentile(values, [5, 10, 25, 50, 75, 90, 95])
+    return {
+        "salary_mean": float(values.mean()),
+        "salary_p05": float(q05),
+        "salary_p10": float(q10),
+        "salary_p25": float(q25),
+        "salary_median": float(q50),
+        "salary_p75": float(q75),
+        "salary_p90": float(q90),
+        "salary_p95": float(q95),
+    }
+
+
+def captain_behavior_features(captains: Iterable[Any]) -> dict[str, float]:
+    """Describe field captain concentration without using fantasy outcomes."""
+    values = list(captains)
+    if not values:
+        raise ValueError("at least one captain is required")
+    counts = Counter(values)
+    entries = len(values)
+    ordered = sorted(counts.values(), reverse=True)
+    return {
+        "captain_unique_count": float(len(counts)),
+        "captain_top1_mass": ordered[0] / entries,
+        "captain_top4_mass": sum(ordered[:4]) / entries,
     }
