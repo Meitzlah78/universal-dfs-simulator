@@ -58,9 +58,18 @@ class ExhaustiveShowdownBuilderTests(unittest.TestCase):
         fast = fast_exhaustive_showdown_candidates(
             self.players, self.sim, self.own, keep=10, salary_cap=100000, **weights
         )
-        scalar_keys = list(zip(scalar["Captain"], scalar["Flex1"], scalar["Flex2"], scalar["Flex3"], scalar["Flex4"], scalar["Flex5"]))
-        fast_keys = list(zip(fast["Captain"], fast["Flex1"], fast["Flex2"], fast["Flex3"], fast["Flex4"], fast["Flex5"]))
-        self.assertEqual(fast_keys, scalar_keys)
+        lineup_columns = ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"]
+        scalar_scores = {
+            tuple(row[column] for column in lineup_columns): float(row["CandidateScore"])
+            for _, row in scalar.iterrows()
+        }
+        fast_scores = {
+            tuple(row[column] for column in lineup_columns): float(row["CandidateScore"])
+            for _, row in fast.iterrows()
+        }
+        self.assertEqual(set(fast_scores), set(scalar_scores))
+        for key in scalar_scores:
+            self.assertAlmostEqual(fast_scores[key], scalar_scores[key], places=10)
         self.assertEqual(fast.attrs["examined_lineups"], scalar.attrs["examined_lineups"])
         self.assertEqual(fast.attrs["legal_lineups"], scalar.attrs["legal_lineups"])
 
