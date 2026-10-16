@@ -77,12 +77,41 @@ def sample_opponent_batch(rng: np.random.Generator, captain_weights: np.ndarray,
     return captains, flex_indices
 
 def score_lineup_matrix(simulation_values: np.ndarray, captain_indices: np.ndarray, flex_indices: np.ndarray, rules: ShowdownRules = ShowdownRules()) -> np.ndarray:
-    values = np.asarray(simulation_values, dtype=float)
-    captains = np.asarray(captain_indices, dtype=int)
-    flex = np.asarray(flex_indices, dtype=int)
-    if flex.ndim != 2 or flex.shape[1] != rules.flex_count:
+    """Score all Showdown lineups for a simulation block without Python lineup loops."""
+    values = np.asarray(simulation_values)
+    captains = np.asarray(captain_indices, dtype=np.intp)
+    flex = np.asarray(flex_indices, dtype=np.intp)
+    if values.ndim != 2:
+        raise ValueError("simulation_values must have shape (simulations, players)")
+    if captains.ndim != 1:
+        raise ValueError("captain_indices must be one-dimensional")
+    if flex.ndim != 2 or flex.shape != (len(captains), rules.flex_count):
         raise ValueError(f"flex_indices must have shape (n, {rules.flex_count})")
-    return values[:, captains] * rules.captain_points_multiplier + np.take(values, flex, axis=1).sum(axis=2)
+    captain_scores = values[:, captains] * rules.captain_points_multiplier
+    flex_scores = values[:, flex].sum(axis=2)
+    return captain_scores + flex_scores
+
+def score_showdown_chunks(simulation_values: np.ndarray, lineup_indices: np.ndarray, chunk_size: int = 128, rules: ShowdownRules = ShowdownRules()):
+    """Yield (start, end, scores) for Showdown simulation chunks.
+
+    lineup_indices is the compact six-column integer matrix used by the app:
+    Captain first, followed by the five FLEX player indices. Only one chunk of
+    simulation scores is materialized at a time so large contest fields do not
+    require a full simulations-by-field score matrix in memory.
+    """
+    values = np.asarray(simulation_values)
+    lineups = np.asarray(lineup_indices)
+    if values.ndim != 2:
+        raise ValueError("simulation_values must have shape (simulations, players)")
+    if lineups.ndim != 2 or lineups.shape[1] != rules.flex_count + 1:
+        raise ValueError(f"lineup_indices must have shape (n, {rules.flex_count + 1})")
+    if int(chunk_size) < 1:
+        raise ValueError("chunk_size must be at least 1")
+    captains = lineups[:, 0].astype(np.intp, copy=False)
+    flex = lineups[:, 1:].astype(np.intp, copy=False)
+    for start in range(0, len(values), int(chunk_size)):
+        end = min(start + int(chunk_size), len(values))
+        yield start, end, score_lineup_matrix(values[start:end], captains, flex, rules)
 
 def exact_duplicate_counts(lineups: pd.DataFrame) -> pd.Series:
     required = ["Captain"] + [f"Flex{i}" for i in range(1, DK_FLEX_COUNT + 1)]
