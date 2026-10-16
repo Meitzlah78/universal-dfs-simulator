@@ -482,6 +482,10 @@ def build_showdown_opponent_field(available_players, simulation_df, players_df,
     max_attempts = max(200000, int(target) * 10)
 
     captain_weights = np.clip(captain_base_weights, 0.01, None)
+    # Completed large-field DK Showdown data is materially more concentrated at
+    # Captain than a straight ownership draw. BUF@LAR put about 59.7% of entries
+    # on its top four Captains. Sharpen Captain only; FLEX remains ownership-first.
+    captain_weights = np.power(captain_weights, 1.45)
     captain_weights /= captain_weights.sum()
     batch_size = min(4096, max(512, int(target)))
     while len(rows) < target and attempts < max_attempts:
