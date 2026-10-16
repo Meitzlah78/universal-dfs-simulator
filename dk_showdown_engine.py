@@ -43,6 +43,46 @@ def candidate_score(captain: str, flex: Sequence[str], player_sim: Mapping[str, 
     upside_credit = min(ownership_tax, lineup_upside * 0.08)
     return {"SimMean": total_mean, "SimP95": total_p95, "SimP99": total_p99, "Score": raw_score - ownership_tax + upside_credit}
 
+def opponent_lineup_means(captain_indices: Sequence[int], flex_indices: np.ndarray, player_means: Sequence[float], rules: ShowdownRules = ShowdownRules()) -> np.ndarray:
+    """Projected mean for sampled opponent lineups.
+
+    This is intentionally separate from ownership sampling. Public ownership says
+    which players the field uses; lineup-quality acceptance models the fact that
+    real entrants still tend to combine those players into reasonably strong
+    constructions instead of accepting every legal ownership-weighted draw.
+    """
+    means = np.asarray(player_means, dtype=np.float64)
+    captains = np.asarray(captain_indices, dtype=np.intp)
+    flex = np.asarray(flex_indices, dtype=np.intp)
+    if captains.ndim != 1:
+        raise ValueError("captain_indices must be one-dimensional")
+    if flex.ndim != 2 or flex.shape != (len(captains), rules.flex_count):
+        raise ValueError(f"flex_indices must have shape (n, {rules.flex_count})")
+    return means[captains] * rules.captain_points_multiplier + means[flex].sum(axis=1)
+
+def opponent_quality_acceptance(lineup_means: Sequence[float], reference_mean: float | None = None) -> np.ndarray:
+    """Softly reject weak ownership-weighted opponent constructions.
+
+    The curve is deliberately modest: strong/publicly sensible lineups are kept,
+    while the low-quality tail is thinned rather than removed.  That preserves
+    contrarian field entries without letting independent player sampling create
+    an unrealistically soft contest field.
+    """
+    values = np.asarray(lineup_means, dtype=np.float64)
+    if values.ndim != 1:
+        raise ValueError("lineup_means must be one-dimensional")
+    if not len(values):
+        return np.asarray([], dtype=np.float64)
+    finite = values[np.isfinite(values)]
+    if not len(finite):
+        return np.zeros(len(values), dtype=np.float64)
+    center = float(np.median(finite) if reference_mean is None else reference_mean)
+    scale = max(float(np.std(finite)), 1.0)
+    z = (values - center) / scale
+    # Logistic transition with a non-zero floor keeps a realistic bad-lineup tail.
+    acceptance = 0.18 + 0.82 / (1.0 + np.exp(-1.35 * (z + 0.35)))
+    return np.clip(acceptance, 0.18, 1.0)
+
 def duplicate_expansion_weights(log_weights: Sequence[float]) -> np.ndarray:
     values = np.asarray(log_weights, dtype=np.float64)
     if values.ndim != 1:
@@ -119,26 +159,11 @@ def weighted_score_bounds(unique_scores: np.ndarray, multiplicities: np.ndarray,
     for row in range(scores.shape[0]):
         left_idx = np.searchsorted(sorted_scores[row], candidates[row], side="left")
         right_idx = np.searchsorted(sorted_scores[row], candidates[row], side="right")
-        left[row] = np.where(
-            left_idx > 0,
-            cumulative[row, np.maximum(left_idx - 1, 0)],
-            0,
-        )
-        right[row] = np.where(
-            right_idx > 0,
-            cumulative[row, np.maximum(right_idx - 1, 0)],
-            0,
-        )
+        left[row] = np.where(left_idx > 0, cumulative[row, np.maximum(left_idx - 1, 0)], 0)
+        right[row] = np.where(right_idx > 0, cumulative[row, np.maximum(right_idx - 1, 0)], 0)
     return left, right
 
 def score_showdown_chunks(simulation_values: np.ndarray, lineup_indices: np.ndarray, chunk_size: int = 128, rules: ShowdownRules = ShowdownRules()):
-    """Yield (start, end, scores) for Showdown simulation chunks.
-
-    lineup_indices is the compact six-column integer matrix used by the app:
-    Captain first, followed by the five FLEX player indices. Only one chunk of
-    simulation scores is materialized at a time so large contest fields do not
-    require a full simulations-by-field score matrix in memory.
-    """
     values = np.asarray(simulation_values)
     lineups = np.asarray(lineup_indices)
     if values.ndim != 2:
