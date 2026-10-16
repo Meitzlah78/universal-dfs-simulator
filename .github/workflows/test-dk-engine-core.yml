@@ -39,3 +39,7 @@ jobs:
         env:
           PYTHONPATH: ${{ github.workspace }}
         run: python benchmarks/benchmark_dk_compressed_field.py
+      - name: Run DK portfolio bounds benchmark
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python benchmarks/benchmark_dk_portfolio_bounds.py
