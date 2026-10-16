@@ -39,13 +39,18 @@ counts += rng.multinomial(
 assert np.all(counts > 0) and int(counts.sum()) == FIELD_ENTRIES
 
 
+def score_compact(sims, lineup_idx):
+    """Call the production scorer using compact [CPT, FLEX1..5] indices."""
+    return score_lineup_matrix(sims, lineup_idx[:, 0], lineup_idx[:, 1:])
+
+
 def run(batch_size):
     ranges = [(i, min(i + batch_size, SIMS)) for i in range(0, SIMS, batch_size)]
     def score_range(bounds):
         start, end = bounds
         sims = player_scores[start:end]
-        cand = score_lineup_matrix(sims, candidate_idx)
-        field = score_lineup_matrix(sims, field_idx)
+        cand = score_compact(sims, candidate_idx)
+        field = score_compact(sims, field_idx)
         left, right = weighted_score_bounds(field, counts, cand)
         pleft = np.sum(cand[:, :, None] < cand[:, None, :], axis=1)
         pright = np.sum(cand[:, :, None] <= cand[:, None, :], axis=1)
