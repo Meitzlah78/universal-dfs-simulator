@@ -4,6 +4,7 @@ import pandas as pd
 from dk_showdown_engine import (
     ShowdownRules,
     candidate_score,
+    duplicate_expansion_counts,
     duplicate_expansion_weights,
     exact_duplicate_counts,
     lineup_key,
@@ -43,7 +44,7 @@ def test_candidate_score_matches_existing_app_formula():
     assert actual == {"SimMean": total_mean, "SimP95": total_p95, "SimP99": total_p99, "Score": raw_score-tax+credit}
 
 
-def test_duplicate_expansion_weights_match_existing_calibration():
+def test_duplicate_expansion_weights_match_current_calibration():
     log_weights = np.linspace(-8.0, 0.0, 500, dtype=np.float64)
     centered = log_weights - np.max(log_weights)
     base = np.exp(centered*0.38); base /= base.sum(); total = len(log_weights)
@@ -53,8 +54,18 @@ def test_duplicate_expansion_weights_match_existing_calibration():
     broad[broad_indices] = broad_strength/broad_strength.sum()
     top_count = max(10, min(40, total)); top_indices = np.argpartition(log_weights, -top_count)[-top_count:]
     top = np.zeros(total); top_strength = np.exp(centered[top_indices]*1.20); top[top_indices] = top_strength/top_strength.sum()
-    expected = 0.76*base + 0.20*broad + 0.04*top; expected /= expected.sum()
+    expected = 0.57*base + 0.25*broad + 0.18*top; expected /= expected.sum()
     np.testing.assert_allclose(duplicate_expansion_weights(log_weights), expected, rtol=0.0, atol=1e-15)
+
+
+def test_duplicate_expansion_counts_are_exact_and_deterministic():
+    values = np.random.default_rng(20261016).normal(-14.0, 2.0, size=10_000)
+    a = duplicate_expansion_counts(values, 47_271, seed=7)
+    b = duplicate_expansion_counts(values, 47_271, seed=7)
+    np.testing.assert_array_equal(a, b)
+    assert a.dtype == np.int64
+    assert np.all(a >= 0)
+    assert int(a.sum()) == 47_271
 
 
 def test_duplicate_expansion_weights_handle_small_and_empty_fields():
