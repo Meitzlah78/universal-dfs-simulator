@@ -8007,98 +8007,98 @@ if build_clicked:
 
             seen_flex_groups = set()
             captain_attempts = 0
-            # Keep the search bounded on Streamlit Cloud; repeated random samples can otherwise burn CPU for a long time when salary/lock rules reject most lineups.
             max_captain_attempts = max(500, per_captain_candidate_limit * 8)
+            flex_names = np.asarray(flex_pool, dtype=object)
+            flex_log_weights = np.log(np.clip(flex_rank_weights, 1e-300, None))
             while (
                 len(captain_candidates) < per_captain_candidate_limit
                 and captain_attempts < max_captain_attempts
                 and len(flex_pool) >= 5
             ):
-                captain_attempts += 1
-                if captain_attempts % 100 == 0:
-                    candidate_progress.progress(
-                        min(0.99, (captain_index + min(0.99, captain_attempts / max(1, max_captain_attempts))) / max(1, len(search_pool))),
-                        text=f"Testing {captain}: {len(candidates) + len(captain_candidates):,} candidates accepted"
+                remaining_attempts = max_captain_attempts - captain_attempts
+                batch_n = min(max(64, per_captain_candidate_limit - len(captain_candidates)), remaining_attempts, 512)
+                if batch_n <= 0:
+                    break
+                gumbels = rng.gumbel(size=(batch_n, len(flex_names)))
+                sampled_indices = np.argpartition(gumbels + flex_log_weights[None, :], -5, axis=1)[:, -5:]
+                captain_attempts += batch_n
+                for sampled_idx in sampled_indices:
+                    if len(captain_candidates) >= per_captain_candidate_limit:
+                        break
+                    sampled = flex_names[sampled_idx]
+                    flex_players = tuple(str(p) for p in sampled)
+                    flex_key = tuple(sorted(flex_players))
+                    if flex_key in seen_flex_groups:
+                        continue
+                    seen_flex_groups.add(flex_key)
+
+                    lineup_players = [
+                        captain
+                    ] + list(flex_players)
+
+                    # LOCK CHECK
+                    if not all(
+                        p in lineup_players
+                        for p in locked_players
+                    ):
+                        continue
+
+                    # SALARY CHECK
+                    total_salary = (
+                        captain_salary_map[captain]
+                        + sum(
+                            salary_map[p]
+                            for p in flex_players
+                        )
                     )
-                sampled = rng.choice(
-                    np.asarray(flex_pool, dtype=object),
-                    size=5,
-                    replace=False,
-                    p=flex_rank_weights
-                )
-                flex_players = tuple(str(p) for p in sampled)
-                flex_key = tuple(sorted(flex_players))
-                if flex_key in seen_flex_groups:
-                    continue
-                seen_flex_groups.add(flex_key)
 
-                lineup_players = [
-                    captain
-                ] + list(flex_players)
+                    if total_salary < MIN_LINEUP_SALARY or total_salary > min(SALARY_CAP, MAX_LINEUP_SALARY):
+                        continue
 
-                # LOCK CHECK
-                if not all(
-                    p in lineup_players
-                    for p in locked_players
-                ):
-                    continue
-
-                # SALARY CHECK
-                total_salary = (
-                    captain_salary_map[captain]
-                    + sum(
-                        salary_map[p]
-                        for p in flex_players
+                    # DraftKings Showdown requires players
+                    # from both teams
+                    lineup_teams = set(
+                        players_df.loc[
+                            players_df["Name"].isin(lineup_players),
+                            "Team"
+                        ]
                     )
-                )
 
-                if total_salary < MIN_LINEUP_SALARY or total_salary > min(SALARY_CAP, MAX_LINEUP_SALARY):
-                    continue
+                    if len(lineup_teams) < 2:
+                        continue
 
-                # DraftKings Showdown requires players
-                # from both teams
-                lineup_teams = set(
-                    players_df.loc[
-                        players_df["Name"].isin(lineup_players),
-                        "Team"
-                    ]
-                )
+                    # ========================================
+                    # SIMULATION SCORE
+                    # ========================================
 
-                if len(lineup_teams) < 2:
-                    continue
+                    _candidate_metrics = dk_showdown_candidate_score(
+                        captain,
+                        flex_players,
+                        player_sim,
+                        showdown_ownership_by_name,
+                        P95_WEIGHT,
+                        P99_WEIGHT,
+                        MEAN_WEIGHT,
+                        STDDEV_WEIGHT,
+                    )
+                    total_mean = _candidate_metrics["SimMean"]
+                    total_p95 = _candidate_metrics["SimP95"]
+                    total_p99 = _candidate_metrics["SimP99"]
+                    score = _candidate_metrics["Score"]
 
-                # ========================================
-                # SIMULATION SCORE
-                # ========================================
-
-                _candidate_metrics = dk_showdown_candidate_score(
-                    captain,
-                    flex_players,
-                    player_sim,
-                    showdown_ownership_by_name,
-                    P95_WEIGHT,
-                    P99_WEIGHT,
-                    MEAN_WEIGHT,
-                    STDDEV_WEIGHT,
-                )
-                total_mean = _candidate_metrics["SimMean"]
-                total_p95 = _candidate_metrics["SimP95"]
-                total_p99 = _candidate_metrics["SimP99"]
-                score = _candidate_metrics["Score"]
-
-                captain_candidates.append({
-                    "Captain": captain,
-                    "Flex1": flex_players[0],
-                    "Flex2": flex_players[1],
-                    "Flex3": flex_players[2],
-                    "Flex4": flex_players[3],
-                    "Flex5": flex_players[4],
-                    "Salary": total_salary,
-                    "SimMean": total_mean,
-                    "SimP95": total_p95,
-                    "SimP99": total_p99,
-                    "Score": score
-                })
+                    captain_candidates.append({
+                        "Captain": captain,
+                        "Flex1": flex_players[0],
+                        "Flex2": flex_players[1],
+                        "Flex3": flex_players[2],
+                        "Flex4": flex_players[3],
+                        "Flex5": flex_players[4],
+                        "Salary": total_salary,
+                        "SimMean": total_mean,
+                        "SimP95": total_p95,
+                        "SimP99": total_p99,
+                        "Score": score
+                    })
 
             candidates.extend(captain_candidates)
             candidate_progress.progress(
