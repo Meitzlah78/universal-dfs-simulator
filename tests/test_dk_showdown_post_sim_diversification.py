@@ -82,7 +82,8 @@ class DKShowdownPostSimDiversificationTests(unittest.TestCase):
 
     def test_locked_lineup_counts_toward_exposure(self):
         locked = self.pool.iloc[[0]].copy()
-        result = select_post_sim_portfolio(self.pool, 3, max_exposure={"E": 34.0}, locked_df=locked)
+        # 33% of a 3-lineup portfolio rounds up to one allowed lineup.
+        result = select_post_sim_portfolio(self.pool, 3, max_exposure={"E": 33.0}, locked_df=locked)
         exposure_e = int(result[["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"]].eq("E").sum().sum())
         self.assertEqual(exposure_e, 1)
 
