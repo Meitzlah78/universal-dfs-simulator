@@ -8024,6 +8024,31 @@ if build_clicked:
                 gumbels = rng.gumbel(size=(batch_n, len(flex_names)))
                 sampled_indices = np.argpartition(gumbels + flex_log_weights[None, :], -5, axis=1)[:, -5:]
                 captain_attempts += batch_n
+
+                # Reject invalid DK Showdown candidates in one NumPy batch before
+                # entering the remaining duplicate/scoring Python loop.
+                sampled_names = flex_names[sampled_indices]
+                sampled_salaries = np.asarray(
+                    [[int(salary_map.get(str(name), 0)) for name in row] for row in sampled_names],
+                    dtype=np.int32,
+                )
+                batch_salary = int(captain_salary_map.get(captain, 0)) + sampled_salaries.sum(axis=1, dtype=np.int32)
+                batch_valid = (batch_salary >= int(min_salary)) & (batch_salary <= int(max_salary)) & (batch_salary <= int(SALARY_CAP))
+
+                if locked_players:
+                    locked_names = np.asarray([str(name) for name in locked_players], dtype=object)
+                    captain_locked = locked_names == str(captain)
+                    flex_has_locked = (sampled_names[:, :, None] == locked_names[None, None, :]).any(axis=1)
+                    batch_valid &= np.all(flex_has_locked | captain_locked[None, :], axis=1)
+
+                captain_team = str(team_map.get(captain, ''))
+                sampled_teams = np.asarray(
+                    [[str(team_map.get(str(name), '')) for name in row] for row in sampled_names],
+                    dtype=object,
+                )
+                batch_valid &= np.any(sampled_teams != captain_team, axis=1)
+                sampled_indices = sampled_indices[batch_valid]
+
                 for sampled_idx in sampled_indices:
                     if len(captain_candidates) >= per_captain_candidate_limit:
                         break
