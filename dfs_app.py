@@ -444,8 +444,8 @@ def build_showdown_opponent_field(available_players, simulation_df, players_df,
     # first, but when it is absent use a DK-only projection-rank curve.
     _own_lookup = {str(c).strip().casefold(): c for c in ownership_pool.columns}
     _own_col = next((_own_lookup[k] for k in (
-        "projected own %", "ownership %", "projected ownership",
-        "projected own", "ownership", "own%", "own"
+        "field flex own %", "field own %", "projected own %", "ownership %",
+        "projected ownership", "projected own", "ownership", "own%", "own"
     ) if k in _own_lookup), None)
     if _own_col is not None:
         _external_ownership = pd.to_numeric(
