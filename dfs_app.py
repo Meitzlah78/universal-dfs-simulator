@@ -3810,7 +3810,7 @@ def simulate_fd_play_by_play(players_df, rng, n=SIMULATION_COUNT, correlation_st
     strength = float(np.clip(correlation_strength, 0.0, 1.0))
     names = pool["Name"].astype(str).tolist()
 
-    # FanDuel PBP role inputs: use the same historical player-week data already
+    # Shared NFL PBP role inputs: use the same historical player-week data already
     # cached by the simulator. In particular, QB rushing must come from each QB's
     # own history rather than being treated as an RB-only team rushing play.
     _fd_hist = load_nfl_historical_player_stats()
@@ -3823,10 +3823,10 @@ def simulate_fd_play_by_play(players_df, rng, n=SIMULATION_COUNT, correlation_st
             continue
         try:
             _key = normalize_projection_player_name(_name)
-            _matches = _fd_hist_index.get(_key, [])
-            if not _matches:
+            _matched_history = _fd_hist_index.get(_key)
+            if _matched_history is None or not isinstance(_matched_history, pd.DataFrame) or _matched_history.empty:
                 continue
-            _rows = _fd_hist.loc[_matches].copy() if all(isinstance(x, (int, np.integer)) for x in _matches) else pd.DataFrame()
+            _rows = _matched_history.copy()
             if _rows.empty:
                 continue
             if "season" in _rows.columns and "week" in _rows.columns:
@@ -3868,10 +3868,10 @@ def simulate_fd_play_by_play(players_df, rng, n=SIMULATION_COUNT, correlation_st
             if _pos not in {"QB", "RB", "WR", "TE", "K"}:
                 continue
             try:
-                _matches = _fd_hist_index.get(normalize_projection_player_name(_name), [])
-                if not _matches or not all(isinstance(x, (int, np.integer)) for x in _matches):
+                _matched_history = _fd_hist_index.get(normalize_projection_player_name(_name))
+                if _matched_history is None or not isinstance(_matched_history, pd.DataFrame) or _matched_history.empty:
                     continue
-                _rows = _fd_hist.loc[_matches].copy()
+                _rows = _matched_history.copy()
                 if _rows.empty:
                     continue
                 if "season" in _rows.columns and "week" in _rows.columns:
