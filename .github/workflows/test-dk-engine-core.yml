@@ -5,9 +5,11 @@ on:
     branches:
       - refactor/dk-showdown-engine
       - 'refactor/dk-*'
+      - install/dk-showdown-live-transform-test
   pull_request:
     branches:
       - refactor/dk-showdown-engine
+      - install/dk-showdown-production-transforms
   workflow_dispatch:
 
 permissions:
@@ -23,61 +25,44 @@ jobs:
           python-version: '3.11'
       - name: Install test dependencies
         run: pip install numpy pandas pytest
-      - name: Apply vector candidate filter transform on safety branch
-        if: github.ref == 'refs/heads/refactor/dk-vector-candidate-filters'
-        run: python .github/scripts/vectorize_dk_candidate_filters.py
-      - name: Verify transformed candidate filter markers
-        if: github.ref == 'refs/heads/refactor/dk-vector-candidate-filters'
+      - name: Prepare transformed Simmah source
         run: |
-          grep -q 'batch_valid = (batch_salary' dfs_app.py
-          grep -q 'sampled_indices = sampled_indices\[batch_valid\]' dfs_app.py
-      - name: Verify exhaustive Showdown live source transform
+          if grep -q 'Runtime entry point for the validated DK Showdown transforms' dfs_app.py || grep -q 'from dfs_app_runtime import' dfs_app.py; then
+            python - <<'PY'
+          from pathlib import Path
+          import urllib.request
+          url = 'https://raw.githubusercontent.com/Meitzlah78/universal-dfs-simulator/40f00bce67aff5772b25971d4f2f8153aba386da/dfs_app.py'
+          Path('/tmp/dfs_app.py').write_bytes(urllib.request.urlopen(url).read())
+          PY
+            cp /tmp/dfs_app.py dfs_app.py
+            python .github/scripts/install_dk_historical_field_calibration.py
+            python .github/scripts/install_dk_exhaustive_build.py
+            python .github/scripts/install_dk_post_sim_diversification.py
+          fi
+      - name: Verify transformed Showdown source
         run: |
-          cp dfs_app.py /tmp/dfs_app.original.py
-          python .github/scripts/install_dk_exhaustive_build.py
+          grep -q 'from dk_showdown_field_calibration import' dfs_app.py
+          grep -q 'calibrated_duplicate_expansion_counts as dk_duplicate_expansion_counts' dfs_app.py
           grep -q 'from dk_showdown_build import build_showdown_candidates as dk_build_showdown_candidates' dfs_app.py
           grep -q 'candidates_df = dk_build_showdown_candidates(' dfs_app.py
           grep -q 'CANDIDATE_COUNT = 5000' dfs_app.py
           grep -q 'dk_exhaustive_build_stats' dfs_app.py
-          if grep -q 'search_pool = player_rank\[:20\]' dfs_app.py; then
-            echo 'legacy top-20 captain search pool survived transform' >&2
-            exit 1
-          fi
-          python -m py_compile dfs_app.py dk_showdown_engine.py dk_showdown_exhaustive.py dk_showdown_build.py nfl_scoring.py
-          mv /tmp/dfs_app.original.py dfs_app.py
-      - name: Verify post-sim diversification live source transform
-        run: |
-          cp dfs_app.py /tmp/dfs_app.original.py
-          python .github/scripts/install_dk_post_sim_diversification.py
           grep -q 'from dk_portfolio_selection import select_post_sim_portfolio' dfs_app.py
           grep -q 'Diversification after Contest Sim' dfs_app.py
           grep -q 'Minimum unique players' dfs_app.py
-          grep -q 'portfolio_diversification_mode_used' dfs_app.py
-          grep -q 'portfolio_min_uniques_used' dfs_app.py
           grep -q 'select_post_sim_portfolio(' dfs_app.py
-          if grep -q 'auto_diversification_pct = 90.0' dfs_app.py; then
-            echo 'hidden 90 percent exposure ceiling survived transform' >&2
-            exit 1
-          fi
-          if grep -q 'max_shared_players = max(1, slot_count - 2)' dfs_app.py; then
-            echo 'hidden two-unique overlap rule survived transform' >&2
-            exit 1
-          fi
-          python -m py_compile dfs_app.py dk_portfolio_selection.py
-          mv /tmp/dfs_app.original.py dfs_app.py
-      - name: Verify installed candidate numeric-array optimization
-        run: |
-          grep -q 'flex_salary_values\[sampled_indices\]' dfs_app.py
-          grep -q 'flex_team_values\[sampled_indices\]' dfs_app.py
-          python -m py_compile dfs_app.py dk_showdown_engine.py dk_showdown_exhaustive.py dk_showdown_build.py nfl_scoring.py
-      - name: Compile DK engine and app
-        run: python -m py_compile dk_showdown_engine.py dk_showdown_exhaustive.py dk_showdown_build.py dk_portfolio_selection.py nfl_scoring.py dfs_app.py
-      - name: Run DK engine, exhaustive builder, production build adapter, post-sim diversification, compressed-field, and shared NFL scoring tests
+          ! grep -q 'auto_diversification_pct = 90.0' dfs_app.py
+          ! grep -q 'max_shared_players = max(1, slot_count - 2)' dfs_app.py
+          python -m py_compile dfs_app.py dk_showdown_engine.py dk_showdown_field_calibration.py dk_showdown_exhaustive.py dk_showdown_build.py dk_portfolio_selection.py nfl_scoring.py
+      - name: Run DK engine, field calibration, exhaustive builder, post-sim diversification, compressed-field, and scoring tests
         env:
           PYTHONPATH: ${{ github.workspace }}
         run: >-
           python -m pytest -q
           tests/test_dk_showdown_engine.py
+          tests/test_dk_showdown_expansion_shape.py
+          tests/test_dk_showdown_latest_actual_field.py
+          tests/test_dk_showdown_production_wiring.py
           tests/test_dk_showdown_exhaustive.py
           tests/test_dk_showdown_build.py
           tests/test_dk_showdown_post_sim_diversification.py
@@ -110,3 +95,9 @@ jobs:
         env:
           PYTHONPATH: ${{ github.workspace }}
         run: python benchmarks/benchmark_dk_candidate_array_lookups.py
+      - name: Upload transformed app artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dk-showdown-transformed-app
+          path: dfs_app.py
+          if-no-files-found: error

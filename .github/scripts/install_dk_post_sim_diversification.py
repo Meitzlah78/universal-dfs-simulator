@@ -1,8 +1,10 @@
 """Install post-Contest-Sim DK Showdown diversification controls into dfs_app.py.
 
-BUILD and Contest Sim results remain cached. This transform only changes final
-portfolio selection: Portfolio mode uses EV ordering without a hidden overlap
-rule; Min Uniques applies the user's explicit 0..6 requirement after simulation.
+BUILD and Contest Sim results remain cached. This transform changes final
+portfolio selection and fixes Step 4 candidate evaluation. Each of the 5,000
+candidate lineups is evaluated independently against the simulated opponent
+field. Candidate lineups are alternatives, not 5,000 entries in one contest,
+so they must not affect one another's rank, tie size, payout, or EV.
 """
 from pathlib import Path
 
@@ -15,6 +17,43 @@ if new_import not in text:
     if import_anchor not in text:
         raise SystemExit("DK engine import anchor not found")
     text = text.replace(import_anchor, new_import + import_anchor, 1)
+
+# Candidate evaluation is independent: compare every candidate with the same
+# opponent field, never with the other candidate alternatives. This also removes
+# the O(batch * candidates^2) temporary arrays that killed Streamlit at 5,000.
+comparison_size_anchor = '''        comparison_field_size = total_field + max(0, n_candidates - 1)
+'''
+comparison_size_replacement = '''        comparison_field_size = total_field
+'''
+if comparison_size_anchor not in text:
+    raise SystemExit("Step 4 comparison field-size anchor not found")
+text = text.replace(comparison_size_anchor, comparison_size_replacement, 1)
+
+portfolio_competition_anchor = '''            field_left, field_right = dk_weighted_score_bounds(
+                batch_field_scores, contest_multiplicity, batch_candidate_scores
+            )
+            portfolio_left = np.sum(
+                batch_candidate_scores[:, :, None] < batch_candidate_scores[:, None, :],
+                axis=1,
+            )
+            portfolio_right = np.sum(
+                batch_candidate_scores[:, :, None] <= batch_candidate_scores[:, None, :],
+                axis=1,
+            )
+            left_low = field_left + portfolio_left
+            low = field_right + portfolio_right
+            search_field_size = total_field + n_candidates
+'''
+opponent_only_replacement = '''            field_left, field_right = dk_weighted_score_bounds(
+                batch_field_scores, contest_multiplicity, batch_candidate_scores
+            )
+            left_low = field_left
+            low = field_right
+            search_field_size = total_field
+'''
+if portfolio_competition_anchor not in text:
+    raise SystemExit("Step 4 candidate-vs-candidate competition anchor not found")
+text = text.replace(portfolio_competition_anchor, opponent_only_replacement, 1)
 
 ui_anchor = '''    portfolio_metric = PORTFOLIO_METRICS[
         portfolio_metric_label
@@ -43,8 +82,6 @@ ui_replacement = ui_anchor + '''
             help="0 means no forced diversification; 1 means two selected lineups may share at most 5 of 6 players, etc.",
         )
 
-    # These are explicit user controls from the player table. They are applied
-    # only while selecting the final portfolio from already-simulated lineups.
     post_sim_max_exposure = {}
     post_sim_captain_max_exposure = {}
     if "edited_controls" in locals() and isinstance(edited_controls, pd.DataFrame) and not edited_controls.empty:
@@ -77,9 +114,6 @@ if signature_anchor not in text:
     raise SystemExit("portfolio selection signature anchor not found")
 text = text.replace(signature_anchor, signature_replacement, 1)
 
-# Replace both legacy branches (locked and unlocked) with one selector call.
-# The selector itself preserves locks, counts them toward exposure, and requires
-# newly selected lineups to satisfy Min Uniques relative to locks.
 start_marker = '''        old_portfolio = st.session_state.get("portfolio_df")
 
         if (
@@ -102,9 +136,6 @@ replacement = '''        old_portfolio = st.session_state.get("portfolio_df")
         ):
             locked_df = old_portfolio[old_portfolio["Locked"] == True].copy()
 
-        # Diversification happens only after Contest Sim. Portfolio mode does
-        # not impose a hidden overlap rule or automatic 90% exposure ceiling.
-        # Min Uniques applies exactly the user's requested player difference.
         requested_uniques = int(min_uniques) if diversification_mode == "Min Uniques" else 0
         portfolio_df = select_post_sim_portfolio(
             results_df,
@@ -140,16 +171,26 @@ if state_anchor not in text:
     raise SystemExit("portfolio control state anchor not found")
 text = text.replace(state_anchor, state_replacement, 1)
 
-# Fail closed if the hidden legacy diversification rules survived.
 for forbidden in (
     "auto_diversification_pct = 90.0",
     "max_shared_players = max(1, slot_count - 2)",
     "available_count = max(",
+    "batch_candidate_scores[:, :, None] < batch_candidate_scores[:, None, :]",
+    "batch_candidate_scores[:, :, None] <= batch_candidate_scores[:, None, :]",
+    "comparison_field_size = total_field + max(0, n_candidates - 1)",
+    "search_field_size = total_field + n_candidates",
 ):
     if forbidden in text:
-        raise SystemExit(f"legacy diversification rule survived transform: {forbidden}")
+        raise SystemExit(f"legacy candidate competition/diversification rule survived transform: {forbidden}")
 
-if "locked_df=locked_df" not in text:
-    raise SystemExit("locked portfolio was not routed through post-sim selector")
+for required in (
+    "comparison_field_size = total_field",
+    "left_low = field_left",
+    "low = field_right",
+    "search_field_size = total_field",
+    "locked_df=locked_df",
+):
+    if required not in text:
+        raise SystemExit(f"required opponent-only/post-sim behavior missing: {required}")
 
 APP.write_text(text, encoding="utf-8")
