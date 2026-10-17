@@ -8,6 +8,16 @@ def replace_once(old, new, label):
     global text
     if new in text:
         return
+    # The shared FanDuel setup installer now precomputes this metadata at the
+    # enclosing build scope. In combined installs, do not require the older
+    # nested Full Roster metadata anchor to still exist.
+    if label == "FD build metadata" and all(marker in text for marker in (
+        "fd_build_teams = pool.get",
+        "fd_build_opponents = pool.get",
+        "fd_build_positions = pool.get",
+        "fd_build_name_to_index =",
+    )):
+        return
     if old not in text:
         raise SystemExit(f"Patch anchor not found: {label}")
     text = text.replace(old, new, 1)
@@ -130,4 +140,4 @@ replace_once(
 )
 
 APP.write_text(text, encoding="utf-8")
-print("Installed FanDuel Full Roster vectorized builder hot-loop optimizations")
+print("Installed FanDuel Full Roster vectorized hot-loop optimizations")
