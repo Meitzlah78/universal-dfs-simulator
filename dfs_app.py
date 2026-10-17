@@ -1089,11 +1089,16 @@ def download_public_projection_table(source_name, platform_name, target_names=No
         for table in tables:
             dff_table = table.copy()
             if isinstance(dff_table.columns, pd.MultiIndex):
-                dff_table = dff_table.iloc[3:].copy()
-                dff_table.columns = [
-                    str(col[-1]).strip() if isinstance(col, tuple) else str(col).strip()
-                    for col in dff_table.columns
-                ]
+                def _dff_header(col):
+                    parts = [str(part).strip() for part in col]
+                    useful = [
+                        part for part in parts
+                        if part and not part.casefold().startswith("unnamed:")
+                    ]
+                    # Prefer the most specific useful header level. On the
+                    # current DFF table this yields NAME and FD FP PROJECTED.
+                    return useful[-1] if useful else parts[-1]
+                dff_table.columns = [_dff_header(col) for col in dff_table.columns]
             else:
                 dff_table.columns = [str(col).strip() for col in dff_table.columns]
 
@@ -1316,10 +1321,15 @@ def download_public_projection_table(source_name, platform_name, target_names=No
                     for slate_table in slate_tables:
                         candidate_table = slate_table.copy()
                         if isinstance(candidate_table.columns, pd.MultiIndex):
-                            candidate_table = candidate_table.iloc[3:].copy()
+                            def _dff_candidate_header(col):
+                                parts = [str(part).strip() for part in col]
+                                useful = [
+                                    part for part in parts
+                                    if part and not part.casefold().startswith("unnamed:")
+                                ]
+                                return useful[-1] if useful else parts[-1]
                             candidate_table.columns = [
-                                str(col[-1]).strip() if isinstance(col, tuple) else str(col).strip()
-                                for col in candidate_table.columns
+                                _dff_candidate_header(col) for col in candidate_table.columns
                             ]
                         else:
                             candidate_table.columns = [str(col).strip() for col in candidate_table.columns]
