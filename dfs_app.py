@@ -3788,8 +3788,13 @@ def apply_fd_correlated_simulations(sim_df, player_pool, strength=1.0, seed=2026
     return out
 
 
-def simulate_fd_play_by_play(players_df, rng, n=SIMULATION_COUNT, correlation_strength=1.0):
-    """FanDuel-only play-by-play NFL engine: simulate shared plays, then score player stat lines."""
+def simulate_fd_play_by_play(players_df, rng, n=SIMULATION_COUNT, correlation_strength=1.0, platform="FanDuel"):
+    """Shared NFL play-by-play engine for FanDuel and DraftKings Classic.
+
+    The engine creates complete correlated game scripts first, then applies the
+    selected site's scoring rules. Keeping one football engine prevents DK and
+    FD player outcomes from drifting apart while preserving site-specific scoring.
+    """
     if not isinstance(players_df, pd.DataFrame) or players_df.empty:
         return pd.DataFrame()
     requested_n = max(1, int(n))
@@ -4113,7 +4118,7 @@ def simulate_fd_play_by_play(players_df, rng, n=SIMULATION_COUNT, correlation_st
         name = str(row["Name"]); pos = str(row["Position"]).upper(); target = float(row["Projection"])
         line = stats[name].copy()
         if any(x in pos for x in ("DST", "DEF")) or pos.strip() == "D": line["is_defense"] = 1
-        vals = np.asarray(score_nfl_stat_line(line, "FanDuel"), dtype=float)
+        vals = np.asarray(score_nfl_stat_line(line, platform), dtype=float)
         # Projection-informed ROLE calibration. The literal PBP engine intentionally
         # remains the source of each outcome and its correlations, but a generic
         # 64-play offense can materially understate the workload of elite players.
@@ -7012,7 +7017,27 @@ else:
             st.stop()
         # Simulate stat lines first, then calculate fantasy points with site scoring.
         rng = np.random.default_rng()
-        outcomes = _simulate_scored_player_outcomes(eligible_players, platform, rng)
+        # DraftKings Classic now consumes the same literal shared-play football
+        # engine used by FanDuel. One complete slate script is generated per row,
+        # so QB/receiver, rushing, turnover, DST and game-environment outcomes stay
+        # correlated before the 5,000 candidate and 10,000 field lineup matrices
+        # score those rows. Showdown keeps its existing configurable correlation path.
+        if platform == "DraftKings" and lineup_mode == "Classic":
+            if workflow_status is not None:
+                workflow_status.info(
+                    f"Step 1 of 4: Running {SIMULATION_COUNT:,} shared PBP slate outcomes for DraftKings Classic..."
+                )
+            outcomes = simulate_fd_play_by_play(
+                eligible_players,
+                rng,
+                n=SIMULATION_COUNT,
+                correlation_strength=1.0,
+                platform="DraftKings",
+            )
+            if isinstance(outcomes, pd.DataFrame) and not outcomes.empty:
+                st.session_state["dk_classic_sim_engine"] = "Shared NFL PBP"
+        else:
+            outcomes = _simulate_scored_player_outcomes(eligible_players, platform, rng)
         # Show Step 2 as soon as the player outcomes finish, before the historical-data check.
         if workflow_status is not None:
             workflow_status.info("Step 2 of 4: Preparing rankings and building your candidate lineups...")
@@ -7525,7 +7550,8 @@ else:
         st.write("### DraftKings Classic Lineups")
         st.caption(
             "Classic roster: QB, 2 RB, 3 WR, TE, FLEX (RB/WR/TE), DST. "
-            "Salary cap: $50,000. The 5,000-lineup build automatically spreads exposure instead of repeatedly selecting the same top players."
+            "Salary cap: $50,000. SIM uses the shared NFL play-by-play engine so every lineup is scored against the same correlated game outcomes. "
+            "The 5,000-lineup build automatically spreads exposure instead of repeatedly selecting the same top players."
         )
 
         def classic_positions(value):
