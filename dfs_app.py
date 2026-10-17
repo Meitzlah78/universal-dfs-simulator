@@ -1110,133 +1110,26 @@ def download_public_projection_table(source_name, platform_name, target_names=No
         if normalize_projection_player_name(name)
     }
 
-    # FantasyPros official API. The API key lives only in Streamlit Secrets.
-    if source_name == "FantasyPros":
+    # Keep credentials in Streamlit Secrets; the client selects the site/slate
+    # using the uploaded salary pool's player names for both single-game formats.
+    if source_name == "Compounding Edges":
         try:
-            api_key = str(st.secrets.get("FANTASYPROS_API_KEY", "")).strip()
+            token = str(st.secrets.get("COMPOUNDING_EDGES_API_TOKEN", "")).strip()
         except Exception:
-            api_key = ""
-        if not api_key:
+            token = ""
+        if not token:
             return {}
         try:
-            from datetime import datetime
-            season = datetime.now(ZoneInfo("America/New_York")).year
-            # FantasyPros serves NFL projections by position. Pull each position
-            # separately and request the current weekly projections so Single Game
-            # slates are not limited to a couple of players from a default response.
-            result = {}
-            is_fd = "fanduel" in str(platform_name).casefold()
-            scoring = "HALF" if is_fd else "PPR"
-
-            # Ask FantasyPros for its current NFL week first, then request the
-            # normal expert projection feed for that exact week. R2P is based on
-            # weekly rankings and is intentionally much thinner than the full
-            # projections feed, which caused Single Game slates to match only a
-            # handful of players.
-            projection_week = None
-            try:
-                week_response = requests.get(
-                    "https://api.fantasypros.com/public/v2/json/nfl/players",
-                    headers={"x-api-key": api_key, "Accept": "application/json"},
-                    timeout=(5, 30),
-                )
-                week_response.raise_for_status()
-                week_payload = week_response.json()
-                if isinstance(week_payload, dict):
-                    returned_week = int(week_payload.get("week") or 0)
-                    if returned_week > 0:
-                        projection_week = returned_week
-            except Exception:
-                projection_week = None
-
-            # Safe fallback for the active season if the metadata endpoint does
-            # not publish a current week. This keeps the projection request out
-            # of week 0/preseason while allowing the API response to correct it.
-            if projection_week is None:
-                now_et = datetime.now(ZoneInfo("America/New_York"))
-                # NFL Week 1 begins with the Thursday immediately after Labor Day.
-                # The old fallback anchored to the first Sunday, which left the app
-                # one week behind during the Thursday-Saturday portion of each week
-                # (for example DAL-GB on 2026-10-18 was incorrectly requested as
-                # Week 5 instead of Week 6).
-                sep1 = datetime(season, 9, 1, tzinfo=ZoneInfo("America/New_York"))
-                labor_day = sep1 + pd.Timedelta(days=(7 - sep1.weekday()) % 7)
-                kickoff = labor_day + pd.Timedelta(days=3)
-                projection_week = max(1, min(18, ((now_et.date() - kickoff.date()).days // 7) + 1))
-
-            fp_diag = []
-            fp_matched_names = []
-            for position in ("QB", "RB", "WR", "TE", "K", "DST"):
-                params = {"position": position, "week": projection_week, "scoring": scoring}
-                projection_url = f"https://api.fantasypros.com/public/v2/json/nfl/{season}/projections"
-                response = requests.get(
-                    projection_url,
-                    headers={"x-api-key": api_key, "Accept": "application/json"},
-                    params=params,
-                    timeout=(5, 30),
-                )
-                if response.status_code == 429:
-                    # Do not hammer FantasyPros when its quota is exhausted. A
-                    # refresh can still continue with DFF/DraftEdge; Streamlit's
-                    # 15-minute cache prevents successful responses being fetched
-                    # again on every rerun.
-                    retry_after = str(response.headers.get("Retry-After", "")).strip()
-                    wait_note = f" Retry after {retry_after}s." if retry_after else ""
-                    st.info(f"FantasyPros rate limit reached; using DFF/DraftEdge for this refresh.{wait_note}")
-                    return result
-                response.raise_for_status()
-                payload = response.json()
-                players = payload.get("players", []) if isinstance(payload, dict) else []
-                raw_count = len(players) if isinstance(players, list) else 0
-                target_name_count = 0
-                parsed_target_count = 0
-                sample_stats_keys = []
-                for player in players:
-                    if not isinstance(player, dict):
-                        continue
-                    name = player.get("name") or player.get("player_name")
-                    key = normalize_projection_player_name(name)
-                    if not key or (target_keys and key not in target_keys):
-                        continue
-                    target_name_count += 1
-                    stats = player.get("stats") or {}
-                    if isinstance(stats, list):
-                        stats = next((item for item in stats if isinstance(item, dict)), {})
-                    if not isinstance(stats, dict):
-                        stats = {}
-                    if not sample_stats_keys:
-                        sample_stats_keys = list(stats.keys())[:12]
-                    candidates = (
-                        ("points_half", "fpts_half", "fantasy_points_half", "fpts")
-                        if is_fd else
-                        ("points_ppr", "fpts_ppr", "fantasy_points_ppr", "fpts")
-                    )
-                    value = next((stats.get(k) for k in candidates if stats.get(k) is not None), None)
-                    if value is None:
-                        value = stats.get("points")
-                    if value is None:
-                        value = player.get("fpts") or player.get("points") or player.get("projection")
-                    try:
-                        value = float(value)
-                    except (TypeError, ValueError):
-                        continue
-                    if np.isfinite(value) and value >= 0:
-                        result[key] = value
-                        parsed_target_count += 1
-                        fp_matched_names.append(str(name))
-                fp_diag.append(
-                    f"{position}: raw {raw_count}, slate names {target_name_count}, parsed {parsed_target_count}"
-                    + (f", stats keys {sample_stats_keys}" if target_name_count and parsed_target_count == 0 else "")
-                )
-            st.caption(
-                f"FantasyPros diagnostic — week {projection_week}; "
-                + " | ".join(fp_diag)
-                + "; matched: "
-                + (", ".join(fp_matched_names) if fp_matched_names else "none")
-            )
-            return result
-        except Exception as exc:
-            st.warning(f"FantasyPros API unavailable: {type(exc).__name__}: {exc}")
+            from compounding_edges import fetch_projections
+            values, _ = fetch_projections(token, platform_name, target_names=target_names)
+            return {
+                normalize_projection_player_name(name): value
+                for name, value in values.items()
+            }
+        except Exception:
+            # Requests exceptions may include request details. Never display the
+            # credential or response body in the public Streamlit app.
+            st.warning("Compounding Edges unavailable; continuing with DFF/DraftEdge.")
             return {}
 
     def matches_target(projections):
@@ -2012,7 +1905,7 @@ def refresh_public_projection_sources(platform_names=None):
         "FanDuel Full Roster", "FanDuel Single Game"
     ))
     for platform_name in selected_platforms:
-        for source_name in ("DFF", "DraftEdge", "FantasyPros"): 
+        for source_name in ("DFF", "DraftEdge", "Compounding Edges"):
             values = download_public_projection_table(source_name, platform_name)
             loaded = bool(values)
             label = f"{source_name} ({platform_name})"
@@ -2104,10 +1997,10 @@ def apply_external_projection_sources(players_frame, dff_file, draftedge_file, p
     """Average every available external projection; never substitute internal estimates."""
     result = players_frame.copy()
     target_names = result["Name"].astype(str).tolist() if "Name" in result.columns else []
-    fantasypros, fantasypros_status = get_projection_source_data(None, "FantasyPros", platform_name, target_names)
+    compounding_edges, compounding_edges_status = get_projection_source_data(None, "Compounding Edges", platform_name, target_names)
     dff, dff_status = get_projection_source_data(dff_file, "DFF", platform_name, target_names)
     draftedge, draftedge_status = get_projection_source_data(draftedge_file, "DraftEdge", platform_name, target_names)
-    source_maps = (("FantasyPros", fantasypros), ("DFF", dff), ("DraftEdge", draftedge))
+    source_maps = (("Compounding Edges", compounding_edges), ("DFF", dff), ("DraftEdge", draftedge))
     match_counts = {name: 0 for name, _ in source_maps}
     projections, sources = [], []
     averaged = missing_external = 0
@@ -2117,8 +2010,12 @@ def apply_external_projection_sources(players_frame, dff_file, draftedge_file, p
         available = []
         for source_name, values in source_maps:
             value = values.get(key)
-            if value is not None:
-                available.append((source_name, float(value)))
+            try:
+                value = float(value)
+            except (TypeError, ValueError):
+                continue
+            if np.isfinite(value) and value > 0:
+                available.append((source_name, value))
                 match_counts[source_name] += 1
         if available:
             value = float(np.mean([v for _, v in available]))
@@ -2135,9 +2032,9 @@ def apply_external_projection_sources(players_frame, dff_file, draftedge_file, p
     result["Projection"] = pd.to_numeric(pd.Series(projections, index=result.index), errors="coerce")
     result["ProjectionSource"] = sources
     st.caption(
-        f"External projection matches: FantasyPros {match_counts['FantasyPros']}; DFF {match_counts['DFF']}; "
+        f"External projection matches: Compounding Edges {match_counts['Compounding Edges']}; DFF {match_counts['DFF']}; "
         f"DraftEdge {match_counts['DraftEdge']}; averaged {averaged}; missing {missing_external}. "
-        f"FantasyPros: {fantasypros_status}; DFF: {dff_status}; DraftEdge: {draftedge_status}. "
+        f"Compounding Edges: {compounding_edges_status}; DFF: {dff_status}; DraftEdge: {draftedge_status}. "
         "Internal estimates are disabled. Players without a valid external projection, including zero projections, "
         "are removed from the lineup pool."
     )
@@ -4692,7 +4589,7 @@ if platform == "FanDuel":
     fd_valid_projection_count = int(pd.to_numeric(fd_players.get("Projection"), errors="coerce").gt(0).sum())
     if fd_valid_projection_count == 0 and not fd_players.empty:
         st.warning(
-            "Players loaded successfully, but DFF/DraftEdge projections are not available for this slate yet. "
+            "Players loaded successfully, but Compounding Edges/DFF/DraftEdge projections are not available for this slate yet. "
             "Click REFRESH PROJECTIONS + INJURY NEWS later after projections are posted."
         )
     elif fd_valid_projection_count < len(fd_players):
@@ -4740,7 +4637,7 @@ if platform == "FanDuel":
     if fd_proj_col is None:
         st.caption(
             "FanDuel salary-file averages are ignored. Check ProjectionSource "
-            "in the player table to see whether DFF or DraftEdge matched. "
+            "in the player table to see whether Compounding Edges, DFF, or DraftEdge matched. "
             "Players without a valid positive external projection are excluded."
         )
     fd_player_display = fd_players.drop(columns=["FD_ID"], errors="ignore").copy()
@@ -7096,7 +6993,7 @@ else:
     dk_valid_projection_count = int(pd.to_numeric(players_df.get("Projection"), errors="coerce").gt(0).sum())
     if dk_valid_projection_count == 0 and not players_df.empty:
         st.warning(
-            "Players loaded successfully, but DFF/DraftEdge projections are not available for this slate yet. "
+            "Players loaded successfully, but Compounding Edges/DFF/DraftEdge projections are not available for this slate yet. "
             "Click REFRESH PROJECTIONS + INJURY NEWS later after projections are posted."
         )
     elif dk_valid_projection_count < len(players_df):
@@ -7117,7 +7014,7 @@ else:
         )
 
     internal_key = internal_slate_key(all_dk_players_df)
-    st.caption("Projection values use the DFF/DraftEdge average when both are available, otherwise the single available source. All salary-file players remain visible; players without a positive external projection stay out of SIM/BUILD until a refresh finds one.")
+    st.caption("Projection values average all available valid Compounding Edges, DFF, and DraftEdge projections; a single available source is used directly. All salary-file players remain visible; players without a positive external projection stay out of SIM/BUILD until a refresh finds one.")
     if st.session_state.get("nfl_historical_stats_status"):
         st.caption(st.session_state["nfl_historical_stats_status"])
         if st.session_state.get("nfl_historical_players_matched") is not None:
