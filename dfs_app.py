@@ -1505,7 +1505,49 @@ def download_public_projection_table(source_name, platform_name, target_names=No
                             candidate_response.raise_for_status()
                         except Exception:
                             continue
-                        candidate_result = parse_dff_candidate(candidate_response.text)
+                        candidate_result = {}
+                        try:
+                            candidate_tables = pd.read_html(io.StringIO(candidate_response.text))
+                        except Exception:
+                            candidate_tables = []
+                        for candidate_table in candidate_tables:
+                            candidate_table = candidate_table.copy()
+                            if isinstance(candidate_table.columns, pd.MultiIndex):
+                                def _candidate_header(col):
+                                    parts = [str(part).strip() for part in col]
+                                    useful = [part for part in parts if part and not part.casefold().startswith("unnamed:")]
+                                    return useful[-1] if useful else parts[-1]
+                                candidate_table.columns = [_candidate_header(col) for col in candidate_table.columns]
+                            else:
+                                candidate_table.columns = [str(col).strip() for col in candidate_table.columns]
+                            normalized = {
+                                re.sub(r"[^a-z0-9]+", " ", str(col).casefold()).strip(): col
+                                for col in candidate_table.columns
+                            }
+                            candidate_name_col = next(
+                                (col for key, col in normalized.items()
+                                 if key in ("name", "player", "player name", "nickname") or key.endswith(" name")),
+                                None
+                            )
+                            candidate_site_prefix = "fd" if site == "fanduel" else "dk"
+                            candidate_proj_col = next(
+                                (col for key, col in normalized.items()
+                                 if ("project" in key or "proj" in key)
+                                 and (candidate_site_prefix in key or "fantasy points" in key)),
+                                None
+                            )
+                            if candidate_name_col is None or candidate_proj_col is None:
+                                continue
+                            for _, candidate_row in candidate_table.iterrows():
+                                player_key = normalize_projection_player_name(candidate_row.get(candidate_name_col, ""))
+                                player_value = pd.to_numeric(
+                                    str(candidate_row.get(candidate_proj_col, "")).replace(",", "").replace("$", ""),
+                                    errors="coerce"
+                                )
+                                if player_key and pd.notna(player_value) and np.isfinite(float(player_value)) and float(player_value) >= 0:
+                                    candidate_result[player_key] = float(player_value)
+                            if candidate_result:
+                                break
                         overlap = target_keys.intersection(candidate_result)
                         required_overlap = min(2, len(target_keys))
                         if candidate_result and len(overlap) >= required_overlap:
