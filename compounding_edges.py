@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 import math
 import re
 import requests
@@ -29,26 +31,52 @@ def fetch_projections(token, platform_name, target_names=None, slate_date=None, 
     headers = {"Accept": "application/json", "Authorization": "Bearer " + token}
     site = "fanduel" if "fanduel" in str(platform_name).casefold() else "draftkings"
     targets = {normalize_name(x) for x in (target_names or []) if normalize_name(x)}
-    params = {"date": slate_date} if slate_date else {}
-    response = requests.get(BASE_URL + "/slates", headers=headers, params=params, timeout=timeout)
-    response.raise_for_status()
-    slates = records(response.json(), ("slates", "data", "results"))
+    # The API requires a date and canonical slate fields, not a slate ID.
+    # Include upcoming days when the salary slate is for the next NFL game.
+    today = datetime.now(ZoneInfo("America/New_York")).date()
+    dates = [slate_date] if slate_date else [
+        (today + timedelta(days=offset)).isoformat() for offset in range(4)
+    ]
+    slate_type = "Showdown" if any(
+        label in str(platform_name).casefold() for label in ("showdown", "single game")
+    ) else "Classic"
+    slates = []
+    for date in dates:
+        response = requests.get(BASE_URL + "/slates", headers=headers,
+                                params={"date": date}, timeout=timeout)
+        response.raise_for_status()
+        slates.extend(records(response.json(), ("slates", "data", "results")))
     best = {}
     best_id = None
     best_overlap = -1
+    requested = set()
     for slate in slates:
-        hay = " ".join(str(slate.get(k, "")) for k in ("site", "platform", "operator", "provider", "name")).casefold()
-        if hay and site not in hay.replace(" ", ""):
+        if str(slate.get("site", "")).casefold() != site:
             continue
-        slate_id = slate.get("id") or slate.get("slate_id") or slate.get("slateId")
-        if slate_id is None:
+        if slate.get("slate_type") != slate_type:
             continue
-        projection_response = requests.get(BASE_URL + "/projections", headers=headers, params={"slate_id": slate_id}, timeout=timeout)
-        if projection_response.status_code in (400, 404, 422):
+        fields = ("site", "slate_type", "slate_name", "start_time")
+        if not all(slate.get(field) for field in fields):
+            continue
+        identity = tuple(slate[field] for field in fields)
+        if identity in requested:
+            continue
+        # Four date requests plus at most eight projection requests respect the
+        # documented 12-request/minute budget for one refresh.
+        if len(requested) >= 8:
+            break
+        requested.add(identity)
+        projection_response = requests.get(
+            BASE_URL + "/projections", headers=headers,
+            params={field: slate[field] for field in fields}, timeout=timeout,
+        )
+        if projection_response.status_code in (404, 503):
             continue
         projection_response.raise_for_status()
+        slate_id = str(slate["slate_name"]) + " " + str(slate["start_time"])
         rows = records(projection_response.json(), ("projections", "players", "data", "results"))
         values = {}
+        rows = sorted(rows, key=lambda row: str(row.get("roster_position", "")).upper() in ("CPT", "CAPTAIN", "MVP", "MVP 1.5X"))
         for row in rows:
             name = row.get("player_name") or row.get("name") or row.get("full_name")
             player = row.get("player")
@@ -69,7 +97,7 @@ def fetch_projections(token, platform_name, target_names=None, slate_date=None, 
                 if math.isfinite(raw) and raw > 0:
                     value = raw
                     break
-            if value is not None:
+            if value is not None and key not in values:
                 values[key] = value
         overlap = len(targets.intersection(values)) if targets else len(values)
         if overlap > best_overlap:
