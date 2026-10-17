@@ -10,7 +10,10 @@ def test_full_roster_user_stacks_are_separate_from_opponent_weights():
 
 
 def test_opponent_weighting_prefers_field_ownership_when_available():
-    assert '"field own %", "ownership %", "projected ownership", "ownership", "own%", "own"' in APP
+    assert 'def opponent_field_selection_weights(pool, fallback_scores):' in APP
+    for alias in ('"projected own %"', '"ownership %"', '"projected ownership"', '"ownership"', '"own%"', '"own"'):
+        assert alias in APP
+    assert "if ownership.sum() > 0:" in APP
     assert "return np.clip(ownership, 0.01, None)" in APP
 
 
