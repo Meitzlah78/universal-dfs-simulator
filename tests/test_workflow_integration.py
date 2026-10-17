@@ -40,6 +40,14 @@ class WorkflowIntegrationTest(unittest.TestCase):
         self.assertNotIn('_roi_sims = min(len(_sim_values), 500)',source)
         self.assertIn('for _, lineup in classic_export_portfolio.iterrows():',source)
 
+    def test_classic_report_and_entries_share_assigned_portfolio(self):
+        source=Path('dfs_app.py').read_text()
+        self.assertNotIn('contest_entries = user_lineups.sort_values("Top1"',source)
+        self.assertNotIn('st.dataframe(_saved_classic_entries',source)
+        self.assertIn('data=classic_export_portfolio.to_csv(index=False).encode("utf-8")',source)
+        self.assertIn('for _, lineup in classic_export_portfolio.iterrows():',source)
+        self.assertIn('.sort_values(classic_rank_metric, ascending=False, kind="stable")',source)
+
     def test_classic_assignment_matches_owned_entries_not_display_count(self):
         tree=ast.parse(Path('dfs_app.py').read_text())
         wanted={'_classic_assignment_count','_classic_unique_entries','classic_export_portfolio'}

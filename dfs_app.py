@@ -7521,12 +7521,6 @@ else:
                             full_field_size, classic_contest["payouts"], float(classic_contest["entry"]),
                             progress=lambda fraction,text: _classic_progress.progress(fraction,text=text))
                         st.caption(f"Contest evaluation used all {len(sim_df):,} independent evaluation outcomes. Opponents are a representative estimated field; tied prizes are split across all occupied payout places.")
-                        contest_entries = user_lineups.sort_values("Top1", ascending=False).head(int(classic_entry_count)).copy()
-                        # Re-evaluate the chosen entries together so they compete
-                        # with one another rather than each occupying first alone.
-                        contest_entries = evaluate_contest(sim_df, contest_entries, contest_field_df, _classic_slots,
-                            full_field_size, classic_contest["payouts"], float(classic_contest["entry"]), joint=True)
-                        st.session_state["classic_contest_entries_df"] = contest_entries
                         _classic_progress.empty()
                     st.session_state["classic_contest_field_df"] = contest_field_df
                     st.session_state["classic_contest_field_ready"] = len(contest_field_df) > 0
@@ -7538,21 +7532,6 @@ else:
                     st.caption("Contest metrics use all independent evaluation outcomes against an estimated opponent field and the selected payout ladder.")
                     st.dataframe(user_lineups, use_container_width=True, hide_index=True)
                     st.metric("Simulated opponent lineups", f"{len(contest_field_df):,}")
-                    contest_entries = st.session_state.get("classic_contest_entries_df", pd.DataFrame())
-                    if isinstance(contest_entries, pd.DataFrame) and not contest_entries.empty:
-                        total_fees = float(classic_contest["entry"]) * len(contest_entries)
-                        expected_winnings = float(contest_entries["Expected Prize ($)"].sum())
-                        expected_profit = expected_winnings - total_fees
-                        expected_roi = (100.0 * expected_profit / total_fees) if total_fees > 0 else 0.0
-                        st.write("### Classic Contest Sim + ROI")
-                        st.caption(f"{classic_contest_name} · full field {classic_contest['field']:,} · {len(contest_entries)} of your entries")
-                        _roi_cols = st.columns(5)
-                        _roi_cols[0].metric("Entries", f"{len(contest_entries)}")
-                        _roi_cols[1].metric("Entry Fees", f"${total_fees:,.2f}")
-                        _roi_cols[2].metric("Expected Winnings", f"${expected_winnings:,.2f}")
-                        _roi_cols[3].metric("Expected Profit", f"${expected_profit:,.2f}")
-                        _roi_cols[4].metric("Expected ROI", f"{expected_roi:,.1f}%")
-                        st.dataframe(contest_entries, use_container_width=True, hide_index=True)
                     if all(c in user_lineups.columns for c in ["Top1", "Top5", "Top10", "CashRate"]):
                         _classic_sanity = pd.DataFrame([{
                             "Top 1%": round(100 * float(user_lineups["Top1"].mean()), 2),
@@ -7569,27 +7548,12 @@ else:
         # such as changing the Portfolio count or ranking method.
         if not _classic_contest_button:
             _saved_classic_comparison = st.session_state.get("classic_contest_comparison_df")
-            _saved_classic_entries = st.session_state.get("classic_contest_entries_df")
             _saved_classic_field = st.session_state.get("classic_contest_field_df")
             if isinstance(_saved_classic_comparison, pd.DataFrame) and not _saved_classic_comparison.empty:
                 st.write("### Your Lineups vs. Contest Field")
                 st.dataframe(_saved_classic_comparison, use_container_width=True, hide_index=True)
                 if isinstance(_saved_classic_field, pd.DataFrame) and not _saved_classic_field.empty:
                     st.metric("Simulated opponent lineups", f"{len(_saved_classic_field):,}")
-                if isinstance(_saved_classic_entries, pd.DataFrame) and not _saved_classic_entries.empty:
-                    _saved_entry_fee = float(classic_contest["entry"])
-                    _saved_total_fees = _saved_entry_fee * len(_saved_classic_entries)
-                    _saved_expected_winnings = float(_saved_classic_entries["Expected Prize ($)"].sum())
-                    _saved_expected_profit = _saved_expected_winnings - _saved_total_fees
-                    _saved_expected_roi = (100.0 * _saved_expected_profit / _saved_total_fees) if _saved_total_fees > 0 else 0.0
-                    st.write("### Classic Contest Sim + ROI")
-                    st.caption(f"{classic_contest_name} · full field {classic_contest['field']:,} · {len(_saved_classic_entries)} of your entries")
-                    _saved_roi_cols = st.columns(5)
-                    _saved_roi_cols[0].metric("Entries", f"{len(_saved_classic_entries)}")
-                    _saved_roi_cols[1].metric("Entry Fees", f"${_saved_total_fees:,.2f}")
-                    _saved_roi_cols[2].metric("Expected Winnings", f"${_saved_expected_winnings:,.2f}")
-                    _saved_roi_cols[3].metric("Expected Profit", f"${_saved_expected_profit:,.2f}")
-                    _saved_roi_cols[4].metric("Expected ROI", f"{_saved_expected_roi:,.1f}%")
                 if all(c in _saved_classic_comparison.columns for c in ["Top1", "Top5", "Top10", "CashRate"]):
                     _saved_classic_sanity = pd.DataFrame([{
                         "Top 1%": round(100 * float(_saved_classic_comparison["Top1"].mean()), 2),
@@ -7670,7 +7634,7 @@ else:
             # Classic portfolio controls match the larger portfolio selector used by other formats.
             st.divider()
             st.write("## Portfolio")
-            st.caption("Choose how many generated Classic lineups to show and export. Up to 5,000 lineups can be selected.")
+            st.caption("Browse up to 5,000 candidates. The assigned portfolio below fills your reserved contest entries and is the source for both downloads.")
             classic_portfolio_source = st.session_state.get("classic_contest_comparison_df") if st.session_state.get("classic_field_context") == classic_contest_name else None
             if not isinstance(classic_portfolio_source, pd.DataFrame) or classic_portfolio_source.empty:
                 classic_portfolio_source = classic_results.copy()
@@ -7703,13 +7667,14 @@ else:
                             if col in classic_portfolio_source.columns],
                     keep="first"
                 )
-                .sort_values(classic_rank_metric, ascending=False)
+                .sort_values(classic_rank_metric, ascending=False, kind="stable")
                 .head(int(classic_portfolio_count))
                 .reset_index(drop=True)
             )
             _classic_assignment_count = max(1, int((st.session_state.get("selected_dk_contest") or {}).get("your_entries") or classic_entry_count))
             _classic_unique_entries = classic_top_portfolio.head(_classic_assignment_count).copy()
             classic_export_portfolio = _classic_unique_entries.iloc[np.arange(_classic_assignment_count) % len(_classic_unique_entries)].reset_index(drop=True)
+            st.session_state["classic_contest_entries_df"] = classic_export_portfolio.copy()
             classic_top_portfolio["Assigned to contest"] = np.arange(len(classic_top_portfolio)) < len(_classic_unique_entries)
             _classic_portfolio_field = st.session_state.get("classic_contest_field_df")
             _classic_portfolio_outcomes = st.session_state.get("simulation_df")
@@ -7727,9 +7692,19 @@ else:
                 _portfolio_cols[1].metric("Estimated portfolio winnings", f"${_portfolio_prize:,.2f}")
                 _portfolio_cols[2].metric("Estimated portfolio ROI", f"{100*(_portfolio_prize-_portfolio_fee)/_portfolio_fee:,.1f}%" if _portfolio_fee else "N/A")
                 st.caption(f"{_classic_assignment_count} assigned contest entries are evaluated jointly, including repeated lineups when needed to fill the entry template. Additional displayed candidates are alternatives, not extra owned entries. The opponent field remains an estimate.")
+                st.write("### Assigned contest portfolio")
                 st.dataframe(classic_export_portfolio, use_container_width=True, hide_index=True)
             else:
                 st.caption("Run CONTEST SIM for field-based portfolio metrics.")
+            st.download_button(
+                label="DOWNLOAD ASSIGNED PORTFOLIO REPORT",
+                data=classic_export_portfolio.to_csv(index=False).encode("utf-8"),
+                file_name="DraftKings_Classic_Assigned_Portfolio.csv",
+                mime="text/csv",
+                key="dk_classic_assigned_report",
+                on_click="ignore"
+            )
+            st.caption("Candidate alternatives — only rows marked Assigned to contest are included in your entry replacement.")
             st.dataframe(classic_top_portfolio, use_container_width=True, hide_index=True)
 
             classic_results = remove_out_players_from_lineups(
@@ -7781,7 +7756,8 @@ else:
                                 file_name="DraftKings_Classic_Contest_Entries.csv",
                                 mime="text/csv",
                                 use_container_width=True,
-                                key="dk_classic_replace_export"
+                                key="dk_classic_replace_export",
+                                on_click="ignore"
                             )
                             st.link_button(
                                 "OPEN DRAFTKINGS MY LINEUPS / EDIT ENTRIES",
