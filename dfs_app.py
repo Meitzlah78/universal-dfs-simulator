@@ -1168,12 +1168,22 @@ def download_public_projection_table(source_name, platform_name, target_names=No
             fp_matched_names = []
             for position in ("QB", "RB", "WR", "TE", "K", "DST"):
                 params = {"position": position, "week": projection_week, "scoring": scoring}
+                projection_url = f"https://api.fantasypros.com/public/v2/json/nfl/{season}/projections"
                 response = requests.get(
-                    f"https://api.fantasypros.com/public/v2/json/nfl/{season}/projections",
+                    projection_url,
                     headers={"x-api-key": api_key, "Accept": "application/json"},
                     params=params,
                     timeout=(5, 30),
                 )
+                if response.status_code == 429:
+                    # Do not hammer FantasyPros when its quota is exhausted. A
+                    # refresh can still continue with DFF/DraftEdge; Streamlit's
+                    # 15-minute cache prevents successful responses being fetched
+                    # again on every rerun.
+                    retry_after = str(response.headers.get("Retry-After", "")).strip()
+                    wait_note = f" Retry after {retry_after}s." if retry_after else ""
+                    st.info(f"FantasyPros rate limit reached; using DFF/DraftEdge for this refresh.{wait_note}")
+                    return result
                 response.raise_for_status()
                 payload = response.json()
                 players = payload.get("players", []) if isinstance(payload, dict) else []
