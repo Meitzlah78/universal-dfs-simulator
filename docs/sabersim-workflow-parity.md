@@ -65,3 +65,17 @@ parity. Keep these remaining gaps explicit until measured against unseen contest
 - Field/contest definitions: https://support.sabersim.com/en/articles/12079199-how-contest-sims-work
 - Custom ownership/fields: https://support.sabersim.com/en/articles/17506876-how-do-i-use-my-own-ownership
 - Contest groups: https://support.sabersim.com/en/articles/17506489-how-do-i-build-lineups-for-a-specific-contest
+
+### Classic field audit (October 17, 2026)
+
+The uploaded 10,000-opponent field had 58% unstacked quarterbacks, while the
+candidate pool required a QB/pass-catcher stack. The old stack preference also
+counted RBs. Classic opponents now require at least one same-team WR/TE with the
+QB, independently of user-selected stack rules. This is an explicit tournament
+baseline, not a learned population frequency. Nine-player teams and repeated
+players are rejected; salary limits and duplicate opponent lineups are preserved.
+
+A construction replay using marginal means recovered from the uploaded rounded
+lineup totals produced 10,000 valid opponents, with mean points 101.55 versus
+101.47 previously. This verifies roster mechanics, not ROI calibration. Exact
+outcome-based finish rates cannot be reproduced from marginal means alone.

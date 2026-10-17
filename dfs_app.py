@@ -7410,6 +7410,7 @@ else:
                     ]
                     # Precompute NumPy arrays once. Avoid rebuilding/filtering a pandas
                     # DataFrame for every slot of every simulated opponent lineup.
+                    from simmah_classic_field import classic_tournament_mask
                     pool_names = pool["Name"].astype(str).to_numpy(dtype=object)
                     pool_salaries = pd.to_numeric(pool["Salary"], errors="coerce").fillna(0).to_numpy(dtype=np.int64)
                     pool_weights = pd.to_numeric(pool["Weight"], errors="coerce").fillna(0.01).clip(lower=0.01).to_numpy(dtype=float)
@@ -7437,7 +7438,7 @@ else:
                             probs /= probs.sum()
                             picks[:, col] = rng.choice(choices, size=n, replace=True, p=probs)
                         sorted_picks = np.sort(picks, axis=1)
-                        valid = np.all(np.diff(sorted_picks, axis=1) != 0, axis=1)
+                        valid = classic_tournament_mask(picks, pool["Team"].astype(str).to_numpy(), pool["Position"].astype(str).to_numpy())
                         salaries = pool_salaries[picks].sum(axis=1)
                         valid &= (salaries >= 47000) & (salaries <= 50000)
                         vp = picks[valid]
@@ -7460,7 +7461,9 @@ else:
                             _qb_team = pool.iloc[_qb]["Team"].astype(str).to_numpy()
                             _skill_cols = vp[:, [1, 2, 3, 4, 5, 6, 7]]
                             _skill_teams = np.asarray(pool["Team"].astype(str).to_numpy()[_skill_cols])
-                            _stack_count = (_skill_teams == _qb_team[:, None]).sum(axis=1)
+                            _skill_positions = pool["Position"].astype(str).to_numpy()[_skill_cols]
+                            _pass_catchers = np.isin(_skill_positions, ["WR", "TE"])
+                            _stack_count = ((_skill_teams == _qb_team[:, None]) & _pass_catchers).sum(axis=1)
                             _human_weight *= np.where(_stack_count >= 2, 2.0, np.where(_stack_count >= 1, 1.45, 0.45))
 
                             _human_weight = np.nan_to_num(_human_weight, nan=0.0, posinf=0.0, neginf=0.0)
@@ -7491,6 +7494,7 @@ else:
                     else:
                         contest_field_df = pd.DataFrame(columns=field_slot_names + ["Salary", "ProjectedPoints"])
                     contest_field_df = apply_learned_field(contest_field_df, pool, field_slot_names, "DraftKings", "Classic", classic_contest, int(dk_opponent_target), rng)
+                    st.caption("Classic opponent baseline: each lineup has a QB + WR/TE stack; RBs do not satisfy this rule. This is a tournament construction assumption, not a learned stack frequency. Field popularity uses external ownership when supplied, otherwise a projection-rank proxy.")
                     user_lineups = st.session_state["classic_lineups"].copy()
                     opponent_scores = contest_field_df["ProjectedPoints"].to_numpy(dtype=float) if not contest_field_df.empty else np.array([])
                     if len(opponent_scores):

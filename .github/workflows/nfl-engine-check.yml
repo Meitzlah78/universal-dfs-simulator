@@ -17,7 +17,7 @@ jobs:
       - name: Install test dependencies
         run: python -m pip install numpy pandas
       - name: Compile simulator
-        run: python -m py_compile dfs_app.py simmah_nfl_engine.py simmah_weather.py simmah_candidates.py simmah_contests.py simmah_contest_history.py
+        run: python -m py_compile dfs_app.py simmah_nfl_engine.py simmah_weather.py simmah_candidates.py simmah_contests.py simmah_contest_history.py simmah_classic_field.py
       - name: Verify football events and DFS scoring
         run: python -m unittest discover -s tests -p test_nfl_engine.py -v
       - name: Verify full-slate stacks
@@ -32,3 +32,5 @@ jobs:
         run: python -m unittest discover -s tests -p test_contests.py -v
       - name: Verify workflow integration
         run: python -m unittest discover -s tests -p test_workflow_integration.py -v
+      - name: Verify Classic opponent construction
+        run: python -m unittest discover -s tests -p test_classic_field.py -v
