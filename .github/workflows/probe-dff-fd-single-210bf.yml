@@ -12,6 +12,7 @@ jobs:
           python-version: '3.12'
       - name: Probe optimizer slate data references
         run: |
+          echo "probe revision 2"
           python - <<'PY'
           from urllib.request import Request, urlopen
           import re, html
