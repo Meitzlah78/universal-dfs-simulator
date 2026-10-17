@@ -1126,10 +1126,19 @@ def download_public_projection_table(source_name, platform_name, target_names=No
                 normalize_projection_player_name(name): value
                 for name, value in values.items()
             }
-        except Exception:
-            # Requests exceptions may include request details. Never display the
-            # credential or response body in the public Streamlit app.
-            st.warning("Compounding Edges unavailable; continuing with DFF/DraftEdge.")
+        except Exception as exc:
+            # Only expose a fixed error category/status, never request details.
+            response = getattr(exc, "response", None)
+            status = getattr(response, "status_code", None)
+            if isinstance(status, int):
+                diagnostic = f"HTTP {status}"
+            elif isinstance(exc, requests.exceptions.Timeout):
+                diagnostic = "request timed out"
+            elif isinstance(exc, requests.exceptions.ConnectionError):
+                diagnostic = "connection failed"
+            else:
+                diagnostic = "invalid response or client error"
+            st.warning(f"Compounding Edges unavailable ({diagnostic}); continuing with DFF/DraftEdge.")
             return {}
 
     def matches_target(projections):
