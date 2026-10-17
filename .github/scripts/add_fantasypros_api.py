@@ -3,21 +3,8 @@ from pathlib import Path
 p = Path("dfs_app.py")
 s = p.read_text(encoding="utf-8")
 
-old = '''            result = {}
-            is_fd = "fanduel" in str(platform_name).casefold()
-            scoring = "HALF" if is_fd else "PPR"
-            projection_week = None
-            for position in ("QB", "RB", "WR", "TE", "K", "DST"):
-                # R2P is FantasyPros' weekly rankings-to-projections feed. With
-                # no explicit week it selects the next available weekly slate.
-                # Team positions cannot use R2P, so reuse the week returned by
-                # the skill-position response for K/DST.
-                if position in ("K", "DST"):
-                    params = {"position": position}
-                    if projection_week is not None:
-                        params["week"] = projection_week
-                else:
-                    params = {"position": position, "r2p": "true"}
+old = '''            for position in ("QB", "RB", "WR", "TE", "K", "DST"):
+                params = {"position": position, "week": projection_week, "scoring": scoring}
                 response = requests.get(
                     f"https://api.fantasypros.com/public/v2/json/nfl/{season}/projections",
                     headers={"x-api-key": api_key, "Accept": "application/json"},
@@ -26,47 +13,42 @@ old = '''            result = {}
                 )
                 response.raise_for_status()
                 payload = response.json()
-                if isinstance(payload, dict) and projection_week is None:
+                players = payload.get("players", []) if isinstance(payload, dict) else []
+                for player in players:
+                    if not isinstance(player, dict):
+                        continue
+                    name = player.get("name") or player.get("player_name")
+                    key = normalize_projection_player_name(name)
+                    if not key or (target_keys and key not in target_keys):
+                        continue
+                    stats = player.get("stats") or {}
+                    # FantasyPros currently returns stats as a one-item list for
+                    # NFL projections. Older responses used a dict, so support both.
+                    if isinstance(stats, list):
+                        stats = next((item for item in stats if isinstance(item, dict)), {})
+                    if not isinstance(stats, dict):
+                        stats = {}
+                    candidates = (
+                        ("points_half", "fpts_half", "fantasy_points_half", "fpts")
+                        if is_fd else
+                        ("points_ppr", "fpts_ppr", "fantasy_points_ppr", "fpts")
+                    )
+                    value = next((stats.get(k) for k in candidates if stats.get(k) is not None), None)
+                    if value is None:
+                        value = stats.get("points")
+                    if value is None:
+                        value = player.get("fpts") or player.get("points") or player.get("projection")
                     try:
-                        returned_week = int(payload.get("week"))
-                        if returned_week > 0:
-                            projection_week = returned_week
+                        value = float(value)
                     except (TypeError, ValueError):
-                        pass
+                        continue
+                    if np.isfinite(value) and value >= 0:
+                        result[key] = value
+            return result
 '''
-new = '''            result = {}
-            is_fd = "fanduel" in str(platform_name).casefold()
-            scoring = "HALF" if is_fd else "PPR"
 
-            # Ask FantasyPros for its current NFL week first, then request the
-            # normal expert projection feed for that exact week. R2P is based on
-            # weekly rankings and is intentionally much thinner than the full
-            # projections feed, which caused Single Game slates to match only a
-            # handful of players.
-            projection_week = None
-            try:
-                week_response = requests.get(
-                    "https://api.fantasypros.com/public/v2/json/nfl/players",
-                    headers={"x-api-key": api_key, "Accept": "application/json"},
-                    timeout=(5, 30),
-                )
-                week_response.raise_for_status()
-                week_payload = week_response.json()
-                if isinstance(week_payload, dict):
-                    returned_week = int(week_payload.get("week") or 0)
-                    if returned_week > 0:
-                        projection_week = returned_week
-            except Exception:
-                projection_week = None
-
-            # Safe fallback for the active season if the metadata endpoint does
-            # not publish a current week. This keeps the projection request out
-            # of week 0/preseason while allowing the API response to correct it.
-            if projection_week is None:
-                now_et = datetime.now(ZoneInfo("America/New_York"))
-                season_start = datetime(season, 9, 13, tzinfo=ZoneInfo("America/New_York"))
-                projection_week = max(1, min(18, ((now_et.date() - season_start.date()).days // 7) + 1))
-
+new = '''            fp_diag = []
+            fp_matched_names = []
             for position in ("QB", "RB", "WR", "TE", "K", "DST"):
                 params = {"position": position, "week": projection_week, "scoring": scoring}
                 response = requests.get(
@@ -77,13 +59,63 @@ new = '''            result = {}
                 )
                 response.raise_for_status()
                 payload = response.json()
+                players = payload.get("players", []) if isinstance(payload, dict) else []
+                raw_count = len(players) if isinstance(players, list) else 0
+                target_name_count = 0
+                parsed_target_count = 0
+                sample_stats_keys = []
+                for player in players:
+                    if not isinstance(player, dict):
+                        continue
+                    name = player.get("name") or player.get("player_name")
+                    key = normalize_projection_player_name(name)
+                    if not key or (target_keys and key not in target_keys):
+                        continue
+                    target_name_count += 1
+                    stats = player.get("stats") or {}
+                    if isinstance(stats, list):
+                        stats = next((item for item in stats if isinstance(item, dict)), {})
+                    if not isinstance(stats, dict):
+                        stats = {}
+                    if not sample_stats_keys:
+                        sample_stats_keys = list(stats.keys())[:12]
+                    candidates = (
+                        ("points_half", "fpts_half", "fantasy_points_half", "fpts")
+                        if is_fd else
+                        ("points_ppr", "fpts_ppr", "fantasy_points_ppr", "fpts")
+                    )
+                    value = next((stats.get(k) for k in candidates if stats.get(k) is not None), None)
+                    if value is None:
+                        value = stats.get("points")
+                    if value is None:
+                        value = player.get("fpts") or player.get("points") or player.get("projection")
+                    try:
+                        value = float(value)
+                    except (TypeError, ValueError):
+                        continue
+                    if np.isfinite(value) and value >= 0:
+                        result[key] = value
+                        parsed_target_count += 1
+                        fp_matched_names.append(str(name))
+                fp_diag.append(
+                    f"{position}: raw {raw_count}, slate names {target_name_count}, parsed {parsed_target_count}"
+                    + (f", stats keys {sample_stats_keys}" if target_name_count and parsed_target_count == 0 else "")
+                )
+            st.caption(
+                f"FantasyPros diagnostic — week {projection_week}; "
+                + " | ".join(fp_diag)
+                + "; matched: "
+                + (", ".join(fp_matched_names) if fp_matched_names else "none")
+            )
+            return result
 '''
-if old not in s:
-    if 'normal expert projection feed for that exact week' in s:
-        print("FantasyPros explicit-week projections already applied")
-        raise SystemExit(0)
-    raise SystemExit("FantasyPros R2P request block not found")
-s = s.replace(old, new, 1)
 
+if old not in s:
+    if "FantasyPros diagnostic — week" in s:
+        print("FantasyPros diagnostics already applied")
+        raise SystemExit(0)
+    raise SystemExit("FantasyPros projection loop not found")
+
+s = s.replace(old, new, 1)
 p.write_text(s, encoding="utf-8")
-print("FantasyPros explicit current-week projections applied")
+print("FantasyPros runtime diagnostics applied")
