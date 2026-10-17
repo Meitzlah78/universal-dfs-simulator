@@ -108,3 +108,17 @@ for cash/ROI output; otherwise only estimated finish rates are shown. The existi
 Hail Mary preset remains available and should be checked against the actual
 contest. Candidate variety is not a final-portfolio exposure cap or overlap rule.
 This is workflow parity, not evidence of calibrated ownership or profitability.
+
+### Batched FanDuel opponent generation
+
+Full Roster opponent generation now samples sequential eligible slots in NumPy
+batches instead of Python loops over individual rosters. It retains the existing
+59,000–60,000 salary interval, salary acceptance curve, ownership/mean weights,
+four-player team limit, QB/pass-catcher stack and duplicate rosters. The target
+is unchanged; an exhausted proposal budget raises an explicit shortfall instead
+of silently handing a smaller field to ROI scoring. Single Game keeps its own
+existing field path. Random ordering changes, so sampled fields differ by seed
+from earlier releases; football outcomes and simulation counts are unaffected.
+A local 267-player fixture with synthetic FanDuel salaries generated all 10,000
+opponents in 2.01 seconds (167,936 proposals). Hosting speed and actual slate
+acceptance rates can differ. All 55 scoped tests passed.

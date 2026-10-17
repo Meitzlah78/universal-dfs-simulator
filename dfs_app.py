@@ -4996,177 +4996,77 @@ if platform == "FanDuel":
             )
             _fd_generation_target = learned_field_proposal_target("FanDuel", lineup_mode, st.session_state.get("selected_fd_contest", {}), len(fd_slots), fd_opponent_target)
             with st.spinner(f"Building {_fd_generation_target:,} simulated FanDuel contest entries..."):
-                while len(opponent_rows) < _fd_generation_target and attempts < max(300000, _fd_generation_target * 15):
-                    attempts += 1
-                    if attempts % 250 == 0 and _fd_generation_target > 0:
-                        accepted_progress = len(opponent_rows) / max(_fd_generation_target, 1)
-                        fd_field_progress.progress(
-                            min(1.0, accepted_progress),
-                            text=f"Building FanDuel opponent field: {len(opponent_rows):,} / {_fd_generation_target:,}"
-                        )
-                        fd_workflow_status.info(
-                            f"Step 3 of 4: Building opponent field — {len(opponent_rows):,} of "
-                            f"{_fd_generation_target:,} lineups..."
-                        )
-                    chosen = {}
-                    used = set()
-                    salary = 0
-                    points = 0.0
-                    if lineup_mode == "Single Game":
-                        mvp_candidates = fd_pool[
-                            (fd_pool["Salary"] * 1.5 <= fd_salary_range[1])
-                            & (fd_pool["Salary"] * 1.5 <= 60000)
-                        ]
-                        if mvp_candidates.empty:
-                            break
-                        mvp_candidate_indices = mvp_candidates.index.to_numpy(dtype=int)
-                        mvp_weights = np.clip(fd_mvp_weights[mvp_candidate_indices].astype(float), 0.01, None)
-                        mvp_weights = mvp_weights / mvp_weights.sum()
-                        mvp_row = mvp_candidates.iloc[int(rng.choice(len(mvp_candidates), p=mvp_weights))]
-                        mvp = str(mvp_row["Name"])
-                        chosen["MVP"] = mvp
-                        used.add(mvp)
-                        salary = int(float(mvp_row["Salary"]) * 1.5)
-                        points = float(mvp_row["Projection"]) * 1.5
-                        for slot in ["FLEX1", "FLEX2", "FLEX3", "FLEX4", "FLEX5"]:
-                            choices = fd_pool[
-                                (~fd_pool["Name"].isin(used))
-                                & ((fd_pool["Salary"] + salary) <= fd_salary_range[1])
-                                & ((fd_pool["Salary"] + salary) <= 60000)
+                if lineup_mode == "Full Roster":
+                    from simmah_classic_field import build_fanduel_full_field
+                    _fd_batched_field = build_fanduel_full_field(fd_pool, fd_weights, fd_slots, _fd_generation_target,
+                        rng=rng, progress=lambda fraction,text: fd_field_progress.progress(fraction,text=text))
+                    opponent_rows = _fd_batched_field.to_dict("records")
+                else:
+                    while len(opponent_rows) < _fd_generation_target and attempts < max(300000, _fd_generation_target * 15):
+                        attempts += 1
+                        if attempts % 250 == 0 and _fd_generation_target > 0:
+                            accepted_progress = len(opponent_rows) / max(_fd_generation_target, 1)
+                            fd_field_progress.progress(
+                                min(1.0, accepted_progress),
+                                text=f"Building FanDuel opponent field: {len(opponent_rows):,} / {_fd_generation_target:,}"
+                            )
+                            fd_workflow_status.info(
+                                f"Step 3 of 4: Building opponent field — {len(opponent_rows):,} of "
+                                f"{_fd_generation_target:,} lineups..."
+                            )
+                        chosen = {}
+                        used = set()
+                        salary = 0
+                        points = 0.0
+                        if lineup_mode == "Single Game":
+                            mvp_candidates = fd_pool[
+                                (fd_pool["Salary"] * 1.5 <= fd_salary_range[1])
+                                & (fd_pool["Salary"] * 1.5 <= 60000)
                             ]
-                            if choices.empty:
+                            if mvp_candidates.empty:
                                 break
-                            choice_indices = choices.index.to_numpy(dtype=int)
-                            weights = fd_flex_weights[choice_indices].astype(float)
-                            weights = weights / weights.sum() if weights.sum() else np.full(len(choices), 1.0 / len(choices))
-                            picked = choices.iloc[int(rng.choice(len(choices), p=weights))]
-                            name = str(picked["Name"])
-                            chosen[slot] = name
-                            used.add(name)
-                            salary += int(picked["Salary"])
-                            points += float(picked["Projection"])
-                    else:
-                        roster = [
-                            ("QB", {"QB"}), ("RB1", {"RB"}), ("RB2", {"RB"}),
-                            ("WR1", {"WR"}), ("WR2", {"WR"}), ("WR3", {"WR"}),
-                            ("TE", {"TE"}), ("FLEX", {"RB", "WR", "TE"}),
-                            ("D", {"D", "DST", "DEF"})
-                        ]
-                        # Cache these once per field build instead of scanning the
-                        # whole DataFrame nine times for every attempted lineup.
-                        if "fd_full_field_cache" not in locals():
-                            fd_field_names = fd_pool["Name"].astype(str).to_numpy()
-                            fd_field_name_index = {str(name): i for i, name in enumerate(fd_field_names)}
-                            fd_field_teams = fd_pool["Team"].astype(str).to_numpy()
-                            fd_field_position_labels = fd_pool["Position"].astype(str).to_numpy()
-                            fd_field_salaries = pd.to_numeric(fd_pool["Salary"], errors="coerce").fillna(0).to_numpy(dtype=int)
-                            fd_field_projections = pd.to_numeric(fd_pool["MeanPoints"], errors="coerce").fillna(fd_pool["Projection"]).fillna(0.01).clip(lower=0.01).to_numpy(dtype=float)
-                            fd_field_positions = fd_pool["Eligible"].tolist()
-                            fd_full_field_cache = {
-                                slot: np.asarray([
-                                    i for i, positions in enumerate(fd_field_positions)
-                                    if bool(positions & eligible)
-                                ], dtype=int)
-                                for slot, eligible in roster
-                            }
-                            fd_field_slot_bounds = {
-                                slot: (
-                                    int(fd_field_salaries[idxs].min()),
-                                    int(fd_field_salaries[idxs].max())
-                                )
-                                for slot, idxs in fd_full_field_cache.items() if len(idxs)
-                            }
-                        used_indices = set()
-                        for roster_pos, (slot, eligible) in enumerate(roster):
-                            choices = fd_full_field_cache.get(slot, np.asarray([], dtype=int))
-                            if used_indices:
-                                choices = choices[~np.isin(choices, np.fromiter(used_indices, dtype=int))]
-                            if not len(choices):
-                                break
-                            remaining_roster = roster[roster_pos + 1:]
-                            if remaining_roster:
-                                if any(s not in fd_field_slot_bounds for s, _ in remaining_roster):
-                                    choices = np.asarray([], dtype=int)
-                                else:
-                                    min_remaining = sum(fd_field_slot_bounds[s][0] for s, _ in remaining_roster)
-                                    max_remaining = sum(fd_field_slot_bounds[s][1] for s, _ in remaining_roster)
-                                    candidate_salary = salary + fd_field_salaries[choices]
-                                    _fd_opponent_salary_min = 59000 if lineup_mode == "Full Roster" else fd_salary_range[0]
-                                    _fd_opponent_salary_max = 60000 if lineup_mode == "Full Roster" else min(fd_salary_range[1], 60000)
-                                    feasible = (
-                                        (candidate_salary + max_remaining >= _fd_opponent_salary_min)
-                                        & (candidate_salary + min_remaining <= _fd_opponent_salary_max)
-                                    )
-                                    choices = choices[feasible]
-                            else:
-                                candidate_salary = salary + fd_field_salaries[choices]
-                                _fd_opponent_salary_min = 59000 if lineup_mode == "Full Roster" else fd_salary_range[0]
-                                _fd_opponent_salary_max = 60000 if lineup_mode == "Full Roster" else min(fd_salary_range[1], 60000)
-                                choices = choices[
-                                    (candidate_salary >= _fd_opponent_salary_min)
-                                    & (candidate_salary <= _fd_opponent_salary_max)
+                            mvp_candidate_indices = mvp_candidates.index.to_numpy(dtype=int)
+                            mvp_weights = np.clip(fd_mvp_weights[mvp_candidate_indices].astype(float), 0.01, None)
+                            mvp_weights = mvp_weights / mvp_weights.sum()
+                            mvp_row = mvp_candidates.iloc[int(rng.choice(len(mvp_candidates), p=mvp_weights))]
+                            mvp = str(mvp_row["Name"])
+                            chosen["MVP"] = mvp
+                            used.add(mvp)
+                            salary = int(float(mvp_row["Salary"]) * 1.5)
+                            points = float(mvp_row["Projection"]) * 1.5
+                            for slot in ["FLEX1", "FLEX2", "FLEX3", "FLEX4", "FLEX5"]:
+                                choices = fd_pool[
+                                    (~fd_pool["Name"].isin(used))
+                                    & ((fd_pool["Salary"] + salary) <= fd_salary_range[1])
+                                    & ((fd_pool["Salary"] + salary) <= 60000)
                                 ]
-                            if not len(choices):
-                                break
-                            weights = np.clip(fd_weights[choices].astype(float), 0.0001, None)
-                            if lineup_mode == "Full Roster":
-                                _fd_choice_means = np.clip(fd_field_projections[choices].astype(float), 0.01, None)
-                                _fd_mean_scale = _fd_choice_means / max(float(np.mean(_fd_choice_means)), 0.01)
-                                # Full-roster GPP opponents should be competitive rather
-                                # than near-random within each position. Blend ownership with
-                                # simulated mean strength while leaving Single Game untouched.
-                                weights = weights * np.power(_fd_mean_scale, 0.20)
-                            weights /= weights.sum()
-                            picked_idx = int(rng.choice(choices, p=weights))
-                            name = str(fd_field_names[picked_idx])
-                            chosen[slot] = name
-                            used.add(name)
-                            used_indices.add(picked_idx)
-                            salary += int(fd_field_salaries[picked_idx])
-                            points += float(fd_field_projections[picked_idx])
-                    if len(chosen) != len(fd_slots):
-                        continue
-                    _fd_opponent_salary_min = 59000 if lineup_mode == "Full Roster" else fd_salary_range[0]
-                    _fd_opponent_salary_max = 60000 if lineup_mode == "Full Roster" else min(fd_salary_range[1], 60000)
-                    if salary < _fd_opponent_salary_min or salary > _fd_opponent_salary_max:
-                        continue
-                    if lineup_mode == "Full Roster":
-                        from simmah_classic_field import classic_tournament_mask
-                        _fd_proposal = np.asarray([[fd_field_name_index[chosen[slot]] for slot in fd_slots]])
-                        if not classic_tournament_mask(_fd_proposal, fd_field_teams, fd_field_position_labels, max_from_team=4)[0]:
+                                if choices.empty:
+                                    break
+                                choice_indices = choices.index.to_numpy(dtype=int)
+                                weights = fd_flex_weights[choice_indices].astype(float)
+                                weights = weights / weights.sum() if weights.sum() else np.full(len(choices), 1.0 / len(choices))
+                                picked = choices.iloc[int(rng.choice(len(choices), p=weights))]
+                                name = str(picked["Name"])
+                                chosen[slot] = name
+                                used.add(name)
+                                salary += int(picked["Salary"])
+                                points += float(picked["Projection"])
+                        if len(chosen) != len(fd_slots):
                             continue
-                    # Calibrate FanDuel NFL Full Roster salary usage to observed large-field
-                    # contest behavior. In a 568k-entry historical contest the average salary
-                    # was about $59,781, 41% used the full $60k, 91% used >=$59.5k, and 97%
-                    # used >=$59k.  The sequential player picker otherwise overproduces cheap
-                    # lineups, so use an acceptance curve after a legal lineup is assembled.
-                    # This changes opponent construction only; Single Game and DraftKings are untouched.
-                    if lineup_mode == "Full Roster":
-                        _fd_salary_accept = {
-                            60000: 1.00,
-                            59900: 0.90,
-                            59800: 0.72,
-                            59700: 0.58,
-                            59600: 0.46,
-                            59500: 0.36,
-                            59400: 0.24,
-                            59300: 0.18,
-                            59200: 0.13,
-                            59100: 0.09,
-                            59000: 0.06,
-                        }.get(int(salary), 0.01 if salary >= 58000 else 0.002)
-                        if rng.random() > _fd_salary_accept:
+                        _fd_opponent_salary_min = 59000 if lineup_mode == "Full Roster" else fd_salary_range[0]
+                        _fd_opponent_salary_max = 60000 if lineup_mode == "Full Roster" else min(fd_salary_range[1], 60000)
+                        if salary < _fd_opponent_salary_min or salary > _fd_opponent_salary_max:
                             continue
-                    key = tuple(chosen[slot] for slot in fd_slots)
-                    # Keep duplicates: real FanDuel fields contain repeated lineups,
-                    # and those duplicates must share prizes when they tie.
-                    seen_opponents.add(key)
-                    opponent_rows.append({**chosen, "Salary": salary, "ProjectedPoints": round(points, 2)})
-                    if len(opponent_rows) % 100 == 0 or len(opponent_rows) >= _fd_generation_target:
-                        fd_field_progress.progress(
-                            min(1.0, len(opponent_rows) / max(_fd_generation_target, 1)),
-                            text=f"Building FanDuel opponent field: {len(opponent_rows):,} / {_fd_generation_target:,}"
-                        )
+                        key = tuple(chosen[slot] for slot in fd_slots)
+                        # Keep duplicates: real FanDuel fields contain repeated lineups,
+                        # and those duplicates must share prizes when they tie.
+                        seen_opponents.add(key)
+                        opponent_rows.append({**chosen, "Salary": salary, "ProjectedPoints": round(points, 2)})
+                        if len(opponent_rows) % 100 == 0 or len(opponent_rows) >= _fd_generation_target:
+                            fd_field_progress.progress(
+                                min(1.0, len(opponent_rows) / max(_fd_generation_target, 1)),
+                                text=f"Building FanDuel opponent field: {len(opponent_rows):,} / {_fd_generation_target:,}"
+                            )
             fd_field_progress.empty()
             opponent_df = apply_learned_field(pd.DataFrame(opponent_rows), fd_pool, fd_slots, "FanDuel", lineup_mode,
                 st.session_state.get("selected_fd_contest", {}), fd_opponent_target, rng)

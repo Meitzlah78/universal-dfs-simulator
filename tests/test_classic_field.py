@@ -29,6 +29,24 @@ class ClassicFieldTest(unittest.TestCase):
         teams[6]='B'
         self.assertTrue(classic_tournament_mask(picks,teams,positions,max_from_team=4)[0])
 
+    def test_batched_fanduel_field_reaches_target_with_legal_rosters(self):
+        from test_candidates import fixture
+        from simmah_classic_field import build_fanduel_full_field
+        pool,_,roster=fixture('FD');pool['Projection']=pool.Salary/500
+        slots=[s for s,_ in roster];slots[-1]='D'
+        weights=np.linspace(.1,1,len(pool))
+        result=build_fanduel_full_field(pool,weights,slots,1000,rng=np.random.default_rng(42))
+        self.assertEqual(len(result),1000)
+        meta=pool.set_index('Name');index={n:i for i,n in enumerate(pool.Name)}
+        picks=np.array([[index[n] for n in row] for row in result[slots].itertuples(index=False,name=None)])
+        self.assertTrue(classic_tournament_mask(picks,pool.Team,pool.Position,max_from_team=4).all())
+        self.assertTrue(result.Salary.between(59000,60000).all())
+        np.testing.assert_array_equal(result.Salary,pool.Salary.to_numpy()[picks].sum(axis=1))
+        np.testing.assert_allclose(result.ProjectedPoints,np.round(pool.Projection.to_numpy()[picks].sum(axis=1),2))
+        for slot,names in result[slots].items():
+            allowed={'RB','WR','TE'} if slot=='FLEX' else {'DST','D','DEF'} if slot=='D' else {slot.rstrip('123')}
+            self.assertTrue(meta.loc[names,'Position'].isin(allowed).all())
+
     def test_empty_batches_are_supported(self):
         self.assertEqual(len(classic_tournament_mask(np.empty((0,9),int),[],[])),0)
 
