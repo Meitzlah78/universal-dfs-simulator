@@ -1110,37 +1110,6 @@ def download_public_projection_table(source_name, platform_name, target_names=No
         if normalize_projection_player_name(name)
     }
 
-    # Keep credentials in Streamlit Secrets; the client selects the site/slate
-    # using the uploaded salary pool's player names for both single-game formats.
-    if source_name == "Compounding Edges":
-        try:
-            token = str(st.secrets.get("COMPOUNDING_EDGES_API_TOKEN", "")).strip()
-        except Exception:
-            token = ""
-        if not token:
-            return {}
-        try:
-            from compounding_edges import fetch_projections
-            values, _ = fetch_projections(token, platform_name, target_names=target_names)
-            return {
-                normalize_projection_player_name(name): value
-                for name, value in values.items()
-            }
-        except Exception as exc:
-            # Only expose a fixed error category/status, never request details.
-            response = getattr(exc, "response", None)
-            status = getattr(response, "status_code", None)
-            if isinstance(status, int):
-                diagnostic = f"HTTP {status}"
-            elif isinstance(exc, requests.exceptions.Timeout):
-                diagnostic = "request timed out"
-            elif isinstance(exc, requests.exceptions.ConnectionError):
-                diagnostic = "connection failed"
-            else:
-                diagnostic = "invalid response or client error"
-            st.warning(f"Compounding Edges unavailable ({diagnostic}); continuing with DFF/DraftEdge.")
-            return {}
-
     def matches_target(projections):
         return not target_keys or bool(target_keys.intersection(projections))
 
@@ -1930,7 +1899,7 @@ def refresh_public_projection_sources(platform_names=None):
         "FanDuel Full Roster", "FanDuel Single Game"
     ))
     for platform_name in selected_platforms:
-        for source_name in ("DFF", "DraftEdge", "Compounding Edges"):
+        for source_name in ("DFF", "DraftEdge"):
             values = download_public_projection_table(source_name, platform_name)
             loaded = bool(values)
             label = f"{source_name} ({platform_name})"
@@ -2022,10 +1991,9 @@ def apply_external_projection_sources(players_frame, dff_file, draftedge_file, p
     """Average every available external projection; never substitute internal estimates."""
     result = players_frame.copy()
     target_names = result["Name"].astype(str).tolist() if "Name" in result.columns else []
-    compounding_edges, compounding_edges_status = get_projection_source_data(None, "Compounding Edges", platform_name, target_names)
     dff, dff_status = get_projection_source_data(dff_file, "DFF", platform_name, target_names)
     draftedge, draftedge_status = get_projection_source_data(draftedge_file, "DraftEdge", platform_name, target_names)
-    source_maps = (("Compounding Edges", compounding_edges), ("DFF", dff), ("DraftEdge", draftedge))
+    source_maps = (("DFF", dff), ("DraftEdge", draftedge))
     match_counts = {name: 0 for name, _ in source_maps}
     projections, sources = [], []
     averaged = missing_external = 0
@@ -2065,9 +2033,9 @@ def apply_external_projection_sources(players_frame, dff_file, draftedge_file, p
     result["Projection"] = pd.to_numeric(pd.Series(projections, index=result.index), errors="coerce")
     result["ProjectionSource"] = sources
     st.caption(
-        f"External projection matches: Compounding Edges {match_counts['Compounding Edges']}; DFF {match_counts['DFF']}; "
+        f"External projection matches: DFF {match_counts['DFF']}; "
         f"DraftEdge {match_counts['DraftEdge']}; averaged {averaged}; missing {missing_external}. "
-        f"Compounding Edges: {compounding_edges_status}; DFF: {dff_status}; DraftEdge: {draftedge_status}. "
+        f"DFF: {dff_status}; DraftEdge: {draftedge_status}. "
         "Internal estimates are disabled. Players without a valid external projection, including zero projections, "
         "are removed from the lineup pool."
     )
@@ -4622,7 +4590,7 @@ if platform == "FanDuel":
     fd_valid_projection_count = int(pd.to_numeric(fd_players.get("Projection"), errors="coerce").gt(0).sum())
     if fd_valid_projection_count == 0 and not fd_players.empty:
         st.warning(
-            "Players loaded successfully, but Compounding Edges/DFF/DraftEdge projections are not available for this slate yet. "
+            "Players loaded successfully, but DFF/DraftEdge projections are not available for this slate yet. "
             "Click REFRESH PROJECTIONS + INJURY NEWS later after projections are posted."
         )
     elif fd_valid_projection_count < len(fd_players):
@@ -4670,7 +4638,7 @@ if platform == "FanDuel":
     if fd_proj_col is None:
         st.caption(
             "FanDuel salary-file averages are ignored. Check ProjectionSource "
-            "in the player table to see whether Compounding Edges, DFF, or DraftEdge matched. "
+            "in the player table to see whether DFF or DraftEdge matched. "
             "Players without a valid positive external projection are excluded."
         )
     fd_player_display = fd_players.drop(columns=["FD_ID"], errors="ignore").copy()
@@ -7026,7 +6994,7 @@ else:
     dk_valid_projection_count = int(pd.to_numeric(players_df.get("Projection"), errors="coerce").gt(0).sum())
     if dk_valid_projection_count == 0 and not players_df.empty:
         st.warning(
-            "Players loaded successfully, but Compounding Edges/DFF/DraftEdge projections are not available for this slate yet. "
+            "Players loaded successfully, but DFF/DraftEdge projections are not available for this slate yet. "
             "Click REFRESH PROJECTIONS + INJURY NEWS later after projections are posted."
         )
     elif dk_valid_projection_count < len(players_df):
@@ -7047,7 +7015,7 @@ else:
         )
 
     internal_key = internal_slate_key(all_dk_players_df)
-    st.caption("Projection values average all available valid Compounding Edges, DFF, and DraftEdge projections; a single available source is used directly. All salary-file players remain visible; players without a positive external projection stay out of SIM/BUILD until a refresh finds one.")
+    st.caption("Projection values average all available valid DFF and DraftEdge projections; a single available source is used directly. All salary-file players remain visible; players without a positive external projection stay out of SIM/BUILD until a refresh finds one.")
     if st.session_state.get("nfl_historical_stats_status"):
         st.caption(st.session_state["nfl_historical_stats_status"])
         if st.session_state.get("nfl_historical_players_matched") is not None:
