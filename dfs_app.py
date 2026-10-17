@@ -1131,7 +1131,7 @@ def download_public_projection_table(source_name, platform_name, target_names=No
                 response = requests.get(
                     f"https://api.fantasypros.com/public/v2/json/nfl/{season}/projections",
                     headers={"x-api-key": api_key, "Accept": "application/json"},
-                    params={"position": position, "week": "current", "scoring": scoring},
+                    params={"position": position, "scoring": scoring},
                     timeout=(5, 30),
                 )
                 response.raise_for_status()
@@ -1145,6 +1145,10 @@ def download_public_projection_table(source_name, platform_name, target_names=No
                     if not key or (target_keys and key not in target_keys):
                         continue
                     stats = player.get("stats") or {}
+                    # FantasyPros currently returns stats as a one-item list for
+                    # NFL projections. Older responses used a dict, so support both.
+                    if isinstance(stats, list):
+                        stats = next((item for item in stats if isinstance(item, dict)), {})
                     if not isinstance(stats, dict):
                         stats = {}
                     candidates = (
@@ -2033,10 +2037,10 @@ def apply_external_projection_sources(players_frame, dff_file, draftedge_file, p
     """Average every available external projection; never substitute internal estimates."""
     result = players_frame.copy()
     target_names = result["Name"].astype(str).tolist() if "Name" in result.columns else []
+    fantasypros, fantasypros_status = get_projection_source_data(None, "FantasyPros", platform_name, target_names)
     dff, dff_status = get_projection_source_data(dff_file, "DFF", platform_name, target_names)
     draftedge, draftedge_status = get_projection_source_data(draftedge_file, "DraftEdge", platform_name, target_names)
-    fantasypros, fantasypros_status = get_projection_source_data(None, "FantasyPros", platform_name, target_names)
-    source_maps = (("DFF", dff), ("DraftEdge", draftedge), ("FantasyPros", fantasypros))
+    source_maps = (("FantasyPros", fantasypros), ("DFF", dff), ("DraftEdge", draftedge))
     match_counts = {name: 0 for name, _ in source_maps}
     projections, sources = [], []
     averaged = missing_external = 0
@@ -2064,9 +2068,9 @@ def apply_external_projection_sources(players_frame, dff_file, draftedge_file, p
     result["Projection"] = pd.to_numeric(pd.Series(projections, index=result.index), errors="coerce")
     result["ProjectionSource"] = sources
     st.caption(
-        f"External projection matches: DFF {match_counts['DFF']}; DraftEdge {match_counts['DraftEdge']}; "
-        f"FantasyPros {match_counts['FantasyPros']}; averaged {averaged}; missing {missing_external}. "
-        f"DFF: {dff_status}; DraftEdge: {draftedge_status}; FantasyPros: {fantasypros_status}. "
+        f"External projection matches: FantasyPros {match_counts['FantasyPros']}; DFF {match_counts['DFF']}; "
+        f"DraftEdge {match_counts['DraftEdge']}; averaged {averaged}; missing {missing_external}. "
+        f"FantasyPros: {fantasypros_status}; DFF: {dff_status}; DraftEdge: {draftedge_status}. "
         "Internal estimates are disabled. Players without a valid external projection, including zero projections, "
         "are removed from the lineup pool."
     )
