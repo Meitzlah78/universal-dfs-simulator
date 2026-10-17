@@ -1161,10 +1161,12 @@ def download_public_projection_table(source_name, platform_name, target_names=No
                 # The dated page opens one default matchup. Discover every
                 # slate-specific FanDuel Single Game link/candidate first.
                 discovery_pages = [base_url]
+                discovered_pages = {}
                 for discovery_url in discovery_pages:
                     try:
                         discovery = requests.get(discovery_url, headers=headers_direct, timeout=30)
                         discovery.raise_for_status()
+                        discovered_pages[discovery_url] = discovery
                     except Exception:
                         continue
                     # DFF populates its slate menu through this AJAX request;
@@ -1198,11 +1200,22 @@ def download_public_projection_table(source_name, platform_name, target_names=No
                         if candidate not in page_urls:
                             page_urls.append(candidate)
 
-                for page_url in page_urls:
+                # Network I/O can overlap; parse and render only on the main
+                # Streamlit thread. Reuse the page already fetched for discovery.
+                def fetch_candidate_page(page_url):
+                    if page_url in discovered_pages:
+                        return discovered_pages[page_url]
                     try:
-                        page = requests.get(page_url, headers=headers_direct, timeout=30)
-                        page.raise_for_status()
+                        candidate_page = requests.get(page_url, headers=headers_direct, timeout=30)
+                        candidate_page.raise_for_status()
+                        return candidate_page
                     except Exception:
+                        return None
+
+                with ThreadPoolExecutor(max_workers=4) as page_executor:
+                    pages = list(page_executor.map(fetch_candidate_page, page_urls))
+                for page_url, page in zip(page_urls, pages):
+                    if page is None:
                         continue
                     values = parse_dff_single_game(page.text)
                     overlap = target_keys.intersection(values)
@@ -3248,7 +3261,6 @@ def _simulate_scored_player_outcomes(players_df, platform, rng):
 
     return result
 
-@st.cache_data(show_spinner=False, ttl=86400)
 @st.cache_data(show_spinner=False, ttl=86400)
 def _download_nfl_historical_player_stats():
     """Download historical NFL stats once per cache period, with a network timeout."""
@@ -6323,21 +6335,16 @@ if platform == "FanDuel":
                 if lineup_mode == "Single Game"
                 else ["QB", "RB", "RB", "WR", "WR", "WR", "TE", "FLEX", "D"]
             )
-            export_data = []
-            missing_ids = []
-            for _, lineup in fd_all_ranked.iterrows():
-                row_ids = []
-                for slot in fd_slots:
-                    name = lineup[slot]
-                    player_id = fd_ids.get(name, "")
-                    if not player_id or player_id.lower() == "nan":
-                        missing_ids.append(name)
-                    row_ids.append(player_id)
-                export_data.append(row_ids)
-            if missing_ids:
+            # Map all lineup slots in columns instead of constructing thousands
+            # of pandas Series on every widget rerun.
+            slot_names = fd_all_ranked[fd_slots]
+            mapped_ids = slot_names.apply(lambda column: column.map(fd_ids)).fillna("").astype(str)
+            invalid_ids = mapped_ids.eq("") | mapped_ids.apply(lambda column: column.str.lower().eq("nan"))
+            if invalid_ids.to_numpy().any():
                 st.warning("Some player IDs are missing, so export is unavailable.")
             else:
-                export_df = pd.DataFrame(export_data, columns=export_slots)
+                export_df = mapped_ids.copy()
+                export_df.columns = export_slots
                 selected_fd_contest = st.session_state.get("selected_fd_contest")
                 if fd_entry_file is None or not selected_fd_contest:
                     st.warning(
