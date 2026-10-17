@@ -1063,7 +1063,7 @@ def download_public_projection_table(source_name, platform_name, target_names=No
                 d = str(item.get("start_date", "")).strip()[:10]
                 if d and d not in recent_dates:
                     recent_dates.append(d)
-            # API order is newest first in current DFF responses; preserve it.
+            dff_debug = []
             for slate_date in recent_dates:
                 page = requests.get(
                     f"https://www.dailyfantasyfuel.com/nfl/projections/fanduel/{slate_date}/",
@@ -1089,8 +1089,10 @@ def download_public_projection_table(source_name, platform_name, target_names=No
                         if key and pd.notna(val) and np.isfinite(float(val)) and float(val) >= 0:
                             values[key] = float(val)
                     overlap = target_keys.intersection(values)
+                    dff_debug.append(f"{slate_date}: rows={len(values)}, overlap={len(overlap)}")
                     if len(overlap) >= min(2, len(target_keys)):
                         return values
+            st.warning("DFF FanDuel diagnostic — " + ("; ".join(dff_debug) if dff_debug else f"dates={recent_dates!r}; no projection table parsed"))
         except Exception as exc:
             # Surface the real Streamlit-runtime failure instead of silently
             # converting it into an unavailable projection source.
