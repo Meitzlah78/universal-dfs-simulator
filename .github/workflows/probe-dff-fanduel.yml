@@ -1,0 +1,43 @@
+name: Probe DFF FanDuel
+
+on:
+  push:
+    branches: [feature/salary-csv-upload]
+    paths: ['.github/workflows/probe-dff-fanduel.yml']
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests pandas lxml
+      - name: Probe exact DAL-GB DFF page
+        run: |
+          python - <<'PY'
+          import io, re, requests, pandas as pd
+          from html import unescape
+          url='https://www.dailyfantasyfuel.com/nfl/projections/fanduel/2026-10-15?slate=210BF'
+          targets={'CeeDee Lamb','Dak Prescott','Jordan Love','Christian Watson','George Pickens','Javonte Williams','Matthew Golden','MarShawn Lloyd','Tucker Kraft'}
+          r=requests.get(url,headers={'User-Agent':'Mozilla/5.0'},timeout=30)
+          print('STATUS',r.status_code,'FINAL',r.url,'BYTES',len(r.text))
+          print('TARGET TEXT', {n:(n in r.text) for n in targets})
+          tables=pd.read_html(io.StringIO(r.text))
+          print('TABLES',len(tables))
+          for i,t in enumerate(tables):
+            print('TABLE',i,'SHAPE',t.shape,'COLS',[str(x) for x in t.columns][:20])
+            s=t.to_string()
+            hits=[n for n in targets if n in s]
+            if hits:
+              print('TABLE HITS',hits)
+              print(t.head(20).to_string())
+          rows=re.findall(r'<tr\\b[^>]*class=["\'][^"\']*projections-listing[^"\']*["\'][^>]*>.*?</tr>',r.text,flags=re.I|re.S)
+          print('PROJECTION ROWS',len(rows))
+          for row in rows:
+            text=unescape(re.sub(r'<[^>]+>',' ',row))
+            text=re.sub(r'\\s+',' ',text).strip()
+            if any(n in text for n in targets): print('ROW',text[:500])
+          PY
