@@ -32,6 +32,11 @@ def simulate_stat_lines(pool, roles, rng, n, correlation_strength=1.0, progress=
         row['Team'] = team_key(row.get('Team', ''))
         row['Opponent'] = team_key(row.get('Opponent', ''))
     stats = {str(row['Name']): {key: np.zeros(n, dtype=np.float32) for key in STAT_KEYS} for row in rows}
+    # Event masks compare compact integer IDs instead of Python name objects.
+    # Keep player order and RNG calls unchanged for identical seeded outcomes.
+    player_ids = {name: i for i, name in enumerate(stats)}
+    player_names = list(stats)
+    selection_codes = {}
     by_team = {}
     for row in rows:
         team = str(row.get('Team', '')).upper().strip()
@@ -81,8 +86,11 @@ def simulate_stat_lines(pool, roles, rng, n, correlation_strength=1.0, progress=
 
     def select(names, weights, count):
         if not names or not count:
-            return np.array([], dtype=object)
-        return np.asarray(names, dtype=object)[rng.choice(len(names), count, p=weights)]
+            return np.array([], dtype=np.int32)
+        key = tuple(names)
+        if key not in selection_codes:
+            selection_codes[key] = np.asarray([player_ids[name] for name in names], dtype=np.int32)
+        return selection_codes[key][rng.choice(len(names), count, p=weights)]
 
     diagnostics = {}
     seen = set()
@@ -149,7 +157,7 @@ def simulate_stat_lines(pool, roles, rng, n, correlation_strength=1.0, progress=
                     add(p['qb'], 'two_point_conversions', success)
                 selected = select(names, weights, len(success))
                 for name in names:
-                    add(name, 'two_point_conversions', success[selected == name])
+                    add(name, 'two_point_conversions', success[selected == player_ids[name]])
 
         # Clock always decreases by >= 12 seconds, so this bound covers regulation.
         for _play in range(301):
@@ -194,7 +202,7 @@ def simulate_stat_lines(pool, roles, rng, n, correlation_strength=1.0, progress=
                 pass_rate = np.clip(p['pass_rate'] - factors['rush_share'] - .004 * margin, .35, .80)
                 passing = rng.random(len(idx)) < pass_rate
                 gain = np.zeros(len(idx))
-                carrier = np.full(len(idx), '', dtype=object)
+                carrier = np.full(len(idx), -1, dtype=np.int32)
                 interception = np.zeros(len(idx), dtype=bool)
                 sack = np.zeros(len(idx), dtype=bool)
                 caught = np.zeros(len(idx), dtype=bool)
@@ -218,7 +226,7 @@ def simulate_stat_lines(pool, roles, rng, n, correlation_strength=1.0, progress=
                     if len(selected):
                         carrier[throw] = selected
                         for name in p['receivers']:
-                            loc = np.flatnonzero(throw & (carrier == name))
+                            loc = np.flatnonzero(throw & (carrier == player_ids[name]))
                             role = roles.get(name, {}); targets = role.get('targets', 0); rec = role.get('receptions', 0)
                             qb_comp = np.clip(p['role'].get('completions', 0)/max(attempts, 1), .52, .76) if attempts else .64
                             chance = np.clip((.6*(rec/targets if targets else .64)+.4*qb_comp) * factors['completion'], .35, .88)
@@ -233,33 +241,33 @@ def simulate_stat_lines(pool, roles, rng, n, correlation_strength=1.0, progress=
                 if len(selected):
                     carrier[running] = selected
                     for name in p['runners']:
-                        loc = np.flatnonzero(running & (carrier == name))
+                        loc = np.flatnonzero(running & (carrier == player_ids[name]))
                         role = roles.get(name, {}); carries = role.get('carries', 0)
                         ypc = np.clip(role.get('rush_yards', 0)/carries, 2, 8.5) if carries else 4.35
                         gain[loc] = np.clip(rng.normal(ypc, 5.5, len(loc))*np.sqrt(environment[idx[loc]]), -5, 65)
                 gain = np.clip(gain, -field[idx], 100-field[idx])
                 for name in p['receivers']:
-                    loc = np.flatnonzero(caught & (carrier == name))
+                    loc = np.flatnonzero(caught & (carrier == player_ids[name]))
                     add(name, 'receptions', idx[loc])
                     add(name, 'receiving_yards', idx[loc], gain[loc])
                     add(p['qb'], 'passing_yards', idx[loc], gain[loc])
                 for name in p['runners']:
-                    loc = np.flatnonzero(running & (carrier == name))
+                    loc = np.flatnonzero(running & (carrier == player_ids[name]))
                     add(name, 'rushing_yards', idx[loc], gain[loc])
                 yards_total[side, idx] += gain
                 # Only the actual ball carrier can lose a fumble.
-                carrier[sack] = p['qb'] or ''
-                fumble = ~interception & ((caught | running | sack) & (carrier != '')) & (rng.random(len(idx)) < .0064)
-                for name in set(carrier[fumble]):
-                    add(name, 'fumbles_lost', idx[fumble & (carrier == name)])
+                carrier[sack] = player_ids.get(p['qb'], -1)
+                fumble = ~interception & ((caught | running | sack) & (carrier >= 0)) & (rng.random(len(idx)) < .0064)
+                for code in np.unique(carrier[fumble]):
+                    add(player_names[code], 'fumbles_lost', idx[fumble & (carrier == code)])
                 add(defense, 'fumble_recoveries', idx[fumble])
                 touchdown = (field[idx] + gain >= 100) & ~interception & ~fumble
                 td_idx = idx[touchdown]
                 for name in p['receivers']:
-                    add(name, 'receiving_tds', idx[touchdown & caught & (carrier == name)])
+                    add(name, 'receiving_tds', idx[touchdown & caught & (carrier == player_ids[name])])
                 add(p['qb'], 'passing_tds', idx[touchdown & caught])
                 for name in p['runners']:
-                    add(name, 'rushing_tds', idx[touchdown & running & (carrier == name)])
+                    add(name, 'rushing_tds', idx[touchdown & running & (carrier == player_ids[name])])
                 counters['offensive_tds'][side, td_idx] += 1
                 points[side, td_idx] += 6
                 chargeable[side, td_idx] += 6
