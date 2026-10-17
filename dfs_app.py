@@ -254,55 +254,66 @@ def remove_duplicate_entries(frame, entry_id_col=None):
     return frame.drop_duplicates(keep="first")
 
 
-def full_roster_stack_matches(chosen, pool, selected_stacks, stack_lookup=None):
-    """Return True when a full-roster lineup matches at least one selected QB stack rule."""
-    selected_stacks = list(selected_stacks or [])
-    if not selected_stacks or "No stack rule" in selected_stacks:
-        return True
-    if not isinstance(pool, pd.DataFrame) or pool.empty or not isinstance(chosen, dict):
-        return False
+FULL_ROSTER_STACK_OPTIONS = [
+    "Single stack: QB + 1 WR/TE",
+    "Double stack: QB + 2 WR/TE",
+    "Single stack + bring-back",
+    "Double stack + bring-back",
+]
+SECONDARY_STACK_OPTIONS = ["RB + same-team defense", "Secondary game mini-stack"]
 
-    lookup = stack_lookup
-    if lookup is None:
-        lookup = pool.drop_duplicates("Name", keep="first").set_index("Name")
-    qb_name = str(chosen.get("QB", "")).strip()
-    if not qb_name or qb_name not in lookup.index:
+
+def full_roster_stack_lookup(pool):
+    """Build once per candidate run, rather than indexing pandas for every roster."""
+    return pool.drop_duplicates("Name", keep="first").set_index("Name").to_dict("index")
+
+
+def full_roster_stack_matches(chosen, pool, selected_stacks, stack_lookup=None, secondary_stacks=None):
+    """Match any selected primary structure and every selected secondary rule."""
+    if not isinstance(chosen, dict):
         return False
-    qb_row = lookup.loc[qb_name]
-    qb_team = str(qb_row.get("Team", "")).strip().upper()
-    qb_opp = str(qb_row.get("Opponent", "")).strip().upper()
+    lookup = stack_lookup if stack_lookup is not None else full_roster_stack_lookup(pool)
+    if isinstance(lookup, pd.DataFrame):
+        lookup = lookup.to_dict("index")
+    qb_name = str(chosen.get("QB", "")).strip()
+    qb = lookup.get(qb_name, {})
+    qb_team = str(qb.get("Team", "")).strip().upper()
+    qb_opp = str(qb.get("Opponent", "")).strip().upper()
     if not qb_team:
         return False
-
-    same_team = 0
-    bring_back = 0
-    for slot, player in chosen.items():
+    players = []
+    for slot, name in chosen.items():
         if slot == "QB":
             continue
-        name = str(player).strip()
-        if not name or name not in lookup.index:
-            continue
-        row = lookup.loc[name]
-        pos = str(row.get("Position", "")).upper().replace(" ", "")
-        primary = pos.split("/")[0]
-        # Count offensive skill players only. DST/D do not satisfy stacks.
-        if primary not in {"RB", "WR", "TE"}:
-            continue
+        row = lookup.get(str(name).strip(), {})
+        pos = str(row.get("Position", "")).upper().replace(" ", "").split("/")[0]
         team = str(row.get("Team", "")).strip().upper()
-        if team == qb_team:
-            same_team += 1
-        if qb_opp and team == qb_opp:
-            bring_back += 1
-
+        opp = str(row.get("Opponent", "")).strip().upper()
+        players.append((pos, team, opp))
+    pass_catchers = sum(pos in {"WR", "TE"} and team == qb_team for pos, team, _ in players)
+    bring_back = any(pos in {"RB", "WR", "TE"} and team == qb_opp for pos, team, _ in players) if qb_opp else False
     rules = {
-        "QB + 1 teammate": same_team >= 1,
-        "QB + 2 teammates": same_team >= 2,
-        "QB + 3 teammates": same_team >= 3,
-        "QB + 1 teammate + bring-back": same_team >= 1 and bring_back >= 1,
-        "QB + 2 teammates + bring-back": same_team >= 2 and bring_back >= 1,
-        "QB + 3 teammates + bring-back": same_team >= 3 and bring_back >= 1,
+        FULL_ROSTER_STACK_OPTIONS[0]: pass_catchers == 1,
+        FULL_ROSTER_STACK_OPTIONS[1]: pass_catchers == 2,
+        FULL_ROSTER_STACK_OPTIONS[2]: pass_catchers == 1 and bring_back,
+        FULL_ROSTER_STACK_OPTIONS[3]: pass_catchers == 2 and bring_back,
     }
-    return any(bool(rules.get(rule, False)) for rule in selected_stacks)
+    if selected_stacks and not any(rules.get(rule, False) for rule in selected_stacks):
+        return False
+    secondary = set(secondary_stacks or [])
+    if SECONDARY_STACK_OPTIONS[0] in secondary:
+        defense_teams = {team for pos, team, _ in players if pos in {"D", "DST", "DEF"} and team}
+        if not any(pos == "RB" and team in defense_teams for pos, team, _ in players):
+            return False
+    if SECONDARY_STACK_OPTIONS[1] in secondary:
+        # Two opposing skill players from a game outside the primary QB game.
+        skills = [(team, opp) for pos, team, opp in players
+                  if pos in {"RB", "WR", "TE"} and team and opp and team not in {qb_team, qb_opp}]
+        if not any(team_a == opp_b and team_b == opp_a
+                   for i, (team_a, opp_a) in enumerate(skills)
+                   for team_b, opp_b in skills[i + 1:]):
+            return False
+    return True
 
 
 def opponent_field_selection_weights(pool, fallback_scores):
@@ -4946,18 +4957,17 @@ if platform == "FanDuel":
     if lineup_mode == "Full Roster":
         fd_stack_rules = st.multiselect(
             "Stacks to use in MY lineups",
-            [
-                "No stack rule",
-                "QB + 1 teammate",
-                "QB + 2 teammates",
-                "QB + 3 teammates",
-                "QB + 1 teammate + bring-back",
-                "QB + 2 teammates + bring-back",
-                "QB + 3 teammates + bring-back",
-            ],
-            default=["No stack rule"],
-            key="fd_full_roster_stack_rules",
-            help="Choose stack rules before BUILD. These affect only your lineups, not the opponent field.",
+            FULL_ROSTER_STACK_OPTIONS,
+            default=FULL_ROSTER_STACK_OPTIONS,
+            key="fd_full_roster_stack_rules_v2",
+            help="Accept any selected structure. Single = exactly one WR/TE with your QB; double = exactly two. Bring-back = opposing RB/WR/TE. Clear selections for no primary requirement.",
+        )
+        fd_secondary_stack_rules = st.multiselect(
+            "Optional secondary stacks",
+            SECONDARY_STACK_OPTIONS,
+            default=[],
+            key="fd_full_roster_stack_rules_secondary_v2",
+            help="Each selected secondary rule is required in addition to a selected QB stack. Mini-stacks use another game.",
         )
         st.caption("Choose your FanDuel Full Roster stack rules before pressing BUILD.")
 
@@ -5074,6 +5084,7 @@ if platform == "FanDuel":
     # Preserve the Full Roster stack selection made above. Single Game has no stack rules.
     if lineup_mode != "Full Roster":
         fd_stack_rules = []
+        fd_secondary_stack_rules = []
     if fd_build_clicked:
         # A new run must replace this mode's previous build, not leave stale
         # lineups visible if the current build cannot produce valid results.
@@ -5094,7 +5105,7 @@ if platform == "FanDuel":
         fd_build_teams = pool.get("Team", pd.Series("", index=pool.index)).fillna("").astype(str).str.strip().str.upper().to_numpy(dtype=object)
         fd_build_opponents = pool.get("Opponent", pd.Series("", index=pool.index)).fillna("").astype(str).str.strip().str.upper().to_numpy(dtype=object)
         fd_build_positions = pool.get("Position", pd.Series("", index=pool.index)).fillna("").astype(str).str.upper().str.replace(" ", "", regex=False).str.split("/").str[0].to_numpy(dtype=object)
-        fd_stack_lookup = pool.drop_duplicates("Name", keep="first").set_index("Name") if lineup_mode == "Full Roster" else None
+        fd_stack_lookup = full_roster_stack_lookup(pool) if lineup_mode == "Full Roster" else None
         projections = pd.to_numeric(pool["Projection"], errors="coerce").fillna(0.01).clip(lower=0.01).to_numpy(dtype=float)
         sim_means = np.asarray([float(player_sim.get(name, {}).get("Mean", projections[i])) for i, name in enumerate(names)], dtype=float)
         lineup_scores = np.asarray([
@@ -5112,7 +5123,7 @@ if platform == "FanDuel":
         seen = set()
         player_build_counts = {str(name): 0 for name in names}
         target_lineups = 5000 if lineup_mode == "Full Roster" else 2000
-        max_attempts = 30000 if (lineup_mode == "Full Roster" and ((not fd_stack_rules) or ("No stack rule" in fd_stack_rules))) else (100000 if lineup_mode == "Full Roster" else 500000)
+        max_attempts = 30000 if (lineup_mode == "Full Roster" and (not fd_stack_rules and not fd_secondary_stack_rules)) else (100000 if lineup_mode == "Full Roster" else 500000)
         salary_min, salary_max = int(fd_salary_range[0]), min(int(fd_salary_range[1]), 60000)
         fd_build_progress = st.progress(
             0,
@@ -5146,6 +5157,7 @@ if platform == "FanDuel":
             }
 
         for build_attempt in range(max_attempts):
+            fd_attempt_stack = fd_stack_rules[int(rng.integers(len(fd_stack_rules)))] if fd_stack_rules else None
             if build_attempt % 250 == 0 and len(results) == 0:
                 fd_build_progress.progress(
                     min(0.99, build_attempt / max_attempts),
@@ -5245,14 +5257,14 @@ if platform == "FanDuel":
                         weights *= salary_bias
                     # Build the requested QB stack during generation instead of
                     # relying only on post-build rejection.
-                    if lineup_mode == "Full Roster" and slot != "QB" and "QB" in chosen and fd_stack_rules and "No stack rule" not in fd_stack_rules:
+                    if lineup_mode == "Full Roster" and slot != "QB" and "QB" in chosen and fd_stack_rules:
                         qb_name = str(chosen.get("QB", ""))
                         qb_i = fd_build_name_to_index.get(qb_name)
                         if qb_i is not None:
                             qb_team = str(fd_build_teams[qb_i])
                             qb_opp = str(fd_build_opponents[qb_i])
-                            need_same = max([3 if "QB + 3 teammate" in r else 2 if "QB + 2 teammate" in r else 1 for r in fd_stack_rules] or [1])
-                            need_bring = any("bring-back" in r for r in fd_stack_rules)
+                            need_same = 2 if fd_attempt_stack and fd_attempt_stack.startswith("Double") else 1
+                            need_bring = bool(fd_attempt_stack and "bring-back" in fd_attempt_stack)
                             same_now = 0
                             bring_now = 0
                             for picked_name in chosen.values():
@@ -5265,12 +5277,12 @@ if platform == "FanDuel":
                                 if pos not in {"RB", "WR", "TE"}:
                                     continue
                                 team = str(fd_build_teams[picked_i])
-                                same_now += int(team == qb_team)
+                                same_now += int(team == qb_team and pos in {"WR", "TE"})
                                 bring_now += int(bool(qb_opp) and team == qb_opp)
                             skill_slots_left = sum(1 for s, e in roster[roster.index((slot, _)):] if e & {"RB", "WR", "TE"})
                             forced = []
                             if same_now < need_same and skill_slots_left <= (need_same - same_now) + (1 if need_bring and bring_now < 1 else 0):
-                                forced = choices[fd_build_teams[choices] == qb_team]
+                                forced = choices[(fd_build_teams[choices] == qb_team) & np.isin(fd_build_positions[choices], ["WR", "TE"])]
                             elif need_bring and bring_now < 1 and skill_slots_left <= 1:
                                 forced = choices[fd_build_teams[choices] == qb_opp]
                             if len(forced):
@@ -5299,7 +5311,7 @@ if platform == "FanDuel":
                     total_score += lineup_scores[picked]
             if len(chosen) != len(slots) or salary < salary_min or salary > salary_max:
                 continue
-            if lineup_mode == "Full Roster" and not full_roster_stack_matches(chosen, pool, fd_stack_rules):
+            if lineup_mode == "Full Roster" and not full_roster_stack_matches(chosen, pool, fd_stack_rules, fd_stack_lookup, fd_secondary_stack_rules):
                 continue
             lineup_key = tuple(chosen[slot] for slot in slots)
             if lineup_key in seen:
@@ -7708,18 +7720,17 @@ else:
 
         dk_classic_stack_rules = st.multiselect(
             "Stacks to use in MY lineups",
-            [
-                "No stack rule",
-                "QB + 1 teammate",
-                "QB + 2 teammates",
-                "QB + 3 teammates",
-                "QB + 1 teammate + bring-back",
-                "QB + 2 teammates + bring-back",
-                "QB + 3 teammates + bring-back",
-            ],
-            default=["No stack rule"],
-            key="dk_classic_stack_rules",
-            help="Choose stack rules before BUILD. These affect only your lineups, not the opponent field.",
+            FULL_ROSTER_STACK_OPTIONS,
+            default=FULL_ROSTER_STACK_OPTIONS,
+            key="dk_classic_stack_rules_v2",
+            help="Accept any selected structure. Single = exactly one WR/TE with your QB; double = exactly two. Bring-back = opposing RB/WR/TE. Clear selections for no primary requirement.",
+        )
+        dk_secondary_stack_rules = st.multiselect(
+            "Optional secondary stacks",
+            SECONDARY_STACK_OPTIONS,
+            default=[],
+            key="dk_classic_stack_rules_secondary_v2",
+            help="Each selected secondary rule is required in addition to a selected QB stack. Mini-stacks use another game.",
         )
         st.caption("Choose your DraftKings Classic stack rules before pressing BUILD.")
 
@@ -7864,7 +7875,8 @@ else:
             # NumPy batch builder: construct thousands of rosters at once instead of
             # walking every roster slot in Python for every attempted lineup.
             target_lineups = 5000
-            no_stack_rules = (not dk_classic_stack_rules) or ("No stack rule" in dk_classic_stack_rules)
+            classic_stack_lookup = full_roster_stack_lookup(classic_pool)
+            no_stack_rules = not dk_classic_stack_rules and not dk_secondary_stack_rules
             batch_size = max(20000, target_lineups * 8)
             max_batches = 12 if no_stack_rules else 30
             build_progress = st.progress(0, text=f"Building DraftKings Classic lineups: 0 / {target_lineups:,}")
@@ -7897,7 +7909,7 @@ else:
                     vs = vs[unique_pos]
                     for row_i, salary in zip(vp, vs):
                         chosen = {slot_names[j]: str(classic_names[int(row_i[j])]) for j in range(len(slot_names))}
-                        if not no_stack_rules and not full_roster_stack_matches(chosen, classic_pool, dk_classic_stack_rules):
+                        if not no_stack_rules and not full_roster_stack_matches(chosen, classic_pool, dk_classic_stack_rules, classic_stack_lookup, dk_secondary_stack_rules):
                             continue
                         key = tuple(int(x) for x in row_i)
                         if key in seen:
