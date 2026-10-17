@@ -1,0 +1,31 @@
+name: Probe DFF slate 21128
+on:
+  workflow_dispatch:
+  push:
+    branches: [feature/salary-csv-upload]
+    paths: ['.github/workflows/probe-dff-slate-21128.yml']
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Probe exact DFF FanDuel slate response
+        run: |
+          python - <<'PY'
+          import requests,re
+          url='https://www.dailyfantasyfuel.com/nfl?platform=fd&slate=21128'
+          r=requests.get(url,headers={'User-Agent':'Mozilla/5.0'},timeout=30)
+          print('STATUS',r.status_code,'URL',r.url,'TYPE',r.headers.get('content-type'),'LEN',len(r.text))
+          text=r.text
+          for needle in ['Brandon Aubrey','Trey Smack','Jordan Love','21128','projection','fpts','players','slate']:
+              print('\nNEEDLE',needle,'COUNT',text.lower().count(needle.lower()))
+              m=re.search(re.escape(needle),text,re.I)
+              if m:
+                  print(text[max(0,m.start()-1000):m.end()+2000].replace('\n',' ')[:3500])
+          print('\nSCRIPT SRCS')
+          for src in re.findall(r'<script[^>]+src=["\']([^"\']+)',text,re.I):
+              print(src)
+          PY
