@@ -1628,6 +1628,60 @@ def download_public_projection_table(source_name, platform_name, target_names=No
             except Exception:
                 pass
 
+    # Final FanDuel single-game fallback: DFF's recent-slates API currently
+    # returns dates but an empty slates array. The plain dated FanDuel page
+    # still contains the full projection table, so parse each recent date
+    # directly and select the one overlapping the uploaded salary names.
+    if source_name == "DFF" and site == "fanduel" and is_single_game and target_keys:
+        try:
+            slate_response = requests.get(
+                "https://www.dailyfantasyfuel.com/data/slates/recent/nfl/fanduel",
+                headers=headers, timeout=30
+            )
+            slate_response.raise_for_status()
+            payload = slate_response.json()
+            recent_dates = []
+            for item in payload.get("dates", []):
+                slate_date = str(item.get("start_date", "")).strip()[:10]
+                if slate_date and slate_date not in recent_dates:
+                    recent_dates.append(slate_date)
+            for slate_date in reversed(recent_dates):
+                dated_url = f"https://www.dailyfantasyfuel.com/nfl/projections/fanduel/{slate_date}/"
+                try:
+                    dated_response = requests.get(dated_url, headers=headers, timeout=30)
+                    dated_response.raise_for_status()
+                    dated_tables = pd.read_html(io.StringIO(dated_response.text))
+                except Exception:
+                    continue
+                for dated_table in dated_tables:
+                    if not isinstance(dated_table.columns, pd.MultiIndex):
+                        continue
+                    name_col = None
+                    projection_col = None
+                    for col in dated_table.columns:
+                        levels = [
+                            re.sub(r"[^a-z0-9]+", " ", str(part).casefold()).strip()
+                            for part in col
+                            if not str(part).casefold().startswith("unnamed:")
+                        ]
+                        if "name" in levels:
+                            name_col = col
+                        if any(level == "fd fp projected" for level in levels):
+                            projection_col = col
+                    if name_col is None or projection_col is None:
+                        continue
+                    dated_result = {}
+                    for name, projection in zip(dated_table[name_col], dated_table[projection_col]):
+                        key = normalize_projection_player_name(name)
+                        value = pd.to_numeric(projection, errors="coerce")
+                        if key and pd.notna(value) and np.isfinite(float(value)) and float(value) >= 0:
+                            dated_result[key] = float(value)
+                    overlap = target_keys.intersection(dated_result)
+                    if dated_result and len(overlap) >= min(2, len(target_keys)):
+                        return dated_result
+        except Exception:
+            pass
+
     return {}
 
 def refresh_public_projection_sources(platform_names=None):
