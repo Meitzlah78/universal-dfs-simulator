@@ -1157,6 +1157,8 @@ def download_public_projection_table(source_name, platform_name, target_names=No
                 season_start = datetime(season, 9, 13, tzinfo=ZoneInfo("America/New_York"))
                 projection_week = max(1, min(18, ((now_et.date() - season_start.date()).days // 7) + 1))
 
+            fp_diag = []
+            fp_matched_names = []
             for position in ("QB", "RB", "WR", "TE", "K", "DST"):
                 params = {"position": position, "week": projection_week, "scoring": scoring}
                 response = requests.get(
@@ -1168,6 +1170,10 @@ def download_public_projection_table(source_name, platform_name, target_names=No
                 response.raise_for_status()
                 payload = response.json()
                 players = payload.get("players", []) if isinstance(payload, dict) else []
+                raw_count = len(players) if isinstance(players, list) else 0
+                target_name_count = 0
+                parsed_target_count = 0
+                sample_stats_keys = []
                 for player in players:
                     if not isinstance(player, dict):
                         continue
@@ -1175,13 +1181,14 @@ def download_public_projection_table(source_name, platform_name, target_names=No
                     key = normalize_projection_player_name(name)
                     if not key or (target_keys and key not in target_keys):
                         continue
+                    target_name_count += 1
                     stats = player.get("stats") or {}
-                    # FantasyPros currently returns stats as a one-item list for
-                    # NFL projections. Older responses used a dict, so support both.
                     if isinstance(stats, list):
                         stats = next((item for item in stats if isinstance(item, dict)), {})
                     if not isinstance(stats, dict):
                         stats = {}
+                    if not sample_stats_keys:
+                        sample_stats_keys = list(stats.keys())[:12]
                     candidates = (
                         ("points_half", "fpts_half", "fantasy_points_half", "fpts")
                         if is_fd else
@@ -1198,6 +1205,18 @@ def download_public_projection_table(source_name, platform_name, target_names=No
                         continue
                     if np.isfinite(value) and value >= 0:
                         result[key] = value
+                        parsed_target_count += 1
+                        fp_matched_names.append(str(name))
+                fp_diag.append(
+                    f"{position}: raw {raw_count}, slate names {target_name_count}, parsed {parsed_target_count}"
+                    + (f", stats keys {sample_stats_keys}" if target_name_count and parsed_target_count == 0 else "")
+                )
+            st.caption(
+                f"FantasyPros diagnostic — week {projection_week}; "
+                + " | ".join(fp_diag)
+                + "; matched: "
+                + (", ".join(fp_matched_names) if fp_matched_names else "none")
+            )
             return result
         except Exception as exc:
             st.warning(f"FantasyPros API unavailable: {type(exc).__name__}: {exc}")
