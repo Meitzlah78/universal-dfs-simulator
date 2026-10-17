@@ -1165,6 +1165,21 @@ def download_public_projection_table(source_name, platform_name, target_names=No
                 d = str(item.get("start_date", "")).strip()[:10]
                 if d and d not in recent_dates:
                     recent_dates.append(d)
+            def parse_dff_single_game(html):
+                # Source attributes avoid mobile/desktop columns and injury text.
+                values = {}
+                for tag in re.findall(r"<tr\b[^>]*projections-listing[^>]*>", html, flags=re.IGNORECASE):
+                    attrs = dict(re.findall(r"([\w-]+)=[\"']([^\"']*)[\"']", tag))
+                    key = normalize_projection_player_name(unescape(attrs.get("data-name", "")))
+                    value = pd.to_numeric(attrs.get("data-ppg_proj"), errors="coerce")
+                    if key and pd.notna(value) and np.isfinite(float(value)) and float(value) >= 0:
+                        values[key] = float(value)
+                return values
+
+            from datetime import datetime
+            today_et = datetime.now(ZoneInfo("America/New_York")).date().isoformat()
+            upcoming_dates = [date for date in recent_dates if date >= today_et]
+            recent_dates = sorted(upcoming_dates or recent_dates, reverse=True)
             dff_debug = []
             best_values = {}
             best_overlap = 0
@@ -1176,17 +1191,32 @@ def download_public_projection_table(source_name, platform_name, target_names=No
 
                 # The dated page opens one default matchup. Discover every
                 # slate-specific FanDuel Single Game link/candidate first.
-                discovery_pages = [
-                    base_url,
-                    "https://www.dailyfantasyfuel.com/nfl/showdown-single-game-projections/fanduel/",
-                    f"https://www.dailyfantasyfuel.com/nfl/projections/fanduel/{slate_date}/",
-                ]
+                discovery_pages = [base_url]
                 for discovery_url in discovery_pages:
                     try:
                         discovery = requests.get(discovery_url, headers=headers_direct, timeout=30)
                         discovery.raise_for_status()
                     except Exception:
                         continue
+                    # DFF populates its slate menu through this AJAX request;
+                    # the bare recent endpoint returns dates but no slate codes.
+                    code_match = re.search(r"window\.url\s*=\s*['\"]([A-Za-z0-9]+)['\"]", discovery.text)
+                    if code_match:
+                        try:
+                            slate_menu = requests.get(
+                                "https://www.dailyfantasyfuel.com/data/slates/recent/nfl/fanduel",
+                                params={"date": slate_date, "url": code_match.group(1)},
+                                headers=headers_direct, timeout=30,
+                            )
+                            slate_menu.raise_for_status()
+                            for menu_slate in slate_menu.json().get("slates", []):
+                                code = str(menu_slate.get("url", ""))
+                                if menu_slate.get("showdown_flag") and re.fullmatch(r"[A-Za-z0-9]+", code):
+                                    candidate = base_url.rstrip("/") + "?slate=" + code
+                                    if candidate not in page_urls:
+                                        page_urls.append(candidate)
+                        except Exception:
+                            pass
                     for href in re.findall(r'href=["\']([^"\']+)["\']', discovery.text, flags=re.IGNORECASE):
                         href_text = unescape(href).strip()
                         low = href_text.casefold()
@@ -1203,29 +1233,15 @@ def download_public_projection_table(source_name, platform_name, target_names=No
                     try:
                         page = requests.get(page_url, headers=headers_direct, timeout=30)
                         page.raise_for_status()
-                        page_tables = pd.read_html(io.StringIO(page.text))
                     except Exception:
                         continue
-                    for table in page_tables:
-                        if not isinstance(table.columns, pd.MultiIndex):
-                            continue
-                        if table.shape[1] <= 7:
-                            continue
-                        name_col = table.columns[2]
-                        proj_col = table.columns[7]
-                        values = {}
-                        for name, projection in zip(table.iloc[:, 2], table.iloc[:, 7]):
-                            key = normalize_projection_player_name(name)
-                            val = pd.to_numeric(projection, errors="coerce")
-                            if key and pd.notna(val) and np.isfinite(float(val)) and float(val) >= 0:
-                                values[key] = float(val)
-                        overlap = target_keys.intersection(values)
-                        _sample_keys = list(values.keys())[:5]
-                        dff_debug.append(f"{slate_date}: url={page_url}, rows={len(values)}, overlap={len(overlap)}, name_col={name_col!r}, proj_col={proj_col!r}, sample={_sample_keys!r}")
-                        if len(overlap) > best_overlap:
-                            best_values = values
-                            best_overlap = len(overlap)
-                            best_date = slate_date
+                    values = parse_dff_single_game(page.text)
+                    overlap = target_keys.intersection(values)
+                    dff_debug.append(f"{slate_date}: url={page_url}, rows={len(values)}, overlap={len(overlap)}")
+                    if len(overlap) > best_overlap:
+                        best_values = values
+                        best_overlap = len(overlap)
+                        best_date = slate_date
             if best_overlap >= min(2, len(target_keys)):
                 return best_values
 
@@ -2014,11 +2030,19 @@ def apply_external_projection_sources(players_frame, dff_file, draftedge_file, p
     projections, sources = [], []
     averaged = missing_external = 0
 
+    defense_names = dict(zip(
+        "ARI ATL BAL BUF CAR CHI CIN CLE DAL DEN DET GB HOU IND JAX KC LV LAC LAR MIA MIN NE NO NYG NYJ PHI PIT SF SEA TB TEN WAS".split(),
+        "Cardinals Falcons Ravens Bills Panthers Bears Bengals Browns Cowboys Broncos Lions Packers Texans Colts Jaguars Chiefs Raiders Chargers Rams Dolphins Vikings Patriots Saints Giants Jets Eagles Steelers 49ers Seahawks Buccaneers Titans Commanders".split(),
+    ))
+
     for _, row in result.iterrows():
         key = normalize_projection_player_name(row.get("Name", ""))
         available = []
         for source_name, values in source_maps:
             value = values.get(key)
+            if value is None and str(row.get("Position", "")).upper() in ("D", "DST", "DEF"):
+                nickname = defense_names.get(str(row.get("Team", "")).upper(), "")
+                value = values.get(normalize_projection_player_name(nickname))
             try:
                 value = float(value)
             except (TypeError, ValueError):
