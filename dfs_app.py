@@ -2138,8 +2138,25 @@ def build_opponent_map(source_df, team_values):
     return opponents
 
 
+
+def full_roster_contest_parameters(contest, representative_count):
+    """Resolve explicit contest metadata; keep the existing Hail Mary preset."""
+    contest = contest or {}
+    owned = max(1, int(contest.get("your_entries") or 1))
+    tiers = contest.get("payouts") or contest.get("payout_tiers")
+    field_size = int(contest.get("field_size") or 0)
+    preset = "45K Sun NFL Hail Mary" in str(contest.get("name", ""))
+    if preset:
+        tiers = tiers or [(1, 1, 2000.0), (2, 2, 1000.0), (3, 3, 750.0), (4, 4, 500.0), (5, 5, 300.0), (6, 6, 200.0), (7, 7, 150.0), (8, 8, 125.0), (9, 10, 100.0), (11, 12, 75.0), (13, 15, 50.0), (16, 20, 30.0), (21, 25, 20.0), (26, 30, 15.0), (31, 40, 10.0), (41, 50, 7.5), (51, 75, 5.0), (76, 100, 4.0), (101, 150, 3.0), (151, 300, 2.0), (301, 600, 1.5), (601, 1000, 1.25), (1001, 3000, 1.0), (3001, 7500, 0.8), (7501, 15000, 0.7), (15001, 30000, 0.6), (30001, 65000, 0.5)]
+        field_size = max(215568, field_size)
+    known_field = field_size > owned
+    field_size = max(field_size, int(representative_count) + owned) if not known_field else field_size
+    return {"field_size": field_size, "owned": owned, "tiers": tiers or [],
+        "fee": float(contest.get("entry_fee") or 0),
+        "payouts_known": bool(tiers) and known_field and contest.get("entry_fee") is not None}
+
 @st.cache_data(show_spinner=False, max_entries=8)
-def evaluate_classic_portfolio_cached(outcomes, portfolio, field, slots, field_size, tiers, fee):
+def evaluate_full_roster_portfolio_cached(outcomes, portfolio, field, slots, field_size, tiers, fee):
     from simmah_contests import evaluate_contest
     return evaluate_contest(outcomes, portfolio, field, slots, field_size, tiers, fee, joint=True)
 
@@ -5039,6 +5056,9 @@ if platform == "FanDuel":
                         # whole DataFrame nine times for every attempted lineup.
                         if "fd_full_field_cache" not in locals():
                             fd_field_names = fd_pool["Name"].astype(str).to_numpy()
+                            fd_field_name_index = {str(name): i for i, name in enumerate(fd_field_names)}
+                            fd_field_teams = fd_pool["Team"].astype(str).to_numpy()
+                            fd_field_position_labels = fd_pool["Position"].astype(str).to_numpy()
                             fd_field_salaries = pd.to_numeric(fd_pool["Salary"], errors="coerce").fillna(0).to_numpy(dtype=int)
                             fd_field_projections = pd.to_numeric(fd_pool["MeanPoints"], errors="coerce").fillna(fd_pool["Projection"]).fillna(0.01).clip(lower=0.01).to_numpy(dtype=float)
                             fd_field_positions = fd_pool["Eligible"].tolist()
@@ -5110,6 +5130,11 @@ if platform == "FanDuel":
                     _fd_opponent_salary_max = 60000 if lineup_mode == "Full Roster" else min(fd_salary_range[1], 60000)
                     if salary < _fd_opponent_salary_min or salary > _fd_opponent_salary_max:
                         continue
+                    if lineup_mode == "Full Roster":
+                        from simmah_classic_field import classic_tournament_mask
+                        _fd_proposal = np.asarray([[fd_field_name_index[chosen[slot]] for slot in fd_slots]])
+                        if not classic_tournament_mask(_fd_proposal, fd_field_teams, fd_field_position_labels, max_from_team=4)[0]:
+                            continue
                     # Calibrate FanDuel NFL Full Roster salary usage to observed large-field
                     # contest behavior. In a 568k-entry historical contest the average salary
                     # was about $59,781, 41% used the full $60k, 91% used >=$59.5k, and 97%
@@ -5230,509 +5255,32 @@ if platform == "FanDuel":
                 else:
                     scores = opponent_df["ProjectedPoints"].to_numpy(dtype=float)
                     compared = add_lineup_field_ownership(user_lineups.copy())
-                    if lineup_mode == "Full Roster" and len(compared) > 0:
-                        _fd_score_values = pd.to_numeric(compared["ProjectedPoints"], errors="coerce").fillna(0.0).to_numpy(dtype=float)
-                        _fd_batch_count = min(4, len(_fd_score_values))
-                        _fd_batches = [batch for batch in np.array_split(np.arange(len(_fd_score_values)), _fd_batch_count) if len(batch)]
-
-                        def _fd_score_batch(indices):
-                            batch_scores = _fd_score_values[indices]
-                            beats = np.asarray([int(np.sum(scores < score)) for score in batch_scores], dtype=int)
-                            percentiles = np.asarray([round(100.0 * np.mean(scores <= score), 1) for score in batch_scores], dtype=float)
-                            ranks = np.asarray([1 + int(np.sum(scores > score)) for score in batch_scores], dtype=int)
-                            return indices, beats, percentiles, ranks
-
-                        _fd_beats = np.zeros(len(_fd_score_values), dtype=int)
-                        _fd_percentiles = np.zeros(len(_fd_score_values), dtype=float)
-                        _fd_ranks = np.ones(len(_fd_score_values), dtype=int)
-                        with ThreadPoolExecutor(max_workers=4) as _fd_executor:
-                            _fd_futures = [_fd_executor.submit(_fd_score_batch, batch) for batch in _fd_batches]
-                            for _fd_future in as_completed(_fd_futures):
-                                _fd_indices, _fd_b, _fd_p, _fd_r = _fd_future.result()
-                                _fd_beats[_fd_indices] = _fd_b
-                                _fd_percentiles[_fd_indices] = _fd_p
-                                _fd_ranks[_fd_indices] = _fd_r
-                        compared["BeatsOpponents"] = _fd_beats
-                        compared["FieldPercentile"] = _fd_percentiles
-                        compared["FieldRank"] = _fd_ranks
+                    if lineup_mode == "Full Roster":
+                        from simmah_contests import evaluate_contest
+                        _fd_final_field = opponent_df
+                        _fd_spec = full_roster_contest_parameters(st.session_state.get("selected_fd_contest"), len(_fd_final_field))
+                        _fd_roi_sim = st.session_state.get("fd_simulation_df_full_roster")
+                        if not isinstance(_fd_roi_sim, pd.DataFrame) or len(_fd_roi_sim) != SIMULATION_COUNT:
+                            raise ValueError("Run a fresh SIM before evaluating FanDuel Full Roster")
+                        compared = evaluate_contest(_fd_roi_sim, compared, _fd_final_field, fd_slots,
+                            _fd_spec["field_size"], _fd_spec["tiers"], _fd_spec["fee"],
+                            progress=lambda fraction,text: fd_step4_progress.progress(fraction,text=text))
+                        if not _fd_spec["payouts_known"]:
+                            compared = compared.drop(columns=["CashRate", "Expected Prize ($)", "Expected Net ($)", "Expected ROI (%)", "Entry Fee ($)"], errors="ignore")
+                            compared["ContestScore"] = compared["Top1"]
+                            st.info("Payouts or contest size are unavailable: finish rates use an estimated field; cash and ROI remain pending.")
+                        st.session_state["fd_full_roster_evaluation_context"] = dict(st.session_state.get("selected_fd_contest") or {})
+                        st.caption(f"All {len(_fd_roi_sim):,} independent evaluation outcomes scored against the same {len(_fd_final_field):,} opponents. Ties share occupied prizes; no extra ROI field is built.")
                     else:
                         compared["BeatsOpponents"] = compared["ProjectedPoints"].apply(lambda score: int(np.sum(scores < float(score))))
                         compared["FieldPercentile"] = compared["ProjectedPoints"].apply(lambda score: round(100.0 * np.mean(scores <= float(score)), 1))
                         compared["FieldRank"] = compared["ProjectedPoints"].apply(lambda score: 1 + int(np.sum(scores > float(score))))
-                    compared = add_field_ranking_metrics(compared, scores)
-
-                    # FANDUEL CONTEST ROI: use the same portfolio idea as DraftKings.
-                    # Select the user's actual entry count first, then score those entries
-                    # TOGETHER against the same opponent field in every PBP scenario.
-                    # User entries therefore compete with each other, and duplicate/equal
-                    # scores share the occupied prizes instead of each entry being treated
-                    # as if it were the only user lineup in the contest.
-                    _fd_roi_contest = st.session_state.get("selected_fd_contest") or {}
-                    _fd_roi_name = str(_fd_roi_contest.get("name", ""))
-                    _fd_roi_fee = _fd_roi_contest.get("entry_fee")
-                    _fd_roi_sim = st.session_state.get("fd_simulation_df_" + lineup_mode.replace(" ", "_").lower())
-                    if (
-                        lineup_mode == "Full Roster"
-                        and "45K Sun NFL Hail Mary" in _fd_roi_name
-                        and _fd_roi_fee is not None
-                        and isinstance(_fd_roi_sim, pd.DataFrame)
-                        and not _fd_roi_sim.empty
-                        and len(opponent_df) > 0
-                        and len(compared) > 0
-                    ):
-                        _fd_payout_tiers_roi = [
-                            (1, 1, 2000.0), (2, 2, 1000.0), (3, 3, 750.0),
-                            (4, 4, 500.0), (5, 5, 300.0), (6, 6, 200.0),
-                            (7, 7, 150.0), (8, 8, 125.0), (9, 10, 100.0),
-                            (11, 12, 75.0), (13, 15, 50.0), (16, 20, 30.0),
-                            (21, 25, 20.0), (26, 30, 15.0), (31, 40, 10.0),
-                            (41, 50, 7.50), (51, 75, 5.0), (76, 100, 4.0),
-                            (101, 150, 3.0), (151, 300, 2.0), (301, 600, 1.50),
-                            (601, 1000, 1.25), (1001, 3000, 1.0),
-                            (3001, 7500, 0.80), (7501, 15000, 0.70),
-                            (15001, 30000, 0.60), (30001, 65000, 0.50),
-                        ]
-                        # field_size is the contest capacity returned by FanDuel. Never
-                        # substitute the last paid place (65,000) for total field size.
-                        # FanDuel's Hail Mary page shows current entries separately from
-                        # contest capacity. Final rankings/payouts must use the full contest
-                        # capacity (215,568), not the partially filled current-entry count.
-                        _fd_hail_mary_capacity = 215568
-                        _fd_reported_field_size = int(_fd_roi_contest.get("field_size") or 0)
-                        _fd_full_field_roi = max(_fd_hail_mary_capacity, _fd_reported_field_size)
-                        _fd_my_entries_roi = max(1, min(
-                            int(_fd_roi_contest.get("your_entries") or 1), len(compared)
-                        ))
-                        _fd_full_field_roi = max(_fd_full_field_roi, _fd_my_entries_roi + 1)
-                        _fd_payout = np.zeros(_fd_full_field_roi + 1, dtype=float)
-                        for _lo, _hi, _prize in _fd_payout_tiers_roi:
-                            _fd_payout[max(1, _lo):min(_fd_full_field_roi, _hi) + 1] = float(_prize)
-                        _fd_prefix = np.concatenate(([0.0], np.cumsum(_fd_payout[1:])))
-
-                        # Choose the final entry set without using holdout ROI itself. For
-                        # FanDuel Full Roster, build a portfolio instead of blindly taking the
-                        # top N rows: retain lineup strength while penalizing near-identical
-                        # rosters so one simulated construction cannot dominate all entries.
-                        _fd_select_metric = "ContestScore" if "ContestScore" in compared.columns else "ProjectedPoints"
-                        if lineup_mode == "Full Roster" and _fd_my_entries_roi > 1:
-                            _fd_base = pd.to_numeric(compared[_fd_select_metric], errors="coerce").fillna(-np.inf).to_numpy(dtype=float)
-                            _fd_order = np.argsort(-_fd_base, kind="stable")
-                            _fd_candidate_cap = min(len(_fd_order), max(500, _fd_my_entries_roi * 50))
-                            _fd_pool_idx = _fd_order[:_fd_candidate_cap]
-                            _fd_finite = _fd_base[_fd_pool_idx][np.isfinite(_fd_base[_fd_pool_idx])]
-                            if len(_fd_finite) > 1 and float(np.max(_fd_finite)) > float(np.min(_fd_finite)):
-                                _fd_strength = (_fd_base - float(np.min(_fd_finite))) / (float(np.max(_fd_finite)) - float(np.min(_fd_finite)))
-                            else:
-                                _fd_strength = np.zeros(len(compared), dtype=float)
-                            _fd_rosters = [frozenset(str(compared.iloc[i][slot]) for slot in fd_slots if slot in compared.columns) for i in range(len(compared))]
-                            _fd_chosen = []
-                            _fd_remaining = set(int(i) for i in _fd_pool_idx)
-                            while _fd_remaining and len(_fd_chosen) < _fd_my_entries_roi:
-                                _fd_best_i = None
-                                _fd_best_score = -np.inf
-                                for _fd_i in _fd_remaining:
-                                    if _fd_chosen:
-                                        _fd_max_overlap = max(len(_fd_rosters[_fd_i] & _fd_rosters[_fd_j]) / max(len(_fd_rosters[_fd_i]), 1) for _fd_j in _fd_chosen)
-                                    else:
-                                        _fd_max_overlap = 0.0
-                                    # A modest overlap penalty diversifies the portfolio without
-                                    # discarding strong lineups. It affects Full Roster only.
-                                    _fd_portfolio_score = float(_fd_strength[_fd_i]) - 0.12 * (_fd_max_overlap ** 2)
-                                    if _fd_portfolio_score > _fd_best_score:
-                                        _fd_best_score = _fd_portfolio_score
-                                        _fd_best_i = _fd_i
-                                if _fd_best_i is None:
-                                    break
-                                _fd_chosen.append(_fd_best_i)
-                                _fd_remaining.remove(_fd_best_i)
-                            _fd_selected_idx = np.asarray(_fd_chosen, dtype=int)
-                        else:
-                            _fd_selected_idx = (
-                                compared[_fd_select_metric].astype(float)
-                                .nlargest(_fd_my_entries_roi).index.to_numpy(dtype=int)
-                            )
-                        compared["FD Joint Entry"] = False
-                        compared.loc[_fd_selected_idx, "FD Joint Entry"] = True
-
-                        # Full Roster final ROI gets a larger representative field without
-                        # slowing candidate construction/ranking. The normal builder remains
-                        # at 10K opponents; only the selected joint portfolio uses up to 50K.
-                        _fd_final_field = opponent_df
-                        if lineup_mode == "Full Roster" and len(opponent_df) < 50000:
-                            _fd_extra_target = 50000 - len(opponent_df)
-                            _fd_extra_rows = []
-                            _fd_extra_attempts = 0
-                            _fd_extra_rng = np.random.default_rng(50123)
-                            _fd_extra_roster = [
-                                ("QB", {"QB"}), ("RB1", {"RB"}), ("RB2", {"RB"}),
-                                ("WR1", {"WR"}), ("WR2", {"WR"}), ("WR3", {"WR"}),
-                                ("TE", {"TE"}), ("FLEX", {"RB", "WR", "TE"}),
-                                ("D", {"D", "DST", "DEF"}),
-                            ]
-                            _fd_final_progress = st.progress(0, text="Building larger final ROI field: 10,000 / 50,000")
-                            while len(_fd_extra_rows) < _fd_extra_target and _fd_extra_attempts < max(600000, _fd_extra_target * 15):
-                                _fd_extra_attempts += 1
-                                _fd_chosen_final = {}
-                                _fd_used_final = set()
-                                _fd_salary_final = 0
-                                _fd_points_final = 0.0
-                                for _fd_pos_final, (_fd_slot_final, _fd_eligible_final) in enumerate(_fd_extra_roster):
-                                    _fd_choices_final = fd_full_field_cache.get(_fd_slot_final, np.asarray([], dtype=int))
-                                    if _fd_used_final:
-                                        _fd_choices_final = _fd_choices_final[~np.isin(_fd_choices_final, np.fromiter(_fd_used_final, dtype=int))]
-                                    if not len(_fd_choices_final):
-                                        break
-                                    _fd_remaining_final = _fd_extra_roster[_fd_pos_final + 1:]
-                                    if _fd_remaining_final:
-                                        if any(s not in fd_field_slot_bounds for s, _ in _fd_remaining_final):
-                                            _fd_choices_final = np.asarray([], dtype=int)
-                                        else:
-                                            _fd_min_remaining_final = sum(fd_field_slot_bounds[s][0] for s, _ in _fd_remaining_final)
-                                            _fd_max_remaining_final = sum(fd_field_slot_bounds[s][1] for s, _ in _fd_remaining_final)
-                                            _fd_candidate_salary_final = _fd_salary_final + fd_field_salaries[_fd_choices_final]
-                                            _fd_choices_final = _fd_choices_final[
-                                                (_fd_candidate_salary_final + _fd_max_remaining_final >= _fd_opponent_salary_min)
-                                                & (_fd_candidate_salary_final + _fd_min_remaining_final <= _fd_opponent_salary_max)
-                                            ]
-                                    else:
-                                        _fd_candidate_salary_final = _fd_salary_final + fd_field_salaries[_fd_choices_final]
-                                        _fd_choices_final = _fd_choices_final[
-                                            (_fd_candidate_salary_final >= _fd_opponent_salary_min)
-                                            & (_fd_candidate_salary_final <= _fd_opponent_salary_max)
-                                        ]
-                                    if not len(_fd_choices_final):
-                                        break
-                                    _fd_weights_final = np.clip(fd_weights[_fd_choices_final].astype(float), 0.0001, None)
-                                    _fd_means_final = np.clip(fd_field_projections[_fd_choices_final].astype(float), 0.01, None)
-                                    _fd_mean_scale_final = _fd_means_final / max(float(np.mean(_fd_means_final)), 0.01)
-                                    _fd_weights_final *= np.power(_fd_mean_scale_final, 0.20)
-                                    _fd_weights_final /= _fd_weights_final.sum()
-                                    _fd_pick_final = int(_fd_extra_rng.choice(_fd_choices_final, p=_fd_weights_final))
-                                    _fd_chosen_final[_fd_slot_final] = str(fd_field_names[_fd_pick_final])
-                                    _fd_used_final.add(_fd_pick_final)
-                                    _fd_salary_final += int(fd_field_salaries[_fd_pick_final])
-                                    _fd_points_final += float(fd_field_projections[_fd_pick_final])
-                                if len(_fd_chosen_final) != len(fd_slots):
-                                    continue
-                                if _fd_salary_final < _fd_opponent_salary_min or _fd_salary_final > _fd_opponent_salary_max:
-                                    continue
-                                _fd_salary_accept_final = {
-                                    60000: 1.00, 59900: 0.90, 59800: 0.72, 59700: 0.58,
-                                    59600: 0.46, 59500: 0.36, 59400: 0.24, 59300: 0.18,
-                                    59200: 0.13, 59100: 0.09, 59000: 0.06,
-                                }.get(int(_fd_salary_final), 0.01 if _fd_salary_final >= 58000 else 0.002)
-                                if _fd_extra_rng.random() > _fd_salary_accept_final:
-                                    continue
-                                _fd_extra_rows.append({**_fd_chosen_final, "Salary": _fd_salary_final, "ProjectedPoints": round(_fd_points_final, 2)})
-                                if len(_fd_extra_rows) % 500 == 0 or len(_fd_extra_rows) >= _fd_extra_target:
-                                    _fd_done_final = len(opponent_df) + len(_fd_extra_rows)
-                                    _fd_final_progress.progress(min(1.0, _fd_done_final / 50000), text=f"Building larger final ROI field: {_fd_done_final:,} / 50,000")
-                            _fd_final_progress.empty()
-                            if _fd_extra_rows:
-                                _fd_final_field = pd.concat([opponent_df, pd.DataFrame(_fd_extra_rows)], ignore_index=True)
-                            st.caption(f"Final joint ROI representative field: {len(_fd_final_field):,} opponents (builder/ranking field remains {len(opponent_df):,}).")
-
-                        # Diagnostic only: estimate exact-roster duplication for selected Full Roster entries.
-                        if lineup_mode == "Full Roster" and len(_fd_selected_idx) and len(_fd_final_field):
-                            _fd_dup_slots = [slot for slot in fd_slots if slot in compared.columns and slot in _fd_final_field.columns]
-                            if _fd_dup_slots:
-                                def _fd_dup_key(frame):
-                                    _keys = []
-                                    for _, _row_dup in frame.iterrows():
-                                        _qb = str(_row_dup.get("QB", ""))
-                                        _rbs = tuple(sorted([str(_row_dup.get("RB1", "")), str(_row_dup.get("RB2", ""))]))
-                                        _wrs = tuple(sorted([str(_row_dup.get("WR1", "")), str(_row_dup.get("WR2", "")), str(_row_dup.get("WR3", ""))]))
-                                        _te = str(_row_dup.get("TE", ""))
-                                        _flex = str(_row_dup.get("FLEX", ""))
-                                        _d = str(_row_dup.get("D", ""))
-                                        _keys.append((_qb, _rbs, _wrs, _te, _flex, _d))
-                                    return _keys
-                                _fd_field_dup_keys = _fd_dup_key(_fd_final_field)
-                                _fd_dup_counts = pd.Series(_fd_field_dup_keys).value_counts()
-                                _fd_selected_dup_keys = _fd_dup_key(compared.iloc[_fd_selected_idx])
-                                _fd_rep_matches = np.asarray([int(_fd_dup_counts.get(k, 0)) for k in _fd_selected_dup_keys], dtype=int)
-                                _fd_dup_scale = max((_fd_full_field_roi - len(_fd_selected_idx)) / max(len(_fd_final_field), 1), 0.0)
-                                _fd_est_field_copies = _fd_rep_matches.astype(float) * _fd_dup_scale
-                                compared["Exact Matches in Final Field"] = np.nan
-                                compared["Estimated Field Copies"] = np.nan
-                                compared.loc[_fd_selected_idx, "Exact Matches in Final Field"] = _fd_rep_matches
-                                compared.loc[_fd_selected_idx, "Estimated Field Copies"] = _fd_est_field_copies
-
-                        _fd_columns = {str(name): i for i, name in enumerate(_fd_roi_sim.columns.astype(str))}
-                        _fd_roi_slots = [slot for slot in fd_slots if slot in compared.columns and slot in opponent_df.columns]
-                        def _fd_matrix_indices(frame):
-                            return np.column_stack([
-                                frame[slot].astype(str).map(_fd_columns).fillna(-1).to_numpy(dtype=int)
-                                for slot in _fd_roi_slots
-                            ])
-
-                        _fd_user_matrix = _fd_matrix_indices(compared.iloc[_fd_selected_idx])
-                        _fd_field_matrix = _fd_matrix_indices(_fd_final_field)
-                        _fd_valid = (
-                            bool(_fd_roi_slots)
-                            and np.all(_fd_user_matrix >= 0)
-                            and np.all(_fd_field_matrix >= 0)
-                        )
-                        if _fd_valid:
-                            # Evaluate final contest results on a deterministic holdout slice of
-                            # PBP outcomes rather than the early scenarios used while generating/
-                            # ranking candidates. This reduces selection leakage in final ROI rates.
-                            _fd_all_scenarios = np.arange(len(_fd_roi_sim), dtype=int)
-                            _fd_holdout_start = len(_fd_all_scenarios) // 2
-                            _fd_holdout_pool = _fd_all_scenarios[_fd_holdout_start:]
-                            if len(_fd_holdout_pool) == 0:
-                                _fd_holdout_pool = _fd_all_scenarios
-                            # Top-heavy 200K+ entry GPP ROI is dominated by rare first-place
-                            # outcomes. Use the entire untouched holdout pool for the final joint
-                            # portfolio evaluation instead of only 250 scenarios; otherwise a
-                            # handful of wins can move expected ROI by thousands of percent.
-                            _fd_scenario_count = len(_fd_holdout_pool)
-                            _fd_scenario_idx = _fd_holdout_pool
-                            _fd_n_user = len(_fd_selected_idx)
-                            _fd_expected_prize = np.zeros(_fd_n_user, dtype=float)
-                            _fd_win = np.zeros(_fd_n_user, dtype=float)
-                            _fd_top1 = np.zeros(_fd_n_user, dtype=float)
-                            _fd_top5 = np.zeros(_fd_n_user, dtype=float)
-                            _fd_top10 = np.zeros(_fd_n_user, dtype=float)
-                            _fd_cash = np.zeros(_fd_n_user, dtype=float)
-                            # Cash cutoff is the last PAID place that actually exists in this
-                            # contest. Never let a payout ladder extending beyond field size turn
-                            # CashRate into an automatic 100% result.
-                            _fd_cash_cut = max(
-                                1,
-                                min(
-                                    _fd_full_field_roi,
-                                    max(hi for lo, hi, prize in _fd_payout_tiers_roi if prize > 0 and lo <= _fd_full_field_roi),
-                                ),
-                            )
-                            _fd_values = _fd_roi_sim.to_numpy(dtype=float)
-                            _fd_rep_n = max(len(_fd_final_field), 1)
-                            _fd_full_opponents = max(_fd_full_field_roi - _fd_n_user, 1)
-                            _fd_scale = _fd_full_opponents / _fd_rep_n
-
-                            for _scenario in _fd_scenario_idx:
-                                _row = _fd_values[_scenario]
-                                _field_scores = np.zeros(len(_fd_final_field), dtype=float)
-                                _user_scores = np.zeros(_fd_n_user, dtype=float)
-                                for _slot_pos, _slot in enumerate(_fd_roi_slots):
-                                    _mult = 1.5 if _slot == "MVP" else 1.0
-                                    _field_scores += _row[_fd_field_matrix[:, _slot_pos]] * _mult
-                                    _user_scores += _row[_fd_user_matrix[:, _slot_pos]] * _mult
-
-                                _sorted = np.sort(_field_scores)
-                                _left = np.searchsorted(_sorted, _user_scores, side="left")
-                                _right = np.searchsorted(_sorted, _user_scores, side="right")
-                                _greater_field = np.rint((len(_sorted) - _right) * _fd_scale).astype(int)
-                                _equal_field = np.rint((_right - _left) * _fd_scale).astype(int)
-
-                                # Every one of the user's entries is in this same contest.
-                                _greater_own = np.sum(
-                                    _user_scores[None, :] > _user_scores[:, None], axis=1
-                                )
-                                _equal_own = np.sum(
-                                    _user_scores[None, :] == _user_scores[:, None], axis=1
-                                ) - 1
-                                _greater = _greater_field + _greater_own
-                                _equal = _equal_field + _equal_own
-                                _rank_start = np.clip(_greater + 1, 1, _fd_full_field_roi)
-                                _tie_count = np.maximum(_equal + 1, 1)
-                                _rank_end = np.minimum(_rank_start + _tie_count - 1, _fd_full_field_roi)
-                                _prize_sum = _fd_prefix[_rank_end] - _fd_prefix[_rank_start - 1]
-                                _fd_expected_prize += _prize_sum / _tie_count
-                                _fd_win += (_rank_start == 1) / _tie_count
-                                _fd_top1 += (_rank_start <= max(1, int(np.ceil(_fd_full_field_roi * 0.01))))
-                                _fd_top5 += (_rank_start <= max(1, int(np.ceil(_fd_full_field_roi * 0.05))))
-                                _fd_top10 += (_rank_start <= max(1, int(np.ceil(_fd_full_field_roi * 0.10))))
-                                _fd_cash += (_rank_start <= _fd_cash_cut)
-
-                            _fd_expected_prize /= _fd_scenario_count
-                            # ROI is only truthful for the selected joint entries. Do not
-                            # show fake independent ROI on the other 4,980 candidates.
-                            for _col in ["Expected Prize ($)", "Expected Net ($)", "Expected ROI (%)", "Win %", "Top 1%", "Top 5%", "Top 10%", "Cash %"]:
-                                compared[_col] = np.nan
-                            _fd_net = _fd_expected_prize - float(_fd_roi_fee)
-                            compared.loc[_fd_selected_idx, "Expected Prize ($)"] = _fd_expected_prize
-                            compared.loc[_fd_selected_idx, "Expected Net ($)"] = _fd_net
-                            compared.loc[_fd_selected_idx, "Expected ROI (%)"] = 100.0 * _fd_net / max(float(_fd_roi_fee), 0.01)
-                            compared.loc[_fd_selected_idx, "Win %"] = 100.0 * _fd_win / _fd_scenario_count
-                            compared.loc[_fd_selected_idx, "Top 1%"] = 100.0 * _fd_top1 / _fd_scenario_count
-                            compared.loc[_fd_selected_idx, "Top 5%"] = 100.0 * _fd_top5 / _fd_scenario_count
-                            compared.loc[_fd_selected_idx, "Top 10%"] = 100.0 * _fd_top10 / _fd_scenario_count
-                            compared.loc[_fd_selected_idx, "Cash %"] = 100.0 * _fd_cash / _fd_scenario_count
-
-                            # IMPORTANT: the canonical ranking/export columns must reflect
-                            # scenario-level contest finish rates, not the earlier one-time
-                            # projection percentile flags from add_field_ranking_metrics().
-                            # Keep unselected candidates blank because they were not jointly
-                            # evaluated for payout/ROI in the real contest entry set.
-                            for _canonical in ["WinRate", "Top1", "Top5", "Top10", "CashRate", "AvgPercentile", "ContestScore"]:
-                                compared[_canonical] = np.nan
-                            _fd_win_rate = _fd_win / _fd_scenario_count
-                            _fd_top1_rate = _fd_top1 / _fd_scenario_count
-                            _fd_top5_rate = _fd_top5 / _fd_scenario_count
-                            _fd_top10_rate = _fd_top10 / _fd_scenario_count
-                            _fd_cash_rate = _fd_cash / _fd_scenario_count
-                            compared.loc[_fd_selected_idx, "WinRate"] = _fd_win_rate
-                            compared.loc[_fd_selected_idx, "Top1"] = _fd_top1_rate
-                            compared.loc[_fd_selected_idx, "Top5"] = _fd_top5_rate
-                            compared.loc[_fd_selected_idx, "Top10"] = _fd_top10_rate
-                            compared.loc[_fd_selected_idx, "CashRate"] = _fd_cash_rate
-                            compared.loc[_fd_selected_idx, "ContestScore"] = (
-                                _fd_top1_rate * 0.40
-                                + _fd_top5_rate * 0.25
-                                + _fd_top10_rate * 0.20
-                                + _fd_cash_rate * 0.10
-                                + _fd_win_rate * 0.05
-                            )
-
-                            # Evaluate every generated candidate independently against the SAME
-                            # holdout opponent field. These are diagnostic finish rates only; they
-                            # are intentionally separate from joint-entry payout/ROI metrics.
-                            _fd_all_user_matrix = _fd_matrix_indices(compared)
-                            _fd_diag_field_matrix = _fd_matrix_indices(opponent_df)
-                            if np.all(_fd_all_user_matrix >= 0) and np.all(_fd_diag_field_matrix >= 0):
-                                _fd_all_n = len(compared)
-                                _fd_diag_win = np.zeros(_fd_all_n, dtype=float)
-                                _fd_diag_top1 = np.zeros(_fd_all_n, dtype=float)
-                                _fd_diag_top5 = np.zeros(_fd_all_n, dtype=float)
-                                _fd_diag_top10 = np.zeros(_fd_all_n, dtype=float)
-                                _fd_diag_cash = np.zeros(_fd_all_n, dtype=float)
-                                for _scenario in _fd_scenario_idx:
-                                    _row = _fd_values[_scenario]
-                                    _field_scores = np.zeros(len(opponent_df), dtype=float)
-                                    _candidate_scores = np.zeros(_fd_all_n, dtype=float)
-                                    for _slot_pos, _slot in enumerate(_fd_roi_slots):
-                                        _mult = 1.5 if _slot == "MVP" else 1.0
-                                        _field_scores += _row[_fd_diag_field_matrix[:, _slot_pos]] * _mult
-                                        _candidate_scores += _row[_fd_all_user_matrix[:, _slot_pos]] * _mult
-                                    _sorted_field = np.sort(_field_scores)
-                                    _right = np.searchsorted(_sorted_field, _candidate_scores, side="right")
-                                    _greater = np.rint((len(_sorted_field) - _right) * _fd_scale).astype(int)
-                                    _rank = np.clip(_greater + 1, 1, _fd_full_field_roi)
-                                    _fd_diag_win += (_rank == 1)
-                                    _fd_diag_top1 += (_rank <= max(1, int(np.ceil(_fd_full_field_roi * 0.01))))
-                                    _fd_diag_top5 += (_rank <= max(1, int(np.ceil(_fd_full_field_roi * 0.05))))
-                                    _fd_diag_top10 += (_rank <= max(1, int(np.ceil(_fd_full_field_roi * 0.10))))
-                                    _fd_diag_cash += (_rank <= _fd_cash_cut)
-                                compared["Diagnostic Win %"] = 100.0 * _fd_diag_win / _fd_scenario_count
-                                compared["Diagnostic Top 1%"] = 100.0 * _fd_diag_top1 / _fd_scenario_count
-                                compared["Diagnostic Top 5%"] = 100.0 * _fd_diag_top5 / _fd_scenario_count
-                                compared["Diagnostic Top 10%"] = 100.0 * _fd_diag_top10 / _fd_scenario_count
-                                compared["Diagnostic Cash %"] = 100.0 * _fd_diag_cash / _fd_scenario_count
-
-                            # Persist scenario-level scoring diagnostics so we can verify
-                            # whether the ROI problem is field construction or contest scoring.
-                            # This compares the exact jointly entered user lineups with the
-                            # exact opponent field under the same PBP scenarios.
-                            _fd_diag_scenarios = []
-                            for _scenario in _fd_scenario_idx[:min(50, len(_fd_scenario_idx))]:
-                                _row = _fd_values[_scenario]
-                                _diag_field = np.zeros(len(opponent_df), dtype=float)
-                                _diag_user = np.zeros(_fd_n_user, dtype=float)
-                                for _slot_pos, _slot in enumerate(_fd_roi_slots):
-                                    _mult = 1.5 if _slot == "MVP" else 1.0
-                                    _diag_field += _row[_fd_diag_field_matrix[:, _slot_pos]] * _mult
-                                    _diag_user += _row[_fd_user_matrix[:, _slot_pos]] * _mult
-                                _fd_diag_scenarios.append({
-                                    "Opponent Avg Score": float(np.mean(_diag_field)),
-                                    "My Entries Avg Score": float(np.mean(_diag_user)),
-                                    "Opponent P90 Score": float(np.quantile(_diag_field, 0.90)),
-                                    "Opponent P99 Score": float(np.quantile(_diag_field, 0.99)),
-                                    "My Best Score": float(np.max(_diag_user)),
-                                })
-                            st.session_state["fd_full_roster_scoring_diagnostic"] = pd.DataFrame(_fd_diag_scenarios)
-
+                        compared = add_field_ranking_metrics(compared, scores)
                     st.session_state["fd_contest_comparison_" + lineup_mode.replace(" ", "_").lower()] = compared
                     fd_step4_progress.progress(1.0, text="Step 4 of 4 complete: FanDuel contest comparison finished.")
                     fd_step4_status.success("Step 4 of 4 complete: contest comparison finished.")
                     st.write("### FanDuel Lineups vs. Simulated Contest Field")
-                    st.caption("Contest ROI uses shared FanDuel PBP outcomes when the selected payout ladder is available.")
                     st.dataframe(compared, use_container_width=True, hide_index=True)
-                    if lineup_mode == "Full Roster":
-                        _fd_selected = st.session_state.get("selected_fd_contest") or {}
-                        _fd_fee = _fd_selected.get("entry_fee")
-                        _fd_my_entries = int(_fd_selected.get("your_entries") or 0)
-                        if _fd_selected and _fd_fee is not None and _fd_my_entries > 0:
-                            _fd_total_fees = float(_fd_fee) * _fd_my_entries
-                            st.write("### FanDuel Contest Summary")
-                            _fd_field_label = _fd_selected.get("field_size") or _fd_selected.get("current_entries")
-                            _fd_caption = f"{_fd_selected.get('name', 'Selected FanDuel contest')} · {_fd_my_entries} of your entries"
-                            if _fd_field_label:
-                                _fd_caption += f" · full field {int(_fd_field_label):,}"
-                            st.caption(_fd_caption)
-                            _fd_roi_cols = st.columns(5)
-                            _fd_roi_cols[0].metric("Entries", f"{_fd_my_entries}")
-                            _fd_roi_cols[1].metric("Entry Fees", f"${_fd_total_fees:,.2f}")
-                            _fd_contest_name = str(_fd_selected.get("name", ""))
-                            if "45K Sun NFL Hail Mary" in _fd_contest_name:
-                                _fd_payout_tiers = [
-                                    (1, 1, 2000.0), (2, 2, 1000.0), (3, 3, 750.0),
-                                    (4, 4, 500.0), (5, 5, 300.0), (6, 6, 200.0),
-                                    (7, 7, 150.0), (8, 8, 125.0), (9, 10, 100.0),
-                                    (11, 12, 75.0), (13, 15, 50.0), (16, 20, 30.0),
-                                    (21, 25, 20.0), (26, 30, 15.0), (31, 40, 10.0),
-                                    (41, 50, 7.50), (51, 75, 5.0), (76, 100, 4.0),
-                                    (101, 150, 3.0), (151, 300, 2.0), (301, 600, 1.50),
-                                    (601, 1000, 1.25), (1001, 3000, 1.0),
-                                    (3001, 7500, 0.80), (7501, 15000, 0.70),
-                                    (15001, 30000, 0.60), (30001, 65000, 0.50),
-                                ]
-                                _fd_full_field = int(_fd_field_label or 65000)
-                                _fd_rep_field = max(len(scores), 1)
-                                _fd_scaled_ranks = 1 + np.floor(
-                                    np.maximum(pd.to_numeric(compared["FieldRank"], errors="coerce").fillna(_fd_rep_field).to_numpy(dtype=float) - 1.0, 0.0)
-                                    * max(_fd_full_field - 1, 0) / max(_fd_rep_field - 1, 1)
-                                ).astype(int)
-                                _fd_scaled_ranks = np.clip(_fd_scaled_ranks, 1, max(_fd_full_field, 1))
-                                def _fd_prize_for_rank(rank):
-                                    for lo, hi, prize in _fd_payout_tiers:
-                                        if lo <= int(rank) <= hi:
-                                            return float(prize)
-                                    return 0.0
-                                compared["Estimated Full Field Rank"] = _fd_scaled_ranks
-                                # True PBP ROI is calculated above. Keep the old projected-rank
-                                # payout only as a fallback if no scenario ROI was available.
-                                if "Expected Prize ($)" not in compared.columns:
-                                    compared["Expected Prize ($)"] = [_fd_prize_for_rank(r) for r in _fd_scaled_ranks]
-                                    compared["Expected Net ($)"] = compared["Expected Prize ($)"] - float(_fd_fee)
-                                    compared["Expected ROI (%)"] = 100.0 * compared["Expected Net ($)"] / max(float(_fd_fee), 0.01)
-                                _fd_entry_count = min(_fd_my_entries, len(compared))
-                                if "FD Joint Entry" in compared.columns and compared["FD Joint Entry"].fillna(False).any():
-                                    _fd_entry_pool = compared[compared["FD Joint Entry"].fillna(False)].copy()
-                                else:
-                                    _fd_entry_pool = compared.nlargest(_fd_entry_count, "ContestScore") if _fd_entry_count > 0 else compared.iloc[0:0]
-                                _fd_expected_winnings = float(_fd_entry_pool["Expected Prize ($)"].sum())
-                                _fd_expected_profit = _fd_expected_winnings - _fd_total_fees
-                                _fd_expected_roi = 100.0 * _fd_expected_profit / max(_fd_total_fees, 0.01)
-                                _fd_roi_cols[2].metric("Expected Winnings", f"${_fd_expected_winnings:,.2f}")
-                                _fd_roi_cols[3].metric("Expected Profit", f"${_fd_expected_profit:,.2f}")
-                                _fd_roi_cols[4].metric("Expected ROI", f"{_fd_expected_roi:,.1f}%")
-                                st.caption("Uses shared PBP outcomes plus the Hail Mary payout ladder. Duplicate lineups and tied scores split the occupied prizes.")
-                                _fd_summary_download = pd.DataFrame([{
-                                    "Contest": _fd_selected.get("name", "Selected FanDuel contest"),
-                                    "Contest ID": _fd_selected.get("id", ""),
-                                    "Field Size": _fd_full_field,
-                                    "My Entries": _fd_my_entries,
-                                    "Entry Fee ($)": float(_fd_fee),
-                                    "Total Entry Fees ($)": round(_fd_total_fees, 2),
-                                    "Expected Winnings ($)": round(_fd_expected_winnings, 2),
-                                    "Expected Profit ($)": round(_fd_expected_profit, 2),
-                                    "Expected ROI (%)": round(_fd_expected_roi, 2),
-                                }])
-                                st.download_button(
-                                    "DOWNLOAD CONTEST SUMMARY",
-                                    data=_fd_summary_download.to_csv(index=False).encode("utf-8"),
-                                    file_name=f"fanduel_{lineup_mode.replace(' ', '_').lower()}_contest_summary.csv",
-                                    mime="text/csv",
-                                    use_container_width=True,
-                                    key="fd_contest_summary_download_" + lineup_mode.replace(" ", "_").lower(),
-                                )
-                            else:
-                                _fd_roi_cols[2].metric("Expected Winnings", "Pending payouts")
-                                _fd_roi_cols[3].metric("Expected Profit", "Pending payouts")
-                                _fd_roi_cols[4].metric("Expected ROI", "Pending payouts")
-                                if not _fd_selected.get("prize_summary"):
-                                    st.caption("Exact FanDuel winnings and ROI require the contest payout ladder. The app will not invent payouts when FanDuel does not expose them.")
                     if all(c in compared.columns for c in ["Top1", "Top5", "Top10", "CashRate"]):
                         _fd_sanity = pd.DataFrame([{
                             "Top 1%": round(100 * float(compared["Top1"].mean()), 2),
@@ -5771,6 +5319,9 @@ if platform == "FanDuel":
         # Use the same ranking choices as DraftKings Showdown for both FanDuel formats.
         fd_comparison_key = "fd_contest_comparison_" + lineup_mode.replace(" ", "_").lower()
         fd_rank_source = st.session_state.get(fd_comparison_key)
+        if lineup_mode == "Full Roster" and st.session_state.get("fd_full_roster_evaluation_context") != dict(st.session_state.get("selected_fd_contest") or {}):
+            fd_rank_source = None
+
         if not isinstance(fd_rank_source, pd.DataFrame) or fd_rank_source.empty:
             fd_rank_source = add_field_ranking_metrics(fd_results, fd_results["ProjectedPoints"].to_numpy(dtype=float))
         # Persistent FanDuel Full Roster sanity check and opponent lineup viewer.
@@ -5828,12 +5379,13 @@ if platform == "FanDuel":
             else:
                 st.caption("FanDuel field sanity and opponent lineup info will appear here after Contest SIM builds the opponent field.")
 
+        _fd_rank_options = [label for label, column in PORTFOLIO_METRICS.items() if column in fd_rank_source.columns]
         fd_rank_label = st.selectbox(
-            "Rank lineups by", list(PORTFOLIO_METRICS.keys()),
+            "Rank lineups by", _fd_rank_options, index=_fd_rank_options.index("Top 1%") if "Top 1%" in _fd_rank_options else 0,
             key="fd_rank_metric_" + lineup_mode.replace(" ", "_").lower()
         )
         fd_rank_column = PORTFOLIO_METRICS[fd_rank_label]
-        fd_rank_source = fd_rank_source.sort_values(fd_rank_column, ascending=False).reset_index(drop=True)
+        fd_rank_source = fd_rank_source.sort_values(fd_rank_column, ascending=False, kind="stable").reset_index(drop=True)
         fd_rank_count = st.number_input(
             "Number of lineups to show", min_value=1, max_value=max(1, len(fd_rank_source)),
             value=min(20, max(1, len(fd_rank_source))), step=1,
@@ -5844,6 +5396,41 @@ if platform == "FanDuel":
         # how many rows are shown on screen, not how many get downloaded.
         fd_all_ranked = fd_rank_source.copy()
         fd_results = fd_all_ranked.head(int(fd_rank_count)).copy()
+
+        fd_export_portfolio = fd_all_ranked
+        if lineup_mode == "Full Roster":
+            _fd_selected_contest = st.session_state.get("selected_fd_contest") or {}
+            _fd_spec = full_roster_contest_parameters(_fd_selected_contest, 1)
+            _fd_entry_seed = fd_results.head(_fd_spec["owned"]).copy()
+            fd_export_portfolio = _fd_entry_seed.iloc[np.arange(_fd_spec["owned"]) % len(_fd_entry_seed)].reset_index(drop=True)
+            _fd_joint_field = st.session_state.get("fd_contest_field_full_roster")
+            _fd_joint_outcomes = st.session_state.get("fd_simulation_df_full_roster")
+            _fd_context = st.session_state.get("fd_full_roster_evaluation_context")
+            if isinstance(_fd_joint_field, pd.DataFrame) and not _fd_joint_field.empty and isinstance(_fd_joint_outcomes, pd.DataFrame) and _fd_context == _fd_selected_contest:
+                _fd_spec = full_roster_contest_parameters(_fd_selected_contest, len(_fd_joint_field))
+                with st.spinner("Evaluating assigned FanDuel entries together..."):
+                    fd_export_portfolio = evaluate_full_roster_portfolio_cached(_fd_joint_outcomes, fd_export_portfolio,
+                        _fd_joint_field, fd_slots, _fd_spec["field_size"], _fd_spec["tiers"], _fd_spec["fee"])
+                if not _fd_spec["payouts_known"]:
+                    fd_export_portfolio = fd_export_portfolio.drop(columns=["CashRate", "Expected Prize ($)", "Expected Net ($)", "Expected ROI (%)", "Entry Fee ($)"], errors="ignore")
+                    fd_export_portfolio["ContestScore"] = fd_export_portfolio["Top1"]
+            else:
+                st.warning("Run CONTEST SIM for the selected contest before exporting evaluated entries.")
+                fd_export_portfolio = fd_export_portfolio.drop(columns=["CashRate", "Expected Prize ($)", "Expected Net ($)", "Expected ROI (%)", "Entry Fee ($)"], errors="ignore")
+            st.session_state["fd_full_roster_assigned_portfolio"] = fd_export_portfolio.copy()
+            st.write("### Assigned contest portfolio")
+            st.caption(f"These {_fd_spec['owned']} entries are the source for both downloads. Additional displayed candidates are alternatives.")
+            if "Expected Prize ($)" in fd_export_portfolio:
+                _fd_fees = _fd_spec["fee"] * len(fd_export_portfolio)
+                _fd_winnings = float(fd_export_portfolio["Expected Prize ($)"].sum())
+                _fd_summary = st.columns(3)
+                _fd_summary[0].metric("Selected portfolio fees", f"${_fd_fees:,.2f}")
+                _fd_summary[1].metric("Estimated portfolio winnings", f"${_fd_winnings:,.2f}")
+                _fd_summary[2].metric("Estimated portfolio ROI", f"{100*(_fd_winnings-_fd_fees)/_fd_fees:,.1f}%" if _fd_fees else "N/A")
+            st.dataframe(fd_export_portfolio, use_container_width=True, hide_index=True)
+            st.download_button("DOWNLOAD ASSIGNED PORTFOLIO REPORT", fd_export_portfolio.to_csv(index=False).encode("utf-8"),
+                "FanDuel_Full_Roster_Assigned_Portfolio.csv", "text/csv", key="fd_full_assigned_report", on_click="ignore")
+            st.caption("Candidate alternatives — the assigned portfolio above is used for your entry replacement.")
 
         # Use the same player-by-player points layout as the DraftKings Portfolio.
         fd_display = fd_results.copy()
@@ -5906,7 +5493,7 @@ if platform == "FanDuel":
             )
             # Map all lineup slots in columns instead of constructing thousands
             # of pandas Series on every widget rerun.
-            slot_names = fd_all_ranked[fd_slots]
+            slot_names = fd_export_portfolio[fd_slots]
             mapped_ids = slot_names.apply(lambda column: column.map(fd_ids)).fillna("").astype(str)
             invalid_ids = mapped_ids.eq("") | mapped_ids.apply(lambda column: column.str.lower().eq("nan"))
             if invalid_ids.to_numpy().any():
@@ -6006,16 +5593,19 @@ if platform == "FanDuel":
                                 "No existing entries match the selected contest in this template. "
                                 "Please select the contest that matches the uploaded file."
                             )
-                        if len(fd_all_ranked) < len(target_rows):
+                        if len(fd_export_portfolio) < len(target_rows):
                             raise ValueError(
                                 f"This contest has {len(target_rows)} of your entries, but the build contains "
-                                f"only {len(fd_all_ranked)} lineups. Build at least that many so every entry is replaced."
+                                f"only {len(fd_export_portfolio)} assigned lineups. Build at least that many so every entry is replaced."
                             )
 
+                        _fd_target_ids = [str(fd_template_rows[i][entry_id_index]).strip() for i in target_rows]
+                        if any(not value for value in _fd_target_ids) or len(set(_fd_target_ids)) != len(_fd_target_ids):
+                            raise ValueError("Selected contest contains blank or duplicate Entry IDs. Upload a fresh entry template.")
                         # Only replace existing entries; never create extra entries.
                         # Use the FanDuel ID from the uploaded salary file in each roster cell.
                         for entry_number, row_index in enumerate(target_rows):
-                            lineup = fd_all_ranked.iloc[entry_number]
+                            lineup = fd_export_portfolio.iloc[entry_number]
                             row = list(fd_template_rows[row_index][:len(fd_template_header)])
                             row.extend([""] * (len(fd_template_header) - len(row)))
                             for slot_index, (slot_name, _) in zip(roster_column_indices, slot_aliases):
@@ -6032,7 +5622,7 @@ if platform == "FanDuel":
                             fd_template_rows[row_index] = row
 
                         output = io.StringIO(newline="")
-                        csv.writer(output, lineterminator="\\n").writerows(fd_template_rows)
+                        csv.writer(output, lineterminator="\n").writerows(fd_template_rows)
                         st.success(
                             f"Replacement file ready: {len(target_rows)} existing entries will be updated "
                             f"for {target_name}. Entry IDs and contest details are preserved."
@@ -6043,7 +5633,8 @@ if platform == "FanDuel":
                             file_name=("FanDuel_Single_Game_Replacement.csv" if lineup_mode == "Single Game"
                                        else "FanDuel_Full_Roster_Replacement.csv"),
                             mime="text/csv",
-                            key="fd_export_" + lineup_mode.replace(" ", "_").lower()
+                            key="fd_export_" + lineup_mode.replace(" ", "_").lower(),
+                            on_click="ignore"
                         )
                     except Exception as exc:
                         st.error(f"Could not create FanDuel replacement CSV: {exc}")
@@ -7700,7 +7291,7 @@ else:
 
             if st.session_state.get("classic_field_context") == classic_contest_name and isinstance(_classic_portfolio_field, pd.DataFrame) and not _classic_portfolio_field.empty and isinstance(_classic_portfolio_outcomes, pd.DataFrame):
                 with st.spinner("Evaluating the selected portfolio together..."):
-                    classic_export_portfolio = evaluate_classic_portfolio_cached(
+                    classic_export_portfolio = evaluate_full_roster_portfolio_cached(
                         _classic_portfolio_outcomes, classic_export_portfolio, _classic_portfolio_field,
                         [slot for slot,_ in roster_slots], int(classic_contest["field"]),
                         classic_contest["payouts"], float(classic_contest["entry"]))

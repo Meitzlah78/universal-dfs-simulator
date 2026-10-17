@@ -48,6 +48,47 @@ class WorkflowIntegrationTest(unittest.TestCase):
         self.assertIn('for _, lineup in classic_export_portfolio.iterrows():',source)
         self.assertIn('.sort_values(classic_rank_metric, ascending=False, kind="stable")',source)
 
+    def test_fanduel_joint_roi_reuses_selected_field_without_hidden_expansion(self):
+        source=Path('dfs_app.py').read_text()
+        tree=ast.parse(source)
+        assignments=[n for n in ast.walk(tree) if isinstance(n,ast.Assign) and any(isinstance(t,ast.Name) and t.id=='_fd_final_field' for t in n.targets)]
+        self.assertEqual(len(assignments),1)
+        self.assertIsInstance(assignments[0].value,ast.Name)
+        self.assertEqual(assignments[0].value.id,'opponent_df')
+        self.assertNotIn('Building larger final ROI field',source)
+        self.assertNotIn('_fd_extra_target',source)
+        self.assertIn('compared = evaluate_contest(_fd_roi_sim, compared, _fd_final_field, fd_slots,',source)
+        self.assertNotIn('_fd_holdout_pool',source)
+        self.assertIn('lineup = fd_export_portfolio.iloc[entry_number]',source)
+        self.assertIn('fd_export_portfolio.to_csv(index=False)',source)
+
+    def test_full_roster_contest_parameters_require_metadata_for_roi(self):
+        tree=ast.parse(Path('dfs_app.py').read_text())
+        node=next(n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name=='full_roster_contest_parameters')
+        ns={};exec(compile(ast.Module(body=[node],type_ignores=[]),'app','exec'),ns)
+        resolve=ns['full_roster_contest_parameters']
+        unknown=resolve({'your_entries':20},10000)
+        self.assertFalse(unknown['payouts_known'])
+        self.assertEqual(unknown['field_size'],10020)
+        known=resolve({'field_size':100,'entry_fee':.25,'your_entries':20,'payouts':[(1,10,2)]},50)
+        self.assertTrue(known['payouts_known'])
+        self.assertEqual(known['field_size'],100)
+        preset=resolve({'name':'45K Sun NFL Hail Mary','entry_fee':.25,'your_entries':20},10000)
+        self.assertTrue(preset['payouts_known'])
+        self.assertEqual(preset['field_size'],215568)
+
+    def test_fanduel_assigned_count_matches_owned_and_report_export_source(self):
+        tree=ast.parse(Path('dfs_app.py').read_text())
+        assignments=sorted((n for n in ast.walk(tree) if isinstance(n,ast.Assign) and any(isinstance(t,ast.Name) and t.id in {'_fd_entry_seed','fd_export_portfolio'} for t in n.targets)),key=lambda n:n.lineno)
+        nodes=[n for n in assignments if n.targets[0].id=='_fd_entry_seed' or isinstance(n.value,ast.Call) and isinstance(n.value.func,ast.Attribute) and n.value.func.attr=='reset_index']
+        for shown in [3,100]:
+            frame=pd.DataFrame({'QB':[f'p{i}' for i in range(shown)]})
+            ns={'pd':pd,'np':np,'fd_results':frame,'_fd_spec':{'owned':20}}
+            exec(compile(ast.Module(body=nodes,type_ignores=[]),'app','exec'),ns)
+            assigned=ns['fd_export_portfolio']
+            self.assertEqual(len(assigned),20)
+            self.assertEqual(assigned.QB.nunique(),min(shown,20))
+
     def test_classic_assignment_matches_owned_entries_not_display_count(self):
         tree=ast.parse(Path('dfs_app.py').read_text())
         wanted={'_classic_assignment_count','_classic_unique_entries','classic_export_portfolio'}

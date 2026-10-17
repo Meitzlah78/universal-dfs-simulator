@@ -91,3 +91,20 @@ secondary rules improved from 82 candidates in 100,000 proposals to 5,000 in
 60,160 proposals. This is a construction regression check, not an accuracy test
 or a reproduction of every user configuration. Shortfalls report rejection
 categories and do not imply exhaustive enumeration of all legal combinations.
+
+### FanDuel Full Roster workflow alignment
+
+FanDuel Full Roster now scores all candidates with the same streaming contest
+evaluator as DK Classic, across every 10,000-row evaluation outcome. One learned
+representative field supplies both candidate rankings and joint portfolio
+payouts; the separate 50,000-opponent expansion and half-sample evaluation were
+removed. Top 1% is the default ranking. The displayed assigned portfolio, its
+report download and entry-template replacement use the same ordered roster set.
+
+FanDuel outcomes retain site scoring, the $60,000 cap and four-player team limit.
+Opponent baseline lineups require a QB plus WR/TE stack, independently of user
+candidate stack choices. A known payout ladder and contest capacity are required
+for cash/ROI output; otherwise only estimated finish rates are shown. The existing
+Hail Mary preset remains available and should be checked against the actual
+contest. Candidate variety is not a final-portfolio exposure cap or overlap rule.
+This is workflow parity, not evidence of calibrated ownership or profitability.

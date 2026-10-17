@@ -21,6 +21,14 @@ class ClassicFieldTest(unittest.TestCase):
         self.assertFalse(classic_tournament_mask(duplicate,['A']*8+['B'],positions)[0])
         self.assertTrue(classic_tournament_mask(picks,['A']*8+['B'],positions)[0])
 
+    def test_fanduel_four_player_team_limit(self):
+        positions=['QB','RB','RB','WR','WR','WR','TE','TE','D']
+        picks=np.arange(9)[None,:]
+        teams=['A','A','B','A','A','C','A','D','E']
+        self.assertFalse(classic_tournament_mask(picks,teams,positions,max_from_team=4)[0])
+        teams[6]='B'
+        self.assertTrue(classic_tournament_mask(picks,teams,positions,max_from_team=4)[0])
+
     def test_empty_batches_are_supported(self):
         self.assertEqual(len(classic_tournament_mask(np.empty((0,9),int),[],[])),0)
 
