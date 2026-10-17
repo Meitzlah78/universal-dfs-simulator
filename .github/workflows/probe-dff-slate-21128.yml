@@ -15,11 +15,14 @@ jobs:
       - name: Probe exact DFF FanDuel slate response
         run: |
           python - <<'PY'
-          import requests,re
+          from urllib.request import Request, urlopen
+          import re
           url='https://www.dailyfantasyfuel.com/nfl?platform=fd&slate=21128'
-          r=requests.get(url,headers={'User-Agent':'Mozilla/5.0'},timeout=30)
-          print('STATUS',r.status_code,'URL',r.url,'TYPE',r.headers.get('content-type'),'LEN',len(r.text))
-          text=r.text
+          req=Request(url,headers={'User-Agent':'Mozilla/5.0'})
+          with urlopen(req,timeout=30) as r:
+              raw=r.read()
+              text=raw.decode('utf-8','replace')
+              print('STATUS',r.status,'URL',r.geturl(),'TYPE',r.headers.get('content-type'),'LEN',len(text))
           for needle in ['Brandon Aubrey','Trey Smack','Jordan Love','21128','projection','fpts','players','slate']:
               print('\nNEEDLE',needle,'COUNT',text.lower().count(needle.lower()))
               m=re.search(re.escape(needle),text,re.I)
