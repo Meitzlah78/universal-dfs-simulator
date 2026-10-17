@@ -9086,6 +9086,8 @@ if "contest_results_df" in st.session_state and not (platform == "DraftKings" an
         "AvgPercentile": "Average Percentile",
     })
 
+    showdown_export_controls = st.container()
+
     st.dataframe(
         display_df,
         use_container_width=True,
@@ -9170,81 +9172,84 @@ else:
 # ============================================
 # DRAFTKINGS SHOWDOWN EXPORT BUTTON
 # Export the selected final portfolio using CPT and FLEX IDs from the uploaded DK template.
-if platform == "DraftKings" and lineup_mode == "Showdown":
-    export_portfolio = st.session_state.get("portfolio_df")
-    export_portfolio = remove_out_players_from_lineups(
-        export_portfolio, ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"], "DraftKings Showdown export"
-    )
-    if isinstance(export_portfolio, pd.DataFrame):
-        st.session_state["portfolio_df"] = export_portfolio
-    dk_player_ids = st.session_state.get("dk_player_ids", {})
-    if isinstance(export_portfolio, pd.DataFrame) and not export_portfolio.empty:
-        if not dk_player_ids:
-            st.warning("Upload the DraftKings Showdown lineup template CSV first so the app can get the CPT/FLEX player IDs.")
-        else:
-            export_rows = []
-            missing_ids = []
-            for _, row in export_portfolio.iterrows():
-                captain = str(row.get("Captain", "")).strip()
-                flex_players = [str(row.get(f"Flex{i}", "")).strip() for i in range(1, 6)]
-                captain_id = dk_player_ids.get(captain, {}).get("CPT")
-                flex_ids = [dk_player_ids.get(player, {}).get("FLEX") for player in flex_players]
-                if not captain_id:
-                    missing_ids.append(f"{captain} - CPT")
-                for player, player_id in zip(flex_players, flex_ids):
-                    if not player_id:
-                        missing_ids.append(f"{player} - FLEX")
-                export_rows.append([captain_id or ""] + [player_id or "" for player_id in flex_ids])
-            if missing_ids:
-                st.warning("Some DraftKings CPT/FLEX IDs are missing. Re-upload the correct Showdown template CSV.")
-                st.write(sorted(set(missing_ids)))
+with (showdown_export_controls if "showdown_export_controls" in locals() else st.container()):
+    if platform == "DraftKings" and lineup_mode == "Showdown":
+        st.write("#### DraftKings Showdown Export")
+        st.caption("Download the file for your existing entries, then open DraftKings → My Lineups → Edit Entries → Upload CSV.")
+        st.link_button(
+            "OPEN DRAFTKINGS MY LINEUPS / EDIT ENTRIES",
+            "https://www.draftkings.com/lineup",
+            use_container_width=True,
+        )
+        export_portfolio = st.session_state.get("portfolio_df")
+        export_portfolio = remove_out_players_from_lineups(
+            export_portfolio, ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"], "DraftKings Showdown export"
+        )
+        if isinstance(export_portfolio, pd.DataFrame):
+            st.session_state["portfolio_df"] = export_portfolio
+        dk_player_ids = st.session_state.get("dk_player_ids", {})
+        if isinstance(export_portfolio, pd.DataFrame) and not export_portfolio.empty:
+            if not dk_player_ids:
+                st.warning("Upload the DraftKings Showdown lineup template CSV first so the app can get the CPT/FLEX player IDs.")
             else:
-                # Keep the official DraftKings entry upload separate from a basic lineup export.
-                showdown_slots = ["CPT", "FLEX", "FLEX", "FLEX", "FLEX", "FLEX"]
-                lineup_ids_df = pd.DataFrame(export_rows, columns=showdown_slots)
-                st.write("#### DraftKings Showdown Export")
-                contest_meta = st.session_state.get("selected_dk_contest", {})
-                has_entry_template = (
-                    entry_file is not None
-                    and selected_contest_id
-                    and "entry_df" in locals()
-                    and isinstance(entry_df, pd.DataFrame)
-                    and not entry_df.empty
-                )
-                if has_entry_template:
-                    st.caption("FOR EXISTING ENTRIES: Download this file, then go to DraftKings → My Lineups → Edit Entries → Upload CSV. Do not upload this file on the regular Upload Lineups page. Entry IDs and Contest ID are preserved.")
-                    export_df = build_dk_contest_entry_export(
-                        entry_df,
-                        selected_contest_id,
-                        lineup_ids_df,
-                        showdown_slots,
-                        "Showdown"
-                    )
-                    if export_df is not None:
-                        st.download_button(
-                            label="DOWNLOAD FILE FOR EDIT ENTRIES",
-                            data=export_df.to_csv(index=False).encode("utf-8"),
-                            file_name="DraftKings_Showdown_Contest_Entries.csv",
-                            mime="text/csv",
-                            use_container_width=True,
-                            key="dk_showdown_unified_export"
-                        )
-                        st.link_button(
-                            "OPEN DRAFTKINGS MY LINEUPS / EDIT ENTRIES",
-                            "https://www.draftkings.com/lineup",
-                            use_container_width=True
-                        )
-                        st.caption("On DraftKings, open My Lineups and choose Edit Entries to upload the downloaded replacement CSV.")
+                export_rows = []
+                missing_ids = []
+                for _, row in export_portfolio.iterrows():
+                    captain = str(row.get("Captain", "")).strip()
+                    flex_players = [str(row.get(f"Flex{i}", "")).strip() for i in range(1, 6)]
+                    captain_id = dk_player_ids.get(captain, {}).get("CPT")
+                    flex_ids = [dk_player_ids.get(player, {}).get("FLEX") for player in flex_players]
+                    if not captain_id:
+                        missing_ids.append(f"{captain} - CPT")
+                    for player, player_id in zip(flex_players, flex_ids):
+                        if not player_id:
+                            missing_ids.append(f"{player} - FLEX")
+                    export_rows.append([captain_id or ""] + [player_id or "" for player_id in flex_ids])
+                if missing_ids:
+                    st.warning("Some DraftKings CPT/FLEX IDs are missing. Re-upload the correct Showdown template CSV.")
+                    st.write(sorted(set(missing_ids)))
                 else:
-                    # Always target existing contest entries; don't offer a new-entry upload path.
-                    st.warning(
-                        "To put these lineups into your existing entries, upload the CSV from DraftKings "
-                        "My Contests / Edit Entries in this app and select the matching contest. "
-                        "Then this app will make one replacement file that preserves Entry IDs and Contest ID. "
-                        "A separate new-lineups export is intentionally disabled."
+                    # Keep the official DraftKings entry upload separate from a basic lineup export.
+                    showdown_slots = ["CPT", "FLEX", "FLEX", "FLEX", "FLEX", "FLEX"]
+                    lineup_ids_df = pd.DataFrame(export_rows, columns=showdown_slots)
+                    contest_meta = st.session_state.get("selected_dk_contest", {})
+                    has_entry_template = (
+                        entry_file is not None
+                        and selected_contest_id
+                        and "entry_df" in locals()
+                        and isinstance(entry_df, pd.DataFrame)
+                        and not entry_df.empty
                     )
-    else:
-        st.info("Run CONTEST SIM and build your final portfolio first.")
+                    if has_entry_template:
+                        st.caption("FOR EXISTING ENTRIES: Download this file, then go to DraftKings → My Lineups → Edit Entries → Upload CSV. Do not upload this file on the regular Upload Lineups page. Entry IDs and Contest ID are preserved.")
+                        export_df = build_dk_contest_entry_export(
+                            entry_df,
+                            selected_contest_id,
+                            lineup_ids_df,
+                            showdown_slots,
+                            "Showdown"
+                        )
+                        if export_df is not None:
+                            st.download_button(
+                                label="DOWNLOAD FILE FOR EDIT ENTRIES",
+                                data=export_df.to_csv(index=False).encode("utf-8"),
+                                file_name="DraftKings_Showdown_Contest_Entries.csv",
+                                mime="text/csv",
+                                use_container_width=True,
+                                key="dk_showdown_unified_export",
+                                on_click="ignore"
+                            )
+                            st.caption("On DraftKings, open My Lineups and choose Edit Entries to upload the downloaded replacement CSV.")
+                    else:
+                        # Always target existing contest entries; don't offer a new-entry upload path.
+                        st.warning(
+                            "To put these lineups into your existing entries, upload the CSV from DraftKings "
+                            "My Contests / Edit Entries in this app and select the matching contest. "
+                            "Then this app will make one replacement file that preserves Entry IDs and Contest ID. "
+                            "A separate new-lineups export is intentionally disabled."
+                        )
+        else:
+            st.info("Run CONTEST SIM and build your final portfolio first.")
 
 # Player Pool appears above the SIM handler, so refresh it after a completed
 # Showdown simulation/build to show the newly generated player attributes.
