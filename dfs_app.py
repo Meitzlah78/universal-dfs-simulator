@@ -183,7 +183,7 @@ def remove_duplicate_entries(frame, entry_id_col=None):
     return frame.drop_duplicates(keep="first")
 
 
-def full_roster_stack_matches(chosen, pool, selected_stacks):
+def full_roster_stack_matches(chosen, pool, selected_stacks, stack_lookup=None):
     """Return True when a full-roster lineup matches at least one selected QB stack rule."""
     selected_stacks = list(selected_stacks or [])
     if not selected_stacks or "No stack rule" in selected_stacks:
@@ -191,7 +191,9 @@ def full_roster_stack_matches(chosen, pool, selected_stacks):
     if not isinstance(pool, pd.DataFrame) or pool.empty or not isinstance(chosen, dict):
         return False
 
-    lookup = pool.drop_duplicates("Name", keep="first").set_index("Name")
+    lookup = stack_lookup
+    if lookup is None:
+        lookup = pool.drop_duplicates("Name", keep="first").set_index("Name")
     qb_name = str(chosen.get("QB", "")).strip()
     if not qb_name or qb_name not in lookup.index:
         return False
@@ -4525,6 +4527,12 @@ if platform == "FanDuel":
         pool = pool.drop_duplicates("Name", keep="first").reset_index(drop=True)
         names = pool["Name"].astype(str).to_numpy(dtype=object)
         salaries = pd.to_numeric(pool["Salary"], errors="coerce").fillna(0).to_numpy(dtype=np.int64)
+        fd_all_player_indices = np.arange(len(names), dtype=int)
+        fd_build_name_to_index = {str(name): i for i, name in enumerate(names)}
+        fd_build_teams = pool.get("Team", pd.Series("", index=pool.index)).fillna("").astype(str).str.strip().str.upper().to_numpy(dtype=object)
+        fd_build_opponents = pool.get("Opponent", pd.Series("", index=pool.index)).fillna("").astype(str).str.strip().str.upper().to_numpy(dtype=object)
+        fd_build_positions = pool.get("Position", pd.Series("", index=pool.index)).fillna("").astype(str).str.upper().str.replace(" ", "", regex=False).str.split("/").str[0].to_numpy(dtype=object)
+        fd_stack_lookup = pool.drop_duplicates("Name", keep="first").set_index("Name") if lineup_mode == "Full Roster" else None
         projections = pd.to_numeric(pool["Projection"], errors="coerce").fillna(0.01).clip(lower=0.01).to_numpy(dtype=float)
         sim_means = np.asarray([float(player_sim.get(name, {}).get("Mean", projections[i])) for i, name in enumerate(names)], dtype=float)
         lineup_scores = np.asarray([
@@ -4584,6 +4592,7 @@ if platform == "FanDuel":
             chosen_indices = []
             chosen = {}
             used = set()
+            fd_all_player_indices = np.arange(len(names), dtype=int)
             salary = 0
             total_points = 0.0
             total_score = 0.0
@@ -4598,10 +4607,13 @@ if platform == "FanDuel":
                 total_points = sim_means[mvp_idx] * 1.5
                 total_score = lineup_scores[mvp_idx] * 1.5
                 for slot in slots[1:]:
-                    choices = np.asarray([
-                        i for i in range(len(names))
-                        if i not in used and salary + salaries[i] <= salary_max
-                    ], dtype=int)
+                    if used:
+                        unused_mask = ~np.isin(fd_all_player_indices, np.fromiter(used, dtype=int, count=len(used)))
+                    else:
+                        unused_mask = np.ones(len(fd_all_player_indices), dtype=bool)
+                    choices = fd_all_player_indices[
+                        unused_mask & (salary + salaries[fd_all_player_indices] <= salary_max)
+                    ]
                     if not len(choices):
                         break
                     weights = lineup_scores[choices].copy()
@@ -4621,10 +4633,12 @@ if platform == "FanDuel":
                     total_score += lineup_scores[picked]
             else:
                 for roster_pos, (slot, _) in enumerate(roster):
-                    choices = np.asarray([
-                        i for i in eligible_indices[slot]
-                        if i not in used and salary + salaries[i] <= salary_max
-                    ], dtype=int)
+                    base_choices = eligible_indices[slot]
+                    if used:
+                        unused_mask = ~np.isin(base_choices, np.fromiter(used, dtype=int, count=len(used)))
+                    else:
+                        unused_mask = np.ones(len(base_choices), dtype=bool)
+                    choices = base_choices[unused_mask & (salary + salaries[base_choices] <= salary_max)]
                     if not len(choices):
                         break
 
@@ -4648,18 +4662,14 @@ if platform == "FanDuel":
                                 fd_slot_salary_bounds[remaining_slot][1]
                                 for remaining_slot, _remaining_positions in remaining_roster
                             )
-                            choices = np.asarray([
-                                i for i in choices
-                                if (
-                                    salary + int(salaries[i]) + max_remaining_salary >= salary_min
-                                    and salary + int(salaries[i]) + min_remaining_salary <= salary_max
-                                )
-                            ], dtype=int)
+                            projected_salary = salary + salaries[choices]
+                            choices = choices[
+                                (projected_salary + max_remaining_salary >= salary_min)
+                                & (projected_salary + min_remaining_salary <= salary_max)
+                            ]
                     else:
-                        choices = np.asarray([
-                            i for i in choices
-                            if salary_min <= salary + int(salaries[i]) <= salary_max
-                        ], dtype=int)
+                        projected_salary = salary + salaries[choices]
+                        choices = choices[(projected_salary >= salary_min) & (projected_salary <= salary_max)]
                     if not len(choices):
                         break
 
@@ -4675,11 +4685,10 @@ if platform == "FanDuel":
                     # relying only on post-build rejection.
                     if lineup_mode == "Full Roster" and slot != "QB" and "QB" in chosen and fd_stack_rules and "No stack rule" not in fd_stack_rules:
                         qb_name = str(chosen.get("QB", ""))
-                        qb_matches = np.flatnonzero(names == qb_name)
-                        if len(qb_matches):
-                            qb_i = int(qb_matches[0])
-                            qb_team = str(pool.iloc[qb_i].get("Team", "")).strip().upper()
-                            qb_opp = str(pool.iloc[qb_i].get("Opponent", "")).strip().upper()
+                        qb_i = fd_build_name_to_index.get(qb_name)
+                        if qb_i is not None:
+                            qb_team = str(fd_build_teams[qb_i])
+                            qb_opp = str(fd_build_opponents[qb_i])
                             need_same = max([3 if "QB + 3 teammate" in r else 2 if "QB + 2 teammate" in r else 1 for r in fd_stack_rules] or [1])
                             need_bring = any("bring-back" in r for r in fd_stack_rules)
                             same_now = 0
@@ -4687,23 +4696,22 @@ if platform == "FanDuel":
                             for picked_name in chosen.values():
                                 if picked_name == qb_name:
                                     continue
-                                hits = np.flatnonzero(names == str(picked_name))
-                                if not len(hits):
+                                picked_i = fd_build_name_to_index.get(str(picked_name))
+                                if picked_i is None:
                                     continue
-                                row = pool.iloc[int(hits[0])]
-                                pos = str(row.get("Position", "")).upper().split("/")[0]
+                                pos = str(fd_build_positions[picked_i])
                                 if pos not in {"RB", "WR", "TE"}:
                                     continue
-                                team = str(row.get("Team", "")).strip().upper()
+                                team = str(fd_build_teams[picked_i])
                                 same_now += int(team == qb_team)
                                 bring_now += int(bool(qb_opp) and team == qb_opp)
                             skill_slots_left = sum(1 for s, e in roster[roster.index((slot, _)):] if e & {"RB", "WR", "TE"})
                             forced = []
                             if same_now < need_same and skill_slots_left <= (need_same - same_now) + (1 if need_bring and bring_now < 1 else 0):
-                                forced = [i for i in choices if str(pool.iloc[i].get("Team", "")).strip().upper() == qb_team]
+                                forced = choices[fd_build_teams[choices] == qb_team]
                             elif need_bring and bring_now < 1 and skill_slots_left <= 1:
-                                forced = [i for i in choices if str(pool.iloc[i].get("Team", "")).strip().upper() == qb_opp]
-                            if forced:
+                                forced = choices[fd_build_teams[choices] == qb_opp]
+                            if len(forced):
                                 mask = np.isin(choices, np.asarray(forced, dtype=int))
                                 weights = np.where(mask, weights * 25.0, weights)
                     expected_exposure = max(1.0, target_lineups * len(slots) / max(1, len(names)))
@@ -7256,6 +7264,10 @@ else:
             classic_names = classic_pool["Name"].astype(str).to_numpy(dtype=object)
             classic_salaries = pd.to_numeric(classic_pool["Salary"], errors="coerce").fillna(0).to_numpy(dtype=np.int64)
             classic_eligible = classic_pool["Eligible"].tolist()
+            # Hot-loop metadata: keep pandas row lookups out of the bounded builder.
+            classic_teams = classic_pool.get("Team", pd.Series("", index=classic_pool.index)).fillna("").astype(str).str.strip().str.upper().to_numpy(dtype=object)
+            classic_opponents = classic_pool.get("Opponent", pd.Series("", index=classic_pool.index)).fillna("").astype(str).str.strip().str.upper().to_numpy(dtype=object)
+            classic_positions = classic_pool.get("Position", pd.Series("", index=classic_pool.index)).fillna("").astype(str).str.upper().str.split("/").str[0].to_numpy(dtype=object)
             classic_weights = np.asarray([max(rankings.get(name, 0.01), 0.01) for name in classic_names], dtype=float)
             classic_weights /= classic_weights.sum()
             classic_means = np.asarray([
@@ -7286,10 +7298,13 @@ else:
                 used = set()
                 salary = 0
                 for slot, _eligible in roster_slots:
-                    choices = np.asarray([
-                        i for i in eligible_indices[slot]
-                        if i not in used and salary + classic_salaries[i] <= MAX_LINEUP_SALARY
-                    ], dtype=int)
+                    base_choices = eligible_indices[slot]
+                    if used:
+                        used_mask = ~np.isin(base_choices, np.fromiter(used, dtype=int, count=len(used)))
+                    else:
+                        used_mask = np.ones(len(base_choices), dtype=bool)
+                    salary_mask = salary + classic_salaries[base_choices] <= MAX_LINEUP_SALARY
+                    choices = base_choices[used_mask & salary_mask]
                     if not len(choices):
                         break
                     weights = classic_weights[choices].copy()
@@ -7297,11 +7312,10 @@ else:
                     # relying only on post-build rejection.
                     if slot != "QB" and "QB" in chosen and dk_classic_stack_rules and "No stack rule" not in dk_classic_stack_rules:
                         qb_name = str(chosen.get("QB", ""))
-                        qb_matches = np.flatnonzero(classic_names == qb_name)
-                        if len(qb_matches):
-                            qb_i = int(qb_matches[0])
-                            qb_team = str(classic_pool.iloc[qb_i].get("Team", "")).strip().upper()
-                            qb_opp = str(classic_pool.iloc[qb_i].get("Opponent", "")).strip().upper()
+                        qb_i = name_to_index.get(qb_name)
+                        if qb_i is not None:
+                            qb_team = str(classic_teams[qb_i])
+                            qb_opp = str(classic_opponents[qb_i])
                             need_same = max([3 if "QB + 3 teammate" in r else 2 if "QB + 2 teammate" in r else 1 for r in dk_classic_stack_rules] or [1])
                             need_bring = any("bring-back" in r for r in dk_classic_stack_rules)
                             same_now = 0
@@ -7309,24 +7323,23 @@ else:
                             for picked_name in chosen.values():
                                 if picked_name == qb_name:
                                     continue
-                                hits = np.flatnonzero(classic_names == str(picked_name))
-                                if not len(hits):
+                                picked_i = name_to_index.get(str(picked_name))
+                                if picked_i is None:
                                     continue
-                                row = classic_pool.iloc[int(hits[0])]
-                                pos = str(row.get("Position", "")).upper().split("/")[0]
+                                pos = str(classic_positions[picked_i])
                                 if pos not in {"RB", "WR", "TE"}:
                                     continue
-                                team = str(row.get("Team", "")).strip().upper()
+                                team = str(classic_teams[picked_i])
                                 same_now += int(team == qb_team)
                                 bring_now += int(bool(qb_opp) and team == qb_opp)
                             current_pos = next((j for j, (s, _) in enumerate(roster_slots) if s == slot), 0)
                             skill_slots_left = sum(1 for _, e in roster_slots[current_pos:] if e & {"RB", "WR", "TE"})
                             forced = []
                             if same_now < need_same and skill_slots_left <= (need_same - same_now) + (1 if need_bring and bring_now < 1 else 0):
-                                forced = [i for i in choices if str(classic_pool.iloc[i].get("Team", "")).strip().upper() == qb_team]
+                                forced = choices[classic_teams[choices] == qb_team]
                             elif need_bring and bring_now < 1 and skill_slots_left <= 1:
-                                forced = [i for i in choices if str(classic_pool.iloc[i].get("Team", "")).strip().upper() == qb_opp]
-                            if forced:
+                                forced = choices[classic_teams[choices] == qb_opp]
+                            if len(forced):
                                 mask = np.isin(choices, np.asarray(forced, dtype=int))
                                 weights = np.where(mask, weights * 25.0, weights)
                     if no_stack_rules:
