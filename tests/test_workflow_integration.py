@@ -84,7 +84,7 @@ class WorkflowIntegrationTest(unittest.TestCase):
         self.assertNotIn('_fd_extra_target',source)
         self.assertIn('compared = evaluate_contest(_fd_roi_sim, compared, _fd_final_field, fd_slots,',source)
         self.assertNotIn('_fd_holdout_pool',source)
-        self.assertIn('lineup = fd_export_portfolio.iloc[entry_number]',source)
+        self.assertIn('fd_entry_file.getvalue(), fd_export_portfolio, fd_ids,',source)
         self.assertIn('fd_export_portfolio.to_csv(index=False)',source)
 
     def test_full_roster_contest_parameters_require_metadata_for_roi(self):

@@ -5463,161 +5463,24 @@ if platform == "FanDuel":
             )
             render_entry_export_header("FanDuel")
             if "FD_ID" in fd_players.columns:
-                fd_ids = dict(zip(fd_players["Name"], fd_players["FD_ID"].astype(str)))
-                export_slots = (
-                    ["MVP", "FLEX", "FLEX", "FLEX", "FLEX", "FLEX"]
-                    if lineup_mode == "Single Game"
-                    else ["QB", "RB", "RB", "WR", "WR", "WR", "TE", "FLEX", "D"]
-                )
-                # Map all lineup slots in columns instead of constructing thousands
-                # of pandas Series on every widget rerun.
-                slot_names = fd_export_portfolio[fd_slots]
-                mapped_ids = slot_names.apply(lambda column: column.map(fd_ids)).fillna("").astype(str)
-                invalid_ids = mapped_ids.eq("") | mapped_ids.apply(lambda column: column.str.lower().eq("nan"))
-                if invalid_ids.to_numpy().any():
-                    st.warning("Some player IDs are missing, so export is unavailable.")
+                if fd_entry_file is None or not st.session_state.get("selected_fd_contest"):
+                    st.warning("Upload the original FanDuel entries template and select your contest to enable the entry download.")
                 else:
-                    export_df = mapped_ids.copy()
-                    export_df.columns = export_slots
-                    selected_fd_contest = st.session_state.get("selected_fd_contest")
-                    if fd_entry_file is None or not selected_fd_contest:
-                        st.warning(
-                            "Upload your FanDuel contest entry template and select the contest above "
-                            "to create a replacement CSV. A lineup-only CSV cannot replace existing entries."
-                        )
-                    else:
-                        try:
-                            import csv
-                            import io
-                            fd_template_text = fd_entry_file.getvalue().decode("utf-8-sig", errors="replace")
-                            fd_template_rows = list(csv.reader(io.StringIO(fd_template_text)))
-                            if not fd_template_rows:
-                                raise ValueError("The uploaded FanDuel entry template is empty.")
-                            fd_template_header = [str(c).strip() for c in fd_template_rows[0]]
-                            fd_entry_end = 1
-                            while fd_entry_end < len(fd_template_rows):
-                                row = fd_template_rows[fd_entry_end]
-                                if not row or not str(row[0]).strip():
-                                    break
-                                fd_entry_end += 1
-
-                            header_lookup = {}
-                            for i, column in enumerate(fd_template_header):
-                                key_name = str(column).strip().upper()
-                                header_lookup.setdefault(key_name, []).append(i)
-                            if lineup_mode == "Single Game":
-                                slot_aliases = [
-                                    ("MVP", {"MVP", "MVP - 1.5X POINTS"}),
-                                    ("FLEX1", {"ANYFLEX", "FLEX"}),
-                                    ("FLEX2", {"ANYFLEX", "FLEX"}),
-                                    ("FLEX3", {"ANYFLEX", "FLEX"}),
-                                    ("FLEX4", {"ANYFLEX", "FLEX"}),
-                                    ("FLEX5", {"ANYFLEX", "FLEX"}),
-                                ]
-                            else:
-                                slot_aliases = [
-                                    ("QB", {"QB"}), ("RB1", {"RB"}), ("RB2", {"RB"}),
-                                    ("WR1", {"WR"}), ("WR2", {"WR"}), ("WR3", {"WR"}),
-                                    ("TE", {"TE"}), ("FLEX", {"FLEX"}), ("D", {"D", "DEF", "DST"}),
-                                ]
-                            roster_column_indices = []
-                            used_indices = set()
-                            for slot_name, aliases in slot_aliases:
-                                index = next(
-                                    (i for alias in aliases for i in header_lookup.get(alias, [])
-                                     if i not in used_indices),
-                                    None
-                                )
-                                if index is None:
-                                    raise ValueError(
-                                        f"Could not find the FanDuel upload column for {slot_name}. "
-                                        "Make sure you uploaded the correct Single Game or Full Roster template."
-                                    )
-                                roster_column_indices.append(index)
-                                used_indices.add(index)
-
-                            entry_id_index = next(
-                                (i for i, name in enumerate(fd_template_header)
-                                 if str(name).strip().casefold() in {"entry id", "entry_id", "entryid"}),
-                                None
-                            )
-                            contest_id_index = next(
-                                (i for i, name in enumerate(fd_template_header)
-                                 if str(name).strip().casefold() in {"contest id", "contest_id", "contestid"}),
-                                None
-                            )
-                            contest_name_index = next(
-                                (i for i, name in enumerate(fd_template_header)
-                                 if str(name).strip().casefold() in {"contest name", "contest_name", "contest"}),
-                                None
-                            )
-                            if entry_id_index is None or contest_id_index is None:
-                                raise ValueError("The FanDuel template must include Entry ID and Contest ID columns.")
-
-                            target_id = str(selected_fd_contest.get("id", "")).strip()
-                            target_name = str(selected_fd_contest.get("name", "")).strip()
-                            target_rows = []
-                            for row_index in range(1, fd_entry_end):
-                                row = fd_template_rows[row_index]
-                                row = list(row[:len(fd_template_header)]) + [""] * max(0, len(fd_template_header) - len(row))
-                                if str(row[contest_id_index]).strip() != target_id:
-                                    continue
-                                if contest_name_index is not None and str(row[contest_name_index]).strip() != target_name:
-                                    continue
-                                target_rows.append(row_index)
-
-                            if not target_rows:
-                                raise ValueError(
-                                    "No existing entries match the selected contest in this template. "
-                                    "Please select the contest that matches the uploaded file."
-                                )
-                            if len(fd_export_portfolio) < len(target_rows):
-                                raise ValueError(
-                                    f"This contest has {len(target_rows)} of your entries, but the build contains "
-                                    f"only {len(fd_export_portfolio)} assigned lineups. Build at least that many so every entry is replaced."
-                                )
-
-                            _fd_target_ids = [str(fd_template_rows[i][entry_id_index]).strip() for i in target_rows]
-                            if any(not value for value in _fd_target_ids) or len(set(_fd_target_ids)) != len(_fd_target_ids):
-                                raise ValueError("Selected contest contains blank or duplicate Entry IDs. Upload a fresh entry template.")
-                            # Only replace existing entries; never create extra entries.
-                            # Use the FanDuel ID from the uploaded salary file in each roster cell.
-                            for entry_number, row_index in enumerate(target_rows):
-                                lineup = fd_export_portfolio.iloc[entry_number]
-                                row = list(fd_template_rows[row_index][:len(fd_template_header)])
-                                row.extend([""] * (len(fd_template_header) - len(row)))
-                                for slot_index, (slot_name, _) in zip(roster_column_indices, slot_aliases):
-                                    player_name = str(lineup[slot_name])
-                                    player_id = str(fd_ids.get(player_name, "")).strip()
-                                    if not player_id or player_id.lower() == "nan":
-                                        raise ValueError(f"Missing FanDuel player ID for {player_name}.")
-                                    # FanDuel entry templates use slate-prefixed player IDs
-                                    # (for example, 135282-62239). Add the selected slate prefix
-                                    # when the salary file supplies only the numeric player ID.
-                                    if "-" not in player_id and "-" in target_id:
-                                        player_id = target_id.split("-", 1)[0] + "-" + player_id
-                                    row[slot_index] = player_id
-                                fd_template_rows[row_index] = row
-
-                            output = io.StringIO(newline="")
-                            csv.writer(output, lineterminator="\n").writerows(fd_template_rows)
-                            st.success(
-                                f"Replacement file ready: {len(target_rows)} existing entries will be updated "
-                                f"for {target_name}. Entry IDs and contest details are preserved."
-                            )
-                            st.download_button(
-                                f"DOWNLOAD {len(target_rows)} FANDUEL ENTRIES — UPLOAD THIS FILE",
-                                output.getvalue().encode("utf-8"),
-                                file_name=("FanDuel_Single_Game_Replacement.csv" if lineup_mode == "Single Game"
-                                           else "FanDuel_Full_Roster_Replacement.csv"),
-                                mime="text/csv",
-                                use_container_width=True,
-                                key="fd_export_" + lineup_mode.replace(" ", "_").lower(),
-                                type="primary",
-                                on_click="ignore"
-                            )
-                        except Exception as exc:
-                            st.error(f"Could not create FanDuel replacement CSV: {exc}")
+                    try:
+                        from simmah_exports import build_fanduel_entry_export
+                        fd_ids = dict(zip(fd_players["Name"], fd_players["FD_ID"].astype(str)))
+                        fd_entry_bytes, fd_entry_count = build_fanduel_entry_export(
+                            fd_entry_file.getvalue(), fd_export_portfolio, fd_ids,
+                            st.session_state["selected_fd_contest"], lineup_mode)
+                        st.success(f"Ready to replace {fd_entry_count} reserved entries. Entry IDs and original template details are preserved.")
+                        st.download_button(
+                            f"DOWNLOAD {fd_entry_count} FANDUEL ENTRIES — UPLOAD THIS FILE",
+                            fd_entry_bytes,
+                            file_name="FanDuel_" + lineup_mode.replace(" ", "_") + "_Replacement.csv",
+                            mime="text/csv", use_container_width=True, type="primary",
+                            key="fd_export_" + lineup_mode.replace(" ", "_").lower(), on_click="ignore")
+                    except Exception as exc:
+                        st.error(f"Could not create FanDuel replacement CSV: {exc}")
             else:
                 st.info("This CSV has no player ID column, so lineup export is unavailable.")
 
