@@ -1068,15 +1068,11 @@ def download_public_projection_table(source_name, platform_name, target_names=No
             best_overlap = 0
             best_date = None
             for slate_date in recent_dates:
-                # DFF FanDuel single-game slate URLs are exposed on /nfl with
-                # platform=fd and a slate id.  The current DAL @ GB slate is 21128.
-                # Try the explicit slate page first; target-name overlap still
-                # protects against returning it for an unrelated salary file.
-                page_url = (
-                    "https://www.dailyfantasyfuel.com/nfl?platform=fd&slate=21128"
-                    if slate_date == "2026-10-18"
-                    else f"https://www.dailyfantasyfuel.com/nfl/showdown-single-game-projections/fanduel/{slate_date}/"
-                )
+                # Use DFF's actual FanDuel Single Game projection route. Never
+                # parse the /nfl optimizer page here; it may be a JS shell with
+                # no HTML projection table. Target-name overlap below selects
+                # the matching game instead of hardcoding a slate identifier.
+                page_url = f"https://www.dailyfantasyfuel.com/nfl/showdown-single-game-projections/fanduel/{slate_date}/"
                 page = requests.get(
                     page_url,
                     headers=headers_direct, timeout=30
@@ -1121,7 +1117,7 @@ def download_public_projection_table(source_name, platform_name, target_names=No
             url = (
                 "https://www.dailyfantasyfuel.com/nfl/showdown-single-game-projections/"
                 if site == "draftkings"
-                else "https://www.dailyfantasyfuel.com/nfl/projections/fanduel/"
+                else "https://www.dailyfantasyfuel.com/nfl/showdown-single-game-projections/fanduel/"
             )
         else:
             url = "https://www.dailyfantasyfuel.com/nfl/projections/fanduel/" if site == "fanduel" else "https://www.dailyfantasyfuel.com/nfl/projections/"
