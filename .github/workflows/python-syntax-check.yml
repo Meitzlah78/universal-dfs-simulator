@@ -4,15 +4,60 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: write
+
 jobs:
   syntax:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       - name: Compile app source
         run: python -m py_compile dfs_app.py
+
+  integrate-fast-builders:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/feature/fast-build-all-modes'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out integration branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/fast-build-all-modes
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest numpy pandas
+      - name: Apply all fast builders
+        run: |
+          python .github/scripts/install_fast_classic_builder.py
+          python .github/scripts/install_fast_fd_build_setup.py
+          python .github/scripts/install_fast_fd_single_game_builder.py
+          python .github/scripts/install_fast_fd_full_roster_builder.py
+          python .github/scripts/install_fast_stack_validation.py
+      - name: Validate integrated implementation
+        run: |
+          python -m py_compile dfs_app.py
+          pytest -q tests/test_fast_build_architecture.py tests/test_fast_build_installers.py tests/test_fast_fd_single_game_installer.py tests/test_fast_fd_full_roster_installer.py tests/test_opponent_field_architecture.py
+      - name: Commit validated implementation
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add dfs_app.py
+          if git diff --cached --quiet; then
+            echo 'No source changes required.'
+          else
+            git commit -m 'Integrate validated fast builders across DFS modes'
+            git push origin HEAD:feature/fast-build-all-modes
+          fi
