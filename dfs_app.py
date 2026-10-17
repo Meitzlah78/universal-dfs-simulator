@@ -5016,8 +5016,20 @@ if platform == "FanDuel":
             with st.spinner(f"Building {_fd_generation_target:,} simulated FanDuel contest entries..."):
                 if lineup_mode == "Full Roster":
                     from simmah_classic_field import build_full_roster_field
+                    _fd_salary_counts = None
+                    _fd_team_count = fd_pool["Team"].dropna().nunique()
+                    if _fd_team_count >= 16:
+                        import json as _fd_history_json
+                        _fd_salary_path = Path(__file__).resolve().parent / "data" / "fd_full_salary_history.json"
+                        if _fd_salary_path.exists():
+                            _fd_salary_history = _fd_history_json.loads(_fd_salary_path.read_text())
+                            _fd_salary_counts = _fd_salary_history["salary_counts"]
                     _fd_batched_field = build_full_roster_field(fd_pool, fd_weights, fd_slots, _fd_generation_target,
-                        rng=rng, progress=lambda fraction,text: fd_field_progress.progress(fraction,text=text))
+                        rng=rng, progress=lambda fraction,text: fd_field_progress.progress(fraction,text=text),
+                        salary_counts=_fd_salary_counts)
+                    if _fd_salary_counts:
+                        st.caption("Opponent salary usage uses completed 11-game FD history, conditioned on the supported $59,000–$60,000 range. Ownership and duplicate rates remain estimates.")
+
                     opponent_rows = _fd_batched_field.to_dict("records")
                 else:
                     while len(opponent_rows) < _fd_generation_target and attempts < max(300000, _fd_generation_target * 15):

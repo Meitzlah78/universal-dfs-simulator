@@ -62,3 +62,8 @@ independently verify retractable-roof status. Weather coefficients are conservat
 model assumptions, not measured or validated SaberSim parameters.
 
 Run `python -m unittest discover -s tests -p test_weather.py -v` for weather tests.
+
+
+### FD Full Roster salary calibration
+Large slates (at least 16 represented teams) use anonymous salary counts from the completed 11-game FD contest 135023-280945024 (568,465 visible complete entries). The sampler corrects for proposal frequency within each batch before sampling legal rosters with replacement. This is conditioned on the existing supported $59,000–$60,000 range and salary bins actually present in that batch; it is not an exact whole-field replication. Smaller slates retain their baseline curve. No historical fantasy scores or player identities are used by this salary model.
+A seeded random 10,000-entry sample of the historical field contained 8,645 unique rosters, 1,840 entries in repeated-roster groups, and 128 copies of its most common roster. This is a validation reference, not an imposed duplication target. The current salary change does not calibrate ownership combinations or claim accurate ROI.

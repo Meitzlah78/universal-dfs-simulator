@@ -75,6 +75,18 @@ class ClassicFieldTest(unittest.TestCase):
             normalized=build_full_roster_field(pool,weights/weights.sum(),slots,200,rng=np.random.default_rng(19),platform=site)
             pd.testing.assert_frame_equal(raw,normalized)
 
+    def test_historical_salary_mix_corrects_proposal_frequency(self):
+        from test_candidates import fixture
+        from simmah_classic_field import build_full_roster_field
+        pool,_,roster=fixture('FD');pool['Projection']=pool.Salary/500
+        result=build_full_roster_field(pool,np.ones(len(pool)),[s for s,_ in roster],4000,
+            rng=np.random.default_rng(87),salary_counts={"60000":1,"59500":1})
+        self.assertTrue(result.Salary.isin([60000,59500]).all())
+        self.assertAlmostEqual(float((result.Salary==60000).mean()),.5,delta=.04)
+        index={name:i for i,name in enumerate(pool.Name)}
+        picks=np.array([[index[name] for name in row] for row in result[[s for s,_ in roster]].itertuples(index=False,name=None)])
+        self.assertTrue(classic_tournament_mask(picks,pool.Team,pool.Position,max_from_team=4).all())
+
     def test_empty_batches_are_supported(self):
         self.assertEqual(len(classic_tournament_mask(np.empty((0,9),int),[],[])),0)
 

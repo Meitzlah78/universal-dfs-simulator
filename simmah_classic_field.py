@@ -23,7 +23,7 @@ def classic_tournament_mask(picks, teams, positions, max_from_team=8):
     return unique & legal_teams & stacked
 
 
-def build_full_roster_field(pool, weights, slots, target, rng=None, progress=None, max_proposals=None, platform="FanDuel"):
+def build_full_roster_field(pool, weights, slots, target, rng=None, progress=None, max_proposals=None, platform="FanDuel", salary_counts=None):
     """Shared batched full-roster opponent sampler with site-specific rules.
 
     Keeps the existing salary acceptance curve, ownership/mean blend, QB stack,
@@ -56,6 +56,12 @@ def build_full_roster_field(pool, weights, slots, target, rng=None, progress=Non
     relative_floor=float(nonnegative.max())*1e-8 if nonnegative.max()>0 else 1.
     base=np.maximum(nonnegative,relative_floor)*(1 if draftkings else np.maximum(means,.01)**.20)
     acceptance={60000:1.,59900:.90,59800:.72,59700:.58,59600:.46,59500:.36,59400:.24,59300:.18,59200:.13,59100:.09,59000:.06}
+    learned_salary = None
+    if salary_counts is not None:
+        learned_salary = {int(k):float(v) for k,v in salary_counts.items()
+                          if floor <= int(k) <= cap and float(v)>0}
+        if not learned_salary or not all(np.isfinite(v) for v in learned_salary.values()):
+            raise ValueError("Invalid historical salary distribution")
     limit=max(300000,target*150) if max_proposals is None else int(max_proposals)
     chunks=[];accepted=0;attempted=0
     while accepted<target and attempted<limit:
@@ -84,6 +90,21 @@ def build_full_roster_field(pool, weights, slots, target, rng=None, progress=Non
                 selected=rng.choice(viable,size=min(len(viable),target-accepted),replace=True,p=human/human.sum())
             else:selected=viable
             chosen=picks[selected];cost=total[selected]
+        elif learned_salary:
+            viable=np.flatnonzero(valid)
+            if len(viable):
+                costs=total[viable].astype(int)
+                values,counts=np.unique(costs,return_counts=True)
+                source=dict(zip(values,counts))
+                # Correct for proposal frequency: an acceptance curve alone
+                # cannot reproduce a historical salary distribution.
+                mass=np.array([learned_salary.get(int(v),0)/source[v] for v in costs])
+                if mass.sum()>0:
+                    selected=rng.choice(viable,size=min(len(viable),target-accepted),
+                                        replace=True,p=mass/mass.sum())
+                else:selected=np.array([],int)
+            else:selected=viable
+            chosen=picks[selected];cost=total[selected]
         else:
             probability=np.array([acceptance.get(int(s),.01 if s>=58000 else .002) for s in total])
             valid &= rng.random(n)<=probability
@@ -95,7 +116,7 @@ def build_full_roster_field(pool, weights, slots, target, rng=None, progress=Non
         if progress:progress(min(1,accepted/max(target,1)),f'Building {platform} opponent field: {accepted:,} / {target:,}')
     if accepted<target:raise ValueError(f'Built {accepted:,} of {target:,} {platform} opponents after {attempted:,} proposals; check player availability and salary feasibility')
     result=pd.concat(chunks,ignore_index=True) if chunks else pd.DataFrame(columns=list(slots)+['Salary','ProjectedPoints'])
-    result.attrs.update(proposals=attempted,target=target,engine='batched-full-roster-field-v2',platform=platform)
+    result.attrs.update(proposals=attempted,target=target,engine='batched-full-roster-field-v3',platform=platform, salary_model='historical distribution within supported salary range' if learned_salary else 'baseline')
     return result
 
 
