@@ -9981,7 +9981,7 @@ if "contest_results_df" in st.session_state and not (platform == "DraftKings" an
         "Captain", "Captain Sim Pts", "Flex1", "Flex1 Sim Pts",
         "Flex2", "Flex2 Sim Pts", "Flex3", "Flex3 Sim Pts",
         "Flex4", "Flex4 Sim Pts", "Flex5", "Flex5 Sim Pts",
-        "Salary", "Lineup Ownership Score (%)", "ContestScore", "WinRate", "Top1", "Top5",
+        "Salary", "Lineup Ownership Score (%)", "Projected Dupes", "ContestScore", "WinRate", "Top1", "Top5",
         "Top10", "CashRate", "Entry Fee ($)", "Expected Prize ($)", "Expected Net ($)",
         "Expected ROI (%)"
     ]
@@ -9990,6 +9990,30 @@ if "contest_results_df" in st.session_state and not (platform == "DraftKings" an
         portfolio_lineup_columns,
         "portfolio export"
     )
+    # Pre-lock exact-lineup popularity estimate. Keep this separate from the
+    # summed Lineup Ownership Score and do not use it as a hidden diversity rule.
+    if not classic_mode and "Captain" in portfolio_df.columns:
+        _dupe_ownership_df = st.session_state.get("latest_field_ownership")
+        _dupe_own = {}
+        if isinstance(_dupe_ownership_df, pd.DataFrame) and not _dupe_ownership_df.empty and "Name" in _dupe_ownership_df.columns:
+            _dupe_own = dict(zip(
+                _dupe_ownership_df["Name"].astype(str),
+                pd.to_numeric(_dupe_ownership_df.get("Ownership %", 0.0), errors="coerce").fillna(0.0) / 100.0
+            ))
+        _dupe_field_size = int(max(2, estimated_full_field_size))
+        _dupe_values = []
+        for _, _dupe_row in portfolio_df.iterrows():
+            _dupe_captain = str(_dupe_row.get("Captain", ""))
+            _dupe_flex = [str(_dupe_row.get(f"Flex{i}", "")) for i in range(1, 6)]
+            _dupe_cp = max(float(_dupe_own.get(_dupe_captain, 0.05)) * 0.20, 0.0001)
+            _dupe_fp = [max(float(_dupe_own.get(_p, 0.05)), 0.0001) for _p in _dupe_flex]
+            _dupe_raw = _dupe_cp * float(np.prod(_dupe_fp))
+            _dupe_expected = _dupe_field_size * (max(_dupe_raw, 1e-12) ** 0.62)
+            _dupe_salary = float(pd.to_numeric(pd.Series([_dupe_row.get("Salary", 50000)]), errors="coerce").fillna(50000).iloc[0])
+            _dupe_expected *= float(np.exp(-max(0.0, 50000.0 - _dupe_salary) / 9000.0))
+            _dupe_values.append(max(0, int(round(_dupe_expected)) - 1))
+        portfolio_df["Projected Dupes"] = _dupe_values
+
     st.session_state["portfolio_df"] = portfolio_df
     portfolio_export_df = portfolio_df[
         [col for col in export_columns if col in portfolio_df.columns]
