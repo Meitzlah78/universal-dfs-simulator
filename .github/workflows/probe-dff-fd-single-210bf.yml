@@ -1,0 +1,34 @@
+name: Probe DFF FanDuel Single Game Route
+on:
+  push:
+    branches: [feature/salary-csv-upload]
+    paths: ['.github/workflows/probe-dff-fd-single-210bf.yml']
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Probe candidate DFF routes
+        run: |
+          python - <<'PY'
+          from urllib.request import Request, urlopen
+          urls = [
+            'https://www.dailyfantasyfuel.com/nfl/showdown-single-game-projections/fanduel/2026-10-15?slate=210BF',
+            'https://www.dailyfantasyfuel.com/nfl/showdown-single-game-projections/fanduel/2026-10-15/?slate=210BF',
+            'https://www.dailyfantasyfuel.com/nfl?platform=fd&slate=21128',
+          ]
+          needles = ['Brandon Aubrey','Trey Smack','Jordan Love','Dak Prescott','CeeDee Lamb']
+          for url in urls:
+            print('\nURL', url)
+            try:
+              req=Request(url,headers={'User-Agent':'Mozilla/5.0'})
+              text=urlopen(req,timeout=30).read().decode('utf-8','ignore')
+              print('bytes',len(text))
+              for n in needles: print(n, n.casefold() in text.casefold())
+              for token in ['210BF','21128','slate','showdown-single-game-projections']:
+                print(token, text.casefold().find(token.casefold()))
+            except Exception as e:
+              print(type(e).__name__, e)
+          PY
