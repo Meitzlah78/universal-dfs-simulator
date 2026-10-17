@@ -16,15 +16,17 @@ def replace_once(old, new, label):
 # Current Full Roster already precomputes slot eligibility and salary bounds.
 # Optimize only remaining hot-loop work without changing roster or sim rules.
 replace_once(
-'''            names = pool["Name"].astype(str).to_numpy(dtype=object)
-            salaries = pd.to_numeric(pool["Salary"], errors="coerce").fillna(0).to_numpy(dtype=np.int64)
+'''        names = pool["Name"].astype(str).to_numpy(dtype=object)
+        salaries = pd.to_numeric(pool["Salary"], errors="coerce").fillna(0).to_numpy(dtype=np.int64)
+        projections = pd.to_numeric(pool["Projection"], errors="coerce").fillna(0.01).clip(lower=0.01).to_numpy(dtype=float)
 ''',
-'''            names = pool["Name"].astype(str).to_numpy(dtype=object)
-            salaries = pd.to_numeric(pool["Salary"], errors="coerce").fillna(0).to_numpy(dtype=np.int64)
-            fd_build_teams = pool.get("Team", pd.Series("", index=pool.index)).fillna("").astype(str).str.strip().str.upper().to_numpy(dtype=object)
-            fd_build_opponents = pool.get("Opponent", pd.Series("", index=pool.index)).fillna("").astype(str).str.strip().str.upper().to_numpy(dtype=object)
-            fd_build_positions = pool.get("Position", pd.Series("", index=pool.index)).fillna("").astype(str).str.upper().str.replace(" ", "", regex=False).str.split("/").str[0].to_numpy(dtype=object)
-            fd_build_name_to_index = {str(name): i for i, name in enumerate(names)}
+'''        names = pool["Name"].astype(str).to_numpy(dtype=object)
+        salaries = pd.to_numeric(pool["Salary"], errors="coerce").fillna(0).to_numpy(dtype=np.int64)
+        fd_build_teams = pool.get("Team", pd.Series("", index=pool.index)).fillna("").astype(str).str.strip().str.upper().to_numpy(dtype=object)
+        fd_build_opponents = pool.get("Opponent", pd.Series("", index=pool.index)).fillna("").astype(str).str.strip().str.upper().to_numpy(dtype=object)
+        fd_build_positions = pool.get("Position", pd.Series("", index=pool.index)).fillna("").astype(str).str.upper().str.replace(" ", "", regex=False).str.split("/").str[0].to_numpy(dtype=object)
+        fd_build_name_to_index = {str(name): i for i, name in enumerate(names)}
+        projections = pd.to_numeric(pool["Projection"], errors="coerce").fillna(0.01).clip(lower=0.01).to_numpy(dtype=float)
 ''',
 "FD build metadata",
 )
