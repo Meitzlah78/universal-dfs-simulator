@@ -30,7 +30,7 @@ BINS = {
 
 
 def name_key(value):
-    name = re.sub(r'\s+\(\d+\)\s*$','',str(value or '').casefold().strip())
+    name = re.sub(r'\s+\(\d+(?:-\d+)?\)[,; ]*$','',str(value or '').casefold().strip())
     name = re.sub(r'\s+(jr|sr|ii|iii|iv|v)\.?$','',name)
     return re.sub('[^a-z0-9]','',name)
 
@@ -64,7 +64,7 @@ def parse_lineups(frame):
     output = []
     if 'lineup' in lookup:
         for raw in source[lookup['lineup']].dropna():
-            pairs = [(slot_key(slot),name.strip(' ;|')) for slot,name in TOKEN.findall(str(raw))]
+            pairs = [(slot_key(slot),name.strip(' ,;|')) for slot,name in TOKEN.findall(str(raw))]
             if pairs: output.append(pairs)
     else:
         cols = [(c,slot_key(c)) for c in frame.columns if slot_key(c) in SLOTS]
@@ -136,7 +136,10 @@ def ingest_frames(frames, digest, platform='Auto', mode='Auto', fee=None, max_en
         site=platform
         if str(site).casefold()=='auto':
             cols={str(c).replace(' ','').casefold() for c in frame.columns}
-            if 'EntryId' in frame.columns and 'EntryName' in frame.columns: site='DraftKings'
+            # FanDuel exports also use EntryId/EntryName. Slate-prefixed
+            # player IDs identify FD; shared entry headers do not identify DK.
+            if any(re.search(r'\(\d+-\d+\)',name) for row in lineups for _,name in row): site='FanDuel'
+            elif 'EntryId' in frame.columns and 'EntryName' in frame.columns: site='DraftKings'
             elif any(slot=='MVP' for slot,_ in lineups[0]): site='FanDuel'
             elif any(slot=='CPT' for slot,_ in lineups[0]): site='DraftKings'
             else: raise ValueError('Select the source platform for this standings file')

@@ -124,3 +124,18 @@ class ContestHistoryTest(unittest.TestCase):
 
 
 if __name__=='__main__':unittest.main()
+
+
+class FanDuelStandingsIdentityTest(__import__("unittest").TestCase):
+    def test_fd_ids_and_shared_headers_do_not_train_dk(self):
+        import pandas as pd
+        from simmah_contest_history import ingest_frames, name_key, parse_lineups
+        players = [("QB", "Quarter Back"), ("RB", "Runner One"), ("RB", "Runner Two"),
+                   ("WR", "Receiver One"), ("WR", "Receiver Two"), ("WR", "Receiver Three"),
+                   ("TE", "Tight End"), ("WR", "Flex Player"), ("D", "Atlanta Falcons")]
+        lineup = ", ".join(f"{slot} {name} (135068-{i+1})" for i,(slot,name) in enumerate(players))
+        frame = pd.DataFrame({"Rank":[1], "EntryId":[123], "EntryName":["example"], "Lineup":[lineup]})
+        profile = ingest_frames([frame], "fixture")[0]
+        self.assertEqual(profile["format"], "FD_FULL")
+        self.assertEqual(name_key(parse_lineups(frame)[0][0][1]), name_key("Quarter Back"))
+        self.assertEqual(name_key("Player Jr. (135068-12),"), name_key("Player Jr."))
