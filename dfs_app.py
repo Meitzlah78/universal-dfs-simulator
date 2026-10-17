@@ -1127,15 +1127,33 @@ def download_public_projection_table(source_name, platform_name, target_names=No
             result = {}
             is_fd = "fanduel" in str(platform_name).casefold()
             scoring = "HALF" if is_fd else "PPR"
+            projection_week = None
             for position in ("QB", "RB", "WR", "TE", "K", "DST"):
+                # R2P is FantasyPros' weekly rankings-to-projections feed. With
+                # no explicit week it selects the next available weekly slate.
+                # Team positions cannot use R2P, so reuse the week returned by
+                # the skill-position response for K/DST.
+                if position in ("K", "DST"):
+                    params = {"position": position}
+                    if projection_week is not None:
+                        params["week"] = projection_week
+                else:
+                    params = {"position": position, "r2p": "true"}
                 response = requests.get(
                     f"https://api.fantasypros.com/public/v2/json/nfl/{season}/projections",
                     headers={"x-api-key": api_key, "Accept": "application/json"},
-                    params={"position": position, "scoring": scoring},
+                    params=params,
                     timeout=(5, 30),
                 )
                 response.raise_for_status()
                 payload = response.json()
+                if isinstance(payload, dict) and projection_week is None:
+                    try:
+                        returned_week = int(payload.get("week"))
+                        if returned_week > 0:
+                            projection_week = returned_week
+                    except (TypeError, ValueError):
+                        pass
                 players = payload.get("players", []) if isinstance(payload, dict) else []
                 for player in players:
                     if not isinstance(player, dict):
