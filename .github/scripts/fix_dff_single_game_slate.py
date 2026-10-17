@@ -98,3 +98,4 @@ insert = r'''        # DFF's generic single-game page opens one default matchup.
 text = text.replace(anchor, insert + anchor, 1)
 path.write_text(text, encoding='utf-8')
 print('Patched DFF single-game slate discovery')
+# workflow trigger
