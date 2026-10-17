@@ -2,71 +2,49 @@ from pathlib import Path
 
 path = Path('dfs_app.py')
 text = path.read_text()
-start_marker = '            for slate_date in recent_dates:\n'
-end_marker = '            if best_overlap >= min(2, len(target_keys)):\n'
-start = text.find(start_marker, text.find('# FanDuel Single Game:'))
-end = text.find(end_marker, start)
-if start < 0 or end < 0:
-    raise SystemExit('current DFF direct-date block not found')
-old = text[start:end]
-new = '''            from urllib.parse import urljoin
-            for slate_date in recent_dates:
-                base_url = f"https://www.dailyfantasyfuel.com/nfl/showdown-single-game-projections/fanduel/{slate_date}/"
-                page_urls = [base_url]
-
-                # The dated page opens one default matchup. Discover every
-                # slate-specific FanDuel Single Game link/candidate first.
-                discovery_pages = [
-                    base_url,
-                    "https://www.dailyfantasyfuel.com/nfl/showdown-single-game-projections/fanduel/",
-                    f"https://www.dailyfantasyfuel.com/nfl/projections/fanduel/{slate_date}/",
-                ]
-                for discovery_url in discovery_pages:
-                    try:
-                        discovery = requests.get(discovery_url, headers=headers_direct, timeout=30)
-                        discovery.raise_for_status()
-                    except Exception:
-                        continue
-                    for href in re.findall(r'href=["\\\']([^"\\\']+)["\\\']', discovery.text, flags=re.IGNORECASE):
-                        href_text = unescape(href).strip()
-                        low = href_text.casefold()
-                        if 'showdown-single-game-projections/fanduel' in low:
-                            candidate = urljoin(discovery_url, href_text)
-                            if candidate not in page_urls:
-                                page_urls.append(candidate)
-                    for code in re.findall(r'[?&]slate=([A-Za-z0-9]+)', discovery.text, flags=re.IGNORECASE):
-                        candidate = f"https://www.dailyfantasyfuel.com/nfl/showdown-single-game-projections/fanduel/{slate_date}?slate={code}"
-                        if candidate not in page_urls:
-                            page_urls.append(candidate)
-
-                for page_url in page_urls:
-                    try:
-                        page = requests.get(page_url, headers=headers_direct, timeout=30)
-                        page.raise_for_status()
-                        page_tables = pd.read_html(io.StringIO(page.text))
-                    except Exception:
-                        continue
-                    for table in page_tables:
-                        if not isinstance(table.columns, pd.MultiIndex):
-                            continue
-                        if table.shape[1] <= 7:
-                            continue
-                        name_col = table.columns[2]
-                        proj_col = table.columns[7]
-                        values = {}
-                        for name, projection in zip(table.iloc[:, 2], table.iloc[:, 7]):
-                            key = normalize_projection_player_name(name)
-                            val = pd.to_numeric(projection, errors="coerce")
-                            if key and pd.notna(val) and np.isfinite(float(val)) and float(val) >= 0:
-                                values[key] = float(val)
-                        overlap = target_keys.intersection(values)
-                        _sample_keys = list(values.keys())[:5]
-                        dff_debug.append(f"{slate_date}: url={page_url}, rows={len(values)}, overlap={len(overlap)}, name_col={name_col!r}, proj_col={proj_col!r}, sample={_sample_keys!r}")
-                        if len(overlap) > best_overlap:
-                            best_values = values
-                            best_overlap = len(overlap)
-                            best_date = slate_date
+needle = '''            if best_overlap >= min(2, len(target_keys)):
+                return best_values
+            st.warning("DFF FanDuel diagnostic — " + ("; ".join(dff_debug) if dff_debug else f"dates={recent_dates!r}; no projection table parsed"))
 '''
-text = text[:start] + new + text[end:]
+replacement = '''            if best_overlap >= min(2, len(target_keys)):
+                return best_values
+
+            # DFF does not always expose alternate Single Game slate codes in
+            # server-rendered HTML. Fall back to the dated FanDuel classic
+            # projection table and keep ONLY uploaded-slate players. This gives
+            # Single Game the same DFF player projections without guessing a
+            # matchup or hardcoding a slate ID.
+            classic_best = {}
+            classic_overlap = 0
+            classic_date = None
+            for slate_date in recent_dates:
+                classic_url = f"https://www.dailyfantasyfuel.com/nfl/projections/fanduel/{slate_date}/"
+                try:
+                    classic_page = requests.get(classic_url, headers=headers_direct, timeout=30)
+                    classic_page.raise_for_status()
+                    classic_tables = pd.read_html(io.StringIO(classic_page.text))
+                except Exception:
+                    continue
+                for table in classic_tables:
+                    if not isinstance(table.columns, pd.MultiIndex) or table.shape[1] <= 7:
+                        continue
+                    values = {}
+                    for name, projection in zip(table.iloc[:, 2], table.iloc[:, 7]):
+                        key = normalize_projection_player_name(name)
+                        val = pd.to_numeric(projection, errors="coerce")
+                        if key in target_keys and pd.notna(val) and np.isfinite(float(val)) and float(val) >= 0:
+                            values[key] = float(val)
+                    if len(values) > classic_overlap:
+                        classic_best = values
+                        classic_overlap = len(values)
+                        classic_date = slate_date
+            if classic_overlap >= min(2, len(target_keys)):
+                return classic_best
+
+            st.warning("DFF FanDuel diagnostic — " + ("; ".join(dff_debug) if dff_debug else f"dates={recent_dates!r}; no projection table parsed") + f"; classic_fallback={classic_overlap} matches on {classic_date}")
+'''
+if needle not in text:
+    raise SystemExit('DFF return/diagnostic block not found')
+text = text.replace(needle, replacement, 1)
 path.write_text(text)
-print('updated DFF FanDuel slate discovery')
+print('added DFF FanDuel classic projection fallback')
