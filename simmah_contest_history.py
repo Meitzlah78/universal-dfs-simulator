@@ -125,7 +125,7 @@ def summarize(features):
     return result
 
 
-def ingest_frames(frames, digest, platform='Auto', mode='Auto', fee=None, max_entries=None, metadata=None):
+def ingest_frames(frames, digest, platform='Auto', mode='Auto', fee=None, max_entries=None, metadata=None, game_count=None):
     profiles=[]
     for index,frame in enumerate(frames):
         rank_columns={str(c).strip().casefold() for c in frame.columns}
@@ -172,7 +172,7 @@ def ingest_frames(frames, digest, platform='Auto', mode='Auto', fee=None, max_en
             profile_id=digest+':'+str(index)
         profiles.append({'id':profile_id,'format':fmt,'sport':'NFL',
             'stake_bucket':stake_bucket(fee),'max_entries':max_entries,
-            'roster_size':next(iter(sizes)),'lineups':len(lineups),
+            'roster_size':next(iter(sizes)),'game_count':game_count,'lineups':len(lineups),
             'unique_lineups':len(duplicates),'mean_copies':len(lineups)/len(duplicates),
             'features':summarize(feats),'imported_at':datetime.now(timezone.utc).isoformat()})
     if not profiles: raise ValueError('No complete lineups were found; no learning was applied')
@@ -226,9 +226,10 @@ def save_store(path,store):
         if os.path.exists(temp):os.unlink(temp)
 
 
-def matching_profiles(store,platform,mode,fee=None,max_entries=None,roster_size=None):
+def matching_profiles(store,platform,mode,fee=None,max_entries=None,roster_size=None,game_count=None):
     fmt=format_key(platform,mode)
     profiles=[c for c in store.get('contests',[]) if c['format']==fmt and c.get('sport')=='NFL' and (roster_size is None or c.get('roster_size')==roster_size)]
+    profiles=[c for c in profiles if c.get('game_count') is None or c.get('game_count')==game_count]
     if fee is not None:
         exact=[c for c in profiles if c.get('stake_bucket')==stake_bucket(fee)]
         profiles=exact or [c for c in profiles if c.get('stake_bucket')=='UNKNOWN']

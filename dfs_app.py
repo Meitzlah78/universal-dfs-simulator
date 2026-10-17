@@ -519,20 +519,26 @@ def add_lineup_field_ownership(portfolio_df):
     return result
 
 
-def learned_field_profiles(platform_name, mode_name, contest, roster_size):
+def learned_field_profiles(platform_name, mode_name, contest, roster_size, pool=None):
     contest = contest or {}
     fee = contest.get("entry_fee", contest.get("entry"))
     maximum = contest.get("max_entries_per_user", contest.get("max_entries"))
+    game_count = None
+    if isinstance(pool, pd.DataFrame) and "Team" in pool:
+        teams = pool["Team"].dropna().astype(str).str.strip()
+        team_count = teams[teams.ne("")].nunique()
+        if team_count and team_count % 2 == 0:
+            game_count = team_count // 2
     return matching_profiles(st.session_state.get("field_history_store", {"schema": 1, "contests": []}),
-        platform_name, mode_name, fee=fee, max_entries=maximum, roster_size=roster_size)
+        platform_name, mode_name, fee=fee, max_entries=maximum, roster_size=roster_size, game_count=game_count)
 
 
-def learned_field_proposal_target(platform_name, mode_name, contest, roster_size, target):
-    return int(np.ceil(target * 1.5)) if learned_field_profiles(platform_name, mode_name, contest, roster_size) else int(target)
+def learned_field_proposal_target(platform_name, mode_name, contest, roster_size, target, pool=None):
+    return int(np.ceil(target * 1.5)) if learned_field_profiles(platform_name, mode_name, contest, roster_size, pool) else int(target)
 
 
 def apply_learned_field(field, pool, slots, platform_name, mode_name, contest, target, rng):
-    profiles = learned_field_profiles(platform_name, mode_name, contest, len(slots))
+    profiles = learned_field_profiles(platform_name, mode_name, contest, len(slots), pool)
     selected, provenance = calibrate_field(field, pool, slots, profiles, target, rng)
     st.session_state["field_learning_" + platform_name + "_" + mode_name] = provenance
     if provenance.get("applied"):
@@ -552,7 +558,7 @@ def build_showdown_opponent_field(available_players, simulation_df, players_df,
 
     requested_target = int(target)
     contest = st.session_state.get("selected_dk_contest", {})
-    target = learned_field_proposal_target("DraftKings", "Showdown", contest, 6, requested_target)
+    target = learned_field_proposal_target("DraftKings", "Showdown", contest, 6, requested_target, players_df)
     names = np.asarray(list(available_players), dtype=object)
     means = simulation_df.mean(axis=0).reindex(names).fillna(0.01).to_numpy(dtype=float)
 
@@ -5006,7 +5012,7 @@ if platform == "FanDuel":
                 0,
                 text=f"Building FanDuel opponent field: 0 / {fd_opponent_target:,}"
             )
-            _fd_generation_target = learned_field_proposal_target("FanDuel", lineup_mode, st.session_state.get("selected_fd_contest", {}), len(fd_slots), fd_opponent_target)
+            _fd_generation_target = learned_field_proposal_target("FanDuel", lineup_mode, st.session_state.get("selected_fd_contest", {}), len(fd_slots), fd_opponent_target, fd_pool)
             with st.spinner(f"Building {_fd_generation_target:,} simulated FanDuel contest entries..."):
                 if lineup_mode == "Full Roster":
                     from simmah_classic_field import build_full_roster_field
@@ -6935,7 +6941,7 @@ else:
                     ]
                     from simmah_classic_field import build_full_roster_field
                     field_slot_names = [slot for slot, _ in contest_slots]
-                    field_target = learned_field_proposal_target("DraftKings", "Classic", classic_contest, 9, int(dk_opponent_target))
+                    field_target = learned_field_proposal_target("DraftKings", "Classic", classic_contest, 9, int(dk_opponent_target), pool)
                     _classic_field_progress = st.progress(0, text=f"Building DraftKings opponent field: 0 / {field_target:,}")
                     contest_field_df = build_full_roster_field(pool, pool["Weight"].to_numpy(float), field_slot_names,
                         field_target, rng=rng, platform="DraftKings",

@@ -139,3 +139,11 @@ class FanDuelStandingsIdentityTest(__import__("unittest").TestCase):
         self.assertEqual(profile["format"], "FD_FULL")
         self.assertEqual(name_key(parse_lineups(frame)[0][0][1]), name_key("Quarter Back"))
         self.assertEqual(name_key("Player Jr. (135068-12),"), name_key("Player Jr."))
+
+class SlateScopeTest(__import__("unittest").TestCase):
+    def test_scoped_history_requires_matching_game_count(self):
+        from simmah_contest_history import matching_profiles
+        store = {'contests':[{'format':'FD_FULL','sport':'NFL','roster_size':9,'game_count':2}]}
+        self.assertEqual(len(matching_profiles(store,'FanDuel','Full Roster',game_count=2)),1)
+        self.assertFalse(matching_profiles(store,'FanDuel','Full Roster',game_count=10))
+        self.assertFalse(matching_profiles(store,'FanDuel','Full Roster'))
