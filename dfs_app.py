@@ -1069,7 +1069,7 @@ def download_public_projection_table(source_name, platform_name, target_names=No
             best_date = None
             for slate_date in recent_dates:
                 page = requests.get(
-                    f"https://www.dailyfantasyfuel.com/nfl/projections/fanduel/{slate_date}/",
+                    f"https://www.dailyfantasyfuel.com/nfl/showdown-single-game-projections/fanduel/{slate_date}/",
                     headers=headers_direct, timeout=30
                 )
                 page.raise_for_status()
