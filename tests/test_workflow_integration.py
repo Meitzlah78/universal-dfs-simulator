@@ -8,6 +8,16 @@ from test_candidates import fixture
 
 
 class WorkflowIntegrationTest(unittest.TestCase):
+    def test_external_ownership_percent_strings_override_fallback(self):
+        tree=ast.parse(Path('dfs_app.py').read_text())
+        fn=next(n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name=='opponent_field_selection_weights')
+        ns={'np':np,'pd':pd}
+        exec(compile(ast.Module(body=[fn],type_ignores=[]),'app','exec'),ns)
+        weights=ns['opponent_field_selection_weights'](
+            pd.DataFrame({'Projected Ownership':['35%', ' 5% ', None, 'inf']}),
+            np.array([1.,100.,50.,10.]))
+        np.testing.assert_allclose(weights,[35.,5.,.01,.01])
+
     def test_candidate_helper_uses_separate_construction_and_evaluation(self):
         tree=ast.parse(Path('dfs_app.py').read_text())
         wanted={'FULL_ROSTER_STACK_OPTIONS','SECONDARY_STACK_OPTIONS','full_roster_stack_lookup','full_roster_stack_matches','build_joint_candidate_pool'}

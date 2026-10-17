@@ -349,7 +349,7 @@ def opponent_field_selection_weights(pool, fallback_scores):
         "projected own", "ownership", "own%", "own"
     ) if k in lookup), None)
     if own_col is not None:
-        ownership = pd.to_numeric(pool[own_col], errors="coerce").fillna(0.0).to_numpy(dtype=float)
+        ownership = pd.to_numeric(pool[own_col].astype(str).str.strip().str.replace("%", "", regex=False), errors="coerce").replace([np.inf, -np.inf], np.nan).fillna(0.0).to_numpy(dtype=float)
         ownership = np.clip(ownership, 0.0, None)
         if ownership.sum() > 0:
             return np.clip(ownership, 0.01, None)
