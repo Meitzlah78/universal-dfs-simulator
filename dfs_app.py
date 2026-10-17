@@ -1121,41 +1121,48 @@ def download_public_projection_table(source_name, platform_name, target_names=No
         try:
             from datetime import datetime
             season = datetime.now(ZoneInfo("America/New_York")).year
-            response = requests.get(
-                f"https://api.fantasypros.com/public/v2/json/nfl/{season}/projections",
-                headers={"x-api-key": api_key, "Accept": "application/json"},
-                params={"positions": "QB:RB:WR:TE:K:DST", "scoring": "PPR"},
-                timeout=(5, 30),
-            )
-            response.raise_for_status()
-            payload = response.json()
-            players = payload.get("players", []) if isinstance(payload, dict) else []
+            # FantasyPros serves NFL projections by position. Pull each position
+            # separately and request the current weekly projections so Single Game
+            # slates are not limited to a couple of players from a default response.
             result = {}
             is_fd = "fanduel" in str(platform_name).casefold()
-            for player in players:
-                if not isinstance(player, dict):
-                    continue
-                name = player.get("name") or player.get("player_name")
-                key = normalize_projection_player_name(name)
-                if not key or (target_keys and key not in target_keys):
-                    continue
-                stats = player.get("stats") or {}
-                if not isinstance(stats, dict):
-                    stats = {}
-                candidates = (
-                    ("points_half", "fpts_half", "fantasy_points_half")
-                    if is_fd else
-                    ("points_ppr", "fpts_ppr", "fantasy_points_ppr")
+            scoring = "HALF" if is_fd else "PPR"
+            for position in ("QB", "RB", "WR", "TE", "K", "DST"):
+                response = requests.get(
+                    f"https://api.fantasypros.com/public/v2/json/nfl/{season}/projections",
+                    headers={"x-api-key": api_key, "Accept": "application/json"},
+                    params={"position": position, "week": "current", "scoring": scoring},
+                    timeout=(5, 30),
                 )
-                value = next((stats.get(k) for k in candidates if stats.get(k) is not None), None)
-                if value is None:
-                    value = stats.get("points")
-                try:
-                    value = float(value)
-                except (TypeError, ValueError):
-                    continue
-                if np.isfinite(value) and value >= 0:
-                    result[key] = value
+                response.raise_for_status()
+                payload = response.json()
+                players = payload.get("players", []) if isinstance(payload, dict) else []
+                for player in players:
+                    if not isinstance(player, dict):
+                        continue
+                    name = player.get("name") or player.get("player_name")
+                    key = normalize_projection_player_name(name)
+                    if not key or (target_keys and key not in target_keys):
+                        continue
+                    stats = player.get("stats") or {}
+                    if not isinstance(stats, dict):
+                        stats = {}
+                    candidates = (
+                        ("points_half", "fpts_half", "fantasy_points_half", "fpts")
+                        if is_fd else
+                        ("points_ppr", "fpts_ppr", "fantasy_points_ppr", "fpts")
+                    )
+                    value = next((stats.get(k) for k in candidates if stats.get(k) is not None), None)
+                    if value is None:
+                        value = stats.get("points")
+                    if value is None:
+                        value = player.get("fpts") or player.get("points") or player.get("projection")
+                    try:
+                        value = float(value)
+                    except (TypeError, ValueError):
+                        continue
+                    if np.isfinite(value) and value >= 0:
+                        result[key] = value
             return result
         except Exception as exc:
             st.warning(f"FantasyPros API unavailable: {type(exc).__name__}: {exc}")
