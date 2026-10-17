@@ -62,6 +62,19 @@ class ClassicFieldTest(unittest.TestCase):
         np.testing.assert_array_equal(result.Salary,pool.Salary.to_numpy()[picks].sum(axis=1))
         self.assertEqual(result.attrs['platform'],'DraftKings')
 
+    def test_field_weights_are_invariant_to_normalization(self):
+        import pandas as pd
+        from test_candidates import fixture
+        from simmah_classic_field import build_full_roster_field
+        for site in ['FanDuel','DraftKings']:
+            pool,_,roster=fixture('FD' if site=='FanDuel' else 'DK')
+            pool['Projection']=pool.Salary/500
+            weights=np.linspace(.01,1,len(pool))**2
+            slots=[s for s,_ in roster]
+            raw=build_full_roster_field(pool,weights,slots,200,rng=np.random.default_rng(19),platform=site)
+            normalized=build_full_roster_field(pool,weights/weights.sum(),slots,200,rng=np.random.default_rng(19),platform=site)
+            pd.testing.assert_frame_equal(raw,normalized)
+
     def test_empty_batches_are_supported(self):
         self.assertEqual(len(classic_tournament_mask(np.empty((0,9),int),[],[])),0)
 

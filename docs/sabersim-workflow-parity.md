@@ -133,3 +133,16 @@ external projections as mean estimates generated all 10,000 opponents in 0.64
 seconds locally; this is generation timing only, not total app runtime or ROI
 validation. Proposal ordering/distributions can differ from the earlier DK
 independent-slot rejection sampler. All 56 scoped tests pass.
+
+### Normalized field-weight correction
+
+The full FanDuel field audit found average simulated points 83.84 versus 110.01
+for the assigned portfolio. Code inspection found an absolute 0.01 floor applied
+to already normalized player weights. In a large pool this can flatten nearly all
+relative sampling weights. The shared sampler now uses a floor relative to the
+largest input weight, retaining ratios under normalization. Tests require raw
+and normalized input vectors to produce identical seeded fields on both sites.
+This fixes a sampling defect; new field/outcome tests and real contests are still
+needed to validate finish-rate and ROI calibration. Marginal player means fitted
+from lineup totals have position-dependent identifiability limits and should
+not be treated as recovered player forecasts. All 57 scoped tests pass.

@@ -49,7 +49,12 @@ def build_full_roster_field(pool, weights, slots, target, rng=None, progress=Non
     minimum=np.array([salaries[c].min() for c in eligible]);maximum=np.array([salaries[c].max() for c in eligible])
     # Dividing each row's means by their mean is a scalar factor and cancels
     # when weights normalize, so precompute the exact relative weights once.
-    base=np.maximum(weights,.01)*(1 if draftkings else np.maximum(means,.01)**.20)
+    # Probabilities may already sum to one. An absolute floor such as .01
+    # flattens a 267-player normalized vector into almost uniform sampling.
+    # Use a relative floor so raw and normalized weights are equivalent.
+    nonnegative=np.maximum(weights,0)
+    relative_floor=float(nonnegative.max())*1e-8 if nonnegative.max()>0 else 1.
+    base=np.maximum(nonnegative,relative_floor)*(1 if draftkings else np.maximum(means,.01)**.20)
     acceptance={60000:1.,59900:.90,59800:.72,59700:.58,59600:.46,59500:.36,59400:.24,59300:.18,59200:.13,59100:.09,59000:.06}
     limit=max(300000,target*150) if max_proposals is None else int(max_proposals)
     chunks=[];accepted=0;attempted=0
