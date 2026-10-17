@@ -4584,6 +4584,7 @@ if platform == "FanDuel":
             chosen_indices = []
             chosen = {}
             used = set()
+            fd_all_player_indices = np.arange(len(names), dtype=int)
             salary = 0
             total_points = 0.0
             total_score = 0.0
@@ -4598,10 +4599,13 @@ if platform == "FanDuel":
                 total_points = sim_means[mvp_idx] * 1.5
                 total_score = lineup_scores[mvp_idx] * 1.5
                 for slot in slots[1:]:
-                    choices = np.asarray([
-                        i for i in range(len(names))
-                        if i not in used and salary + salaries[i] <= salary_max
-                    ], dtype=int)
+                    if used:
+                        unused_mask = ~np.isin(fd_all_player_indices, np.fromiter(used, dtype=int, count=len(used)))
+                    else:
+                        unused_mask = np.ones(len(fd_all_player_indices), dtype=bool)
+                    choices = fd_all_player_indices[
+                        unused_mask & (salary + salaries[fd_all_player_indices] <= salary_max)
+                    ]
                     if not len(choices):
                         break
                     weights = lineup_scores[choices].copy()
