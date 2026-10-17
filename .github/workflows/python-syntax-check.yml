@@ -23,7 +23,6 @@ jobs:
         run: python -m py_compile dfs_app.py
 
   integrate-fast-builders:
-    # Combined integration run for PR #13.
     if: github.event_name == 'push' && github.ref == 'refs/heads/feature/fast-build-all-modes'
     runs-on: ubuntu-latest
     steps:
@@ -40,6 +39,8 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install pytest numpy pandas
+      - name: Validate installer guards before mutation
+        run: pytest -q tests/test_fast_build_architecture.py tests/test_fast_build_installers.py tests/test_fast_fd_single_game_installer.py tests/test_fast_fd_full_roster_installer.py tests/test_opponent_field_architecture.py
       - name: Apply all fast builders
         run: |
           python .github/scripts/install_fast_classic_builder.py
@@ -47,10 +48,27 @@ jobs:
           python .github/scripts/install_fast_fd_single_game_builder.py
           python .github/scripts/install_fast_fd_full_roster_builder.py
           python .github/scripts/install_fast_stack_validation.py
-      - name: Validate integrated implementation
+      - name: Validate integrated source
         run: |
           python -m py_compile dfs_app.py
-          pytest -q tests/test_fast_build_architecture.py tests/test_fast_build_installers.py tests/test_fast_fd_single_game_installer.py tests/test_fast_fd_full_roster_installer.py tests/test_opponent_field_architecture.py
+          python - <<'PY'
+          from pathlib import Path
+          text = Path('dfs_app.py').read_text(encoding='utf-8')
+          required = [
+              'classic_teams = classic_pool.get',
+              'choices = base_choices[used_mask & salary_mask]',
+              'fd_all_player_indices = np.arange(len(names), dtype=int)',
+              'choices = base_choices[unused_mask & (salary + salaries[base_choices] <= salary_max)]',
+              'projected_salary = salary + salaries[choices]',
+              'fd_build_name_to_index.get(qb_name)',
+              'fd_build_teams[choices] == qb_team',
+              'fd_stack_lookup',
+          ]
+          missing = [marker for marker in required if marker not in text]
+          if missing:
+              raise SystemExit(f'Missing integrated fast-builder markers: {missing}')
+          print('Integrated fast-builder markers verified')
+          PY
       - name: Commit validated implementation
         run: |
           git config user.name 'github-actions[bot]'
