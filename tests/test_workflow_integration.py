@@ -80,7 +80,7 @@ class WorkflowIntegrationTest(unittest.TestCase):
     def test_fanduel_assigned_count_matches_owned_and_report_export_source(self):
         tree=ast.parse(Path('dfs_app.py').read_text())
         assignments=sorted((n for n in ast.walk(tree) if isinstance(n,ast.Assign) and any(isinstance(t,ast.Name) and t.id in {'_fd_entry_seed','fd_export_portfolio'} for t in n.targets)),key=lambda n:n.lineno)
-        nodes=[n for n in assignments if n.targets[0].id=='_fd_entry_seed' or isinstance(n.value,ast.Call) and isinstance(n.value.func,ast.Attribute) and n.value.func.attr=='reset_index']
+        nodes=[n for n in assignments if n.targets[0].id=='_fd_entry_seed' or isinstance(n.value,ast.Call) and isinstance(n.value.func,ast.Attribute) and n.value.func.attr=='reset_index' and '_fd_entry_seed' in ast.unparse(n.value)]
         for shown in [3,100]:
             frame=pd.DataFrame({'QB':[f'p{i}' for i in range(shown)]})
             ns={'pd':pd,'np':np,'fd_results':frame,'_fd_spec':{'owned':20}}

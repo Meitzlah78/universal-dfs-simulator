@@ -20,6 +20,18 @@ st.set_page_config(
 
 st.title("Universal DFS Simulator")
 
+def render_entry_export_header(site):
+    """Keep the entry-upload controls consistent across every roster format."""
+    st.write("### Export")
+    st.caption("Download the file for your existing entries, then open the site and upload it through Edit Entries. Entry IDs and contest details are preserved.")
+    label, url = (
+        ("OPEN FANDUEL / EDIT ENTRIES", "https://www.fanduel.com/upcoming")
+        if site == "FanDuel"
+        else ("OPEN DRAFTKINGS MY LINEUPS / EDIT ENTRIES", "https://www.draftkings.com/lineup")
+    )
+    st.link_button(label, url, use_container_width=True)
+
+
 from pathlib import Path
 from simmah_contest_history import (
     load_store, save_store, update_store, merge_stores, ingest_frames, read_standings,
@@ -5214,7 +5226,9 @@ if platform == "FanDuel":
     if fd_results is not None:
         fd_results = remove_out_players_from_lineups(fd_results, fd_slots, "FanDuel")
         st.session_state[fd_build_key] = fd_results
-        st.write(f"Built {len(fd_results)} FanDuel lineups.")
+        st.divider()
+        st.write("## Portfolio")
+        st.caption(f"{len(fd_results):,} candidate lineups available. Rank the pool, review your assigned entries, then export.")
 
         # Use the same ranking choices as DraftKings Showdown for both FanDuel formats.
         fd_comparison_key = "fd_contest_comparison_" + lineup_mode.replace(" ", "_").lower()
@@ -5332,13 +5346,21 @@ if platform == "FanDuel":
                 "FanDuel_Full_Roster_Assigned_Portfolio.csv", "text/csv", key="fd_full_assigned_report", on_click="ignore")
             st.caption("Candidate alternatives — the assigned portfolio above is used for your entry replacement.")
 
-        st.write("#### FanDuel Export")
-        st.caption("FOR EXISTING ENTRIES: Download the replacement CSV, then open FanDuel and upload it through the CSV edit flow for your existing entries. Entry IDs and contest details are preserved.")
-        st.link_button(
-            "OPEN FANDUEL / EDIT ENTRIES",
-            "https://www.fanduel.com/upcoming",
-            use_container_width=True,
-        )
+        if lineup_mode == "Single Game":
+            _fd_single_owned = int((st.session_state.get("selected_fd_contest") or {}).get("your_entries") or len(fd_results))
+            _fd_single_seed = fd_results.head(max(1, _fd_single_owned))
+            fd_export_portfolio = _fd_single_seed.iloc[np.arange(max(1, _fd_single_owned)) % len(_fd_single_seed)].reset_index(drop=True)
+            st.write("### Assigned contest portfolio")
+            st.caption("These lineups are used for both the portfolio report and entry replacement.")
+            st.dataframe(fd_export_portfolio, use_container_width=True, hide_index=True)
+            st.download_button(
+                "DOWNLOAD ASSIGNED PORTFOLIO REPORT",
+                fd_export_portfolio.to_csv(index=False).encode("utf-8"),
+                "FanDuel_Single_Game_Assigned_Portfolio.csv", "text/csv",
+                key="fd_single_assigned_report", on_click="ignore",
+            )
+
+        render_entry_export_header("FanDuel")
         if "FD_ID" in fd_players.columns:
             fd_ids = dict(zip(fd_players["Name"], fd_players["FD_ID"].astype(str)))
             export_slots = (
@@ -7176,7 +7198,7 @@ else:
                     # Keep the official DraftKings entry upload separate from a basic lineup export.
                     dk_upload_columns = ["QB", "RB", "RB", "WR", "WR", "WR", "TE", "FLEX", "DST"]
                     lineup_ids_df = pd.DataFrame(export_data, columns=dk_upload_columns)
-                    st.write("#### DraftKings Classic Export")
+                    render_entry_export_header("DraftKings")
                     has_entry_template = (
                         entry_file is not None
                         and selected_contest_id
@@ -7202,11 +7224,6 @@ else:
                                 use_container_width=True,
                                 key="dk_classic_replace_export",
                                 on_click="ignore"
-                            )
-                            st.link_button(
-                                "OPEN DRAFTKINGS MY LINEUPS / EDIT ENTRIES",
-                                "https://www.draftkings.com/lineup",
-                                use_container_width=True
                             )
                             st.caption("On DraftKings, open My Lineups and choose Edit Entries to upload the downloaded replacement CSV.")
                     else:
@@ -8603,7 +8620,7 @@ if "contest_results_df" in st.session_state and not (platform == "DraftKings" an
 
     portfolio_limit = min(20, len(results_df))
     portfolio_count = st.number_input(
-        "Number of lineups",
+        "Number of lineups to show",
         min_value=1,
         max_value=max(1, portfolio_limit),
         value=max(1, portfolio_limit),
@@ -8612,7 +8629,7 @@ if "contest_results_df" in st.session_state and not (platform == "DraftKings" an
     )
 
     portfolio_metric_label = st.selectbox(
-        "Sort pool by",
+        "Rank lineups by",
         list(PORTFOLIO_METRICS.keys()),
         index=list(PORTFOLIO_METRICS.keys()).index("Top 1%"),
         key="portfolio_metric"
@@ -9086,6 +9103,7 @@ if "contest_results_df" in st.session_state and not (platform == "DraftKings" an
         "AvgPercentile": "Average Percentile",
     })
 
+    st.write("### Assigned contest portfolio")
     showdown_export_controls = st.container()
 
     st.dataframe(
@@ -9154,11 +9172,12 @@ if "contest_results_df" in st.session_state and not (platform == "DraftKings" an
             portfolio_export_df[col] = portfolio_export_df[col] * 100
 
     st.download_button(
-        label="EXPORT PORTFOLIO CSV",
+        label="DOWNLOAD ASSIGNED PORTFOLIO REPORT",
         data=portfolio_export_df.to_csv(index=False).encode("utf-8"),
-        file_name="DFS_Portfolio.csv",
+        file_name="DraftKings_Showdown_Assigned_Portfolio.csv",
         mime="text/csv",
-        use_container_width=True
+        use_container_width=True,
+        on_click="ignore"
     )
 
 
@@ -9174,13 +9193,7 @@ else:
 # Export the selected final portfolio using CPT and FLEX IDs from the uploaded DK template.
 with (showdown_export_controls if "showdown_export_controls" in locals() else st.container()):
     if platform == "DraftKings" and lineup_mode == "Showdown":
-        st.write("#### DraftKings Showdown Export")
-        st.caption("Download the file for your existing entries, then open DraftKings → My Lineups → Edit Entries → Upload CSV.")
-        st.link_button(
-            "OPEN DRAFTKINGS MY LINEUPS / EDIT ENTRIES",
-            "https://www.draftkings.com/lineup",
-            use_container_width=True,
-        )
+        render_entry_export_header("DraftKings")
         export_portfolio = st.session_state.get("portfolio_df")
         export_portfolio = remove_out_players_from_lineups(
             export_portfolio, ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"], "DraftKings Showdown export"
