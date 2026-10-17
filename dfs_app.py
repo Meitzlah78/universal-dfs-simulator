@@ -1096,7 +1096,8 @@ def download_public_projection_table(source_name, platform_name, target_names=No
                         if key and pd.notna(val) and np.isfinite(float(val)) and float(val) >= 0:
                             values[key] = float(val)
                     overlap = target_keys.intersection(values)
-                    dff_debug.append(f"{slate_date}: rows={len(values)}, overlap={len(overlap)}")
+                    _sample_keys = list(values.keys())[:5]
+                    dff_debug.append(f"{slate_date}: rows={len(values)}, overlap={len(overlap)}, name_col={name_col!r}, proj_col={proj_col!r}, sample={_sample_keys!r}")
                     if len(overlap) >= min(2, len(target_keys)):
                         return values
             st.warning("DFF FanDuel diagnostic — " + ("; ".join(dff_debug) if dff_debug else f"dates={recent_dates!r}; no projection table parsed"))
