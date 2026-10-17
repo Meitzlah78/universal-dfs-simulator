@@ -1091,8 +1091,10 @@ def download_public_projection_table(source_name, platform_name, target_names=No
                     overlap = target_keys.intersection(values)
                     if len(overlap) >= min(2, len(target_keys)):
                         return values
-        except Exception:
-            pass
+        except Exception as exc:
+            # Surface the real Streamlit-runtime failure instead of silently
+            # converting it into an unavailable projection source.
+            st.error(f"DFF FanDuel Single Game loader error: {type(exc).__name__}: {exc}")
 
     if source_name == "DFF":
         if is_single_game:
