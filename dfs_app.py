@@ -1048,11 +1048,14 @@ def download_public_projection_table(source_name, platform_name, target_names=No
 
     if source_name == "DFF":
         if is_single_game:
-            # This is the working Colab route; DraftKings is the default view.
+            # DFF's FanDuel all-slate projection feed contains the same NFL
+            # fantasy-point projections and, unlike the generic single-game
+            # page, exposes every matchup. target_names below selects the
+            # salary-file game by player-name intersection.
             url = (
                 "https://www.dailyfantasyfuel.com/nfl/showdown-single-game-projections/"
                 if site == "draftkings"
-                else "https://www.dailyfantasyfuel.com/nfl/showdown-single-game-projections/fanduel/"
+                else "https://www.dailyfantasyfuel.com/nfl/projections/fanduel/"
             )
         else:
             url = "https://www.dailyfantasyfuel.com/nfl/projections/fanduel/" if site == "fanduel" else "https://www.dailyfantasyfuel.com/nfl/projections/"
