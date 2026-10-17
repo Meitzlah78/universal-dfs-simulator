@@ -1,21 +1,28 @@
-"""Expose Projected Dupes in DK Showdown result tables and CSV exports."""
+"""Expose Projected Dupes in the actual DK Showdown portfolio/export path."""
 from pathlib import Path
 
 APP = Path("dfs_app.py")
 text = APP.read_text(encoding="utf-8")
 
-anchor = 'def add_field_ranking_metrics(frame, field_scores, score_column="ProjectedPoints"):\n'
-helper = '''def add_dk_projected_dupes(frame, player_pool=None, contest_size=None):\n    """Attach expected competing copies without changing lineup selection rules."""\n    if frame is None or frame.empty or "Captain" not in frame.columns:\n        return frame\n    result = frame.copy()\n    flex_cols = [f"Flex{i}" for i in range(1, 6)]\n    if not all(c in result.columns for c in flex_cols):\n        return result\n    size = int(contest_size or st.session_state.get("contest_field_size", 0) or MAX_SIMULATED_OPPONENTS)\n    pool = player_pool if isinstance(player_pool, pd.DataFrame) else pd.DataFrame()\n    own, cpt_own = {}, {}\n    if not pool.empty and "Name" in pool.columns:\n        lookup = {str(c).strip().casefold(): c for c in pool.columns}\n        own_col = next((lookup[k] for k in ("field own %", "projected own %", "ownership %", "projected ownership", "ownership", "own%", "own") if k in lookup), None)\n        cpt_col = next((lookup[k] for k in ("field cpt own %", "captain/mvp ownership %", "captain ownership %", "captain exp %") if k in lookup), None)\n        for _, prow in pool.iterrows():\n            name = str(prow.get("Name", "")).strip()\n            if not name:\n                continue\n            if own_col:\n                own[name] = max(float(pd.to_numeric(pd.Series([prow.get(own_col)]), errors="coerce").fillna(0).iloc[0]), 0.01) / 100.0\n            if cpt_col:\n                cpt_own[name] = max(float(pd.to_numeric(pd.Series([prow.get(cpt_col)]), errors="coerce").fillna(0).iloc[0]), 0.01) / 100.0\n    estimates = []\n    for _, row in result.iterrows():\n        captain = str(row["Captain"]); flex = [str(row[c]) for c in flex_cols]\n        cp = cpt_own.get(captain, own.get(captain, 0.05) * 0.20)\n        raw = cp * float(np.prod([own.get(p, 0.05) for p in flex]))\n        expected = size * (max(raw, 1e-12) ** 0.62)\n        salary = float(pd.to_numeric(pd.Series([row.get("Salary", 50000)]), errors="coerce").fillna(50000).iloc[0])\n        expected *= float(np.exp(-max(0.0, 50000.0 - salary) / 9000.0))\n        estimates.append(max(0, int(round(expected)) - 1))\n    result["Projected Dupes"] = estimates\n    return result\n\n\n'''
-if "def add_dk_projected_dupes(" not in text:
-    if anchor not in text:
-        raise SystemExit("ranking helper anchor not found")
-    text = text.replace(anchor, helper + anchor, 1)
-
-# Patch CSV expressions conservatively: only simple DataFrame variable exports.
-# The transformed app uses final_lineups for the user portfolio export.
-for var in ("final_lineups", "display_lineups", "portfolio_df"):
-    old = f'{var}.to_csv(index=False)'
-    new = f'{var}.pipe(add_dk_projected_dupes, player_pool=locals().get("player_pool", locals().get("pool", None)), contest_size=st.session_state.get("contest_field_size", None)).to_csv(index=False)'
+# Add Projected Dupes to the explicit portfolio export allow-list.  The app builds
+# portfolio_export_df from this list, so patching .to_csv() itself is too late.
+old = '''        "Salary", "Lineup Ownership Score (%)", "ContestScore", "WinRate", "Top1", "Top5",\n'''
+new = '''        "Salary", "Lineup Ownership Score (%)", "Projected Dupes", "ContestScore", "WinRate", "Top1", "Top5",\n'''
+if new not in text:
+    if old not in text:
+        raise SystemExit("portfolio export column anchor not found")
     text = text.replace(old, new)
+
+# Compute the estimate on portfolio_df before the export dataframe is sliced.
+anchor = '''    st.session_state["portfolio_df"] = portfolio_df\n    portfolio_export_df = portfolio_df[\n'''
+injection = '''    # Pre-lock exact-lineup popularity estimate. Keep this separate from the\n    # summed Lineup Ownership Score and do not use it as a hidden diversity rule.\n    if not classic_mode and "Captain" in portfolio_df.columns:\n        _dupe_ownership_df = st.session_state.get("latest_field_ownership")\n        _dupe_own = {}\n        if isinstance(_dupe_ownership_df, pd.DataFrame) and not _dupe_ownership_df.empty and "Name" in _dupe_ownership_df.columns:\n            _dupe_own = dict(zip(\n                _dupe_ownership_df["Name"].astype(str),\n                pd.to_numeric(_dupe_ownership_df.get("Ownership %", 0.0), errors="coerce").fillna(0.0) / 100.0\n            ))\n        _dupe_field_size = int(max(2, estimated_full_field_size))\n        _dupe_values = []\n        for _, _dupe_row in portfolio_df.iterrows():\n            _dupe_captain = str(_dupe_row.get("Captain", ""))\n            _dupe_flex = [str(_dupe_row.get(f"Flex{i}", "")) for i in range(1, 6)]\n            # Captain ownership is approximated from field ownership until a\n            # dedicated CPT ownership source is present; the tempered role product\n            # avoids treating player ownership percentages as independent events.\n            _dupe_cp = max(float(_dupe_own.get(_dupe_captain, 0.05)) * 0.20, 0.0001)\n            _dupe_fp = [max(float(_dupe_own.get(_p, 0.05)), 0.0001) for _p in _dupe_flex]\n            _dupe_raw = _dupe_cp * float(np.prod(_dupe_fp))\n            _dupe_expected = _dupe_field_size * (max(_dupe_raw, 1e-12) ** 0.62)\n            _dupe_salary = float(pd.to_numeric(pd.Series([_dupe_row.get("Salary", 50000)]), errors="coerce").fillna(50000).iloc[0])\n            _dupe_expected *= float(np.exp(-max(0.0, 50000.0 - _dupe_salary) / 9000.0))\n            _dupe_values.append(max(0, int(round(_dupe_expected)) - 1))\n        portfolio_df["Projected Dupes"] = _dupe_values\n\n    st.session_state["portfolio_df"] = portfolio_df\n    portfolio_export_df = portfolio_df[\n'''
+if "_dupe_values = []" not in text:
+    if anchor not in text:
+        raise SystemExit("portfolio export dataframe anchor not found")
+    text = text.replace(anchor, injection, 1)
+
+for required in ('"Projected Dupes"', '_dupe_values = []', 'portfolio_export_df = portfolio_df['):
+    if required not in text:
+        raise SystemExit(f"Projected Dupes export marker missing: {required}")
 
 APP.write_text(text, encoding="utf-8")
