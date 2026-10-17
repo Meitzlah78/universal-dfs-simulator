@@ -7729,122 +7729,66 @@ else:
                 i for i, name in enumerate(classic_names) if name in locked_name_set
             }
             name_to_index = {str(name): i for i, name in enumerate(classic_names)}
-            candidate_lineups = []
-            seen = set()
-            classic_build_counts = {str(name): 0 for name in classic_names}
+            # NumPy batch builder: construct thousands of rosters at once instead of
+            # walking every roster slot in Python for every attempted lineup.
             target_lineups = 5000
             no_stack_rules = (not dk_classic_stack_rules) or ("No stack rule" in dk_classic_stack_rules)
-            # No-stack builds should be the fast path. Stack builds can need more
-            # attempts because they must satisfy the selected QB correlation rule.
-            max_attempts = 30000 if no_stack_rules else 100000
+            batch_size = max(20000, target_lineups * 8)
+            max_batches = 12 if no_stack_rules else 30
             build_progress = st.progress(0, text=f"Building DraftKings Classic lineups: 0 / {target_lineups:,}")
-            expected_exposure = max(1.0, target_lineups * len(roster_slots) / max(1, len(classic_names)))
-            for attempt in range(max_attempts):
-                chosen = {}
-                used = set()
-                salary = 0
-                for slot, _eligible in roster_slots:
-                    base_choices = eligible_indices[slot]
-                    if used:
-                        used_mask = ~np.isin(base_choices, np.fromiter(used, dtype=int, count=len(used)))
-                    else:
-                        used_mask = np.ones(len(base_choices), dtype=bool)
-                    salary_mask = salary + classic_salaries[base_choices] <= MAX_LINEUP_SALARY
-                    choices = base_choices[used_mask & salary_mask]
-                    if not len(choices):
-                        break
-                    weights = classic_weights[choices].copy()
-                    # Build the requested QB stack during generation instead of
-                    # relying only on post-build rejection.
-                    if slot != "QB" and "QB" in chosen and dk_classic_stack_rules and "No stack rule" not in dk_classic_stack_rules:
-                        qb_name = str(chosen.get("QB", ""))
-                        qb_i = name_to_index.get(qb_name)
-                        if qb_i is not None:
-                            qb_team = str(classic_teams[qb_i])
-                            qb_opp = str(classic_opponents[qb_i])
-                            need_same = max([3 if "QB + 3 teammate" in r else 2 if "QB + 2 teammate" in r else 1 for r in dk_classic_stack_rules] or [1])
-                            need_bring = any("bring-back" in r for r in dk_classic_stack_rules)
-                            same_now = 0
-                            bring_now = 0
-                            for picked_name in chosen.values():
-                                if picked_name == qb_name:
-                                    continue
-                                picked_i = name_to_index.get(str(picked_name))
-                                if picked_i is None:
-                                    continue
-                                pos = str(classic_positions[picked_i])
-                                if pos not in {"RB", "WR", "TE"}:
-                                    continue
-                                team = str(classic_teams[picked_i])
-                                same_now += int(team == qb_team)
-                                bring_now += int(bool(qb_opp) and team == qb_opp)
-                            current_pos = next((j for j, (s, _) in enumerate(roster_slots) if s == slot), 0)
-                            skill_slots_left = sum(1 for _, e in roster_slots[current_pos:] if e & {"RB", "WR", "TE"})
-                            forced = []
-                            if same_now < need_same and skill_slots_left <= (need_same - same_now) + (1 if need_bring and bring_now < 1 else 0):
-                                forced = choices[classic_teams[choices] == qb_team]
-                            elif need_bring and bring_now < 1 and skill_slots_left <= 1:
-                                forced = choices[classic_teams[choices] == qb_opp]
-                            if len(forced):
-                                mask = np.isin(choices, np.asarray(forced, dtype=int))
-                                weights = np.where(mask, weights * 25.0, weights)
-                    if no_stack_rules:
-                        # Avoid the expensive Python exposure loop for every roster slot
-                        # when the user intentionally selected no stacking rules.
-                        exposure_penalty = np.fromiter(
-                            ((1.0 + classic_build_counts.get(str(classic_names[i]), 0) / expected_exposure) ** 1.5 for i in choices),
-                            dtype=float,
-                            count=len(choices),
-                        )
-                    else:
-                        exposure_penalty = np.asarray([
-                            (1.0 + classic_build_counts.get(str(classic_names[i]), 0) / expected_exposure) ** 1.5
-                            for i in choices
-                        ], dtype=float)
-                    weights /= exposure_penalty
-                    weight_total = weights.sum()
-                    if not np.isfinite(weight_total) or weight_total <= 0:
-                        weights = np.full(len(choices), 1.0 / len(choices), dtype=float)
-                    else:
-                        weights /= weight_total
-                    if rng.random() < 0.25:
-                        picked = int(rng.choice(choices))
-                    else:
-                        picked = int(rng.choice(choices, p=weights))
-                    chosen[slot] = str(classic_names[picked])
-                    used.add(picked)
-                    salary += int(classic_salaries[picked])
-                if len(chosen) != len(roster_slots) or salary < MIN_LINEUP_SALARY or salary > MAX_LINEUP_SALARY or salary > 50000:
-                    if attempt % 250 == 0:
-                        build_progress.progress(
-                            min(0.99, attempt / max_attempts),
-                            text=f"Building DraftKings Classic lineups: {len(candidate_lineups):,} / {target_lineups:,} (checking valid rosters)"
-                        )
-                    continue
-                if not locked_name_set.issubset(set(chosen.values())):
-                    continue
-                if not no_stack_rules and not full_roster_stack_matches(chosen, classic_pool, dk_classic_stack_rules):
-                    continue
-                key = tuple(chosen[slot] for slot, _ in roster_slots)
-                if key in seen:
-                    continue
-                seen.add(key)
-                for player_name in set(chosen.values()):
-                    classic_build_counts[str(player_name)] = classic_build_counts.get(str(player_name), 0) + 1
-                selected_indices = [name_to_index[chosen[slot]] for slot, _ in roster_slots]
-                projected_points = float(classic_means[selected_indices].sum())
-                candidate_lineups.append({
-                    **chosen, "Salary": salary, "ProjectedPoints": projected_points,
-                    "Score": sum(rankings.get(name, 0.01) for name in chosen.values())
-                })
-                if len(candidate_lineups) % 100 == 0 or len(candidate_lineups) >= target_lineups:
-                    build_progress.progress(
-                        min(1.0, len(candidate_lineups) / target_lineups),
-                        text=f"Building DraftKings Classic lineups: {len(candidate_lineups):,} / {target_lineups:,}"
-                    )
-                if len(candidate_lineups) >= target_lineups:
+            accepted = []
+            seen = set()
+            slot_names = [slot for slot, _ in roster_slots]
+            for batch_no in range(max_batches):
+                n = batch_size
+                picks = np.empty((n, len(roster_slots)), dtype=np.int32)
+                for col, (slot, _) in enumerate(roster_slots):
+                    choices = eligible_indices[slot]
+                    probs = classic_weights[choices].astype(float, copy=True)
+                    probs /= probs.sum()
+                    picks[:, col] = rng.choice(choices, size=n, replace=True, p=probs)
+                # A player may fill only one roster slot.
+                sorted_picks = np.sort(picks, axis=1)
+                valid = np.all(np.diff(sorted_picks, axis=1) != 0, axis=1)
+                salaries = classic_salaries[picks].sum(axis=1)
+                valid &= (salaries >= MIN_LINEUP_SALARY) & (salaries <= MAX_LINEUP_SALARY) & (salaries <= 50000)
+                if locked_indices:
+                    for locked_i in locked_indices:
+                        valid &= np.any(picks == int(locked_i), axis=1)
+                valid_idx = np.flatnonzero(valid)
+                if len(valid_idx):
+                    vp = picks[valid_idx]
+                    vs = salaries[valid_idx]
+                    # Unique within this batch; preserve slot order because RB/WR slots
+                    # are represented explicitly in the exported roster.
+                    vp, unique_pos = np.unique(vp, axis=0, return_index=True)
+                    vs = vs[unique_pos]
+                    for row_i, salary in zip(vp, vs):
+                        chosen = {slot_names[j]: str(classic_names[int(row_i[j])]) for j in range(len(slot_names))}
+                        if not no_stack_rules and not full_roster_stack_matches(chosen, classic_pool, dk_classic_stack_rules):
+                            continue
+                        key = tuple(int(x) for x in row_i)
+                        if key in seen:
+                            continue
+                        seen.add(key)
+                        accepted.append((row_i.copy(), int(salary)))
+                        if len(accepted) >= target_lineups:
+                            break
+                build_progress.progress(
+                    min(1.0, len(accepted) / target_lineups),
+                    text=f"Building DraftKings Classic lineups: {len(accepted):,} / {target_lineups:,}"
+                )
+                if len(accepted) >= target_lineups:
                     break
             build_progress.empty()
+            candidate_lineups = []
+            for row_i, salary in accepted[:target_lineups]:
+                chosen = {slot_names[j]: str(classic_names[int(row_i[j])]) for j in range(len(slot_names))}
+                projected_points = float(classic_means[row_i].sum())
+                candidate_lineups.append({
+                    **chosen, "Salary": salary, "ProjectedPoints": projected_points,
+                    "Score": float(classic_adjusted_scores[row_i].sum())
+                })
 
             if not candidate_lineups:
                 st.error(
@@ -7896,56 +7840,59 @@ else:
                         ], dtype=np.int32)
                         for slot, eligible in contest_slots
                     }
-                    rows = []
-                    seen_contest = set()
-                    attempts = 0
-                    max_opponent_attempts = max(250000, dk_opponent_target * 15)
-                    while len(rows) < dk_opponent_target and attempts < max_opponent_attempts:
-                        attempts += 1
-                        chosen_indices = []
-                        chosen = {}
-                        salary = 0
-                        used = set()
-                        for slot, _eligible in contest_slots:
-                            base_indices = slot_indices[slot]
-                            if not len(base_indices):
-                                break
-                            choices = base_indices[
-                                np.asarray([
-                                    int(i) not in used and salary + int(pool_salaries[i]) <= MAX_LINEUP_SALARY
-                                    for i in base_indices
-                                ], dtype=bool)
-                            ]
-                            if not len(choices):
-                                break
-                            weights = pool_weights[choices]
-                            weight_sum = weights.sum()
-                            if not np.isfinite(weight_sum) or weight_sum <= 0:
-                                picked_idx = int(rng.choice(choices))
-                            else:
-                                picked_idx = int(rng.choice(choices, p=weights / weight_sum))
-                            chosen[slot] = str(pool_names[picked_idx])
-                            chosen_indices.append(picked_idx)
-                            used.add(picked_idx)
-                            salary += int(pool_salaries[picked_idx])
-                        if len(chosen_indices) != len(contest_slots):
-                            continue
-                        if salary < MIN_LINEUP_SALARY or salary > MAX_LINEUP_SALARY or salary > 50000:
-                            continue
-                        key = tuple(chosen[slot] for slot, _ in contest_slots)
-                        if key in seen_contest:
-                            continue
-                        seen_contest.add(key)
-                        points = float(pool_means[chosen_indices].sum())
-                        rows.append({**chosen, "Salary": salary, "ProjectedPoints": round(points, 2)})
-                    contest_field_df = pd.DataFrame(rows)
+                    # NumPy opponent-field generator. Real DK fields contain duplicate
+                    # rosters, so duplicates are intentionally retained for tie splitting.
+                    field_target = int(dk_opponent_target)
+                    field_batches = []
+                    field_count = 0
+                    field_batch_size = max(20000, min(100000, field_target * 3))
+                    field_slot_names = [slot for slot, _ in contest_slots]
+                    for _batch in range(30):
+                        n = field_batch_size
+                        picks = np.empty((n, len(contest_slots)), dtype=np.int32)
+                        for col, (slot, _) in enumerate(contest_slots):
+                            choices = slot_indices[slot]
+                            probs = pool_weights[choices].astype(float, copy=True)
+                            probs /= probs.sum()
+                            picks[:, col] = rng.choice(choices, size=n, replace=True, p=probs)
+                        sorted_picks = np.sort(picks, axis=1)
+                        valid = np.all(np.diff(sorted_picks, axis=1) != 0, axis=1)
+                        salaries = pool_salaries[picks].sum(axis=1)
+                        valid &= (salaries >= MIN_LINEUP_SALARY) & (salaries <= MAX_LINEUP_SALARY) & (salaries <= 50000)
+                        vp = picks[valid]
+                        vs = salaries[valid]
+                        if len(vp):
+                            need = field_target - field_count
+                            vp = vp[:need]
+                            vs = vs[:need]
+                            field_batches.append((vp, vs))
+                            field_count += len(vp)
+                        if field_count >= field_target:
+                            break
+                    if field_batches:
+                        field_picks = np.vstack([x[0] for x in field_batches])[:field_target]
+                        field_salaries = np.concatenate([x[1] for x in field_batches])[:field_target]
+                        field_points = pool_means[field_picks].sum(axis=1)
+                        field_data = {
+                            slot: pool_names[field_picks[:, j]]
+                            for j, slot in enumerate(field_slot_names)
+                        }
+                        field_data["Salary"] = field_salaries
+                        field_data["ProjectedPoints"] = np.round(field_points, 2)
+                        contest_field_df = pd.DataFrame(field_data)
+                    else:
+                        contest_field_df = pd.DataFrame(columns=field_slot_names + ["Salary", "ProjectedPoints"])
                     user_lineups = st.session_state["classic_lineups"].copy()
                     opponent_scores = contest_field_df["ProjectedPoints"].to_numpy(dtype=float) if not contest_field_df.empty else np.array([])
                     if len(opponent_scores):
                         user_lineups = add_lineup_field_ownership(user_lineups)
-                        user_lineups["BeatsOpponents"] = user_lineups["ProjectedPoints"].apply(lambda score: int(np.sum(opponent_scores < float(score))))
-                        user_lineups["FieldPercentile"] = user_lineups["ProjectedPoints"].apply(lambda score: round(100.0 * np.mean(opponent_scores <= float(score)), 1))
-                        user_lineups["FieldRank"] = user_lineups["ProjectedPoints"].apply(lambda score: 1 + int(np.sum(opponent_scores > float(score))))
+                        _opp_sorted_static = np.sort(opponent_scores)
+                        _user_static = user_lineups["ProjectedPoints"].to_numpy(dtype=float)
+                        _less_static = np.searchsorted(_opp_sorted_static, _user_static, side="left")
+                        _right_static = np.searchsorted(_opp_sorted_static, _user_static, side="right")
+                        user_lineups["BeatsOpponents"] = _less_static
+                        user_lineups["FieldPercentile"] = np.round(100.0 * _right_static / len(_opp_sorted_static), 1)
+                        user_lineups["FieldRank"] = 1 + len(_opp_sorted_static) - _right_static
                         user_lineups = add_field_ranking_metrics(user_lineups, opponent_scores)
                         # Convert representative-field percentile to the selected contest's
                         # full-field rank, then apply its exact payout ladder.
@@ -7973,12 +7920,11 @@ else:
 
                         def _lineup_matrix(_df, _slots):
                             _mat = np.zeros((len(_sim_cols), len(_df)), dtype=np.float32)
-                            for _j, (_, _row) in enumerate(_df.iterrows()):
-                                for _slot in _slots:
-                                    _name = str(_row.get(_slot, ''))
-                                    _i = _sim_index.get(_name)
-                                    if _i is not None:
-                                        _mat[_i, _j] += 1.0
+                            _cols = np.arange(len(_df), dtype=np.int32)
+                            for _slot in _slots:
+                                _idx = np.asarray([_sim_index.get(str(x), -1) for x in _df[_slot].to_numpy()], dtype=np.int32)
+                                _ok = _idx >= 0
+                                np.add.at(_mat, (_idx[_ok], _cols[_ok]), 1.0)
                             return _mat
 
                         _opp_slots = [slot for slot, _ in contest_slots]
