@@ -83,6 +83,10 @@ class ClassicFieldTest(unittest.TestCase):
             rng=np.random.default_rng(87),salary_counts={"60000":1,"59500":1})
         self.assertTrue(result.Salary.isin([60000,59500]).all())
         self.assertAlmostEqual(float((result.Salary==60000).mean()),.5,delta=.04)
+        # A broad synthetic pool should not collapse into repeated draws
+        # from each small proposal batch.
+        canonical=result[[s for s,_ in roster]].apply(lambda row:tuple(sorted(row)),axis=1)
+        self.assertGreater(canonical.nunique(),.95*len(result))
         index={name:i for i,name in enumerate(pool.Name)}
         picks=np.array([[index[name] for name in row] for row in result[[s for s,_ in roster]].itertuples(index=False,name=None)])
         self.assertTrue(classic_tournament_mask(picks,pool.Team,pool.Position,max_from_team=4).all())

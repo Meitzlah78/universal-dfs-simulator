@@ -100,8 +100,13 @@ def build_full_roster_field(pool, weights, slots, target, rng=None, progress=Non
                 # cannot reproduce a historical salary distribution.
                 mass=np.array([learned_salary.get(int(v),0)/source[v] for v in costs])
                 if mass.sum()>0:
-                    selected=rng.choice(viable,size=min(len(viable),target-accepted),
-                                        replace=True,p=mass/mass.sum())
+                    # Independent rejection keeps each generated proposal at
+                    # most once. Resampling a small batch with replacement
+                    # manufactured many copies of otherwise rare rosters.
+                    keep=rng.random(len(viable)) < mass/mass.max()
+                    selected=viable[keep]
+                    rng.shuffle(selected)
+                    selected=selected[:target-accepted]
                 else:selected=np.array([],int)
             else:selected=viable
             chosen=picks[selected];cost=total[selected]
@@ -116,7 +121,7 @@ def build_full_roster_field(pool, weights, slots, target, rng=None, progress=Non
         if progress:progress(min(1,accepted/max(target,1)),f'Building {platform} opponent field: {accepted:,} / {target:,}')
     if accepted<target:raise ValueError(f'Built {accepted:,} of {target:,} {platform} opponents after {attempted:,} proposals; check player availability and salary feasibility')
     result=pd.concat(chunks,ignore_index=True) if chunks else pd.DataFrame(columns=list(slots)+['Salary','ProjectedPoints'])
-    result.attrs.update(proposals=attempted,target=target,engine='batched-full-roster-field-v3',platform=platform, salary_model='historical distribution within supported salary range' if learned_salary else 'baseline')
+    result.attrs.update(proposals=attempted,target=target,engine='batched-full-roster-field-v4',platform=platform, salary_model='historical distribution within supported salary range' if learned_salary else 'baseline')
     return result
 
 
