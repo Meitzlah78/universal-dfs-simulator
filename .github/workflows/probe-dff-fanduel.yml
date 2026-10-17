@@ -1,0 +1,73 @@
+name: Probe DFF FanDuel
+
+on:
+  push:
+    branches: [feature/salary-csv-upload]
+    paths: ['.github/workflows/probe-dff-fanduel.yml']
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/salary-csv-upload
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests pandas lxml
+      - name: Probe exact page and slate API discovery
+        run: |
+          python - <<'PY'
+          import io, requests, pandas as pd
+          from urllib.parse import quote
+          headers={'User-Agent':'Mozilla/5.0'}
+          targets={'CeeDee Lamb','Dak Prescott','Jordan Love','Christian Watson','George Pickens','Javonte Williams','Matthew Golden','MarShawn Lloyd','Tucker Kraft'}
+
+          exact='https://www.dailyfantasyfuel.com/nfl/projections/fanduel/2026-10-15?slate=210BF'
+          r=requests.get(exact,headers=headers,timeout=30)
+          print('EXACT',r.status_code,r.url,len(r.text),{n:(n in r.text) for n in targets})
+
+          api='https://www.dailyfantasyfuel.com/data/slates/recent/nfl/fanduel'
+          sr=requests.get(api,headers=headers,timeout=30)
+          print('API',sr.status_code,sr.url,len(sr.text),sr.text[:1000])
+          payload=sr.json()
+          candidates=[]
+          def collect(node,inherited_date=''):
+              if isinstance(node,dict):
+                  node_date=str(node.get('start_date') or node.get('date') or inherited_date or '').strip()[:10]
+                  slate_code=str(node.get('slate') or node.get('url') or node.get('url_code') or node.get('code') or '').strip()
+                  if node_date:
+                      item=(node_date,slate_code)
+                      if item not in candidates: candidates.append(item)
+                  for value in node.values(): collect(value,node_date)
+              elif isinstance(node,list):
+                  for value in node: collect(value,inherited_date)
+          collect(payload)
+          print('CANDIDATE COUNT',len(candidates))
+          print('CANDIDATES',candidates[:100])
+          print('HAS EXACT',('2026-10-15','210BF') in candidates)
+
+          for slate_date, slate_code in candidates:
+              if slate_date != '2026-10-15':
+                  continue
+              base=f'https://www.dailyfantasyfuel.com/nfl/projections/fanduel/{slate_date}'
+              urls=[]
+              if slate_code:
+                  encoded=quote(slate_code,safe='')
+                  urls += [f'{base}?slate={encoded}',f'{base}?url={encoded}']
+              urls.append(base+'/')
+              for url in urls:
+                  rr=requests.get(url,headers=headers,timeout=30)
+                  hits=[n for n in targets if n in rr.text]
+                  print('TRY',url,'STATUS',rr.status_code,'FINAL',rr.url,'HITS',hits)
+                  if hits:
+                      tabs=pd.read_html(io.StringIO(rr.text))
+                      print('MATCH TABLES',len(tabs))
+                      for t in tabs:
+                          if any(n in t.to_string() for n in targets):
+                              print('MATCH COLS',[str(x) for x in t.columns])
+                              print(t.head(5).to_string())
+                              raise SystemExit(0)
+          PY

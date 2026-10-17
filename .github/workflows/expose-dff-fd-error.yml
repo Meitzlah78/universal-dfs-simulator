@@ -1,0 +1,31 @@
+name: Expose DFF FanDuel Runtime Error
+on:
+  push:
+    branches: [feature/salary-csv-upload]
+    paths:
+      - '.github/scripts/expose_dff_fd_error.py'
+      - '.github/workflows/expose-dff-fd-error.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/salary-csv-upload
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python .github/scripts/expose_dff_fd_error.py
+      - run: python -m py_compile dfs_app.py
+      - run: grep -q 'DFF FanDuel Single Game loader error' dfs_app.py
+      - run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add dfs_app.py
+          if ! git diff --cached --quiet; then
+            git commit -m 'Expose DFF FanDuel runtime error [skip ci]'
+            git push origin HEAD:feature/salary-csv-upload
+          fi

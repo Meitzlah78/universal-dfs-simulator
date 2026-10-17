@@ -1,0 +1,19 @@
+name: Probe DFF 21128 HTML
+on:
+  push:
+    branches: [feature/salary-csv-upload]
+    paths:
+      - '.github/workflows/probe-dff-21128-html.yml'
+      - '.github/scripts/probe_dff_21128_html.py'
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/salary-csv-upload
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests
+      - run: python .github/scripts/probe_dff_21128_html.py

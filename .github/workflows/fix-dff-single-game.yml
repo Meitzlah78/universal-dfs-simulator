@@ -1,0 +1,43 @@
+name: Fix DFF single-game slate selection
+
+on:
+  push:
+    branches:
+      - feature/salary-csv-upload
+    paths:
+      - '.github/scripts/fix_dff_single_game_slate.py'
+      - '.github/workflows/fix-dff-single-game.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/salary-csv-upload
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Patch DFF slate selection
+        run: python .github/scripts/fix_dff_single_game_slate.py
+      - name: Compile app
+        run: python -m py_compile dfs_app.py
+      - name: Verify patch markers
+        run: |
+          grep -q "follow every slate-specific Showdown" dfs_app.py
+          grep -q "required_overlap = min(2, len(target_keys))" dfs_app.py
+      - name: Commit patched app
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add dfs_app.py
+          if git diff --cached --quiet; then
+            echo "No app changes to commit"
+          else
+            git commit -m "Fix DFF single-game slate matching [skip ci]"
+            git push origin HEAD:feature/salary-csv-upload
+          fi

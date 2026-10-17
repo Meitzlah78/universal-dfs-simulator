@@ -1,0 +1,34 @@
+name: Apply FanDuel all-candidates download
+on:
+  push:
+    branches: [feature/salary-csv-upload]
+    paths:
+      - '.github/scripts/add_fd_all_candidates_download.py'
+      - '.github/workflows/add-fd-all-candidates-download.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/salary-csv-upload
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python .github/scripts/add_fd_all_candidates_download.py
+      - run: python -m py_compile dfs_app.py
+      - name: Commit patch
+        run: |
+          if git diff --quiet -- dfs_app.py; then
+            echo 'No app changes needed.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add dfs_app.py
+          git commit -m 'Add FanDuel all-candidates download [skip ci]'
+          git push origin HEAD:feature/salary-csv-upload

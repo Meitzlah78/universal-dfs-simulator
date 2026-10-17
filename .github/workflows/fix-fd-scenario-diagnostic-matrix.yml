@@ -1,0 +1,56 @@
+name: Fix FD scenario diagnostic matrix
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-fd-scenario-diagnostic-matrix.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/salary-csv-upload
+      - name: Patch diagnostic matrix
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('dfs_app.py')
+          s = p.read_text()
+          old = '''                        _fd_user_matrix = _fd_matrix_indices(compared.iloc[_fd_selected_idx])
+                        _fd_field_matrix = _fd_matrix_indices(_fd_final_field)
+                        _fd_valid = (
+          '''
+          new = '''                        _fd_user_matrix = _fd_matrix_indices(compared.iloc[_fd_selected_idx])
+                        _fd_field_matrix = _fd_matrix_indices(_fd_final_field)
+                        # Keep the 10K builder field matrix separate from the 50K final ROI matrix.
+                        _fd_diag_field_matrix = _fd_matrix_indices(opponent_df)
+                        _fd_valid = (
+          '''
+          if old in s:
+              s = s.replace(old, new, 1)
+          elif '_fd_diag_field_matrix = _fd_matrix_indices(opponent_df)' not in s:
+              raise SystemExit('matrix insertion point not found')
+          bad = '_diag_field += _row[_fd_field_matrix[:, _slot_pos]] * _mult'
+          good = '_diag_field += _row[_fd_diag_field_matrix[:, _slot_pos]] * _mult'
+          if bad not in s and good not in s:
+              raise SystemExit('scenario diagnostic scoring line not found')
+          s = s.replace(bad, good, 1)
+          p.write_text(s)
+      - name: Verify syntax and matrix separation
+        run: |
+          python -m py_compile dfs_app.py
+          grep -F '_fd_field_matrix = _fd_matrix_indices(_fd_final_field)' dfs_app.py
+          grep -F '_fd_diag_field_matrix = _fd_matrix_indices(opponent_df)' dfs_app.py
+          grep -F '_diag_field += _row[_fd_diag_field_matrix[:, _slot_pos]] * _mult' dfs_app.py
+          if grep -F '_diag_field += _row[_fd_field_matrix[:, _slot_pos]] * _mult' dfs_app.py; then exit 1; fi
+      - name: Commit fix
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add dfs_app.py
+          git diff --cached --quiet && exit 0
+          git commit -m 'Fix FanDuel scenario diagnostic matrix [skip ci]'
+          git push origin HEAD:feature/salary-csv-upload

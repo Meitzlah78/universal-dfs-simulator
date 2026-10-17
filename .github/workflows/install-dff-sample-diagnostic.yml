@@ -1,0 +1,26 @@
+name: Install DFF sample diagnostic
+on:
+  push:
+    branches: [feature/salary-csv-upload]
+    paths: ['.github/workflows/install-dff-sample-diagnostic.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/salary-csv-upload
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python .github/scripts/diagnose_dff_fd_samples.py
+      - run: python -m py_compile dfs_app.py
+      - run: |
+          git config user.name github-actions
+          git config user.email actions@github.com
+          git add dfs_app.py
+          git commit -m 'Show DFF parsed columns and sample values' || exit 0
+          git push origin HEAD:feature/salary-csv-upload

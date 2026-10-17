@@ -1,0 +1,16 @@
+name: Probe DFF FD physical columns
+on:
+  workflow_dispatch:
+  push:
+    branches: [feature/salary-csv-upload]
+    paths: ['.github/workflows/probe-dff-fd-physical-columns.yml']
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: feature/salary-csv-upload}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install pandas requests lxml html5lib beautifulsoup4
+      - run: python .github/scripts/probe_dff_fd_physical_columns.py

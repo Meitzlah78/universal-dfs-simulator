@@ -1,0 +1,102 @@
+name: Weekly NFL PBP Archive
+
+on:
+  schedule:
+    # Tuesdays at 11:00 UTC = 7:00 AM Eastern during daylight time.
+    - cron: "0 11 * * 2"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  download-previous-week:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install download dependencies
+        run: python -m pip install --upgrade pandas requests
+
+      - name: Download and archive latest completed NFL week
+        run: |
+          python - <<'PY'
+          import io
+          import os
+          from datetime import datetime, timezone, timedelta
+          from pathlib import Path
+
+          import pandas as pd
+          import requests
+
+          season = datetime.now(timezone.utc).year
+          url = (
+              "https://github.com/nflverse/nflverse-data/releases/download/"
+              f"pbp/play_by_play_{season}.csv"
+          )
+          response = requests.get(url, timeout=(15, 180))
+          response.raise_for_status()
+
+          # Keep play-level fields useful for game-script analysis while avoiding
+          # downloading/storing unrelated columns in the archive.
+          wanted = {
+              "season", "week", "game_id", "old_game_id", "game_date", "home_team",
+              "away_team", "posteam", "defteam", "play_id", "drive", "qtr",
+              "down", "ydstogo", "yardline_100", "game_seconds_remaining",
+              "score_differential", "play_type", "yards_gained", "epa", "wp",
+              "wpa", "passer_player_id", "passer_player_name", "receiver_player_id",
+              "receiver_player_name", "rusher_player_id", "rusher_player_name",
+              "yards_after_catch", "air_yards", "complete_pass", "incomplete_pass",
+              "interception", "sack", "touchdown", "pass_touchdown", "rush_touchdown",
+              "run_location", "run_gap", "shotgun", "no_huddle", "qb_dropback",
+              "qb_scramble", "two_point_attempt", "extra_point_attempt",
+              "field_goal_attempt", "kickoff_attempt", "punt_attempt",
+              "total_home_score", "total_away_score", "home_score", "away_score",
+          }
+          frame = pd.read_csv(
+              io.BytesIO(response.content),
+              usecols=lambda column: column in wanted,
+              low_memory=False,
+          )
+          if frame.empty or "week" not in frame or "game_id" not in frame:
+              raise RuntimeError("PBP download was empty or missing week/game_id columns.")
+
+          frame["week"] = pd.to_numeric(frame["week"], errors="coerce")
+          if "game_date" in frame:
+              frame["game_date"] = pd.to_datetime(frame["game_date"], errors="coerce", utc=True)
+              cutoff = pd.Timestamp(datetime.now(timezone.utc).date(), tz="UTC")
+              frame = frame[frame["game_date"] < cutoff]
+
+          completed_weeks = sorted(frame["week"].dropna().astype(int).unique())
+          if not completed_weeks:
+              raise RuntimeError("No completed NFL weeks found in the downloaded PBP data.")
+
+          week = completed_weeks[-1]
+          weekly = frame[frame["week"] == week].copy()
+          if weekly.empty:
+              raise RuntimeError(f"No plays found for selected week {week}.")
+
+          out_dir = Path("data/pbp")
+          out_dir.mkdir(parents=True, exist_ok=True)
+          output = out_dir / f"{season}_week_{week:02d}.csv.gz"
+          weekly.to_csv(output, index=False, compression="gzip")
+          print(f"Archived {len(weekly):,} plays for season {season}, week {week}: {output}")
+          PY
+
+      - name: Commit archive if changed
+        run: |
+          if [[ -n "$(git status --porcelain data/pbp)" ]]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add data/pbp/
+            git commit -m "Archive weekly NFL play-by-play data"
+            git push
+          else
+            echo "PBP archive is already up to date."
+          fi

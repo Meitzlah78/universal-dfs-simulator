@@ -1,0 +1,30 @@
+name: Fix DFF FanDuel Slate Discovery
+on:
+  push:
+    branches: [feature/salary-csv-upload]
+    paths:
+      - '.github/workflows/fix-dff-fd-slate-discovery.yml'
+      - '.github/scripts/fix_dff_fd_slate_discovery.py'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/salary-csv-upload
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python .github/scripts/fix_dff_fd_slate_discovery.py
+      - run: python -m py_compile dfs_app.py
+      - run: |
+          grep -n 'classic_best' dfs_app.py
+          grep -n 'key in target_keys' dfs_app.py
+      - run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add dfs_app.py
+          git commit -m 'Add DFF FanDuel classic fallback for Single Game [skip ci]'
+          git push
