@@ -43,3 +43,22 @@ of special-teams plays. Some event rates and play-call decisions use fixed model
 assumptions. A successful test run establishes bookkeeping/scoring consistency;
 it does not validate projection accuracy, tail calibration, field realism or ROI.
 Contest-upload feedback is still not wired into model fitting.
+
+## Weather
+
+Both sites and all formats attach weather to a verified scheduled game. ESPN
+supplies home/away teams, venue and kickoff; the uploaded DK Game Info date is
+used when present. Both teams receive the same venue forecast. An NWS hourly
+forecast must cover kickoff through four hours later; other forecast days do not
+influence that game. Wind, meaningful precipitation and heavy snow affect pass
+completion/yards, pass/run mix and kicking accuracy inside the football engine.
+Source projection values are not multiplied, preventing repeated weather scaling.
+
+Public responses are cached for 15 minutes; REFRESH PROJECTIONS + INJURY NEWS
+clears this cache too. Unknown/ambiguous games, unmapped or overseas venues and
+missing/incomplete forecasts are explicitly unavailable and have neutral effects.
+Indoor/roofed venues use neutral conditions from venue metadata. This does not
+independently verify retractable-roof status. Weather coefficients are conservative
+model assumptions, not measured or validated SaberSim parameters.
+
+Run `python -m unittest discover -s tests -p test_weather.py -v` for weather tests.

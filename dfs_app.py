@@ -2104,6 +2104,17 @@ def build_opponent_map(source_df, team_values):
     return opponents
 
 
+@st.cache_data(ttl=900, show_spinner=False)
+def fetch_game_weather_json(url):
+    """Cache public schedule/forecast responses; failed requests aren't cached."""
+    response = requests.get(url, headers={
+        "User-Agent": "Simmah-NFL/2.0 (github.com/Meitzlah78/universal-dfs-simulator)",
+        "Accept": "application/json",
+    }, timeout=(3, 8))
+    response.raise_for_status()
+    return response.json()
+
+
 def extract_slate_games(source_df):
     """Return compact matchup labels detected from a DK/FD player table."""
     import re
@@ -2637,6 +2648,7 @@ platform, lineup_mode = format_options[selected_format]
 if st.session_state.pop("refresh_projections_requested", False):
     download_public_projection_table.clear()
     fetch_nfl_injury_statuses.clear()
+    fetch_game_weather_json.clear()
     st.session_state["projection_updates_found"] = False
     st.session_state["injury_updates_found"] = False
     st.session_state["shared_projection_updated_at"] = _sticky_datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %I:%M:%S %p %Z")
@@ -3763,96 +3775,91 @@ def fetch_fanduel_contest_details(contest_id):
 
 
 
-def fd_weather_multiplier(position, wind_mph=0.0, precip_pct=0.0, heavy_snow=False, dome=False):
-    """Conservative FanDuel weather adjustment. Dome/closed-roof games stay neutral."""
-    if dome:
-        return 1.0
-    pos = str(position).upper().strip()
-    wind = max(float(wind_mph or 0.0), 0.0)
-    precip = max(float(precip_pct or 0.0), 0.0)
-    mult = 1.0
-    # Wind is the primary weather signal. Keep mild weather essentially neutral.
-    if wind >= 20:
-        if pos in {"QB", "WR", "TE"}: mult *= 0.90
-        elif pos in {"K"}: mult *= 0.86
-        elif pos in {"RB"}: mult *= 1.02
-    elif wind >= 15:
-        if pos in {"QB", "WR", "TE"}: mult *= 0.95
-        elif pos in {"K"}: mult *= 0.94
-        elif pos in {"RB"}: mult *= 1.01
-    elif wind >= 10:
-        if pos in {"QB", "WR", "TE"}: mult *= 0.985
-        elif pos in {"K"}: mult *= 0.98
-    # Only meaningful precipitation gets an additional adjustment.
-    if precip >= 60:
-        if pos in {"QB", "WR", "TE"}: mult *= 0.97
-        elif pos in {"RB"}: mult *= 1.01
-        elif pos in {"K"}: mult *= 0.97
-    if heavy_snow:
-        if pos in {"QB", "WR", "TE"}: mult *= 0.92
-        elif pos in {"RB"}: mult *= 1.02
-        elif pos in {"K"}: mult *= 0.90
-    return float(np.clip(mult, 0.75, 1.08))
-
-
-
-FD_STADIUM_WEATHER = {
-    "ARI": (33.5276, -112.2626, True), "ATL": (33.7554, -84.4008, True),
-    "BAL": (39.2780, -76.6227, False), "BUF": (42.7738, -78.7870, False),
-    "CAR": (35.2258, -80.8528, False), "CHI": (41.8623, -87.6167, False),
-    "CIN": (39.0955, -84.5161, False), "CLE": (41.5061, -81.6995, False),
-    "DAL": (32.7473, -97.0945, True), "DEN": (39.7439, -105.0201, False),
-    "DET": (42.3400, -83.0456, True), "GB": (44.5013, -88.0622, False),
-    "HOU": (29.6847, -95.4107, True), "IND": (39.7601, -86.1639, True),
-    "JAX": (30.3239, -81.6373, False), "KC": (39.0489, -94.4839, False),
-    "LV": (36.0908, -115.1830, True), "LAC": (33.9535, -118.3392, True),
-    "LAR": (33.9535, -118.3392, True), "MIA": (25.9580, -80.2389, False),
-    "MIN": (44.9736, -93.2575, True), "NE": (42.0909, -71.2643, False),
-    "NO": (29.9511, -90.0812, True), "NYG": (40.8135, -74.0745, False),
-    "NYJ": (40.8135, -74.0745, False), "PHI": (39.9008, -75.1675, False),
-    "PIT": (40.4468, -80.0158, False), "SEA": (47.5952, -122.3316, False),
-    "SF": (37.4030, -121.9700, False), "TB": (27.9759, -82.5033, False),
-    "TEN": (36.1665, -86.7713, False), "WAS": (38.9076, -76.8645, False),
-}
-
-def _fd_parse_wind_mph(value):
-    nums = re.findall(r"\\d+(?:\\.\\d+)?", str(value or ""))
-    return max([float(x) for x in nums], default=0.0)
-
-@st.cache_data(ttl=1800, show_spinner=False)
-def fetch_fd_nws_weather(team):
-    info = FD_STADIUM_WEATHER.get(str(team).upper().strip())
-    if not info:
-        return None
-    lat, lon, dome = info
-    if dome:
-        return {"wind_mph": 0.0, "precip_pct": 0.0, "heavy_snow": False, "dome": True, "summary": "Indoor/dome"}
-    headers = {"User-Agent": "UniversalDFSSimulator/1.0 (GitHub Meitzlah78/universal-dfs-simulator)", "Accept": "application/geo+json"}
+def apply_game_weather_context(players_frame, source_frame=None):
+    """Resolve actual game venues/kickoffs and annotate weather without changing projections."""
+    from datetime import datetime, timedelta, timezone
+    from simmah_weather import kickoff_hints, schedule_games, select_game, venue_location, forecast_for_game, team_key
+    frame = players_frame.copy()
+    now = datetime.now(timezone.utc)
+    source = source_frame if isinstance(source_frame, pd.DataFrame) else frame
+    hints = kickoff_hints(source.to_dict("records"))
+    dates = [value.date() for value in hints.values()]
+    start = min(dates) if dates else now.astimezone(ZoneInfo("America/New_York")).date()
+    end = (max(dates) + timedelta(days=1)) if dates else start + timedelta(days=8)
+    pairs = {}
+    for row in frame.to_dict("records"):
+        team, opponent = team_key(row.get("Team")), team_key(row.get("Opponent"))
+        if team and opponent and opponent not in {"NAN", "NONE", "—", "-"}:
+            pairs[tuple(sorted((team, opponent)))] = (team, opponent)
     try:
-        point = requests.get(f"https://api.weather.gov/points/{lat},{lon}", headers=headers, timeout=8)
-        point.raise_for_status()
-        hourly_url = point.json().get("properties", {}).get("forecastHourly")
-        if not hourly_url:
-            return None
-        forecast = requests.get(hourly_url, headers=headers, timeout=8)
-        forecast.raise_for_status()
-        periods = forecast.json().get("properties", {}).get("periods", [])
-        if not periods:
-            return None
-        # FanDuel templates do not reliably expose an exact kickoff timestamp in the player table.
-        # Use the strongest meaningful conditions in the next 7 days so weather is not silently ignored.
-        periods = periods[:168]
-        winds = [_fd_parse_wind_mph(p.get("windSpeed")) for p in periods]
-        pops = [float((p.get("probabilityOfPrecipitation") or {}).get("value") or 0.0) for p in periods]
-        snow = any("snow" in str(p.get("shortForecast", "")).lower() for p in periods)
-        idx = int(np.argmax(np.asarray(winds) + np.asarray(pops) / 20.0)) if periods else 0
-        p = periods[idx]
-        wind = winds[idx] if winds else 0.0
-        pop = pops[idx] if pops else 0.0
-        summary = str(p.get("shortForecast") or "NWS forecast")
-        return {"wind_mph": wind, "precip_pct": pop, "heavy_snow": snow, "dome": False, "summary": summary}
+        if (end-start).days > 14:
+            raise ValueError("ambiguous slate dates")
+        payload = fetch_game_weather_json(
+            f"https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates={start:%Y%m%d}-{end:%Y%m%d}&limit=1000"
+        )
+        games = schedule_games(payload)
     except Exception:
-        return None
+        games = []
+
+    def fetch_pair(item):
+        pair, (team, opponent) = item
+        game = select_game(games, team, opponent, now, hints.get(pair))
+        if game is None:
+            return pair, {"status": "Unavailable: game/kickoff not verified"}
+        venue = game["venue"]
+        metadata = {"venue": venue.get("fullName", "Unknown venue"),
+                    "kickoff": game["kickoff"].isoformat(),
+                    "matchup": game["away"] + " @ " + game["home"]}
+        location = venue_location(venue)
+        if location is None:
+            return pair, {**metadata, "status": "Unavailable: venue outside mapped NWS coverage"}
+        lat, lon, indoor = location
+        if indoor:
+            return pair, {**metadata, "status": "Available", "indoor": True,
+                          "wind_mph": 0., "precip_pct": 0., "heavy_snow": False,
+                          "summary": "Indoor/roofed venue — neutral weather"}
+        try:
+            point = fetch_game_weather_json(f"https://api.weather.gov/points/{lat},{lon}")
+            url = point.get("properties", {}).get("forecastHourly")
+            if not url or not str(url).startswith("https://api.weather.gov/"):
+                raise ValueError("hourly forecast unavailable")
+            hourly = fetch_game_weather_json(url)
+            weather = forecast_for_game(hourly.get("properties", {}).get("periods", []), game["kickoff"])
+            return pair, {**metadata, **weather, "indoor": False}
+        except Exception:
+            return pair, {**metadata, "status": "Unavailable: NWS forecast could not load"}
+
+    # Thread workers fetch/parse data only; Streamlit rendering stays on this thread.
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        contexts = dict(executor.map(fetch_pair, pairs.items()))
+    def context(team, opponent):
+        return contexts.get(tuple(sorted((team_key(team), team_key(opponent)))),
+                            {"status": "Unavailable: matchup not verified"})
+    records = [context(row.get("Team"), row.get("Opponent")) for row in frame.to_dict("records")]
+    for column, key, default in [
+        ("Weather Status", "status", "Unavailable"), ("Weather", "summary", "Unavailable"),
+        ("Weather Venue", "venue", "Unknown"), ("Weather Kickoff", "kickoff", ""),
+        ("Wind MPH", "wind_mph", np.nan), ("Precip %", "precip_pct", np.nan),
+        ("Heavy Snow", "heavy_snow", False), ("Weather Indoor", "indoor", False),
+    ]:
+        frame[column] = [record.get(key, default) for record in records]
+    with st.expander("Game weather — venue and kickoff window", expanded=False):
+        summary = []
+        for pair, weather in contexts.items():
+            kickoff = weather.get("kickoff", "")
+            dt = pd.to_datetime(kickoff, utc=True, errors="coerce")
+            summary.append({"Game": weather.get("matchup", " / ".join(pair)),
+                "Venue": weather.get("venue", "Unknown"),
+                "Kickoff (Eastern)": dt.tz_convert("America/New_York").strftime("%m/%d %I:%M %p %Z") if pd.notna(dt) else "Unknown",
+                "Status": weather["status"], "Wind MPH": weather.get("wind_mph"),
+                "Precip %": weather.get("precip_pct"), "Forecast": weather.get("summary", "Unavailable")})
+        if summary:
+            st.dataframe(pd.DataFrame(summary), use_container_width=True, hide_index=True)
+        else:
+            st.caption("Weather unavailable: no verified matchups.")
+        st.caption("Both teams use the same game venue and kickoff-to-four-hours-later forecast. Unavailable weather leaves simulation rates unchanged. Source projections are preserved.")
+    return frame
+
 
 def apply_fd_correlated_simulations(sim_df, player_pool, strength=1.0, seed=20261015):
     """Add conservative game/team correlation to FanDuel outcomes only."""
@@ -3966,8 +3973,16 @@ def simulate_fd_play_by_play(players_df, rng, n=SIMULATION_COUNT, correlation_st
                 continue
 
     progress = st.progress(0, text=f"Preparing {n:,} independent NFL game outcomes...")
+    from simmah_weather import team_key
+    weather_by_team = {}
+    for row in pool.to_dict("records"):
+        weather_by_team[team_key(row.get("Team"))] = {
+            "status": row.get("Weather Status", "Unavailable"),
+            "wind_mph": row.get("Wind MPH", 0), "precip_pct": row.get("Precip %", 0),
+            "heavy_snow": row.get("Heavy Snow", False), "indoor": row.get("Weather Indoor", False),
+        }
     stats = simulate_stat_lines(
-        pool, _fd_hist_roles, rng, n, correlation_strength,
+        pool, _fd_hist_roles, rng, n, correlation_strength, weather_by_team=weather_by_team,
         progress=lambda fraction, text: progress.progress(fraction, text=text),
     )
     out = {}
@@ -3990,23 +4005,6 @@ def simulate_fd_play_by_play(players_df, rng, n=SIMULATION_COUNT, correlation_st
     progress.progress(1.0, text=f"Completed {n:,} independent NFL outcomes ({ENGINE_VERSION})")
     return result
 
-
-def apply_fd_nws_weather(fd_players):
-    frame = fd_players.copy()
-    weather_by_team = {}
-    for team in sorted(set(frame.get("Team", pd.Series(dtype=str)).astype(str).str.upper())):
-        weather_by_team[team] = fetch_fd_nws_weather(team)
-    def _mult(row):
-        wx = weather_by_team.get(str(row.get("Team", "")).upper())
-        if not wx:
-            return 1.0
-        return fd_weather_multiplier(row.get("Position", ""), wx["wind_mph"], wx["precip_pct"], wx["heavy_snow"], wx["dome"])
-    frame["Weather Mult"] = frame.apply(_mult, axis=1)
-    frame["Projection"] = pd.to_numeric(frame["Projection"], errors="coerce") * frame["Weather Mult"]
-    frame["Weather"] = frame["Team"].astype(str).str.upper().map(lambda t: (weather_by_team.get(t) or {}).get("summary", "Unavailable"))
-    frame["Wind MPH"] = frame["Team"].astype(str).str.upper().map(lambda t: (weather_by_team.get(t) or {}).get("wind_mph", 0.0))
-    frame["Precip %"] = frame["Team"].astype(str).str.upper().map(lambda t: (weather_by_team.get(t) or {}).get("precip_pct", 0.0))
-    return frame
 
 if platform == "FanDuel":
     # One-upload FanDuel slate setup. FanDuel entry templates include both the
@@ -4626,11 +4624,7 @@ if platform == "FanDuel":
 
 
 
-    # Automatic NWS weather for FanDuel Full Roster and Single Game only.
-    fd_players = apply_fd_nws_weather(fd_players)
-    _fd_weather_impacts = fd_players[pd.to_numeric(fd_players.get("Weather Mult", 1.0), errors="coerce").fillna(1.0).ne(1.0)] if "Weather Mult" in fd_players.columns else pd.DataFrame()
-    if not _fd_weather_impacts.empty:
-        st.caption("FanDuel weather adjustments active from National Weather Service forecasts.")
+    fd_players = apply_game_weather_context(fd_players, fd_raw)
 
     st.write("### Build Settings")
     st.caption("The 5,000-lineup build automatically spreads player exposure while still favoring stronger simulated scores.")
@@ -6741,6 +6735,8 @@ else:
             f"Players loaded successfully. Projections are available for {dk_valid_projection_count} of {len(players_df)} players; "
             "players without a posted external projection will stay out of builds until a refresh finds one."
         )
+
+    players_df = apply_game_weather_context(players_df, uploaded_df if "uploaded_df" in locals() else players_df)
 
     # Keep the full DraftKings salary-file pool visible even when some players do not yet have projections.
     all_dk_players_df = players_df.copy()
