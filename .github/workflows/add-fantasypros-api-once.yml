@@ -2,7 +2,9 @@ name: Add FantasyPros integration
 on:
   push:
     branches: [feature/salary-csv-upload]
-    paths: ['.github/workflows/add-fantasypros-api-once.yml']
+    paths:
+      - '.github/workflows/add-fantasypros-api-once.yml'
+      - '.github/scripts/add_fantasypros_api.py'
 permissions:
   contents: write
 jobs:
@@ -16,8 +18,9 @@ jobs:
         with:
           python-version: '3.12'
       - run: python .github/scripts/add_fantasypros_api.py
-      - run: python -m py_compile dfs_app.py
+      - run: python -m py_compile dfs_app.py simmah_field_model.py
       - run: grep -q 'api.fantasypros.com/public/v2/json/nfl' dfs_app.py
+      - run: grep -q 'FantasyPros' dfs_app.py
       - name: Commit app
         run: |
           git config user.name simmah-bot
