@@ -47,6 +47,21 @@ class ClassicFieldTest(unittest.TestCase):
             allowed={'RB','WR','TE'} if slot=='FLEX' else {'DST','D','DEF'} if slot=='D' else {slot.rstrip('123')}
             self.assertTrue(meta.loc[names,'Position'].isin(allowed).all())
 
+    def test_batched_draftkings_uses_its_cap_and_full_target(self):
+        from test_candidates import fixture
+        from simmah_classic_field import build_full_roster_field
+        pool,_,roster=fixture();pool['Projection']=pool.Salary/500
+        slots=[s for s,_ in roster]
+        result=build_full_roster_field(pool,np.ones(len(pool)),slots,1000,
+            rng=np.random.default_rng(17),platform='DraftKings')
+        self.assertEqual(len(result),1000)
+        index={n:i for i,n in enumerate(pool.Name)}
+        picks=np.array([[index[n] for n in row] for row in result[slots].itertuples(index=False,name=None)])
+        self.assertTrue(classic_tournament_mask(picks,pool.Team,pool.Position).all())
+        self.assertTrue(result.Salary.between(47000,50000).all())
+        np.testing.assert_array_equal(result.Salary,pool.Salary.to_numpy()[picks].sum(axis=1))
+        self.assertEqual(result.attrs['platform'],'DraftKings')
+
     def test_empty_batches_are_supported(self):
         self.assertEqual(len(classic_tournament_mask(np.empty((0,9),int),[],[])),0)
 

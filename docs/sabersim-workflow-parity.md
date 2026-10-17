@@ -122,3 +122,14 @@ from earlier releases; football outcomes and simulation counts are unaffected.
 A local 267-player fixture with synthetic FanDuel salaries generated all 10,000
 opponents in 2.01 seconds (167,936 proposals). Hosting speed and actual slate
 acceptance rates can differ. All 55 scoped tests passed.
+
+DK Classic and FanDuel Full Roster now call the same batched field generator.
+Site parameters retain DK's 47,000–50,000 salary interval and eight-player team
+limit versus FD's 59,000–60,000 and four-player limit. DK retains its projection,
+salary-spend and pass-catcher-stack weighting; FD retains its salary acceptance
+curve. Both preserve duplicate opponents and run completed-contest calibration
+after proposal generation. Replaying the uploaded 267-player DK inputs with
+external projections as mean estimates generated all 10,000 opponents in 0.64
+seconds locally; this is generation timing only, not total app runtime or ROI
+validation. Proposal ordering/distributions can differ from the earlier DK
+independent-slot rejection sampler. All 56 scoped tests pass.

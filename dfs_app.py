@@ -4997,8 +4997,8 @@ if platform == "FanDuel":
             _fd_generation_target = learned_field_proposal_target("FanDuel", lineup_mode, st.session_state.get("selected_fd_contest", {}), len(fd_slots), fd_opponent_target)
             with st.spinner(f"Building {_fd_generation_target:,} simulated FanDuel contest entries..."):
                 if lineup_mode == "Full Roster":
-                    from simmah_classic_field import build_fanduel_full_field
-                    _fd_batched_field = build_fanduel_full_field(fd_pool, fd_weights, fd_slots, _fd_generation_target,
+                    from simmah_classic_field import build_full_roster_field
+                    _fd_batched_field = build_full_roster_field(fd_pool, fd_weights, fd_slots, _fd_generation_target,
                         rng=rng, progress=lambda fraction,text: fd_field_progress.progress(fraction,text=text))
                     opponent_rows = _fd_batched_field.to_dict("records")
                 else:
@@ -6901,91 +6901,14 @@ else:
                         ("WR1", {"WR"}), ("WR2", {"WR"}), ("WR3", {"WR"}),
                         ("TE", {"TE"}), ("FLEX", {"RB", "WR", "TE"}), ("DST", {"DST"})
                     ]
-                    # Precompute NumPy arrays once. Avoid rebuilding/filtering a pandas
-                    # DataFrame for every slot of every simulated opponent lineup.
-                    from simmah_classic_field import classic_tournament_mask
-                    pool_names = pool["Name"].astype(str).to_numpy(dtype=object)
-                    pool_salaries = pd.to_numeric(pool["Salary"], errors="coerce").fillna(0).to_numpy(dtype=np.int64)
-                    pool_weights = pd.to_numeric(pool["Weight"], errors="coerce").fillna(0.01).clip(lower=0.01).to_numpy(dtype=float)
-                    pool_means = np.asarray([float(mean_scores.get(name, 0.0)) for name in pool_names], dtype=float)
-                    slot_indices = {
-                        slot: np.asarray([
-                            i for i, positions in enumerate(pool["Eligible"].tolist())
-                            if positions & eligible
-                        ], dtype=np.int32)
-                        for slot, eligible in contest_slots
-                    }
-                    # NumPy opponent-field generator. Real DK fields contain duplicate
-                    # rosters, so duplicates are intentionally retained for tie splitting.
-                    field_target = learned_field_proposal_target("DraftKings", "Classic", classic_contest, 9, int(dk_opponent_target))
-                    field_batches = []
-                    field_count = 0
-                    field_batch_size = max(20000, min(100000, field_target * 3))
+                    from simmah_classic_field import build_full_roster_field
                     field_slot_names = [slot for slot, _ in contest_slots]
-                    for _batch in range(30):
-                        n = field_batch_size
-                        picks = np.empty((n, len(contest_slots)), dtype=np.int32)
-                        for col, (slot, _) in enumerate(contest_slots):
-                            choices = slot_indices[slot]
-                            probs = pool_weights[choices].astype(float, copy=True)
-                            probs /= probs.sum()
-                            picks[:, col] = rng.choice(choices, size=n, replace=True, p=probs)
-                        sorted_picks = np.sort(picks, axis=1)
-                        valid = classic_tournament_mask(picks, pool["Team"].astype(str).to_numpy(), pool["Position"].astype(str).to_numpy())
-                        salaries = pool_salaries[picks].sum(axis=1)
-                        valid &= (salaries >= 47000) & (salaries <= 50000)
-                        vp = picks[valid]
-                        vs = salaries[valid]
-                        if len(vp):
-                            # A real DK Classic field is not a random collection of
-                            # salary-valid rosters. Prefer stronger, higher-spend builds
-                            # while retaining enough lower-salary/contrarian lineups to
-                            # preserve field diversity and natural duplicates.
-                            _vproj = pool_means[vp].sum(axis=1)
-                            _proj_center = float(np.median(_vproj))
-                            _proj_scale = max(float(np.std(_vproj)), 1.0)
-                            _proj_z = np.clip((_vproj - _proj_center) / _proj_scale, -3.0, 3.0)
-                            _salary_z = np.clip((vs.astype(float) - 48500.0) / 1200.0, -3.0, 1.25)
-                            _human_weight = np.exp(0.85 * _proj_z + 0.55 * _salary_z)
-
-                            # NFL Classic users strongly prefer QB stacks. Apply a soft
-                            # construction preference rather than a hard stack rule.
-                            _qb = vp[:, 0]
-                            _qb_team = pool.iloc[_qb]["Team"].astype(str).to_numpy()
-                            _skill_cols = vp[:, [1, 2, 3, 4, 5, 6, 7]]
-                            _skill_teams = np.asarray(pool["Team"].astype(str).to_numpy()[_skill_cols])
-                            _skill_positions = pool["Position"].astype(str).to_numpy()[_skill_cols]
-                            _pass_catchers = np.isin(_skill_positions, ["WR", "TE"])
-                            _stack_count = ((_skill_teams == _qb_team[:, None]) & _pass_catchers).sum(axis=1)
-                            _human_weight *= np.where(_stack_count >= 2, 2.0, np.where(_stack_count >= 1, 1.45, 0.45))
-
-                            _human_weight = np.nan_to_num(_human_weight, nan=0.0, posinf=0.0, neginf=0.0)
-                            if _human_weight.sum() > 0:
-                                _human_weight /= _human_weight.sum()
-                                _take = min(len(vp), max(field_target - field_count, 1))
-                                _chosen = rng.choice(len(vp), size=_take, replace=True, p=_human_weight)
-                                vp = vp[_chosen]
-                                vs = vs[_chosen]
-                            need = field_target - field_count
-                            vp = vp[:need]
-                            vs = vs[:need]
-                            field_batches.append((vp, vs))
-                            field_count += len(vp)
-                        if field_count >= field_target:
-                            break
-                    if field_batches:
-                        field_picks = np.vstack([x[0] for x in field_batches])[:field_target]
-                        field_salaries = np.concatenate([x[1] for x in field_batches])[:field_target]
-                        field_points = pool_means[field_picks].sum(axis=1)
-                        field_data = {
-                            slot: pool_names[field_picks[:, j]]
-                            for j, slot in enumerate(field_slot_names)
-                        }
-                        field_data["Salary"] = field_salaries
-                        field_data["ProjectedPoints"] = np.round(field_points, 2)
-                        contest_field_df = pd.DataFrame(field_data)
-                    else:
-                        contest_field_df = pd.DataFrame(columns=field_slot_names + ["Salary", "ProjectedPoints"])
+                    field_target = learned_field_proposal_target("DraftKings", "Classic", classic_contest, 9, int(dk_opponent_target))
+                    _classic_field_progress = st.progress(0, text=f"Building DraftKings opponent field: 0 / {field_target:,}")
+                    contest_field_df = build_full_roster_field(pool, pool["Weight"].to_numpy(float), field_slot_names,
+                        field_target, rng=rng, platform="DraftKings",
+                        progress=lambda fraction,text: _classic_field_progress.progress(fraction,text=text))
+                    _classic_field_progress.empty()
                     contest_field_df = apply_learned_field(contest_field_df, pool, field_slot_names, "DraftKings", "Classic", classic_contest, int(dk_opponent_target), rng)
                     st.caption("Classic opponent baseline: each lineup has a QB + WR/TE stack; RBs do not satisfy this rule. This is a tournament construction assumption, not a learned stack frequency. Field popularity uses external ownership when supplied, otherwise a projection-rank proxy.")
                     user_lineups = st.session_state["classic_lineups"].copy()
