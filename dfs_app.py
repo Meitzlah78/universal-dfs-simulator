@@ -5332,58 +5332,13 @@ if platform == "FanDuel":
                 "FanDuel_Full_Roster_Assigned_Portfolio.csv", "text/csv", key="fd_full_assigned_report", on_click="ignore")
             st.caption("Candidate alternatives — the assigned portfolio above is used for your entry replacement.")
 
-        # Use the same player-by-player points layout as the DraftKings Portfolio.
-        fd_display = fd_results.copy()
-        fd_player_means = {
-            str(name): float(values.get("Mean", 0.0))
-            for name, values in player_sim.items()
-        }
-        if lineup_mode == "Full Roster" and isinstance(fd_all_ranked, pd.DataFrame) and not fd_all_ranked.empty:
-            _fd_all_candidates_export = fd_all_ranked.copy()
-            st.download_button(
-                "DOWNLOAD ALL CANDIDATE LINEUPS",
-                data=_fd_all_candidates_export.to_csv(index=False).encode("utf-8"),
-                file_name="fanduel_all_candidate_lineups.csv",
-                mime="text/csv",
-                key="download_fd_all_candidate_lineups",
-                use_container_width=True,
-            )
-        fd_display_columns = []
-        for slot in fd_slots:
-            if slot not in fd_display.columns:
-                continue
-            multiplier = 1.5 if slot in {"MVP"} else 1.0
-            points_col = slot + " Sim Pts"
-            fd_display[points_col] = fd_display[slot].map(
-                lambda player: round(fd_player_means.get(str(player), 0.0) * multiplier, 2)
-            )
-            fd_display_columns.extend([slot, points_col])
-        if "ProjectedPoints" in fd_display.columns:
-            fd_display_columns.append("ProjectedPoints")
-        if "Score" in fd_display.columns:
-            fd_display_columns.append("Score")
-        if "Salary" in fd_display.columns:
-            fd_display_columns.append("Salary")
-        # FanDuel contest comparison already calculates these metrics. Keep them
-        # visible in the post-SIM portfolio table so the completed contest run is
-        # not reduced back to only projection/score/salary after st.rerun().
-        for metric_col in [
-            "ContestScore", "WinRate", "Top1", "Top5", "Top10", "CashRate",
-            "AvgPercentile", "Entry Fee ($)", "Expected Prize ($)",
-            "Expected Net ($)", "Expected ROI (%)", "Estimated Full Field Rank",
-            "Exact Matches in Final Field", "Estimated Field Copies",
-        ]:
-            if metric_col in fd_display.columns:
-                fd_display_columns.append(metric_col)
-        fd_display_columns = list(dict.fromkeys(
-            col for col in fd_display_columns if col in fd_display.columns
-        ))
-        st.dataframe(
-            fd_display[fd_display_columns] if fd_display_columns else fd_display,
+        st.write("#### FanDuel Export")
+        st.caption("FOR EXISTING ENTRIES: Download the replacement CSV, then open FanDuel and upload it through the CSV edit flow for your existing entries. Entry IDs and contest details are preserved.")
+        st.link_button(
+            "OPEN FANDUEL / EDIT ENTRIES",
+            "https://www.fanduel.com/upcoming",
             use_container_width=True,
-            hide_index=True
         )
-
         if "FD_ID" in fd_players.columns:
             fd_ids = dict(zip(fd_players["Name"], fd_players["FD_ID"].astype(str)))
             export_slots = (
@@ -5528,11 +5483,12 @@ if platform == "FanDuel":
                             f"for {target_name}. Entry IDs and contest details are preserved."
                         )
                         st.download_button(
-                            "DOWNLOAD FANDUEL REPLACEMENT CSV",
+                            "DOWNLOAD FILE FOR EDIT ENTRIES",
                             output.getvalue().encode("utf-8"),
                             file_name=("FanDuel_Single_Game_Replacement.csv" if lineup_mode == "Single Game"
                                        else "FanDuel_Full_Roster_Replacement.csv"),
                             mime="text/csv",
+                            use_container_width=True,
                             key="fd_export_" + lineup_mode.replace(" ", "_").lower(),
                             on_click="ignore"
                         )
@@ -5540,6 +5496,60 @@ if platform == "FanDuel":
                         st.error(f"Could not create FanDuel replacement CSV: {exc}")
         else:
             st.info("This CSV has no player ID column, so lineup export is unavailable.")
+
+
+        # Use the same player-by-player points layout as the DraftKings Portfolio.
+        fd_display = fd_results.copy()
+        fd_player_means = {
+            str(name): float(values.get("Mean", 0.0))
+            for name, values in player_sim.items()
+        }
+        if lineup_mode == "Full Roster" and isinstance(fd_all_ranked, pd.DataFrame) and not fd_all_ranked.empty:
+            _fd_all_candidates_export = fd_all_ranked.copy()
+            st.download_button(
+                "DOWNLOAD ALL CANDIDATE LINEUPS",
+                data=_fd_all_candidates_export.to_csv(index=False).encode("utf-8"),
+                file_name="fanduel_all_candidate_lineups.csv",
+                mime="text/csv",
+                key="download_fd_all_candidate_lineups",
+                use_container_width=True,
+            )
+        fd_display_columns = []
+        for slot in fd_slots:
+            if slot not in fd_display.columns:
+                continue
+            multiplier = 1.5 if slot in {"MVP"} else 1.0
+            points_col = slot + " Sim Pts"
+            fd_display[points_col] = fd_display[slot].map(
+                lambda player: round(fd_player_means.get(str(player), 0.0) * multiplier, 2)
+            )
+            fd_display_columns.extend([slot, points_col])
+        if "ProjectedPoints" in fd_display.columns:
+            fd_display_columns.append("ProjectedPoints")
+        if "Score" in fd_display.columns:
+            fd_display_columns.append("Score")
+        if "Salary" in fd_display.columns:
+            fd_display_columns.append("Salary")
+        # FanDuel contest comparison already calculates these metrics. Keep them
+        # visible in the post-SIM portfolio table so the completed contest run is
+        # not reduced back to only projection/score/salary after st.rerun().
+        for metric_col in [
+            "ContestScore", "WinRate", "Top1", "Top5", "Top10", "CashRate",
+            "AvgPercentile", "Entry Fee ($)", "Expected Prize ($)",
+            "Expected Net ($)", "Expected ROI (%)", "Estimated Full Field Rank",
+            "Exact Matches in Final Field", "Estimated Field Copies",
+        ]:
+            if metric_col in fd_display.columns:
+                fd_display_columns.append(metric_col)
+        fd_display_columns = list(dict.fromkeys(
+            col for col in fd_display_columns if col in fd_display.columns
+        ))
+        st.dataframe(
+            fd_display[fd_display_columns] if fd_display_columns else fd_display,
+            use_container_width=True,
+            hide_index=True
+        )
+
 
     st.stop()
 
