@@ -42,7 +42,7 @@ penalties, timeouts, halftime possession, injuries/substitutions or the full ran
 of special-teams plays. Some event rates and play-call decisions use fixed model
 assumptions. A successful test run establishes bookkeeping/scoring consistency;
 it does not validate projection accuracy, tail calibration, field realism or ROI.
-Contest-upload feedback is still not wired into model fitting.
+Completed-contest uploads now calibrate anonymous opponent-construction profiles; they do not fit or validate the football performance model.
 
 ## Weather
 
