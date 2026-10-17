@@ -33,11 +33,18 @@ if old not in text:
     raise SystemExit("classic forced-team anchor not found")
 text = text.replace(old, new, 1)
 
-old = '''                            if forced:\n                                mask = np.isin(choices, np.asarray(forced, dtype=int))\n'''
-new = '''                            if len(forced):\n                                mask = np.isin(choices, np.asarray(forced, dtype=int))\n'''
-if old not in text:
+# Scope the truthiness change to the Classic block. A global first-occurrence
+# replacement can accidentally modify the FanDuel Full Roster block first.
+classic_forced_marker = 'forced = choices[classic_teams[choices] == qb_team]'
+marker_pos = text.find(classic_forced_marker)
+if marker_pos < 0:
+    raise SystemExit("classic forced marker not found")
+old_truth = '''                            if forced:\n                                mask = np.isin(choices, np.asarray(forced, dtype=int))\n'''
+new_truth = '''                            if len(forced):\n                                mask = np.isin(choices, np.asarray(forced, dtype=int))\n'''
+truth_pos = text.find(old_truth, marker_pos)
+if truth_pos < 0:
     raise SystemExit("classic forced truthiness anchor not found")
-text = text.replace(old, new, 1)
+text = text[:truth_pos] + new_truth + text[truth_pos + len(old_truth):]
 
 path.write_text(text, encoding="utf-8")
 print("Installed vectorized DK Classic hot-loop builder optimizations")
