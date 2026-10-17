@@ -8,6 +8,21 @@ from test_candidates import fixture
 
 
 class WorkflowIntegrationTest(unittest.TestCase):
+    def test_csv_ownership_survives_player_pool_loading(self):
+        tree=ast.parse(Path('dfs_app.py').read_text())
+        fn=next(n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name=='preserve_uploaded_ownership')
+        ns={'np':np,'pd':pd};exec(compile(ast.Module(body=[fn],type_ignores=[]),'app','exec'),ns)
+        players=pd.DataFrame({'Name':['A','B','C']},index=[4,7,9])
+        raw=pd.DataFrame({'Own%':['35%','0%','bad'],'Field Own %':[99,99,99],
+                          'MVP Ownership %':['12%',None,'200%']},index=players.index)
+        result=ns['preserve_uploaded_ownership'](players,raw)
+        self.assertEqual(result.loc[4,'Projected Ownership'],35)
+        self.assertEqual(result.loc[7,'Projected Ownership'],0)
+        self.assertTrue(pd.isna(result.loc[9,'Projected Ownership']))
+        self.assertEqual(result.loc[4,'Projected MVP Ownership'],12)
+        self.assertTrue(pd.isna(result.loc[9,'Projected MVP Ownership']))
+        self.assertNotIn('Field Own %',result)
+
     def test_external_ownership_percent_strings_override_fallback(self):
         tree=ast.parse(Path('dfs_app.py').read_text())
         fn=next(n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name=='opponent_field_selection_weights')

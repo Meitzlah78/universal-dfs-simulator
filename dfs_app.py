@@ -335,6 +335,23 @@ def full_roster_stack_matches(chosen, pool, selected_stacks, stack_lookup=None, 
     return True
 
 
+def preserve_uploaded_ownership(players, raw):
+    """Keep pregame ownership inputs; never reuse simulated field ownership."""
+    aliases = {
+        "Projected Ownership": ("projected own %", "ownership %", "projected ownership", "projected own", "ownership", "own%", "own"),
+        "Projected MVP Ownership": ("projected mvp ownership", "mvp ownership %", "mvp own %"),
+        "Projected Flex Ownership": ("projected flex ownership", "flex ownership %", "flex own %"),
+    }
+    lookup = {str(c).strip().casefold():c for c in raw.columns}
+    result = players.copy()
+    for target, names in aliases.items():
+        source = next((lookup[name] for name in names if name in lookup), None)
+        if source is not None:
+            values = pd.to_numeric(raw[source].astype(str).str.strip().str.replace("%", "", regex=False), errors="coerce")
+            result[target] = values.where(np.isfinite(values) & values.between(0,100))
+    return result
+
+
 def opponent_field_selection_weights(pool, fallback_scores):
     """Use ownership as the primary opponent-construction signal for full-roster contests."""
     fallback = np.asarray(fallback_scores, dtype=float)
@@ -4421,6 +4438,7 @@ if platform == "FanDuel":
         if fd_id_col is not None:
             fd_players["FD_ID"] = fd_raw[fd_id_col].astype(str).str.strip()
 
+        fd_players = preserve_uploaded_ownership(fd_players, fd_raw)
         fd_players = fd_players.dropna(subset=["Salary"])
         fd_players = fd_players[
             (fd_players["Name"] != "") &
@@ -6111,6 +6129,7 @@ else:
                 )
                 if id_col is not None:
                     loaded_players["DK_ID"] = uploaded_df[id_col].astype(str).str.strip()
+                loaded_players = preserve_uploaded_ownership(loaded_players, uploaded_df)
                 # Keep missing projections blank until the DFF refresh below has a chance to fill them.
                 loaded_players["Projection"] = pd.to_numeric(
                     loaded_players["Projection"], errors="coerce"
