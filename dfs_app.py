@@ -1073,21 +1073,16 @@ def download_public_projection_table(source_name, platform_name, target_names=No
                 for table in pd.read_html(io.StringIO(page.text)):
                     if not isinstance(table.columns, pd.MultiIndex):
                         continue
-                    # FanDuel DFF rendered layout: player Name is the 7th displayed
-                    # column. Use its physical position instead of misleading MultiIndex labels.
-                    if table.shape[1] <= 6:
+                    # DFF's MultiIndex labels are shifted relative to the rendered data.
+                    # Runtime diagnostics show physical column 6 contains player names.
+                    # The FD projected-points data is the next physical column (7), even
+                    # though its semantic header is attached to column 6.
+                    if table.shape[1] <= 7:
                         continue
                     name_col = table.columns[6]
-                    proj_col = None
-                    for col in table.columns:
-                        levels = [re.sub(r"[^a-z0-9]+", " ", str(x).casefold()).strip() for x in col]
-                        if len(levels) > 1 and levels[1] == "fd fp projected":
-                            proj_col = col
-                            break
-                    if proj_col is None:
-                        continue
+                    proj_col = table.columns[7]
                     values = {}
-                    for name, projection in zip(table[name_col], table[proj_col]):
+                    for name, projection in zip(table.iloc[:, 6], table.iloc[:, 7]):
                         key = normalize_projection_player_name(name)
                         val = pd.to_numeric(projection, errors="coerce")
                         if key and pd.notna(val) and np.isfinite(float(val)) and float(val) >= 0:
