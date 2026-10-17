@@ -3837,11 +3837,13 @@ def build_joint_candidate_pool(pool, platform_name, mode_name, evaluation_outcom
     own_lookup = {str(col).strip().casefold(): col for col in pool.columns}
     own_col = next((own_lookup[key] for key in ("projected ownership", "ownership", "ownership %", "own%") if key in own_lookup), None)
     penalty = np.maximum(pd.to_numeric(pool[own_col], errors="coerce").fillna(0).to_numpy(float)-15, 0)*.06 if own_col else None
+    primary_patterns = [(1,False),(2,False),(1,True),(2,True)]
+    seed_patterns = [primary_patterns[i] for i, label in enumerate(FULL_ROSTER_STACK_OPTIONS) if label in selected_stacks] if mode_name in {"Classic", "Full Roster"} else None
     result = build_candidates(pool, construction, roster, target=5000,
         salary_min=salary_min, salary_max=salary_max, multipliers=multipliers, salary_costs=salary_costs,
         locks=locks, special_allowed=special_allowed, max_from_team=(5 if multipliers else 4 if platform_name=="FanDuel" else 8),
         require_both_teams=True, validator=validator, rng=np.random.default_rng(),
-        noise=.12-.08*float(np.clip(aggressiveness,0,1)), penalties=penalty,
+        noise=.12-.08*float(np.clip(aggressiveness,0,1)), penalties=penalty, primary_stacks=seed_patterns,
         progress=lambda fraction, text: progress.progress(fraction, text=text))
     metadata = dict(result.attrs)
     if result.empty:
@@ -3853,7 +3855,7 @@ def build_joint_candidate_pool(pool, platform_name, mode_name, evaluation_outcom
     st.session_state["candidate_engine_" + platform_name + "_" + mode_name] = metadata
     progress.progress(1., text=f"Built {len(result):,} unique candidates from joint outcomes")
     if len(result)<5000:
-        st.warning(f"Only {len(result):,} unique legal candidates were found within the bounded search; no duplicates were added to fill the pool. Loosen constraints or expand the player pool for 5,000.")
+        st.warning(f"Only {len(result):,} unique legal candidates were found within the bounded search; no duplicates were added to fill the pool. Search diagnostics: " + ", ".join(f"{key}: {value:,}" for key, value in metadata.get("rejected", {}).items()) + ". This is a search limit, not proof that no more legal combinations exist.")
     st.caption("Candidate engine: joint-outcome search; 10,000 separate construction and evaluation outcomes. Lineup percentiles come from summed scores in shared game scripts.")
     return result
 

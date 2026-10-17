@@ -11,7 +11,7 @@ import pandas as pd
 def build_candidates(pool,outcomes,roster,target=5000,salary_min=0,salary_max=50000,
                      multipliers=None,salary_costs=None,locks=(),special_allowed=None,
                      max_from_team=None,require_both_teams=False,validator=None,
-                     rng=None,progress=None,max_proposals=100000,noise=.08,penalties=None):
+                     rng=None,progress=None,max_proposals=100000,noise=.08,penalties=None,primary_stacks=None):
     rng=np.random.default_rng() if rng is None else rng
     pool=pool.drop_duplicates('Name').reset_index(drop=True)
     names=pool['Name'].astype(str).to_numpy(object)
@@ -39,7 +39,9 @@ def build_candidates(pool,outcomes,roster,target=5000,salary_min=0,salary_max=50
     max_cost=np.array([costs[s,choices].max() for s,choices in enumerate(eligible)])
     penalty=np.zeros(len(names)) if penalties is None else np.asarray(penalties,float)
     if penalty.shape!=(len(names),):raise ValueError('Ownership penalties do not align with player names')
+    opponents=pool.get('Opponent',pd.Series('',index=pool.index)).astype(str).str.upper().to_numpy(object)
     records=[];seen=set();proposed=0
+    rejected={'incomplete_or_salary':0,'team_limit':0,'stack_rules':0,'duplicate':0}
     while len(records)<target and proposed<max_proposals:
         batch=min(256,max_proposals-proposed);proposed+=batch
         scenario=rng.integers(0,len(values),batch)
@@ -55,6 +57,49 @@ def build_candidates(pool,outcomes,roster,target=5000,salary_min=0,salary_max=50
             col=draw.argmax(axis=1);row=np.flatnonzero(valid)
             picks[row,col[row]]=player;fixed[row,col[row]]=True
             total[row]+=costs[col[row],player]
+        # Seed the primary stack before filling other slots. Previously stack
+        # rules were checked only after unconstrained optimization, discarding
+        # almost every proposal for double stacks with bring-backs.
+        if primary_stacks:
+            if 'QB' not in slots:raise ValueError('Primary stacks require a QB slot')
+            qb_slot=slots.index('QB')
+            for row in range(batch):
+                if not alive[row]:continue
+                desired,bringback=primary_stacks[int(rng.integers(len(primary_stacks)))]
+                assigned=set(picks[row][picks[row]>=0].tolist())
+                def place(player,slot):
+                    picks[row,slot]=player;fixed[row,slot]=True
+                    total[row]+=costs[slot,player]
+                    assigned.add(player)
+                if picks[row,qb_slot]<0:
+                    available=[i for i in eligible[qb_slot] if i not in assigned]
+                    if not available:alive[row]=False;continue
+                    # Weighted by this proposal's joint QB outcome, with a
+                    # probability floor so quieter scenarios remain searchable.
+                    q=np.asarray(available);v=joint[row,q]
+                    w=np.exp(np.clip((v-v.max())/max(float(v.std()),3),-8,0))
+                    place(int(rng.choice(q,p=w/w.sum())),qb_slot)
+                qb=picks[row,qb_slot];team=teams[qb];opp=opponents[qb]
+                def assign_matching(allowed):
+                    options=[]
+                    for slot,choices in enumerate(eligible):
+                        if picks[row,slot]>=0:continue
+                        available=[int(i) for i in choices if i not in assigned and allowed(int(i))]
+                        if available:options.append((slot,available))
+                    if not options:return False
+                    # Preserve FLEX for the remaining roster when possible.
+                    slot,available=min(options,key=lambda pair:(len(roster[pair[0]][1]) or 99,pair[0]))
+                    player=int(rng.choice(available))
+                    place(player,slot)
+                    return True
+                stacked=sum(i>=0 and i!=qb and teams[i]==team and bool(positions[i]&{'WR','TE'}) for i in picks[row])
+                if stacked>desired:alive[row]=False;continue
+                for _ in range(desired-stacked):
+                    if not assign_matching(lambda i:teams[i]==team and bool(positions[i]&{'WR','TE'})):
+                        alive[row]=False;break
+                if alive[row] and bringback and not any(i>=0 and teams[i]==opp and bool(positions[i]&{'RB','WR','TE'}) for i in picks[row]):
+                    if not opp or not assign_matching(lambda i:teams[i]==opp and bool(positions[i]&{'RB','WR','TE'})):
+                        alive[row]=False
         scale=np.maximum(joint.std(axis=1),1)
         # Vary the salary opportunity cost between proposals, not player outcomes.
         price=rng.uniform(0,.004,batch)
@@ -73,6 +118,7 @@ def build_candidates(pool,outcomes,roster,target=5000,salary_min=0,salary_max=50
             best=objective.argmax(axis=1);row=row[valid];best=best[valid]
             picks[row,slot]=choices[best];total[row]+=costs[slot,choices[best]]
         alive &= (picks>=0).all(axis=1)&(total>=salary_min)&(total<=salary_max)
+        rejected['incomplete_or_salary']+=int((~alive).sum())
         # Coordinate ascent improves each complete legal seed on its own scenario.
         for _ in range(2):
             for slot,choices in enumerate(eligible):
@@ -90,13 +136,16 @@ def build_candidates(pool,outcomes,roster,target=5000,salary_min=0,salary_max=50
         for row in np.flatnonzero(alive):
             pick=picks[row]
             unique_teams,counts=np.unique(teams[pick],return_counts=True)
-            if max_from_team is not None and len(counts) and counts.max()>max_from_team:continue
+            if max_from_team is not None and len(counts) and counts.max()>max_from_team:
+                rejected['team_limit']+=1;continue
             if require_both_teams and len(unique_teams)<2:continue
             chosen={slot:str(names[pick[i]]) for i,slot in enumerate(slots)}
-            if validator is not None and not validator(chosen):continue
+            if validator is not None and not validator(chosen):
+                rejected['stack_rules']+=1;continue
             special=count==6 and mult[0]!=1
             key=(int(pick[0]),tuple(sorted(map(int,pick[1:])))) if special else tuple(sorted(map(int,pick)))
-            if key in seen:continue
+            if key in seen:
+                rejected['duplicate']+=1;continue
             seen.add(key)
             records.append({**chosen,'Salary':int(round(total[row])),
                 'Build Scenario':int(scenario[row]),
@@ -104,7 +153,7 @@ def build_candidates(pool,outcomes,roster,target=5000,salary_min=0,salary_max=50
             if len(records)>=target:break
         if progress:progress(min(1,len(records)/target),f'Building from joint outcomes: {len(records):,} / {target:,}')
     result=pd.DataFrame(records)
-    result.attrs.update(engine='joint-outcome-search-v1',proposals=proposed,target=target)
+    result.attrs.update(engine='joint-outcome-search-v2',proposals=proposed,target=target,rejected=rejected,stack_seeded=bool(primary_stacks))
     return result
 
 

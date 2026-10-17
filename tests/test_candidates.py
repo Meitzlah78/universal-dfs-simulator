@@ -66,6 +66,26 @@ class CandidateTest(unittest.TestCase):
         expected=max(1.5*outcomes.loc[0,c]+outcomes.loc[0,list(flex)].sum() for c in pool.Name for flex in itertools.combinations([p for p in pool.Name if p!=c],5))
         self.assertEqual(result['Scenario Score'].iloc[0],expected)
 
+    def test_seeded_double_stack_bringback_keeps_locks_and_unique_rosters(self):
+        pool,out,roster=fixture();meta=pool.set_index('Name')
+        def valid(row):
+            qb=meta.loc[row['QB']];names=[row[s] for s,_ in roster if s!='QB']
+            selected=meta.loc[names]
+            catches=((selected.Team==qb.Team)&selected.Position.isin(['WR','TE'])).sum()
+            bringback=((selected.Team==qb.Opponent)&selected.Position.isin(['RB','WR','TE'])).any()
+            return catches==2 and bringback
+        result=build_candidates(pool,out,roster,target=300,salary_min=47000,salary_max=50000,
+            locks=['p0','p1'],primary_stacks=[(2,True)],validator=valid,
+            rng=np.random.default_rng(8),max_proposals=10000)
+        self.assertEqual(len(result),300)
+        self.assertTrue(result.attrs['stack_seeded'])
+        for row in result.to_dict('records'):
+            self.assertTrue(valid(row))
+            names=[row[s] for s,_ in roster]
+            self.assertEqual(len(set(names)),9)
+            self.assertIn('p0',names);self.assertIn('p1',names)
+            self.assertTrue(47000<=row['Salary']<=50000)
+
     def test_invalid_outcome_matrix_and_infeasible_locks(self):
         pool,out,roster=fixture()
         with self.assertRaises(ValueError):build_candidates(pool,out.drop(columns='p0'),roster,target=1)

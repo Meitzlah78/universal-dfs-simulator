@@ -79,3 +79,15 @@ A construction replay using marginal means recovered from the uploaded rounded
 lineup totals produced 10,000 valid opponents, with mean points 101.55 versus
 101.47 previously. This verifies roster mechanics, not ROI calibration. Exact
 outcome-based finish rates cannot be reproduced from marginal means alone.
+
+### Stack-aware candidate seeding
+
+Full-roster primary stack requirements are seeded before filling the remaining
+slots, and those players are retained through coordinate ascent. The final
+validator still checks exact pass-catcher counts, bring-backs, secondary stacks,
+locks, salaries and team limits; no duplicate padding or rule relaxation occurs.
+A synthetic eight-team stress test with double stack, bring-back and both
+secondary rules improved from 82 candidates in 100,000 proposals to 5,000 in
+60,160 proposals. This is a construction regression check, not an accuracy test
+or a reproduction of every user configuration. Shortfalls report rejection
+categories and do not imply exhaustive enumeration of all legal combinations.
