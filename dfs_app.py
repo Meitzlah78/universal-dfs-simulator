@@ -1048,10 +1048,9 @@ def download_public_projection_table(source_name, platform_name, target_names=No
 
     if source_name == "DFF":
         if is_single_game:
-            # DFF's FanDuel all-slate projection feed contains the same NFL
-            # fantasy-point projections and, unlike the generic single-game
-            # page, exposes every matchup. target_names below selects the
-            # salary-file game by player-name intersection.
+            # FanDuel's generic page can point at a different slate. The
+            # slate-discovery fallback below resolves the actual date + slate
+            # identifier and matches it against the uploaded salary names.
             url = (
                 "https://www.dailyfantasyfuel.com/nfl/showdown-single-game-projections/"
                 if site == "draftkings"
@@ -1467,10 +1466,20 @@ def download_public_projection_table(source_name, platform_name, target_names=No
                     return candidate_result
 
                 for slate_date, slate_code in candidates:
-                    base = (
-                        f"https://www.dailyfantasyfuel.com/nfl/"
-                        f"showdown-single-game-projections/{site}/{slate_date}"
-                    )
+                    # DFF's FanDuel slate URLs use the regular projections route,
+                    # e.g. /nfl/projections/fanduel/YYYY-MM-DD?slate=SLATE_ID.
+                    # The old code incorrectly tried the showdown route and could
+                    # never reach a valid FD slate such as DAL-GB.
+                    if site == 'fanduel':
+                        base = (
+                            f"https://www.dailyfantasyfuel.com/nfl/"
+                            f"projections/fanduel/{slate_date}"
+                        )
+                    else:
+                        base = (
+                            f"https://www.dailyfantasyfuel.com/nfl/"
+                            f"showdown-single-game-projections/{site}/{slate_date}"
+                        )
                     candidate_urls = []
                     if slate_code:
                         encoded = quote(slate_code, safe='')
