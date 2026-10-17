@@ -6,6 +6,7 @@ on:
     paths: ['.github/workflows/probe-dff-fanduel.yml']
   workflow_dispatch:
 
+# Runtime probe trigger: 2026-10-17
 jobs:
   probe:
     runs-on: ubuntu-latest
