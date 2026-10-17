@@ -10,25 +10,22 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Probe candidate DFF routes
+      - name: Probe optimizer slate data references
         run: |
           python - <<'PY'
           from urllib.request import Request, urlopen
-          urls = [
-            'https://www.dailyfantasyfuel.com/nfl/showdown-single-game-projections/fanduel/2026-10-15?slate=210BF',
-            'https://www.dailyfantasyfuel.com/nfl/showdown-single-game-projections/fanduel/2026-10-15/?slate=210BF',
-            'https://www.dailyfantasyfuel.com/nfl?platform=fd&slate=21128',
-          ]
-          needles = ['Brandon Aubrey','Trey Smack','Jordan Love','Dak Prescott','CeeDee Lamb']
-          for url in urls:
-            print('\nURL', url)
-            try:
-              req=Request(url,headers={'User-Agent':'Mozilla/5.0'})
-              text=urlopen(req,timeout=30).read().decode('utf-8','ignore')
-              print('bytes',len(text))
-              for n in needles: print(n, n.casefold() in text.casefold())
-              for token in ['210BF','21128','slate','showdown-single-game-projections']:
-                print(token, text.casefold().find(token.casefold()))
-            except Exception as e:
-              print(type(e).__name__, e)
+          import re, html
+          url='https://www.dailyfantasyfuel.com/nfl?platform=fd&slate=21128'
+          text=urlopen(Request(url,headers={'User-Agent':'Mozilla/5.0'}),timeout=30).read().decode('utf-8','ignore')
+          print('bytes',len(text))
+          for needle in ['21128','Trey Smack','Brandon Aubrey']:
+            print('\nCONTEXT',needle)
+            for m in list(re.finditer(re.escape(needle),text,re.I))[:8]:
+              print(html.unescape(text[max(0,m.start()-500):m.end()+500]).replace('\n',' ')[:1100])
+          print('\nDATA/API URL CANDIDATES')
+          candidates=set(re.findall(r'''(?:https?:)?//[^\"'<> ]+|/[A-Za-z0-9_?&=./-]*(?:data|api|projection|slate)[A-Za-z0-9_?&=./-]*''',text,re.I))
+          for c in sorted(candidates):
+            if any(x in c.lower() for x in ['data','api','projection','slate']): print(html.unescape(c)[:500])
+          print('\nSCRIPT SOURCES')
+          for src in re.findall(r'<script[^>]+src=[\"\']([^\"\']+)',text,re.I): print(html.unescape(src))
           PY
