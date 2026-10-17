@@ -2746,21 +2746,13 @@ def score_nfl_stat_line(stats, platform):
     # Kicker scoring: 3 points for short FGs, 4 for 40-49 yards, 5 for 50+.
     score = score + arr("fg_under_40") * 3 + arr("fg_40_49") * 4 + arr("fg_50_plus") * 5
     score = score + arr("extra_points_made")
-    # Defense scoring includes points-allowed tiers; yardage allowed is modeled too.
+    # Defense scoring uses points-allowed tiers; yards allowed is diagnostic only.
     points_allowed = arr("points_allowed")
     score = score + np.select(
         [points_allowed == 0, points_allowed <= 6, points_allowed <= 13,
          points_allowed <= 20, points_allowed <= 27, points_allowed <= 34],
         [10, 7, 4, 1, 0, -1], default=-4
     ) * np.asarray(stats.get("is_defense", 0), dtype=float)
-    if not str(platform).lower().startswith("fanduel"):
-        yards_allowed = arr("yards_allowed")
-        score = score + np.select(
-            [yards_allowed <= 100, yards_allowed <= 199, yards_allowed <= 299,
-             yards_allowed <= 349, yards_allowed <= 399, yards_allowed <= 449,
-             yards_allowed <= 499],
-            [3, 2, 1, 0, -1, -3, -5], default=-7
-        ) * np.asarray(stats.get("is_defense", 0), dtype=float)
     return score
 
 
@@ -3631,7 +3623,6 @@ def _historical_player_average(player_name, position, platform, historical, retu
             "interceptions": "interceptions", "rushing_yards": "rushing_yards",
             "rushing_tds": "rushing_tds", "receiving_yards": "receiving_yards",
             "receiving_tds": "receiving_tds", "receptions": "receptions",
-            "fumbles_lost": "sack_fumbles_lost",
         }
         scores = []
         for _, game in rows.iterrows():
@@ -3639,6 +3630,14 @@ def _historical_player_average(player_name, position, platform, historical, retu
             for output_col, source_col in stats_map.items():
                 if source_col in rows.columns:
                     stat_line[output_col] = pd.to_numeric(pd.Series([game[source_col]]), errors="coerce").fillna(0).iloc[0]
+            for output, candidates in {
+                "fumbles_lost": ("sack_fumbles_lost", "rushing_fumbles_lost", "receiving_fumbles_lost"),
+                "two_point_conversions": ("passing_2pt_conversions", "rushing_2pt_conversions", "receiving_2pt_conversions"),
+            }.items():
+                stat_line[output] = sum(
+                    float(pd.to_numeric(pd.Series([game.get(col, 0)]), errors="coerce").fillna(0).iloc[0])
+                    for col in candidates
+                )
             scores.append(float(score_nfl_stat_line(stat_line, platform)))
         points = np.asarray(scores, dtype=float)
     else:
@@ -3911,75 +3910,23 @@ def apply_fd_correlated_simulations(sim_df, player_pool, strength=1.0, seed=2026
 
 
 def simulate_fd_play_by_play(players_df, rng, n=SIMULATION_COUNT, correlation_strength=1.0, platform="FanDuel"):
-    """Shared NFL play-by-play engine for FanDuel and DraftKings Classic.
-
-    The engine creates complete correlated game scripts first, then applies the
-    selected site's scoring rules. Keeping one football engine prevents DK and
-    FD player outcomes from drifting apart while preserving site-specific scoring.
-    """
+    """Generate independent shared football outcomes, then apply exact DFS scoring."""
+    from simmah_nfl_engine import simulate_stat_lines, ENGINE_VERSION
     if not isinstance(players_df, pd.DataFrame) or players_df.empty:
         return pd.DataFrame()
-    requested_n = max(1, int(n))
-    # Streamlit cannot afford thousands of literal full-slate play loops.
-    # Build 150 complete correlated game scripts, then bootstrap COMPLETE rows.
-    # Whole-row resampling keeps QB/receiver/team/opponent outcomes tied together.
-    n = min(requested_n, 150)
+    n = max(1, int(n))
     pool = players_df.drop_duplicates("Name", keep="first").copy().reset_index(drop=True)
     for col in ("Name", "Team", "Opponent", "Position"):
         if col not in pool.columns:
             pool[col] = ""
     pool["Projection"] = pd.to_numeric(pool.get("Projection", 0.0), errors="coerce").fillna(0.01).clip(lower=0.01)
-    strength = float(np.clip(correlation_strength, 0.0, 1.0))
-    names = pool["Name"].astype(str).tolist()
-
-    # Shared NFL PBP role inputs: use the same historical player-week data already
-    # cached by the simulator. In particular, QB rushing must come from each QB's
-    # own history rather than being treated as an RB-only team rushing play.
     _fd_hist = load_nfl_historical_player_stats()
-    _fd_hist_index = _build_historical_name_index(_fd_hist) if not _fd_hist.empty else {}
-    _fd_qb_rush = {}
-    for _, _row in pool.iterrows():
-        _name = str(_row.get("Name", ""))
-        _pos = str(_row.get("Position", "")).upper().split("/")[0].strip()
-        if _pos != "QB" or _fd_hist.empty:
-            continue
-        try:
-            _key = normalize_projection_player_name(_name)
-            _matched_history = _fd_hist_index.get(_key)
-            if _matched_history is None or not isinstance(_matched_history, pd.DataFrame) or _matched_history.empty:
-                continue
-            _rows = _matched_history.copy()
-            if _rows.empty:
-                continue
-            if "season" in _rows.columns and "week" in _rows.columns:
-                _rows = _rows.sort_values(["season", "week"]).tail(24)
-            _carries_col = next((c for c in ("carries", "rushing_attempts", "rush_attempts") if c in _rows.columns), None)
-            _yards_col = next((c for c in ("rushing_yards", "rush_yards") if c in _rows.columns), None)
-            _td_col = next((c for c in ("rushing_tds", "rushing_touchdowns", "rush_tds") if c in _rows.columns), None)
-            if _carries_col:
-                _carries = pd.to_numeric(_rows[_carries_col], errors="coerce").fillna(0).clip(lower=0)
-                _avg_carries = float(_carries.mean())
-            else:
-                _avg_carries = 0.0
-            if _yards_col:
-                _yards = pd.to_numeric(_rows[_yards_col], errors="coerce").fillna(0)
-                _ypc = float(_yards.sum() / max(pd.to_numeric(_rows[_carries_col], errors="coerce").fillna(0).sum(), 1.0)) if _carries_col else 4.5
-            else:
-                _ypc = 4.5
-            if _td_col:
-                _rush_tds = pd.to_numeric(_rows[_td_col], errors="coerce").fillna(0).clip(lower=0)
-                _td_per_carry = float(_rush_tds.sum() / max(pd.to_numeric(_rows[_carries_col], errors="coerce").fillna(0).sum(), 1.0)) if _carries_col else 0.0
-            else:
-                _td_per_carry = 0.0
-            if _avg_carries > 0:
-                _fd_qb_rush[_name] = {
-                    "carries": float(np.clip(_avg_carries, 0.0, 14.0)),
-                    "ypc": float(np.clip(_ypc, 2.0, 8.5)),
-                    "td_per_carry": float(np.clip(_td_per_carry, 0.0, 0.12)),
-                }
-        except Exception:
-            continue
-
+    # The historical index retains spaces; use the same canonical keys as
+    # salary/projection names before looking up opportunity profiles.
+    _fd_hist_index = {
+        normalize_projection_player_name(name): rows
+        for name, rows in _build_historical_name_index(_fd_hist).items()
+    } if not _fd_hist.empty else {}
     # Historical opportunity/efficiency profiles for every offensive position.
     # These feed the play generator itself; they do not add fantasy points after simulation.
     _fd_hist_roles = {}
@@ -4018,256 +3965,29 @@ def simulate_fd_play_by_play(players_df, rng, n=SIMULATION_COUNT, correlation_st
             except Exception:
                 continue
 
-    stats = {name: {} for name in names}
-    stat_keys = ("passing_yards","passing_tds","interceptions","rushing_yards","rushing_tds","receiving_yards","receiving_tds","receptions","fumbles_lost","sacks","def_interceptions","fumble_recoveries","defensive_tds","safeties","blocked_kicks","points_allowed","yards_allowed","fg_under_40","fg_40_49","fg_50_plus","extra_points_made")
-    for name in names:
-        for key in stat_keys:
-            stats[name][key] = np.zeros(n, dtype=float)
-
-    def pos_mask(frame, token):
-        return frame["Position"].astype(str).str.upper().str.contains(token, regex=True)
-
-    teams = [t for t in pool["Team"].astype(str).str.upper().str.strip().unique() if t and t != "NAN"]
-    team_rows = {t: pool[pool["Team"].astype(str).str.upper().str.strip().eq(t)].copy() for t in teams}
-    opponents = {}
-    for team, rows in team_rows.items():
-        vals = rows["Opponent"].astype(str).str.upper().str.strip()
-        vals = vals[~vals.isin(["", "—", "-", "NAN", "NONE"])]
-        opponents[team] = vals.iloc[0] if len(vals) else ""
-
-    handled_games = set()
-    for team in teams:
-        opp = opponents.get(team, "")
-        game_key = tuple(sorted([team, opp])) if opp in team_rows and opp != team else (team,)
-        if game_key in handled_games:
-            continue
-        handled_games.add(game_key)
-        sides = [team] + ([opp] if opp in team_rows and opp != team else [])
-        game_pace = np.clip(rng.normal(1.0, 0.09, n), 0.80, 1.22)
-        game_scoring = np.clip(rng.normal(1.0, 0.13, n), 0.70, 1.35)
-        game_edge = rng.normal(0.0, 1.0, n)
-
-        for side_i, side in enumerate(sides):
-            rows = team_rows[side]
-            other = sides[1-side_i] if len(sides) == 2 else ""
-            qbs = rows[pos_mask(rows, "QB")].sort_values("Projection", ascending=False)
-            rbs = rows[pos_mask(rows, "RB")].sort_values("Projection", ascending=False)
-            recs = rows[pos_mask(rows, "WR|TE|RB")].sort_values("Projection", ascending=False)
-            ks = rows[pos_mask(rows, r"(^|/)K($|/)")]
-            defs = rows[pos_mask(rows, r"DST|DEF|^D$")]
-            qb_name = str(qbs.iloc[0]["Name"]) if not qbs.empty else None
-            rec_names = recs["Name"].astype(str).tolist()
-            rb_names = rbs["Name"].astype(str).tolist()
-            # Blend current projection with each player's historical opportunity.
-            # Targets determine receiver selection; carries determine RB rush selection.
-            if len(recs):
-                _rec_proj = np.clip(recs["Projection"].to_numpy(dtype=float), 0.05, None)
-                _rec_hist = np.asarray([max(_fd_hist_roles.get(str(x), {}).get("targets", 0.0), 0.0) for x in rec_names], dtype=float)
-                if _rec_hist.sum() > 0:
-                    _rec_hist = _rec_hist / _rec_hist.sum()
-                    _rec_proj = _rec_proj / _rec_proj.sum()
-                    rec_w = 0.70 * _rec_hist + 0.30 * _rec_proj
-                else:
-                    rec_w = _rec_proj / _rec_proj.sum()
-            else: rec_w = np.array([])
-            if len(rbs):
-                _rb_proj = np.clip(rbs["Projection"].to_numpy(dtype=float), 0.05, None)
-                _rb_hist_raw = np.asarray([max(_fd_hist_roles.get(str(x), {}).get("carries", 0.0), 0.0) for x in rb_names], dtype=float)
-                _rb_hist_carries_total = float(_rb_hist_raw.sum())
-                if _rb_hist_carries_total > 0:
-                    _rb_hist = _rb_hist_raw / _rb_hist_carries_total
-                    _rb_proj = _rb_proj / _rb_proj.sum()
-                    rb_w = 0.82 * _rb_hist + 0.18 * _rb_proj
-                else:
-                    rb_w = _rb_proj / _rb_proj.sum()
-            else:
-                rb_w = np.array([])
-                _rb_hist_carries_total = 0.0
-
-            # Allocate receiving opportunity by INDIVIDUAL historical team target share.
-            # This preserves alpha WR/TE volume while still keeping RB receiving work tied
-            # to the same finite team target pool. Projection is a secondary current-role
-            # signal rather than a separate positional bucket.
-            if len(rec_names):
-                _rec_hist_raw = np.asarray([max(_fd_hist_roles.get(str(x), {}).get("targets", 0.0), 0.0) for x in rec_names], dtype=float)
-                _rec_proj_raw = np.clip(recs["Projection"].to_numpy(dtype=float), 0.05, None)
-                _rec_proj_share = _rec_proj_raw / max(float(_rec_proj_raw.sum()), 0.01)
-                if _rec_hist_raw.sum() > 0:
-                    _rec_hist_share = _rec_hist_raw / _rec_hist_raw.sum()
-                    # History carries most of the role signal; projection lets current
-                    # depth-chart changes move opportunity without erasing alpha roles.
-                    rec_w = 0.78 * _rec_hist_share + 0.22 * _rec_proj_share
-                else:
-                    rec_w = _rec_proj_share
-                rec_w = rec_w / rec_w.sum()
-
-            # Team play volume and pass/run mix come from the historical roles above.
-            # QB attempts represent historical dropback/pass volume; RB + QB carries
-            # represent rushing volume. Current projections remain a secondary signal
-            # through player allocation, not a post-simulation fantasy-point correction.
-            _qb_role = _fd_hist_roles.get(qb_name, {}) if qb_name else {}
-            _hist_pass = float(_qb_role.get("pass_attempts", 0.0))
-            _hist_rb_rush = float(sum(max(_fd_hist_roles.get(x, {}).get("carries", 0.0), 0.0) for x in rb_names))
-            _hist_qb_rush = float(_qb_role.get("carries", 0.0))
-            _hist_rush = _hist_rb_rush + _hist_qb_rush
-            _hist_plays = _hist_pass + _hist_rush
-            _base_plays = float(np.clip(_hist_plays, 52.0, 76.0)) if _hist_plays >= 40.0 else 64.0
-            _base_pass_rate = float(np.clip(_hist_pass / max(_hist_plays, 1.0), 0.44, 0.70)) if _hist_plays >= 40.0 else 0.58
-            plays_by_sim = np.clip(np.rint(rng.normal(_base_plays, 5.5, n) * game_pace), 46, 84).astype(int)
-            side_sign = 1.0 if side_i == 0 else -1.0
-
-            team_points = np.zeros(n, dtype=float)
-            team_yards = np.zeros(n, dtype=float)
-            giveaways = np.zeros(n, dtype=float)
-            sacks_allowed = np.zeros(n, dtype=float)
-            _qb_rush_role = _fd_qb_rush.get(qb_name, {}) if qb_name else {}
-            for sim_i in range(n):
-                score_env = 1.0 + strength * (game_scoring[sim_i] - 1.0)
-                pace_env = 1.0 + strength * (game_pace[sim_i] - 1.0)
-                edge = side_sign * game_edge[sim_i] * strength
-                pass_rate = float(np.clip(_base_pass_rate - 0.025 * edge, 0.40, 0.74))
-                _qb_hist = _fd_hist_roles.get(qb_name, {}) if qb_name else {}
-                _qa = float(_qb_hist.get("pass_attempts", 0.0))
-                _qc = float(_qb_hist.get("completions", 0.0))
-                _qy = float(_qb_hist.get("pass_yards", 0.0))
-                _qtd = float(_qb_hist.get("pass_tds", 0.0))
-                _qint = float(_qb_hist.get("interceptions", 0.0))
-                _qb_comp_rate = float(np.clip(_qc / max(_qa, 1.0), 0.52, 0.76)) if _qa > 0 else 0.64
-                _qb_ypa = float(np.clip(_qy / max(_qa, 1.0), 5.4, 9.8)) if _qa > 0 else 7.1
-                _qb_td_rate = float(np.clip(_qtd / max(_qa, 1.0), 0.020, 0.090)) if _qa > 0 else 0.045
-                _qb_int_rate = float(np.clip(_qint / max(_qa, 1.0), 0.006, 0.050)) if _qa > 0 else 0.021
-                for _ in range(int(plays_by_sim[sim_i])):
-                    is_pass = rng.random() < pass_rate
-                    if is_pass and qb_name:
-                        if rng.random() < 0.065:
-                            sacks_allowed[sim_i] += 1
-                            continue
-                        if rng.random() < _qb_int_rate:
-                            stats[qb_name]["interceptions"][sim_i] += 1
-                            giveaways[sim_i] += 1
-                            continue
-                        if not rec_names:
-                            continue
-                        target_i = int(rng.choice(len(rec_names), p=rec_w))
-                        receiver = rec_names[target_i]
-                        _role = _fd_hist_roles.get(receiver, {})
-                        _hist_targets = float(_role.get("targets", 0.0))
-                        _hist_recs = float(_role.get("receptions", 0.0))
-                        _hist_catch = (_hist_recs / _hist_targets) if _hist_targets > 0 else 0.64
-                        # Blend receiver catch history with the QB's own completion rate.
-                        catch_prob = float(np.clip(0.60 * _hist_catch + 0.40 * _qb_comp_rate, 0.42, 0.88))
-                        if rng.random() < catch_prob:
-                            _hist_ypr = float(_role.get("rec_yards", 0.0)) / max(_hist_recs, 1.0) if _hist_recs > 0 else 11.2
-                            # Reconcile receiver YPR with QB historical YPA/completion rate.
-                            _qb_ypc = _qb_ypa / max(_qb_comp_rate, 0.01)
-                            _yard_mean = float(np.clip(0.65 * _hist_ypr + 0.35 * _qb_ypc, 5.0, 20.0))
-                            yards = float(np.clip(rng.gamma(2.0, _yard_mean / 2.0) * score_env, 0.0, 75.0))
-                            stats[qb_name]["passing_yards"][sim_i] += yards
-                            stats[receiver]["receiving_yards"][sim_i] += yards
-                            stats[receiver]["receptions"][sim_i] += 1
-                            team_yards[sim_i] += yards
-                            _hist_rec_td_rate = float(_role.get("rec_tds", 0.0)) / max(_hist_targets, 1.0) if _hist_targets > 0 else 0.035
-                            # A completed pass can score according to both the receiver's
-                            # target TD rate and the QB's historical passing-TD rate.
-                            _qb_td_per_completion = _qb_td_rate / max(_qb_comp_rate, 0.01)
-                            td_prob = float(np.clip((0.55 * _hist_rec_td_rate / max(catch_prob, 0.01) + 0.45 * _qb_td_per_completion) * score_env + max(yards - 20.0, 0.0) * 0.001, 0.006, 0.20))
-                            if rng.random() < td_prob:
-                                stats[qb_name]["passing_tds"][sim_i] += 1
-                                stats[receiver]["receiving_tds"][sim_i] += 1
-                                team_points[sim_i] += 7
-                    elif rb_names or qb_name:
-                        # Allocate QB rushing INSIDE the existing run-play pool so it
-                        # replaces an RB carry rather than creating an extra team play.
-                        _qb_carries_hist = float(_fd_hist_roles.get(qb_name, {}).get("carries", 0.0)) if qb_name else 0.0
-                        _rb_carries_hist = _rb_hist_carries_total
-                        _qb_rush_share = float(np.clip(_qb_carries_hist / max(_qb_carries_hist + _rb_carries_hist, 1.0), 0.0, 0.35))
-                        _use_qb = bool(qb_name and rng.random() < _qb_rush_share)
-                        if _use_qb:
-                            runner = qb_name
-                            _run_role = _fd_hist_roles.get(runner, {})
-                            _carries = float(_run_role.get("carries", 0.0))
-                            _ypc = float(_run_role.get("rush_yards", 0.0)) / max(_carries, 1.0) if _carries > 0 else 4.5
-                            _ypc = float(np.clip(_ypc, 2.0, 8.5))
-                        elif rb_names:
-                            runner_i = int(rng.choice(len(rb_names), p=rb_w))
-                            runner = rb_names[runner_i]
-                            _run_role = _fd_hist_roles.get(runner, {})
-                            _carries = float(_run_role.get("carries", 0.0))
-                            _ypc = float(_run_role.get("rush_yards", 0.0)) / max(_carries, 1.0) if _carries > 0 else 4.35
-                            _ypc = float(np.clip(0.75 * _ypc + 0.25 * 4.25, 2.8, 6.2))
-                        else:
-                            continue
-                        yards = float(np.clip(rng.normal(_ypc * np.sqrt(score_env), max(3.2, abs(_ypc))), -4.0, 45.0))
-                        stats[runner]["rushing_yards"][sim_i] += yards
-                        team_yards[sim_i] += max(yards, 0.0)
-                        _hist_rush_td_rate = float(_run_role.get("rush_tds", 0.0)) / max(_carries, 1.0) if _carries > 0 else 0.026
-                        _rush_td_prob = float(np.clip((0.80 * _hist_rush_td_rate + 0.20 * 0.026) * score_env + max(yards - 15.0, 0.0) * 0.001, 0.004, 0.16))
-                        if rng.random() < _rush_td_prob:
-                            stats[runner]["rushing_tds"][sim_i] += 1
-                            team_points[sim_i] += 7
-                    if rng.random() < 0.006:
-                        carrier_pool = rec_names if rec_names else rb_names
-                        if carrier_pool:
-                            carrier = str(rng.choice(carrier_pool))
-                            stats[carrier]["fumbles_lost"][sim_i] += 1
-                            giveaways[sim_i] += 1
-                # Kicking comes from possessions that did not become touchdowns.
-                for _, kr in ks.iterrows():
-                    kn = str(kr["Name"])
-                    fg_att = int(np.clip(rng.poisson(1.7 * pace_env), 0, 5))
-                    for _ in range(fg_att):
-                        bucket = rng.random()
-                        if bucket < 0.55: stats[kn]["fg_under_40"][sim_i] += 1
-                        elif bucket < 0.82: stats[kn]["fg_40_49"][sim_i] += 1
-                        else: stats[kn]["fg_50_plus"][sim_i] += 1
-                    stats[kn]["extra_points_made"][sim_i] += max(0, round(team_points[sim_i] / 7.0))
-                    team_points[sim_i] += 3 * fg_att
-
-            # Defense for the opponent receives events generated by this offense.
-            if other and other in team_rows:
-                other_defs = team_rows[other][pos_mask(team_rows[other], r"DST|DEF|^D$")]
-                for _, dr in other_defs.iterrows():
-                    dn = str(dr["Name"])
-                    stats[dn]["sacks"] += sacks_allowed
-                    stats[dn]["def_interceptions"] += np.array([stats[qb_name]["interceptions"][i] if qb_name else 0 for i in range(n)])
-                    stats[dn]["fumble_recoveries"] += np.maximum(giveaways - (stats[qb_name]["interceptions"] if qb_name else 0), 0)
-                    stats[dn]["points_allowed"] = team_points.copy()
-                    stats[dn]["yards_allowed"] = team_yards.copy()
-                    stats[dn]["defensive_tds"] += rng.binomial(1, np.clip(0.025 + 0.025 * giveaways, 0.025, 0.16))
-
+    progress = st.progress(0, text=f"Preparing {n:,} independent NFL game outcomes...")
+    stats = simulate_stat_lines(
+        pool, _fd_hist_roles, rng, n, correlation_strength,
+        progress=lambda fraction, text: progress.progress(fraction, text=text),
+    )
     out = {}
-    for _, row in pool.iterrows():
-        name = str(row["Name"]); pos = str(row["Position"]).upper(); target = float(row["Projection"])
-        line = stats[name].copy()
-        if any(x in pos for x in ("DST", "DEF")) or pos.strip() == "D": line["is_defense"] = 1
-        vals = np.asarray(score_nfl_stat_line(line, platform), dtype=float)
-        # Projection-informed ROLE calibration. The literal PBP engine intentionally
-        # remains the source of each outcome and its correlations, but a generic
-        # 64-play offense can materially understate the workload of elite players.
-        # Softly scale the generated stat-line scores toward the player's current
-        # expectation without forcing the finished simulation mean to equal it.
-        # An 0.80 exponent leaves roughly 20% of the raw PBP disagreement intact;
-        # the bounded factor also prevents tiny/raw samples from exploding.
-        raw_mean = float(np.mean(vals)) if len(vals) and np.isfinite(vals).any() else 0.0
-        if raw_mean > 0 and target > 0:
-            role_factor = float(np.clip((target / raw_mean) ** 0.80, 0.60, 1.80))
-            vals = vals * role_factor
-        elif target > 0:
-            vals = np.maximum(0.0, rng.normal(target, max(0.75, target * 0.35), n))
-        out[name] = np.maximum(np.nan_to_num(vals, nan=0.0), 0.0)
+    for row in pool.to_dict("records"):
+        name = str(row["Name"])
+        line = stats[name]
+        position = str(row.get("Position", "")).upper().split("/")[0].strip()
+        line["is_defense"] = int(position in {"D", "DST", "DEF"})
+        values = np.asarray(score_nfl_stat_line(line, platform), dtype=float)
+        if len(values) != n or not np.isfinite(values).all():
+            raise ValueError("NFL engine returned invalid outcomes for " + name)
+        out[name] = values
     result = pd.DataFrame(out)
-    if requested_n > n and not result.empty:
-        # Resample row indices once for the entire slate so every player's score
-        # comes from the same underlying simulated game script.
-        take = rng.integers(0, n, size=requested_n)
-        result = result.iloc[take].reset_index(drop=True)
-
-    # Re-center AFTER bootstrap. With only 150 complete PBP scripts, a rare event
-    # for a fringe player can otherwise be over-sampled enough to move a 0.2-point
-    # Keep the PBP engine's simulated means. Projection is an input expectation,
-    # not a hard target that the finished simulation must equal. This lets game
-    # scripts, usage, touchdowns, turnovers, and shared play outcomes move a
-    # player's Sim Pts above or below Projection while preserving the P10-P99 shape.
+    result.attrs["engine_version"] = ENGINE_VERSION
+    result.attrs["independent_outcomes"] = n
+    best = result.max(axis=1)
+    ties = result.eq(best, axis=0)
+    cap_hit = ties.div(ties.sum(axis=1).clip(lower=1), axis=0).mean() * 100
+    st.session_state["simulation_cap_hit_pct"] = cap_hit.to_dict()
+    progress.progress(1.0, text=f"Completed {n:,} independent NFL outcomes ({ENGINE_VERSION})")
     return result
 
 
@@ -7135,27 +6855,16 @@ else:
             st.stop()
         # Simulate stat lines first, then calculate fantasy points with site scoring.
         rng = np.random.default_rng()
-        # DraftKings Classic now consumes the same literal shared-play football
-        # engine used by FanDuel. One complete slate script is generated per row,
-        # so QB/receiver, rushing, turnover, DST and game-environment outcomes stay
-        # correlated before the 5,000 candidate and 10,000 field lineup matrices
-        # score those rows. Showdown keeps its existing configurable correlation path.
-        if platform == "DraftKings" and lineup_mode == "Classic":
-            if workflow_status is not None:
-                workflow_status.info(
-                    f"Step 1 of 4: Running {SIMULATION_COUNT:,} shared PBP slate outcomes for DraftKings Classic..."
-                )
-            outcomes = simulate_fd_play_by_play(
-                eligible_players,
-                rng,
-                n=SIMULATION_COUNT,
-                correlation_strength=1.0,
-                platform="DraftKings",
-            )
-            if isinstance(outcomes, pd.DataFrame) and not outcomes.empty:
-                st.session_state["dk_classic_sim_engine"] = "Shared NFL PBP"
-        else:
-            outcomes = _simulate_scored_player_outcomes(eligible_players, platform, rng)
+        if workflow_status is not None:
+            workflow_status.info(f"Step 1 of 4: Running {SIMULATION_COUNT:,} independent shared NFL outcomes...")
+        outcomes = simulate_fd_play_by_play(
+            eligible_players, rng, n=SIMULATION_COUNT,
+            correlation_strength=(1.0 if lineup_mode == "Classic" else
+                                  float(st.session_state.get("active_game_correlation_strength", 0.0))),
+            platform="DraftKings",
+        )
+        if lineup_mode == "Classic":
+            st.session_state["dk_classic_sim_engine"] = "Shared NFL PBP v2"
         # Show Step 2 as soon as the player outcomes finish, before the historical-data check.
         if workflow_status is not None:
             workflow_status.info("Step 2 of 4: Preparing rankings and building your candidate lineups...")
