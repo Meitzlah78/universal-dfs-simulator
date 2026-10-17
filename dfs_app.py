@@ -1046,6 +1046,54 @@ def download_public_projection_table(source_name, platform_name, target_names=No
     is_single_game = "single game" in platform_key or "showdown" in platform_key
     site = "fanduel" if "fanduel" in platform_key else "draftkings"
 
+    # FanDuel Single Game: bypass the legacy Showdown routing entirely. DFF's
+    # recent-slates endpoint currently supplies dates without slate IDs, while
+    # each dated FanDuel page contains the complete projection table.
+    if source_name == "DFF" and site == "fanduel" and is_single_game and target_keys:
+        try:
+            headers_direct = {"User-Agent": "Mozilla/5.0"}
+            sr = requests.get(
+                "https://www.dailyfantasyfuel.com/data/slates/recent/nfl/fanduel",
+                headers=headers_direct, timeout=30
+            )
+            sr.raise_for_status()
+            payload = sr.json()
+            recent_dates = []
+            for item in payload.get("dates", []):
+                d = str(item.get("start_date", "")).strip()[:10]
+                if d and d not in recent_dates:
+                    recent_dates.append(d)
+            # API order is newest first in current DFF responses; preserve it.
+            for slate_date in recent_dates:
+                page = requests.get(
+                    f"https://www.dailyfantasyfuel.com/nfl/projections/fanduel/{slate_date}/",
+                    headers=headers_direct, timeout=30
+                )
+                page.raise_for_status()
+                for table in pd.read_html(io.StringIO(page.text)):
+                    if not isinstance(table.columns, pd.MultiIndex):
+                        continue
+                    name_col = proj_col = None
+                    for col in table.columns:
+                        levels = [re.sub(r"[^a-z0-9]+", " ", str(x).casefold()).strip() for x in col]
+                        if "name" in levels:
+                            name_col = col
+                        if "fd fp projected" in levels:
+                            proj_col = col
+                    if name_col is None or proj_col is None:
+                        continue
+                    values = {}
+                    for name, projection in zip(table[name_col], table[proj_col]):
+                        key = normalize_projection_player_name(name)
+                        val = pd.to_numeric(projection, errors="coerce")
+                        if key and pd.notna(val) and np.isfinite(float(val)) and float(val) >= 0:
+                            values[key] = float(val)
+                    overlap = target_keys.intersection(values)
+                    if len(overlap) >= min(2, len(target_keys)):
+                        return values
+        except Exception:
+            pass
+
     if source_name == "DFF":
         if is_single_game:
             # FanDuel's generic page can point at a different slate. The
