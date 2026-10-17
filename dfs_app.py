@@ -1090,6 +1090,18 @@ def download_public_projection_table(source_name, platform_name, target_names=No
                     if name_col is None or proj_col is None:
                         continue
                     values = {}
+                    # DFF's rendered table has POS values under the column whose
+                    # second header level says NAME. The actual player names are
+                    # in the first column (header level 0 == PLAYER).
+                    player_col = None
+                    for col in table.columns:
+                        levels = [re.sub(r"[^a-z0-9]+", " ", str(x).casefold()).strip() for x in col]
+                        if levels and levels[0] == "player":
+                            player_col = col
+                            break
+                    if player_col is None:
+                        player_col = table.columns[0]
+                    name_col = player_col
                     for name, projection in zip(table[name_col], table[proj_col]):
                         key = normalize_projection_player_name(name)
                         val = pd.to_numeric(projection, errors="coerce")
