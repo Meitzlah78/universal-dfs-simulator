@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   syntax-check:
@@ -18,9 +18,29 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          ref: feature/salary-csv-upload
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Apply GridIron patch
+        run: python .github/scripts/add_gridiron_api.py
       - name: Compile simulator file
         run: python -m py_compile dfs_app.py
+      - name: Verify GridIron integration
+        run: |
+          grep -q 'api.gridirondata.com/api/v1/projections' dfs_app.py
+          grep -q 'External projection matches: GridIron' dfs_app.py
+      - name: Commit GridIron app change
+        if: github.event_name == 'push'
+        run: |
+          git config user.name simmah-bot
+          git config user.email simmah-bot@users.noreply.github.com
+          git add dfs_app.py
+          if git diff --cached --quiet; then
+            echo 'No app changes to commit'
+          else
+            git commit -m 'Integrate GridIron projections [skip ci]'
+            git push origin HEAD:feature/salary-csv-upload
+          fi
