@@ -2,7 +2,9 @@ name: Fix DFF FanDuel Slate Discovery
 on:
   push:
     branches: [feature/salary-csv-upload]
-    paths: ['.github/workflows/fix-dff-fd-slate-discovery.yml']
+    paths:
+      - '.github/workflows/fix-dff-fd-slate-discovery.yml'
+      - '.github/scripts/fix_dff_fd_slate_discovery.py'
 permissions:
   contents: write
 jobs:
@@ -18,7 +20,7 @@ jobs:
       - run: python .github/scripts/fix_dff_fd_slate_discovery.py
       - run: python -m py_compile dfs_app.py
       - run: |
-          grep -n 'classic_url = f"https://www.dailyfantasyfuel.com/nfl/projections/fanduel' dfs_app.py
+          grep -n 'discovery_pages' dfs_app.py
           grep -n 'showdown-single-game-projections/fanduel/{slate_date}?slate={code}' dfs_app.py
       - run: |
           git config user.name github-actions
