@@ -1073,13 +1073,20 @@ def download_public_projection_table(source_name, platform_name, target_names=No
                 for table in pd.read_html(io.StringIO(page.text)):
                     if not isinstance(table.columns, pd.MultiIndex):
                         continue
+                    # DFF uses a 3-level header. Match the semantic second
+                    # header level exactly so later columns cannot overwrite NAME.
                     name_col = proj_col = None
                     for col in table.columns:
                         levels = [re.sub(r"[^a-z0-9]+", " ", str(x).casefold()).strip() for x in col]
-                        if "name" in levels:
+                        if len(levels) > 1 and levels[1] == "name" and name_col is None:
                             name_col = col
-                        if "fd fp projected" in levels:
+                        if len(levels) > 1 and levels[1] == "fd fp projected" and proj_col is None:
                             proj_col = col
+                    # Current DFF table layout is NAME at column 1 and FD projected
+                    # points at column 6. Use that only as a validated fallback.
+                    if (name_col is None or proj_col is None) and table.shape[1] > 6:
+                        name_col = table.columns[1]
+                        proj_col = table.columns[6]
                     if name_col is None or proj_col is None:
                         continue
                     values = {}
