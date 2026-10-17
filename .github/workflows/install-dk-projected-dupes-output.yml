@@ -1,0 +1,44 @@
+name: Install DK Projected Dupes Output
+
+on:
+  push:
+    branches:
+      - install/dk-showdown-production-transforms
+    paths:
+      - '.github/scripts/install_dk_projected_dupes_output.py'
+      - '.github/workflows/install-dk-projected-dupes-output.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: install/dk-showdown-production-transforms
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply Projected Dupes transform
+        run: python .github/scripts/install_dk_projected_dupes_output.py
+      - name: Compile app
+        run: python -m py_compile dfs_app.py
+      - name: Verify markers
+        run: |
+          grep -q '"Projected Dupes"' dfs_app.py
+          grep -q '_dupe_values = \[\]' dfs_app.py
+          grep -q 'portfolio_export_df = portfolio_df\[' dfs_app.py
+      - name: Commit transformed app
+        run: |
+          if git diff --quiet -- dfs_app.py; then
+            echo 'No app change produced'
+            exit 1
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add dfs_app.py
+          git commit -m 'Expose Projected Dupes in DK Showdown portfolio export'
+          git push origin HEAD:install/dk-showdown-production-transforms
