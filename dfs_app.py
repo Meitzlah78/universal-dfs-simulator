@@ -7678,6 +7678,20 @@ else:
             classic_top_portfolio["Assigned to contest"] = np.arange(len(classic_top_portfolio)) < len(_classic_unique_entries)
             _classic_portfolio_field = st.session_state.get("classic_contest_field_df")
             _classic_portfolio_outcomes = st.session_state.get("simulation_df")
+            if st.session_state.get("classic_field_context") == classic_contest_name and isinstance(_classic_portfolio_field, pd.DataFrame) and not _classic_portfolio_field.empty:
+                with st.expander("Opponent field diagnostics"):
+                    st.caption("This estimated field determines finish rates and ROI. Construction learning does not validate future ownership or profitability.")
+                    _diagnostic_rows = []
+                    for _label, _frame in [("Opponent field", _classic_portfolio_field), ("Assigned portfolio", classic_export_portfolio)]:
+                        _diagnostic_rows.append({"Group": _label, "Lineups": len(_frame),
+                            "Mean salary": float(pd.to_numeric(_frame["Salary"], errors="coerce").mean()),
+                            "Mean simulated points": float(pd.to_numeric(_frame["ProjectedPoints"], errors="coerce").mean())})
+                    st.dataframe(pd.DataFrame(_diagnostic_rows), hide_index=True, use_container_width=True)
+                    st.download_button("DOWNLOAD CLASSIC OPPONENT FIELD", _classic_portfolio_field.to_csv(index=False).encode("utf-8"),
+                        "DraftKings_Classic_Opponent_Field.csv", "text/csv", key="classic_field_diagnostics", on_click="ignore")
+                    st.download_button("DOWNLOAD CLASSIC PLAYER INPUTS", classic_pool.to_csv(index=False).encode("utf-8"),
+                        "DraftKings_Classic_Player_Inputs.csv", "text/csv", key="classic_player_diagnostics", on_click="ignore")
+
             if st.session_state.get("classic_field_context") == classic_contest_name and isinstance(_classic_portfolio_field, pd.DataFrame) and not _classic_portfolio_field.empty and isinstance(_classic_portfolio_outcomes, pd.DataFrame):
                 with st.spinner("Evaluating the selected portfolio together..."):
                     classic_export_portfolio = evaluate_classic_portfolio_cached(

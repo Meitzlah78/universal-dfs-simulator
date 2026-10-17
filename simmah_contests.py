@@ -71,6 +71,9 @@ def evaluate_contest(outcomes,candidates,field,slots,field_size,tiers,entry_fee,
     result['Estimated Full Field Rank']=rank_sum/len(values)
     result['FieldRank']=result['Estimated Full Field Rank']
     result['AvgPercentile']=1-(result['FieldRank']-1)/max(field_size-1,1)
+    # Replace obsolete comparisons of lineup means with outcome-based ranks.
+    result=result.drop(columns=['BeatsOpponents'],errors='ignore')
+    result['FieldPercentile']=100*result['AvgPercentile']
     result['Expected Prize ($)']=prize_sum/len(values)
     result['Entry Fee ($)']=float(entry_fee)
     result['Expected Net ($)']=result['Expected Prize ($)']-float(entry_fee)

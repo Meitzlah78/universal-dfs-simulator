@@ -43,6 +43,18 @@ class ContestAccountingTest(unittest.TestCase):
         picks,mult=lineup_indices(frame,['C','F1','F2'],['A','B','C'],[1.5,1,1])
         np.testing.assert_array_equal(score_batch(values,picks,mult),[[65,65]])
 
+    def test_complete_field_finish_shares_conserve_and_replace_static_metrics(self):
+        rng=np.random.default_rng(42)
+        names=[f'p{i}' for i in range(100)]
+        values=pd.DataFrame(rng.normal(size=(300,100)),columns=names)
+        users=pd.DataFrame({'S':names,'FieldPercentile':[100]*100,'BeatsOpponents':[999]*100})
+        result=evaluate_contest(values,users,pd.DataFrame({'S':['p0']}),['S'],100,[(1,20,1)],1,joint=True)
+        for metric,total in [('WinRate',1),('Top1',1),('Top5',5),('Top10',10),('CashRate',20)]:
+            self.assertAlmostEqual(result[metric].sum(),total)
+        self.assertNotIn('BeatsOpponents',result)
+        np.testing.assert_allclose(result.FieldPercentile,100*result.AvgPercentile)
+        self.assertAlmostEqual(result['Expected Prize ($)'].sum(),20)
+
     def test_invalid_payouts_or_player_refs_rejected(self):
         with self.assertRaises(ValueError):payout_vector(10,[(1,2,10),(2,3,5)])
         with self.assertRaises(ValueError):payout_vector(10,[(1,2,-1)])
