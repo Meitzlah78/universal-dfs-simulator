@@ -2,8 +2,8 @@ name: Probe DFF slate 21128
 on:
   workflow_dispatch:
   push:
-    branches: [feature/salary-csv-upload]
-    paths: ['.github/workflows/probe-dff-slate-21128.yml']
+    branches:
+      - feature/salary-csv-upload
 jobs:
   probe:
     runs-on: ubuntu-latest
