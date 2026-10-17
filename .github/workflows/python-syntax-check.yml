@@ -23,6 +23,7 @@ jobs:
         run: python -m py_compile dfs_app.py
 
   integrate-fast-builders:
+    # Combined integration run for PR #13.
     if: github.event_name == 'push' && github.ref == 'refs/heads/feature/fast-build-all-modes'
     runs-on: ubuntu-latest
     steps:
