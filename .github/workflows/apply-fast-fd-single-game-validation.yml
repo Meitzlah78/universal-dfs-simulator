@@ -1,0 +1,59 @@
+name: Apply fast FD Single Game builder validation
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - install/fast-fd-single-game-validation
+    paths:
+      - .github/triggers/apply-fast-fd-single-game-validation
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.ref == 'refs/heads/install/fast-fd-single-game-validation'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: install/fast-fd-single-game-validation
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install test dependency
+        run: python -m pip install pytest
+      - name: Verify pre-patch anchors
+        run: python -m pytest -q tests/test_fast_fd_single_game_installer.py
+      - name: Apply FD Single Game installer
+        run: python .github/scripts/install_fast_fd_single_game_builder.py
+      - name: Syntax check
+        run: python -m py_compile dfs_app.py .github/scripts/install_fast_fd_single_game_builder.py
+      - name: Verify transformed FD Single Game hot loop
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          app = Path('dfs_app.py').read_text(encoding='utf-8')
+          required = [
+              'fd_all_player_indices = np.arange(len(names), dtype=int)',
+              'unused_mask = ~np.isin(fd_all_player_indices',
+              'salary_mask = salary + salaries[fd_all_player_indices] <= salary_max',
+          ]
+          missing = [token for token in required if token not in app]
+          if missing:
+              raise SystemExit(f'Missing FD Single Game transformed anchors: {missing}')
+          PY
+      - name: Run architecture tests
+        run: python -m pytest -q tests/test_fast_build_architecture.py tests/test_opponent_field_architecture.py tests/test_fast_build_installers.py
+      - name: Commit patched app
+        run: |
+          if git diff --quiet -- dfs_app.py; then
+            echo "No dfs_app.py changes to commit"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add dfs_app.py
+          git commit -m "Apply FD Single Game fast-builder optimization"
+          git push origin HEAD:install/fast-fd-single-game-validation
