@@ -1,0 +1,52 @@
+name: Apply fast DK Classic builder validation
+
+on:
+  push:
+    branches:
+      - install/fast-dk-classic-validation-2
+    paths:
+      - .github/triggers/apply-fast-dk-classic-validation
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: install/fast-dk-classic-validation-2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install test dependency
+        run: python -m pip install pytest
+      - name: Apply DK Classic installer
+        run: python .github/scripts/install_fast_classic_builder.py
+      - name: Syntax check
+        run: python -m py_compile dfs_app.py .github/scripts/install_fast_classic_builder.py
+      - name: Verify transformed DK Classic hot loop
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          app = Path('dfs_app.py').read_text(encoding='utf-8')
+          required = [
+              'used_mask = ~np.isin(base_choices',
+              'salary_mask = salary + classic_salaries[base_choices] <= MAX_LINEUP_SALARY',
+              'qb_i = name_to_index.get(qb_name)',
+              'classic_teams[choices] == qb_team',
+          ]
+          missing = [token for token in required if token not in app]
+          if missing:
+              raise SystemExit(f'Missing DK Classic transformed anchors: {missing}')
+          PY
+      - name: Run architecture tests
+        run: python -m pytest -q tests/test_fast_build_architecture.py tests/test_opponent_field_architecture.py tests/test_fast_build_installers.py
+      - name: Commit patched app
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add dfs_app.py
+          git commit -m "Apply DK Classic fast-builder optimization"
+          git push origin HEAD:install/fast-dk-classic-validation-2
