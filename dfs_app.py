@@ -4972,6 +4972,14 @@ if platform == "FanDuel":
         )
         fd_players = fd_players[~fd_players["Injury Status"].astype(str).str.casefold().eq("out")].copy()
     fd_player_display = _fd_edited_pool.copy() if isinstance(_fd_edited_pool, pd.DataFrame) else fd_player_display
+    _fd_scoring_report = fd_player_display.copy()
+    _fd_current_outcomes = st.session_state.get("fd_simulation_df_" + lineup_mode.replace(" ", "_").lower())
+    if isinstance(_fd_current_outcomes, pd.DataFrame) and not _fd_current_outcomes.empty:
+        _fd_scoring_report["Actual Simulation Mean"] = _fd_scoring_report["Name"].map(_fd_current_outcomes.mean().to_dict())
+        _fd_scoring_report["Simulation Minus Projection"] = _fd_scoring_report["Actual Simulation Mean"] - pd.to_numeric(_fd_scoring_report["Projection"], errors="coerce")
+    st.download_button("DOWNLOAD PLAYER SCORING INPUTS", _fd_scoring_report.to_csv(index=False).encode("utf-8"),
+        "FanDuel_" + lineup_mode.replace(" ", "_") + "_Player_Scoring_Inputs.csv", "text/csv",
+        key="fd_player_scoring_inputs_" + lineup_mode.replace(" ", "_").lower(), on_click="ignore")
     with st.expander("Copy Player Info to ChatGPT"):
         st.caption("Click inside the text box, press Ctrl+A, then Ctrl+C. Paste the copied text into ChatGPT.")
         fd_copy_text = fd_player_display.to_csv(index=False, sep="\t", na_rep="")
@@ -5533,14 +5541,25 @@ if platform == "FanDuel":
         # Keep all built lineups for export. The display limit only controls
         # how many rows are shown on screen, not how many get downloaded.
         fd_all_ranked = fd_rank_source.copy()
+        _fd_diverse_portfolio = None
+        if lineup_mode == "Full Roster":
+            from simmah_portfolio_selection import select_portfolio, put_portfolio_first
+            _fd_owned_count = full_roster_contest_parameters(st.session_state.get("selected_fd_contest") or {}, 1)["owned"]
+            try:
+                _fd_diverse_portfolio = select_portfolio(fd_all_ranked, fd_slots, _fd_owned_count, fd_rank_column,
+                    controls=fd_player_display.set_index("Name").to_dict("index"))
+            except ValueError as exc:
+                st.error(str(exc))
+                st.stop()
+            fd_all_ranked = put_portfolio_first(fd_all_ranked, _fd_diverse_portfolio, fd_slots)
+            st.caption("Assigned portfolio balances the selected ranking metric with roster overlap. Default player cap: 80%; locks and explicit higher minimums may exceed it. Manual maximums remain enforced. Candidate alternatives remain available below.")
         fd_results = fd_all_ranked.head(int(fd_rank_count)).copy()
 
         fd_export_portfolio = fd_all_ranked
         if lineup_mode == "Full Roster":
             _fd_selected_contest = st.session_state.get("selected_fd_contest") or {}
             _fd_spec = full_roster_contest_parameters(_fd_selected_contest, 1)
-            _fd_entry_seed = fd_results.head(_fd_spec["owned"]).copy()
-            fd_export_portfolio = _fd_entry_seed.iloc[np.arange(_fd_spec["owned"]) % len(_fd_entry_seed)].reset_index(drop=True)
+            fd_export_portfolio = _fd_diverse_portfolio.copy()
             _fd_joint_field = st.session_state.get("fd_contest_field_full_roster")
             _fd_joint_outcomes = st.session_state.get("fd_simulation_df_full_roster")
             _fd_context = st.session_state.get("fd_full_roster_evaluation_context")
@@ -7240,20 +7259,19 @@ else:
                 key="dk_classic_portfolio_metric_top1_default_v2"
             )
             classic_rank_metric = PORTFOLIO_METRICS[classic_rank_label]
-            classic_top_portfolio = (
-                classic_portfolio_source
-                .drop_duplicates(
-                    subset=[col for col in ["QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "FLEX", "DST"]
-                            if col in classic_portfolio_source.columns],
-                    keep="first"
-                )
-                .sort_values(classic_rank_metric, ascending=False, kind="stable")
-                .head(int(classic_portfolio_count))
-                .reset_index(drop=True)
-            )
+            from simmah_portfolio_selection import select_portfolio, put_portfolio_first
             _classic_assignment_count = max(1, int((st.session_state.get("selected_dk_contest") or {}).get("your_entries") or classic_entry_count))
-            _classic_unique_entries = classic_top_portfolio.head(_classic_assignment_count).copy()
-            classic_export_portfolio = _classic_unique_entries.iloc[np.arange(_classic_assignment_count) % len(_classic_unique_entries)].reset_index(drop=True)
+            _classic_slots = [col for col in ["QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "FLEX", "DST"] if col in classic_portfolio_source]
+            try:
+                classic_export_portfolio = select_portfolio(classic_portfolio_source, _classic_slots,
+                    _classic_assignment_count, classic_rank_metric, controls=control_map)
+            except ValueError as exc:
+                st.error(str(exc))
+                st.stop()
+            _classic_unique_entries = classic_export_portfolio.copy()
+            classic_top_portfolio = put_portfolio_first(classic_portfolio_source, classic_export_portfolio,
+                _classic_slots).head(int(classic_portfolio_count)).copy()
+            st.caption("Assigned portfolio balances the selected ranking metric with roster overlap. Default player cap: 80%; locks and explicit higher minimums may exceed it. Manual maximums remain enforced. Display count does not change assigned entries.")
             st.session_state["classic_contest_entries_df"] = classic_export_portfolio.copy()
             classic_top_portfolio["Assigned to contest"] = np.arange(len(classic_top_portfolio)) < len(_classic_unique_entries)
             _classic_portfolio_field = st.session_state.get("classic_contest_field_df")
