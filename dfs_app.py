@@ -426,6 +426,22 @@ def opponent_field_selection_weights(pool, fallback_scores):
     return np.clip((0.10 + ranks ** 2) * market_factors, 0.01, None)
 
 
+def render_value_leverage_finder(pool, comparison, field, slots, key, special_slot=None):
+    from simmah_leverage import leverage_report
+    report = leverage_report(pool, comparison, field, slots, special_slot)
+    with st.expander("Value & leverage finder", expanded=True):
+        st.caption("Value = projected points per $1,000; position percentile compares players at the same position. Leverage = Top-1%-weighted candidate presence minus simulated field ownership. This is a candidate-dependent signal, not optimal-lineup probability or a guaranteed edge.")
+        if report["Sim Leverage (pp)"].notna().any():
+            st.caption(f"Based on {report.attrs.get('evaluated_unique_candidates', 0):,} distinct evaluated candidates with positive Top-1% rates and {report.attrs.get('field_entries', 0):,} simulated field entries. Candidate limits, locks and stacks influence these results.")
+        else:
+            st.caption("Value is available now. Leverage needs a completed contest comparison and opponent field; missing estimates stay blank.")
+        options = ["Projected Pts / $1k", "Position Value Percentile", "Sim Leverage (pp)"]
+        options = [c for c in options if c in report]
+        sort = st.selectbox("Find plays by", options, index=options.index("Sim Leverage (pp)") if report["Sim Leverage (pp)"].notna().any() else 0, key="leverage_sort_" + key)
+        cols = [c for c in ["Name", "Team", "Position", "Salary", "Projection", "Projected Pts / $1k", "P95 Pts / $1k", "Position Value Percentile", "Top1-weighted Presence %", "Field Own %", "Sim Leverage (pp)", "CPT/MVP Weighted Presence %", "Field CPT/MVP Own %", "CPT/MVP Leverage (pp)"] if c in report]
+        st.dataframe(report[cols].sort_values(sort, ascending=False, na_position="last"), hide_index=True, use_container_width=True)
+
+
 def ownership_adjusted_player_scores(pool, names, base_scores, player_sim, projection_fallback=None):
     """Subtract an ownership tax, while allowing strong simulated upside to offset it."""
     names = list(names)
@@ -4220,9 +4236,9 @@ def build_joint_candidate_pool(pool, platform_name, mode_name, evaluation_outcom
     if mode_name in {"Classic", "Full Roster"}:
         st.caption("Lineup rule: offensive players cannot face their own lineup's defense.")
     progress = st.progress(0, text="Building candidates from joint game outcomes...")
-    own_lookup = {str(col).strip().casefold(): col for col in pool.columns}
-    own_col = next((own_lookup[key] for key in ("projected ownership", "ownership", "ownership %", "own%") if key in own_lookup), None)
-    penalty = np.maximum(pd.to_numeric(pool[own_col], errors="coerce").fillna(0).to_numpy(float)-15, 0)*.06 if own_col else None
+    # Salary-constrained joint outcomes find value. Contest evaluation handles
+    # ownership through the field; popular players receive no blanket penalty.
+    penalty = None
     primary_patterns = [(1,False),(2,False),(1,True),(2,True)]
     seed_patterns = [primary_patterns[i] for i, label in enumerate(FULL_ROSTER_STACK_OPTIONS) if label in selected_stacks] if mode_name in {"Classic", "Full Roster"} else None
     result = build_candidates(pool, construction, roster, target=5000,
@@ -5039,6 +5055,8 @@ if platform == "FanDuel":
         st.session_state.get("fd_contest_field_" + _fd_mode),
     )
     st.caption("Simulation and ownership summaries fill after SIM completes. Pending values are not zero; external ownership and weather require available source data.")
+    from simmah_leverage import add_value_columns
+    fd_player_display = add_value_columns(fd_player_display)
     fd_snapshot_display = fd_player_display.copy()
     for sim_key, sim_label in [
         ("Mean", "Sim Pts"), ("P10", "Sim P10"), ("P25", "Sim P25"),
@@ -5596,6 +5614,9 @@ if platform == "FanDuel":
         if lineup_mode == "Single Game" and (st.session_state.get("fd_single_game_evaluation_engine") != "shared-contest-mvp-v1" or st.session_state.get("fd_single_game_evaluation_context") != dict(st.session_state.get("selected_fd_contest") or {})):
             fd_rank_source = None
             st.warning("Run a fresh Single Game SIM to calculate shared-outcome finish rates.")
+        render_value_leverage_finder(fd_player_display, fd_rank_source,
+            st.session_state.get("fd_contest_field_" + lineup_mode.replace(" ", "_").lower()),
+            fd_slots, "fd_" + lineup_mode, "MVP" if lineup_mode == "Single Game" else None)
         if not isinstance(fd_rank_source, pd.DataFrame) or fd_rank_source.empty:
             fd_rank_source = add_field_ranking_metrics(fd_results, fd_results["ProjectedPoints"].to_numpy(dtype=float))
         # Persistent FanDuel Full Roster sanity check and opponent lineup viewer.
@@ -6825,6 +6846,8 @@ else:
         else:
             control_display[setting] = default
 
+    from simmah_leverage import add_value_columns
+    control_display = add_value_columns(control_display)
     if isinstance(_active_simulation_df, pd.DataFrame) and not _active_simulation_df.empty:
         save_automatic_pregame_snapshot(
             control_display,
@@ -7383,6 +7406,9 @@ else:
             st.write("## Portfolio")
             st.caption("Browse up to 5,000 candidates. The assigned portfolio below fills your reserved contest entries and is the source for both downloads.")
             classic_portfolio_source = st.session_state.get("classic_contest_comparison_df") if st.session_state.get("classic_field_context") == classic_contest_name else None
+            render_value_leverage_finder(control_display, classic_portfolio_source,
+                st.session_state.get("classic_contest_field_df"),
+                ["QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "FLEX", "DST"], "dk_classic")
             if not isinstance(classic_portfolio_source, pd.DataFrame) or classic_portfolio_source.empty:
                 classic_portfolio_source = classic_results.copy()
             # Match the Showdown ranking menu across all formats.
@@ -8933,6 +8959,9 @@ if isinstance(_saved_field_df, pd.DataFrame) and not _saved_field_df.empty:
 if "contest_results_df" in st.session_state and not (platform == "DraftKings" and lineup_mode == "Classic"):
 
     results_df = st.session_state["contest_results_df"]
+    if platform == "DraftKings" and lineup_mode == "Showdown":
+        render_value_leverage_finder(control_display, results_df, st.session_state.get("contest_field_df"),
+            ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"], "dk_showdown", "Captain")
     classic_mode = platform == "DraftKings" and lineup_mode == "Classic"
     portfolio_lineup_columns = (
         ["QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "FLEX", "DST"]
