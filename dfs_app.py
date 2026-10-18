@@ -1271,6 +1271,7 @@ def download_public_projection_table(source_name, platform_name, target_names=No
     import re
     from html import unescape
     import requests
+    from zoneinfo import ZoneInfo
 
     target_keys = {
         normalize_projection_player_name(name)
@@ -1853,7 +1854,6 @@ def download_public_projection_table(source_name, platform_name, target_names=No
                 # Its AJAX menu requires both date and the page's window.url.
                 # Without that request every date opens only its first game.
                 from datetime import datetime, timedelta
-                from zoneinfo import ZoneInfo
                 current_date = datetime.now(ZoneInfo("America/New_York")).date()
                 valid_dates = sorted({d for d, _ in candidates
                                       if current_date.isoformat() <= d <= (current_date + timedelta(days=7)).isoformat()})

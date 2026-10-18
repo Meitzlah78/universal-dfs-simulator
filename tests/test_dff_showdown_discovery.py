@@ -1,5 +1,6 @@
 """Exercise the app loader without importing Streamlit or making network calls."""
 import ast
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
@@ -12,14 +13,14 @@ import pandas as pd
 
 
 class DffShowdownDiscoveryTests(TestCase):
-    def load(self, fail_default=False, repeat=False, broken_hint=False):
+    def load(self, fail_default=False, repeat=False, broken_hint=False, platform="DraftKings Showdown"):
         tree = ast.parse((Path(__file__).resolve().parents[1] / "dfs_app.py").read_text())
         nodes = [n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name in
                  {"download_public_projection_table", "normalize_projection_player_name"}]
         for node in nodes:
             node.decorator_list = []
         state = {"selected_dk_contest": {"name": "Dime Package (DAL @ GB)"}}
-        scope = {"pd": pd, "np": np, "st": SimpleNamespace(session_state=state)}
+        scope = {"ThreadPoolExecutor": ThreadPoolExecutor, "pd": pd, "np": np, "st": SimpleNamespace(session_state=state)}
         exec(compile(ast.Module(body=nodes, type_ignores=[]), "dfs_app.py", "exec"), scope)
         today = datetime.now(ZoneInfo("America/New_York")).date().isoformat()
         calls = []
@@ -44,6 +45,8 @@ class DffShowdownDiscoveryTests(TestCase):
                 return response(f'''<table><tr class="projections-listing" data-name="Jordan Love" data-team="GB" data-opp="DAL" data-ppg_proj="{love_projection[0]}"></tr>
                     <tr class="projections-listing" data-name="CeeDee Lamb" data-team="DAL" data-opp="GB" data-ppg_proj="20.2"></tr>
                     <tr class="projections-listing" data-name="No Projection" data-ppg_proj="NaN"></tr></table>''')
+            if platform == "FanDuel Single Game":
+                return response("<script>window.url = '25D4A';</script>")
             return response('''<script>window.url = '25D4A';</script>
                 <tr class="projections-listing" data-name="Jordan Love" data-team="GB" data-opp="MIN" data-ppg_proj="99"></tr>
                 <tr class="projections-listing" data-name="Christian Watson" data-team="GB" data-opp="MIN" data-ppg_proj="50"></tr>''')
@@ -53,13 +56,18 @@ class DffShowdownDiscoveryTests(TestCase):
                 state["verified_dff_slate_routes"] = {
                     ("draftkings", ("ceedeelamb", "christianwatson", "jordanlove"), ("DAL", "GB")): "https://www.dailyfantasyfuel.com/broken"}
             result = scope["download_public_projection_table"](
-                "DFF", "DraftKings Showdown", ["Jordan Love", "CeeDee Lamb", "Christian Watson"], ("DAL", "GB"))
+                "DFF", platform, ["Jordan Love", "CeeDee Lamb", "Christian Watson"], ("DAL", "GB"))
             if repeat:
                 calls.clear()
                 love_projection[0] = 22.0
                 result = scope["download_public_projection_table"](
-                    "DFF", "DraftKings Showdown", ["Jordan Love", "CeeDee Lamb", "Christian Watson"], ("DAL", "GB"))
+                    "DFF", platform, ["Jordan Love", "CeeDee Lamb", "Christian Watson"], ("DAL", "GB"))
         return result, calls
+
+    def test_fanduel_single_game_discovers_projections_without_scope_error(self):
+        result, calls = self.load(platform="FanDuel Single Game")
+        self.assertEqual(result, {"jordanlove": 21.0, "ceedeelamb": 20.2})
+        self.assertTrue(any("/fanduel" in url for url, _ in calls))
 
     def test_discovers_matching_slate_from_ajax_menu_and_parses_attributes(self):
         result, calls = self.load()
