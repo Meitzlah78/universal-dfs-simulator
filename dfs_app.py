@@ -20,6 +20,8 @@ st.set_page_config(
 
 st.title("Universal DFS Simulator")
 st.session_state["active_game_markets"] = {}
+st.session_state["active_game_lines"] = []
+st.session_state["active_slate_identity"] = ""
 
 def render_portfolio_roi_panel(portfolio, contest=None):
     from simmah_portfolio import portfolio_roi_totals
@@ -2445,6 +2447,8 @@ def extract_slate_games(source_df):
 
 def show_detected_slate_games(source_df):
     st.session_state["active_game_markets"] = {}
+    st.session_state["active_game_lines"] = []
+    st.session_state["active_slate_identity"] = ""
     games = extract_slate_games(source_df)
     if not games:
         return
@@ -2476,6 +2480,12 @@ def show_detected_slate_games(source_df):
             markets[team_key(home)] = (home_points, away_points)
             st.write(f"**{away} {away_points:g} @ {home} {home_points:g}** · Total {float(row['Game total']):g} · {home} {float(row['Home spread']):+g}")
     st.session_state["active_game_markets"] = markets
+    st.session_state["active_slate_identity"] = slate_key
+    st.session_state["active_game_lines"] = [
+        {"matchup": r["Game"], "total": float(r["Game total"]), "home_spread": float(r["Home spread"]),
+         "source": "Manual pregame entry"}
+        for r in lines.to_dict("records") if implied_scores(r["Game total"], r["Home spread"]) is not None
+    ]
     if markets:
         st.caption("Source: manually entered pregame lines. Experimental field-popularity adjustment (maximum ±15%) applies only without imported ownership. Player projections stay unchanged. Rebuild opponents and rerun contest simulation after editing lines.")
 
@@ -2558,6 +2568,8 @@ def extract_slate_games(source_df):
 
 def show_detected_slate_games(source_df):
     st.session_state["active_game_markets"] = {}
+    st.session_state["active_game_lines"] = []
+    st.session_state["active_slate_identity"] = ""
     games = extract_slate_games(source_df)
     if not games:
         return
@@ -2589,6 +2601,12 @@ def show_detected_slate_games(source_df):
             markets[team_key(home)] = (home_points, away_points)
             st.write(f"**{away} {away_points:g} @ {home} {home_points:g}** · Total {float(row['Game total']):g} · {home} {float(row['Home spread']):+g}")
     st.session_state["active_game_markets"] = markets
+    st.session_state["active_slate_identity"] = slate_key
+    st.session_state["active_game_lines"] = [
+        {"matchup": r["Game"], "total": float(r["Game total"]), "home_spread": float(r["Home spread"]),
+         "source": "Manual pregame entry"}
+        for r in lines.to_dict("records") if implied_scores(r["Game total"], r["Home spread"]) is not None
+    ]
     if markets:
         st.caption("Source: manually entered pregame lines. Experimental field-popularity adjustment (maximum ±15%) applies only without imported ownership. Player projections stay unchanged. Rebuild opponents and rerun contest simulation after editing lines.")
 
@@ -2697,6 +2715,14 @@ def save_automatic_pregame_snapshot(snapshot_df, format_label, correlation_pct=0
     game_date = now.date().isoformat()
 
     snapshot = snapshot_df.copy()
+    from simmah_weather import team_key
+    markets = st.session_state.get("active_game_markets", {})
+    if "Team" in snapshot:
+        values = [markets.get(team_key(t), (np.nan, np.nan)) for t in snapshot["Team"]]
+        snapshot["Market Implied Team Points"] = [v[0] for v in values]
+        snapshot["Market Implied Opponent Points"] = [v[1] for v in values]
+        snapshot["Market Game Total"] = [sum(v) for v in values]
+        snapshot["Market Team Spread"] = [v[1] - v[0] for v in values]
     snapshot.insert(0, "GameDate", game_date)
     snapshot.insert(1, "Format", str(format_label))
     snapshot.insert(2, "Snapshot Saved ET", now.strftime("%Y-%m-%d %I:%M:%S %p ET"))
@@ -2738,8 +2764,12 @@ def save_automatic_pregame_snapshot(snapshot_df, format_label, correlation_pct=0
         "correlation_pct": float(correlation_pct),
         "aggressiveness_pct": float(aggressiveness_pct),
         "payout_schedule": payout_values,
+        "game_lines": st.session_state.get("active_game_lines", []),
+        "market_source": "Manual pregame entry" if markets else "Unavailable",
+        "slate_id": st.session_state.get("active_slate_identity") or hashlib.sha256(
+            snapshot_df[[c for c in ["Name", "Team", "Opponent", "Salary"] if c in snapshot_df]].to_csv(index=False).encode()
+        ).hexdigest()[:16],
     }
-
     if st.session_state.get(hash_key) != digest or not csv_path.exists():
         csv_path.write_text(csv_text, encoding="utf-8")
         meta_path.write_text(json.dumps(meta, indent=2), encoding="utf-8")
@@ -2750,6 +2780,40 @@ def save_automatic_pregame_snapshot(snapshot_df, format_label, correlation_pct=0
     st.session_state["latest_auto_pregame_snapshot_path"] = str(csv_path)
     st.session_state["latest_auto_pregame_snapshot_meta"] = meta
     return csv_path
+
+
+def save_export_checkpoint(snapshot, metadata, export_data, export_name):
+    """Callback receives the exact rendered export and snapshot, before rerun."""
+    import copy
+    from datetime import datetime, timezone
+    from simmah_snapshot_archive import archive_snapshot
+    if not isinstance(snapshot, pd.DataFrame) or snapshot.empty:
+        st.error("Export snapshot could not be saved: no matching simulation snapshot is available.")
+        return
+    meta = copy.deepcopy(metadata)
+    meta["exported_at_utc"] = datetime.now(timezone.utc).isoformat()
+    meta["export_filename"] = export_name
+    meta["checkpoint"] = "Lineup export; not confirmation of contest submission or pre-lock timing"
+    try:
+        path = archive_snapshot(_pregame_snapshot_dir(), snapshot, meta,
+            _safe_snapshot_slug(meta.get("format")), meta["slate_id"])
+        payload = export_data.encode("utf-8") if isinstance(export_data, str) else bytes(export_data)
+        path.with_name(path.stem + "_lineups.csv").write_bytes(payload)
+        st.session_state["last_export_snapshot_path"] = str(path)
+        st.toast("Export snapshot saved with the exact lineup CSV.")
+    except Exception as exc:
+        st.error(f"Lineup download is available, but saving its snapshot failed: {exc}")
+
+
+def lineup_export_download(*args, **kwargs):
+    import copy
+    data = kwargs.get("data", args[1] if len(args) > 1 else None)
+    name = kwargs.get("file_name", args[2] if len(args) > 2 else "lineups.csv")
+    snapshot, metadata = load_latest_automatic_pregame_snapshot(selected_format)
+    # Bind copies now: callback execution must not pick up a different slate later.
+    kwargs["on_click"] = save_export_checkpoint
+    kwargs["args"] = (snapshot.copy(deep=True), copy.deepcopy(metadata), data, name)
+    return st.download_button(*args, **kwargs)
 
 
 def load_latest_automatic_pregame_snapshot(format_label):
@@ -5730,7 +5794,7 @@ if platform == "FanDuel":
         st.write("### Export to FanDuel")
         st.caption("Use the entry file below to update your reserved FanDuel entries.")
         with st.expander("Analysis report (optional)", expanded=False):
-            st.download_button(
+            lineup_export_download(
                 "DOWNLOAD PORTFOLIO REPORT (FOR REVIEW)",
                 fd_export_portfolio.to_csv(index=False).encode("utf-8"),
                 "FanDuel_Assigned_Portfolio_Report.csv", "text/csv",
@@ -5761,15 +5825,13 @@ if platform == "FanDuel":
                         _fd_preview_text = _fd_export_io.StringIO()
                         _fd_export_csv.writer(_fd_preview_text).writerows([row[:10 if lineup_mode == "Single Game" else 13] for row in _fd_upload_rows[:3]])
                         st.code(_fd_preview_text.getvalue(), language="csv")
-                    st.download_button(
+                    lineup_export_download(
                         f"EXPORT TO FANDUEL — {fd_entry_count} ENTRIES",
                         fd_entry_bytes,
                         file_name=_fd_export_name,
                         mime="text/csv", use_container_width=True, type="primary",
                         key="fd_entry_upload_v2_" + lineup_mode.replace(" ", "_").lower() + "_" + str(st.session_state["selected_fd_contest"]["id"]), on_click="ignore")
-                    from simmah_exports import direct_csv_download_link
-                    st.markdown(direct_csv_download_link(fd_entry_bytes, _fd_export_name), unsafe_allow_html=True)
-                    st.caption("If the main button downloads the wrong file, use DIRECT FANDUEL UPLOAD DOWNLOAD above. Both contain the same verified entry CSV.")
+                    st.caption("Export saves a timestamped player snapshot and the exact entry CSV for later comparison.")
                 except Exception as exc:
                     st.error(f"Could not create FanDuel replacement CSV: {exc}")
         else:
@@ -7398,7 +7460,7 @@ else:
             st.caption("Candidate alternatives — only rows marked Assigned to contest are included in your entry replacement.")
             st.dataframe(classic_top_portfolio, use_container_width=True, hide_index=True)
 
-            st.download_button(
+            lineup_export_download(
                 label="DOWNLOAD ASSIGNED PORTFOLIO REPORT",
                 data=classic_export_portfolio.to_csv(index=False).encode("utf-8"),
                 file_name="DraftKings_Classic_Assigned_Portfolio.csv",
@@ -7450,7 +7512,7 @@ else:
                             "Classic"
                         )
                         if export_df is not None:
-                            st.download_button(
+                            lineup_export_download(
                                 label="DOWNLOAD FILE FOR EDIT ENTRIES",
                                 data=export_df.to_csv(index=False).encode("utf-8"),
                                 file_name="DraftKings_Classic_Contest_Entries.csv",
@@ -9408,7 +9470,7 @@ if "contest_results_df" in st.session_state and not (platform == "DraftKings" an
         if col in portfolio_export_df.columns:
             portfolio_export_df[col] = portfolio_export_df[col] * 100
 
-    st.download_button(
+    lineup_export_download(
         label="DOWNLOAD ASSIGNED PORTFOLIO REPORT",
         data=portfolio_export_df.to_csv(index=False).encode("utf-8"),
         file_name="DraftKings_Showdown_Assigned_Portfolio.csv",
@@ -9480,7 +9542,7 @@ with st.container():
                             "Showdown"
                         )
                         if export_df is not None:
-                            st.download_button(
+                            lineup_export_download(
                                 label="DOWNLOAD FILE FOR EDIT ENTRIES",
                                 data=export_df.to_csv(index=False).encode("utf-8"),
                                 file_name="DraftKings_Showdown_Contest_Entries.csv",
