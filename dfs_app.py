@@ -5437,8 +5437,6 @@ if platform == "FanDuel":
                 _fd_summary[1].metric("Estimated portfolio winnings", f"${_fd_winnings:,.2f}")
                 _fd_summary[2].metric("Estimated portfolio ROI", f"{100*(_fd_winnings-_fd_fees)/_fd_fees:,.1f}%" if _fd_fees else "N/A")
             st.dataframe(fd_export_portfolio, use_container_width=True, hide_index=True)
-            st.download_button("DOWNLOAD ASSIGNED PORTFOLIO REPORT", fd_export_portfolio.to_csv(index=False).encode("utf-8"),
-                "FanDuel_Full_Roster_Assigned_Portfolio.csv", "text/csv", key="fd_full_assigned_report", on_click="ignore")
             st.caption("Candidate alternatives — the assigned portfolio above is used for your entry replacement.")
 
         if lineup_mode == "Single Game":
@@ -5448,23 +5446,18 @@ if platform == "FanDuel":
             st.write("### Assigned contest portfolio")
             st.caption("These lineups are used for both the portfolio report and entry replacement.")
             st.dataframe(fd_export_portfolio, use_container_width=True, hide_index=True)
-            st.download_button(
-                "DOWNLOAD ASSIGNED PORTFOLIO REPORT",
-                fd_export_portfolio.to_csv(index=False).encode("utf-8"),
-                "FanDuel_Single_Game_Assigned_Portfolio.csv", "text/csv",
-                key="fd_single_assigned_report", on_click="ignore",
-            )
 
         with fd_entry_export_controls:
-            st.write("### Download Your FanDuel Entries")
+            st.write("### Export to FanDuel")
             st.caption("Use the entry file below to update your reserved FanDuel entries.")
-            st.download_button(
-                "DOWNLOAD PORTFOLIO REPORT (FOR REVIEW)",
-                fd_export_portfolio.to_csv(index=False).encode("utf-8"),
-                "FanDuel_Assigned_Portfolio_Report.csv", "text/csv",
-                key="fd_portfolio_report_top_" + lineup_mode.replace(" ", "_").lower(),
-                on_click="ignore", use_container_width=True,
-            )
+            with st.expander("Analysis report (optional)", expanded=False):
+                st.download_button(
+                    "DOWNLOAD PORTFOLIO REPORT (FOR REVIEW)",
+                    fd_export_portfolio.to_csv(index=False).encode("utf-8"),
+                    "FanDuel_Assigned_Portfolio_Report.csv", "text/csv",
+                    key="fd_portfolio_report_top_" + lineup_mode.replace(" ", "_").lower(),
+                    on_click="ignore", use_container_width=True,
+                )
             render_entry_export_header("FanDuel")
             if "FD_ID" in fd_players.columns:
                 if fd_entry_file is None or not st.session_state.get("selected_fd_contest"):
@@ -5478,7 +5471,7 @@ if platform == "FanDuel":
                             st.session_state["selected_fd_contest"], lineup_mode)
                         st.success(f"Ready to replace {fd_entry_count} reserved entries. Entry IDs and original template details are preserved.")
                         st.download_button(
-                            f"DOWNLOAD {fd_entry_count} FANDUEL ENTRIES — UPLOAD THIS FILE",
+                            f"EXPORT TO FANDUEL — {fd_entry_count} ENTRIES",
                             fd_entry_bytes,
                             file_name="FanDuel_" + lineup_mode.replace(" ", "_") + "_Replacement.csv",
                             mime="text/csv", use_container_width=True, type="primary",
