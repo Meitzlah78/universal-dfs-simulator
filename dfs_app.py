@@ -5140,71 +5140,13 @@ if platform == "FanDuel":
 
                     opponent_rows = _fd_batched_field.to_dict("records")
                 else:
-                    while len(opponent_rows) < _fd_generation_target and attempts < max(300000, _fd_generation_target * 15):
-                        attempts += 1
-                        if attempts % 250 == 0 and _fd_generation_target > 0:
-                            accepted_progress = len(opponent_rows) / max(_fd_generation_target, 1)
-                            fd_field_progress.progress(
-                                min(1.0, accepted_progress),
-                                text=f"Building FanDuel opponent field: {len(opponent_rows):,} / {_fd_generation_target:,}"
-                            )
-                            fd_workflow_status.info(
-                                f"Step 3 of 4: Building opponent field — {len(opponent_rows):,} of "
-                                f"{_fd_generation_target:,} lineups..."
-                            )
-                        chosen = {}
-                        used = set()
-                        salary = 0
-                        points = 0.0
-                        if lineup_mode == "Single Game":
-                            mvp_candidates = fd_pool[
-                                (fd_pool["Salary"] * 1.5 <= fd_salary_range[1])
-                                & (fd_pool["Salary"] * 1.5 <= 60000)
-                            ]
-                            if mvp_candidates.empty:
-                                break
-                            mvp_candidate_indices = mvp_candidates.index.to_numpy(dtype=int)
-                            mvp_weights = np.clip(fd_mvp_weights[mvp_candidate_indices].astype(float), 0.01, None)
-                            mvp_weights = mvp_weights / mvp_weights.sum()
-                            mvp_row = mvp_candidates.iloc[int(rng.choice(len(mvp_candidates), p=mvp_weights))]
-                            mvp = str(mvp_row["Name"])
-                            chosen["MVP"] = mvp
-                            used.add(mvp)
-                            salary = int(float(mvp_row["Salary"]) * 1.5)
-                            points = float(mvp_row["Projection"]) * 1.5
-                            for slot in ["FLEX1", "FLEX2", "FLEX3", "FLEX4", "FLEX5"]:
-                                choices = fd_pool[
-                                    (~fd_pool["Name"].isin(used))
-                                    & ((fd_pool["Salary"] + salary) <= fd_salary_range[1])
-                                    & ((fd_pool["Salary"] + salary) <= 60000)
-                                ]
-                                if choices.empty:
-                                    break
-                                choice_indices = choices.index.to_numpy(dtype=int)
-                                weights = fd_flex_weights[choice_indices].astype(float)
-                                weights = weights / weights.sum() if weights.sum() else np.full(len(choices), 1.0 / len(choices))
-                                picked = choices.iloc[int(rng.choice(len(choices), p=weights))]
-                                name = str(picked["Name"])
-                                chosen[slot] = name
-                                used.add(name)
-                                salary += int(picked["Salary"])
-                                points += float(picked["Projection"])
-                        if len(chosen) != len(fd_slots):
-                            continue
-                        _fd_opponent_salary_min = 59000 if lineup_mode == "Full Roster" else fd_salary_range[0]
-                        _fd_opponent_salary_max = 60000 if lineup_mode == "Full Roster" else min(fd_salary_range[1], 60000)
-                        if salary < _fd_opponent_salary_min or salary > _fd_opponent_salary_max:
-                            continue
-                        key = tuple(chosen[slot] for slot in fd_slots)
-                        # Keep duplicates: real FanDuel fields contain repeated lineups,
-                        # and those duplicates must share prizes when they tie.
-                        seen_opponents.add(key)
-                        opponent_rows.append({**chosen, "Salary": salary, "ProjectedPoints": round(points, 2)})
-                        if len(opponent_rows) % 100 == 0 or len(opponent_rows) >= _fd_generation_target:
-                            fd_field_progress.progress(
-                                min(1.0, len(opponent_rows) / max(_fd_generation_target, 1)),
-                                text=f"Building FanDuel opponent field: {len(opponent_rows):,} / {_fd_generation_target:,}"
-                            )
+                    from simmah_single_field import build_fanduel_single_field
+                    _fd_single_field = build_fanduel_single_field(
+                        fd_pool, fd_mvp_weights, fd_flex_weights, _fd_generation_target,
+                        fd_salary_range, rng=rng,
+                        progress=lambda fraction,text: fd_field_progress.progress(fraction,text=text),
+                    )
+                    opponent_rows = _fd_single_field.to_dict("records")
             fd_field_progress.empty()
             opponent_df = apply_learned_field(pd.DataFrame(opponent_rows), fd_pool, fd_slots, "FanDuel", lineup_mode,
                 st.session_state.get("selected_fd_contest", {}), fd_opponent_target, rng)
