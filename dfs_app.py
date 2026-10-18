@@ -20,6 +20,23 @@ st.set_page_config(
 
 st.title("Universal DFS Simulator")
 
+def render_portfolio_roi_panel(portfolio, contest=None):
+    from simmah_portfolio import portfolio_roi_totals
+    totals = portfolio_roi_totals(portfolio, contest)
+    st.write("### Portfolio ROI")
+    columns = st.columns(5)
+    columns[0].metric("Assigned entries", f"{totals['entries']:,}")
+    for column, key, label in zip(columns[1:], ("fees","winnings","net","roi"),
+                                  ("Entry fees","Estimated winnings","Estimated net profit","Estimated ROI")):
+        value = totals[key]
+        display = "Pending" if value is None else (f"{value:,.1f}%" if key == "roi" else f"${value:,.2f}")
+        column.metric(label, display)
+    if totals["roi"] is None:
+        st.caption("Run the contest simulation with a confirmed field size, entry fee and payout schedule for ROI estimates.")
+    else:
+        st.caption("Simulation estimate for the assigned portfolio. The opponent field and expected returns remain unvalidated.")
+
+
 def render_entry_export_header(site):
     """Keep the entry-upload controls consistent across every roster format."""
     st.write("### Export")
@@ -5429,13 +5446,6 @@ if platform == "FanDuel":
             st.session_state["fd_full_roster_assigned_portfolio"] = fd_export_portfolio.copy()
             st.write("### Assigned contest portfolio")
             st.caption(f"These {_fd_spec['owned']} entries are the source for both downloads. Additional displayed candidates are alternatives.")
-            if "Expected Prize ($)" in fd_export_portfolio:
-                _fd_fees = _fd_spec["fee"] * len(fd_export_portfolio)
-                _fd_winnings = float(fd_export_portfolio["Expected Prize ($)"].sum())
-                _fd_summary = st.columns(3)
-                _fd_summary[0].metric("Selected portfolio fees", f"${_fd_fees:,.2f}")
-                _fd_summary[1].metric("Estimated portfolio winnings", f"${_fd_winnings:,.2f}")
-                _fd_summary[2].metric("Estimated portfolio ROI", f"{100*(_fd_winnings-_fd_fees)/_fd_fees:,.1f}%" if _fd_fees else "N/A")
             st.dataframe(fd_export_portfolio, use_container_width=True, hide_index=True)
             st.caption("Candidate alternatives — the assigned portfolio above is used for your entry replacement.")
 
@@ -5448,6 +5458,7 @@ if platform == "FanDuel":
             st.dataframe(fd_export_portfolio, use_container_width=True, hide_index=True)
 
         with fd_entry_export_controls:
+            render_portfolio_roi_panel(fd_export_portfolio, st.session_state.get("selected_fd_contest"))
             st.write("### Export to FanDuel")
             st.caption("Use the entry file below to update your reserved FanDuel entries.")
             with st.expander("Analysis report (optional)", expanded=False):
@@ -7114,17 +7125,12 @@ else:
                         [slot for slot,_ in roster_slots], int(classic_contest["field"]),
                         classic_contest["payouts"], float(classic_contest["entry"]))
                 st.session_state["classic_contest_entries_df"] = classic_export_portfolio
-                _portfolio_fee = float(classic_contest["entry"]) * len(classic_export_portfolio)
-                _portfolio_prize = float(classic_export_portfolio["Expected Prize ($)"].sum())
-                _portfolio_cols = st.columns(3)
-                _portfolio_cols[0].metric("Selected portfolio fees", f"${_portfolio_fee:,.2f}")
-                _portfolio_cols[1].metric("Estimated portfolio winnings", f"${_portfolio_prize:,.2f}")
-                _portfolio_cols[2].metric("Estimated portfolio ROI", f"{100*(_portfolio_prize-_portfolio_fee)/_portfolio_fee:,.1f}%" if _portfolio_fee else "N/A")
                 st.caption(f"{_classic_assignment_count} assigned contest entries are evaluated jointly, including repeated lineups when needed to fill the entry template. Additional displayed candidates are alternatives, not extra owned entries. The opponent field remains an estimate.")
                 st.write("### Assigned contest portfolio")
                 st.dataframe(classic_export_portfolio, use_container_width=True, hide_index=True)
             else:
                 st.caption("Run CONTEST SIM for field-based portfolio metrics.")
+            render_portfolio_roi_panel(classic_export_portfolio, classic_contest)
             st.download_button(
                 label="DOWNLOAD ASSIGNED PORTFOLIO REPORT",
                 data=classic_export_portfolio.to_csv(index=False).encode("utf-8"),
@@ -8995,17 +9001,6 @@ if "contest_results_df" in st.session_state and not (platform == "DraftKings" an
                 _portfolio_expected_net / _portfolio_total_fees * 100.0
                 if _portfolio_total_fees > 0 else np.nan
             )
-            st.write("### Estimated Results for Your Entries")
-            _portfolio_metrics = st.columns(4)
-            _portfolio_metrics[0].metric("Entries", f"{_portfolio_lineup_count:,}")
-            _portfolio_metrics[1].metric("Total Entry Fees", f"${_portfolio_total_fees:,.2f}")
-            _portfolio_metrics[2].metric("Expected Winnings", f"${_portfolio_total_prizes:,.2f}")
-            _portfolio_metrics[3].metric(
-                "Expected Profit / ROI",
-                f"${_portfolio_expected_net:,.2f} / {_portfolio_expected_roi:.1f}%"
-                if pd.notna(_portfolio_expected_roi)
-                else f"${_portfolio_expected_net:,.2f} / N/A"
-            )
             st.caption(
                 "Holdout portfolio estimate: lineups are selected using one half of the simulations, then "
                 "ROI is measured on the untouched second half. Entries are scored together and ties are split. "
@@ -9017,6 +9012,7 @@ if "contest_results_df" in st.session_state and not (platform == "DraftKings" an
                 "for the selected contest. Upload or select the correct contest payout table to calculate ROI."
             )
 
+    render_portfolio_roi_panel(portfolio_df, st.session_state.get("selected_dk_contest"))
     _payout_columns = ["Expected Prize ($)", "Expected Net ($)", "Expected ROI (%)"]
     if classic_mode:
         # Show each Classic roster slot beside that player's simulated points,
