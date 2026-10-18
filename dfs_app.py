@@ -5308,7 +5308,7 @@ if platform == "FanDuel":
             fd_rank_source = add_field_ranking_metrics(fd_results, fd_results["ProjectedPoints"].to_numpy(dtype=float))
         # Persistent FanDuel Full Roster sanity check and opponent lineup viewer.
         # Read from session state so these remain visible after SIM triggers st.rerun().
-        if lineup_mode == "Full Roster":
+        if lineup_mode in {"Full Roster", "Single Game"}:
             _fd_field_key = "fd_contest_field_" + lineup_mode.replace(" ", "_").lower()
             _fd_persist_field = st.session_state.get(_fd_field_key)
             if isinstance(_fd_persist_field, pd.DataFrame) and not _fd_persist_field.empty:
@@ -5317,7 +5317,14 @@ if platform == "FanDuel":
                 _fd_my_proj = pd.to_numeric(fd_rank_source.get("ProjectedPoints"), errors="coerce").dropna()
                 _fd_my_salary = pd.to_numeric(fd_rank_source.get("Salary"), errors="coerce").dropna()
 
-                st.write("### FanDuel Full Roster Field Sanity Check")
+                st.write("### Opponent Field")
+                st.caption(f"FanDuel {lineup_mode}: {len(_fd_persist_field):,} simulated entries.")
+                st.download_button(
+                    "DOWNLOAD OPPONENT FIELD", _fd_persist_field.to_csv(index=False).encode("utf-8"),
+                    "fanduel_" + lineup_mode.replace(" ", "_").lower() + "_opponent_field.csv",
+                    "text/csv", key="fd_opponent_field_visible_" + lineup_mode.replace(" ", "_").lower(),
+                    on_click="ignore", use_container_width=True,
+                )
                 _fd_sc = st.columns(4)
                 _fd_sc[0].metric("Opponent avg projection", f"{_fd_field_proj.mean():.2f}" if not _fd_field_proj.empty else "N/A")
                 _fd_sc[1].metric("My avg projection", f"{_fd_my_proj.mean():.2f}" if not _fd_my_proj.empty else "N/A")
@@ -5354,9 +5361,10 @@ if platform == "FanDuel":
                     st.download_button(
                         "Download Full Opponent Field CSV",
                         data=_fd_opponent_show.to_csv(index=False).encode("utf-8"),
-                        file_name="fanduel_full_roster_opponent_field.csv",
+                        file_name="fanduel_" + lineup_mode.replace(" ", "_").lower() + "_opponent_field.csv",
                         mime="text/csv",
-                        key="fd_download_opponent_field_full_roster",
+                        key="fd_download_opponent_field_" + lineup_mode.replace(" ", "_").lower(),
+                        on_click="ignore",
                     )
             else:
                 st.caption("FanDuel field sanity and opponent lineup info will appear here after Contest SIM builds the opponent field.")
@@ -5414,20 +5422,22 @@ if platform == "FanDuel":
             st.dataframe(fd_export_portfolio, use_container_width=True, hide_index=True)
 
         st.session_state["fd_assigned_display_" + lineup_mode.replace(" ", "_").lower()] = fd_export_portfolio.copy()
+        st.write("### Candidate Lineups")
         # Use the same player-by-player points layout as the DraftKings Portfolio.
         fd_display = fd_results.copy()
         fd_player_means = {
             str(name): float(values.get("Mean", 0.0))
             for name, values in player_sim.items()
         }
-        if lineup_mode == "Full Roster" and isinstance(fd_all_ranked, pd.DataFrame) and not fd_all_ranked.empty:
+        if isinstance(fd_all_ranked, pd.DataFrame) and not fd_all_ranked.empty:
             _fd_all_candidates_export = fd_all_ranked.copy()
             st.download_button(
                 "DOWNLOAD ALL CANDIDATE LINEUPS",
                 data=_fd_all_candidates_export.to_csv(index=False).encode("utf-8"),
-                file_name="fanduel_all_candidate_lineups.csv",
+                file_name="fanduel_" + lineup_mode.replace(" ", "_").lower() + "_all_candidate_lineups.csv",
                 mime="text/csv",
-                key="download_fd_all_candidate_lineups",
+                key="download_fd_all_candidate_lineups_" + lineup_mode.replace(" ", "_").lower(),
+                on_click="ignore",
                 use_container_width=True,
             )
         fd_display_columns = []
