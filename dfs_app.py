@@ -5955,6 +5955,8 @@ else:
     # Exact capacity supplied from the contest details, scoped to this contest.
     if str(active_dk_selection.get("id", "")) == "196786594" and not auto_max_entries:
         auto_max_entries = 35671
+    if str(active_dk_selection.get("id", "")) == "196867391" and not auto_max_entries:
+        auto_max_entries = 3567
     auto_field_size = auto_max_entries or auto_current_entries
 
     try:
@@ -7898,6 +7900,20 @@ with st.expander("Contest Payout Structure", expanded=False):
         st.session_state["contest_payout_contest_id"] = "196786594"
         st.session_state["contest_payout_auto_loaded"] = True
 
+
+    # User-verified HOU vs JAX $300 Dime Package; never reuse for another contest.
+    if (
+        str(st.session_state.get("selected_dk_contest", {}).get("id", "")) == "196867391"
+        and str(st.session_state.get("contest_payout_contest_id", "")) != "196867391"
+    ):
+        _hou_jax_dime_ranges = [[1,1,30],[2,2,15],[3,3,10],[4,4,5],[5,5,4],[6,7,3],[8,10,2],[11,15,1.5],[16,20,1],[21,30,0.75],[31,60,0.5],[61,130,0.4],[131,340,0.3],[341,830,0.2]]
+        _hou_jax_dime_schedule = np.zeros(830, dtype=float)
+        for _rank_start, _rank_end, _rank_prize in _hou_jax_dime_ranges:
+            _hou_jax_dime_schedule[_rank_start - 1:_rank_end] = _rank_prize
+        st.session_state["contest_payout_schedule"] = _hou_jax_dime_schedule
+        st.session_state["contest_payout_source_name"] = "User-verified HOU vs JAX $300 Dime Package payout table"
+        st.session_state["contest_payout_contest_id"] = "196867391"
+        st.session_state["contest_payout_auto_loaded"] = True
 
     # Verified payout schedule supplied from the DraftKings contest details.
     # Keep it scoped to this exact contest ID; never apply it to another contest.
