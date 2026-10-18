@@ -2263,6 +2263,12 @@ def full_roster_contest_parameters(contest, representative_count):
     if preset:
         tiers = tiers or [(1, 1, 2000.0), (2, 2, 1000.0), (3, 3, 750.0), (4, 4, 500.0), (5, 5, 300.0), (6, 6, 200.0), (7, 7, 150.0), (8, 8, 125.0), (9, 10, 100.0), (11, 12, 75.0), (13, 15, 50.0), (16, 20, 30.0), (21, 25, 20.0), (26, 30, 15.0), (31, 40, 10.0), (41, 50, 7.5), (51, 75, 5.0), (76, 100, 4.0), (101, 150, 3.0), (151, 300, 2.0), (301, 600, 1.5), (601, 1000, 1.25), (1001, 3000, 1.0), (3001, 7500, 0.8), (7501, 15000, 0.7), (15001, 30000, 0.6), (30001, 65000, 0.5)]
         field_size = max(215568, field_size)
+    # Confirmed by the user's prize-table screenshot for this exact contest.
+    # Use capacity as the modeled final field; current entry count is not final.
+    if str(contest.get("id", "")) == "135464-281110099":
+        tiers = tiers or [[1,1,200],[2,2,100],[3,3,50],[4,4,30],[5,5,25],[6,6,20],[7,7,15],[8,8,12],[9,10,10],[11,12,8],[13,15,6],[16,20,4],[21,25,3],[26,30,2],[31,40,1.5],[41,50,1],[51,75,0.75],[76,100,0.5],[101,150,0.4],[151,250,0.35],[251,500,0.3],[501,1000,0.25],[1001,2255,0.2],[2256,5000,0.15],[5001,10000,0.12],[10001,28750,0.1]]
+        field_size = field_size or 95808
+        contest = dict(contest, entry_fee=0.05 if contest.get("entry_fee") is None else contest["entry_fee"])
     known_field = field_size > owned
     field_size = max(field_size, int(representative_count) + owned) if not known_field else field_size
     return {"field_size": field_size, "owned": owned, "tiers": tiers or [],
@@ -4327,6 +4333,8 @@ if platform == "FanDuel":
                     "prize_pool": (_fd_auto_details or {}).get("prize_pool"),
                     "prize_summary": (_fd_auto_details or {}).get("prize_summary"),
                 }
+                if _fd_contest_id == "135464-281110099":
+                    st.caption("Confirmed Pooch Punt payout schedule: $4,000 across 28,750 paid places. ROI models the full 95,808-entry capacity; the final filled field may differ.")
                 fd_fee_text = f"${float(fd_fee):.2f}" if pd.notna(fd_fee) else "not listed"
                 st.success(
                     f"Selected: {fd_selected_row[fd_name_col]} | Contest ID: {_fd_contest_id} | "
