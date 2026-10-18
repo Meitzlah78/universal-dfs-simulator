@@ -5529,13 +5529,25 @@ if platform == "FanDuel":
                     fd_entry_bytes, fd_entry_count = build_fanduel_entry_export(
                         fd_entry_file.getvalue(), fd_export_portfolio, fd_ids,
                         st.session_state["selected_fd_contest"], lineup_mode)
+                    import csv as _fd_export_csv
+                    import io as _fd_export_io
+                    _fd_upload_rows = list(_fd_export_csv.reader(_fd_export_io.StringIO(fd_entry_bytes.decode("utf-8-sig"))))
+                    _fd_upload_header = [c.strip().casefold() for c in _fd_upload_rows[0]]
+                    if not set(_fd_upload_header).intersection({"entry_id", "entry id", "entryid"}) or not set(_fd_upload_header).intersection({"contest_id", "contest id", "contestid"}):
+                        raise ValueError("Export blocked: replacement CSV is missing reserved entry identifiers.")
+                    _fd_export_name = "FanDuel_" + lineup_mode.replace(" ", "_") + "_" + str(st.session_state["selected_fd_contest"]["id"]) + "_UPLOAD.csv"
                     st.success(f"Ready to replace {fd_entry_count} reserved entries. Entry IDs and original template details are preserved.")
+                    st.caption("FanDuel upload file: " + _fd_export_name + ". This file contains entry_id, contest_id, and roster player IDs.")
+                    with st.expander("Preview FanDuel upload IDs", expanded=False):
+                        _fd_preview_text = _fd_export_io.StringIO()
+                        _fd_export_csv.writer(_fd_preview_text).writerows([row[:10 if lineup_mode == "Single Game" else 13] for row in _fd_upload_rows[:3]])
+                        st.code(_fd_preview_text.getvalue(), language="csv")
                     st.download_button(
                         f"EXPORT TO FANDUEL — {fd_entry_count} ENTRIES",
                         fd_entry_bytes,
-                        file_name="FanDuel_" + lineup_mode.replace(" ", "_") + "_Replacement.csv",
+                        file_name=_fd_export_name,
                         mime="text/csv", use_container_width=True, type="primary",
-                        key="fd_export_" + lineup_mode.replace(" ", "_").lower(), on_click="ignore")
+                        key="fd_entry_upload_v2_" + lineup_mode.replace(" ", "_").lower() + "_" + str(st.session_state["selected_fd_contest"]["id"]), on_click="ignore")
                 except Exception as exc:
                     st.error(f"Could not create FanDuel replacement CSV: {exc}")
         else:
