@@ -31,3 +31,9 @@ class OwnershipTests(unittest.TestCase):
             p = pool(); p[col] = value
             with self.assertRaises(ValueError):
                 apply_sharksnip(p, HTML, NOW)
+
+    def test_impossible_position_totals_rejected(self):
+        p = pd.concat([pool()] * 4, ignore_index=True)
+        html = HTML.replace('21.8%', '90.0%')
+        with self.assertRaisesRegex(ValueError, 'roster capacity'):
+            apply_sharksnip(p, html, NOW)

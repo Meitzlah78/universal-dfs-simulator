@@ -115,7 +115,14 @@ def apply_sharksnip(pool, html, now=None):
     own = pd.Series(values, index=result.index, dtype=float)
     proxy = .1 + pd.to_numeric(result['MeanPoints'], errors='coerce').rank(pct=True)**2
     scale = float((own[own.notna()] / proxy[own.notna()]).median())
-    result['Projected Ownership'] = own.fillna(proxy * scale).clip(0,100)
+    combined = own.fillna(proxy * scale).clip(0,100)
+    # Nine roster spots impose hard limits on marginal ownership totals.
+    # Reject the whole feed rather than amplify malformed popularity values.
+    positions = result['Position'].astype(str).str.upper().replace({'D':'DST','DEF':'DST'})
+    limits = {'QB':125, 'DST':125, 'RB':330, 'WR':440, 'TE':220}
+    if combined.sum() > 990 or any(float(combined[positions == pos].sum()) > limit for pos, limit in limits.items()):
+        raise ValueError('Ownership totals exceed legal roster capacity; source rejected')
+    result['Projected Ownership'] = combined
     result['Ownership Source'] = ['SharkSnip experimental' if v is not None else 'Projection-rank fallback' for v in values]
     result['Ownership Updated UTC'] = meta['generated_at']
     result['Ownership Draft Group'] = meta['draft_group']
