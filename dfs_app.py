@@ -588,18 +588,43 @@ def learned_field_profiles(platform_name, mode_name, contest, roster_size, pool=
         platform_name, mode_name, fee=fee, max_entries=maximum, roster_size=roster_size, game_count=game_count)
 
 
+def ownership_proposal_target(pool, mode_name, target):
+    from simmah_field_ownership import has_ownership_targets
+    return 5 * int(target) if mode_name in {"Classic", "Full Roster"} and has_ownership_targets(pool) else int(target)
+
+
 def learned_field_proposal_target(platform_name, mode_name, contest, roster_size, target, pool=None):
     return int(np.ceil(target * 1.5)) if learned_field_profiles(platform_name, mode_name, contest, roster_size, pool) else int(target)
 
 
 def apply_learned_field(field, pool, slots, platform_name, mode_name, contest, target, rng):
     profiles = learned_field_profiles(platform_name, mode_name, contest, len(slots), pool)
-    selected, provenance = calibrate_field(field, pool, slots, profiles, target, rng)
+    from simmah_field_ownership import has_ownership_targets, calibrate_field_ownership
+    ownership_fit = mode_name in {"Classic", "Full Roster"} and has_ownership_targets(pool)
+    # Historical construction selection precedes the final ownership fit. It
+    # must leave enough independent proposals for selection without replacement.
+    history_target = min(len(field), 5 * int(target)) if ownership_fit else target
+    selected, provenance = calibrate_field(field, pool, slots, profiles, history_target, rng)
     st.session_state["field_learning_" + platform_name + "_" + mode_name] = provenance
     if provenance.get("applied"):
         st.caption(f"Field learning applied: {provenance['contests']} matching contest(s), {provenance['historical_entries']:,} entries; features: " + ", ".join(provenance["features"]) + ". This calibrates construction, not future player ownership.")
     else:
         st.caption("Field learning: baseline construction used — " + provenance["reason"] + ".")
+    if ownership_fit:
+        with st.spinner("Calibrating final opponent ownership..."):
+            selected, report = calibrate_field_ownership(selected, pool, slots, target, rng)
+        diagnostics = selected.attrs.get("ownership_calibration", {})
+        mean_error = diagnostics.get("mean_absolute_error_pp", 0)
+        max_error = diagnostics.get("max_error_pp", 0)
+        st.caption(f"Final ownership calibration: mean error {mean_error:.2f} percentage points; largest difference {max_error:.2f}. Salary frequencies retained; each generated proposal selected at most once.")
+        if max_error > 3:
+            st.warning("Some ownership targets cannot be closely matched within the available legal proposals and salary mix. Review the final ownership comparison; projected ownership remains an estimate.")
+        with st.expander("Projected versus final opponent ownership", expanded=False):
+            st.dataframe(report, use_container_width=True, hide_index=True)
+            st.download_button("DOWNLOAD OWNERSHIP COMPARISON", report.to_csv(index=False).encode("utf-8"),
+                f"{platform_name}_{mode_name.replace(' ', '_')}_Ownership_Comparison.csv", "text/csv",
+                key=f"ownership_comparison_{platform_name}_{mode_name}", on_click="ignore")
+        st.session_state["ownership_comparison_" + platform_name + "_" + mode_name] = report
     return selected
 
 
@@ -5229,7 +5254,7 @@ if platform == "FanDuel":
                 0,
                 text=f"Building FanDuel opponent field: 0 / {fd_opponent_target:,}"
             )
-            _fd_generation_target = learned_field_proposal_target("FanDuel", lineup_mode, st.session_state.get("selected_fd_contest", {}), len(fd_slots), fd_opponent_target, fd_pool)
+            _fd_generation_target = learned_field_proposal_target("FanDuel", lineup_mode, st.session_state.get("selected_fd_contest", {}), len(fd_slots), ownership_proposal_target(fd_pool, lineup_mode, fd_opponent_target), fd_pool)
             with st.spinner(f"Building {_fd_generation_target:,} simulated FanDuel contest entries..."):
                 if lineup_mode == "Full Roster":
                     from simmah_classic_field import build_full_roster_field
@@ -7038,7 +7063,7 @@ else:
                     ]
                     from simmah_classic_field import build_full_roster_field
                     field_slot_names = [slot for slot, _ in contest_slots]
-                    field_target = learned_field_proposal_target("DraftKings", "Classic", classic_contest, 9, int(dk_opponent_target), pool)
+                    field_target = learned_field_proposal_target("DraftKings", "Classic", classic_contest, 9, ownership_proposal_target(pool, "Classic", dk_opponent_target), pool)
                     _classic_field_progress = st.progress(0, text=f"Building DraftKings opponent field: 0 / {field_target:,}")
                     contest_field_df = build_full_roster_field(pool, pool["Weight"].to_numpy(float), field_slot_names,
                         field_target, rng=rng, platform="DraftKings",
