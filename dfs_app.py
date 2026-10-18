@@ -370,11 +370,24 @@ def preserve_uploaded_ownership(players, raw):
 
 
 @st.cache_data(ttl=900, show_spinner=False)
-def fetch_experimental_dk_ownership():
-    from simmah_ownership import URL
-    response = requests.get(URL, timeout=12)
+def fetch_footballguys_ownership(site):
+    from simmah_footballguys import URL
+    response = requests.get(URL, params={"site": site}, timeout=12)
     response.raise_for_status()
     return response.text
+
+
+def attach_main_slate_ownership(pool, site):
+    from simmah_footballguys import apply_footballguys, has_uploaded_ownership
+    if has_uploaded_ownership(pool):
+        st.caption("Uploaded ownership retained; automatic ownership skipped.")
+        return pool
+    try:
+        pool, note = apply_footballguys(pool, fetch_footballguys_ownership(site), site)
+        st.caption(note)
+    except Exception as exc:
+        st.caption(f"Footballguys ownership unavailable: {exc}. Using estimated popularity.")
+    return pool
 
 
 def opponent_field_selection_weights(pool, fallback_scores):
@@ -387,7 +400,7 @@ def opponent_field_selection_weights(pool, fallback_scores):
     # Prefer true/pregame projected ownership; fall back to the projection-rank
     # proxy below when no external ownership is available.
     own_col = next((lookup[k] for k in (
-        "projected own %", "ownership %", "projected ownership",
+        "ownership selection weight", "projected own %", "ownership %", "projected ownership",
         "projected own", "ownership", "own%", "own"
     ) if k in lookup), None)
     if own_col is not None:
@@ -5164,6 +5177,13 @@ if platform == "FanDuel":
                 if isinstance(values, dict)
             }
         fd_pool["MeanPoints"] = fd_pool["Name"].map(fd_mean_scores).fillna(fd_pool["Projection"])
+        if lineup_mode == "Full Roster":
+            fd_pool = attach_main_slate_ownership(fd_pool, "fanduel")
+            own_cols = [c for c in ["Name", "Team", "Position", "Projected Ownership", "Ownership Selection Weight", "Ownership Source", "Ownership Updated UTC", "Ownership Week"] if c in fd_pool.columns]
+            st.session_state["fd_full_ownership_snapshot"] = fd_pool[own_cols].copy()
+            with st.expander("Opponent projected ownership inputs", expanded=False):
+                st.dataframe(fd_pool[own_cols], use_container_width=True, hide_index=True)
+                st.download_button("DOWNLOAD OWNERSHIP SNAPSHOT", fd_pool[own_cols].to_csv(index=False).encode("utf-8"), "FanDuel_Full_Ownership_Snapshot.csv", "text/csv", key="fd_full_ownership_snapshot_download", on_click="ignore")
         fd_weights = opponent_field_selection_weights(
             fd_pool, fd_pool["MeanPoints"].to_numpy(dtype=float)
         )
@@ -7001,13 +7021,8 @@ else:
                     mean_scores = sim_df.mean(axis=0).to_dict()
                     pool = classic_pool.copy()
                     pool["MeanPoints"] = pool["Name"].map(mean_scores).fillna(pool["Projection"])
-                    try:
-                        from simmah_ownership import apply_sharksnip
-                        pool, ownership_note = apply_sharksnip(pool, fetch_experimental_dk_ownership())
-                        st.caption(ownership_note)
-                    except Exception as ownership_error:
-                        st.caption(f"Automatic DK ownership unavailable: {ownership_error}. Using uploaded ownership or estimated popularity.")
-                    ownership_columns = [c for c in ["Name", "Team", "Opponent", "Position", "Salary", "Projected Ownership", "Ownership Source", "Ownership Updated UTC", "Ownership Draft Group"] if c in pool.columns]
+                    pool = attach_main_slate_ownership(pool, "draftkings")
+                    ownership_columns = [c for c in ["Name", "Team", "Opponent", "Position", "Salary", "Projected Ownership", "Ownership Source", "Ownership Updated UTC", "Ownership Week", "Ownership Selection Weight"] if c in pool.columns]
                     pool["Weight"] = opponent_field_selection_weights(
                         pool, pool["MeanPoints"].to_numpy(dtype=float)
                     )
@@ -9678,3 +9693,4 @@ with st.expander("SIMMAH ROI Tracker", expanded=False):
         )
     else:
         st.info("No contest results recorded yet. Enter actual fees and winnings above to start tracking ROI.")
+
