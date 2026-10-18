@@ -4756,6 +4756,15 @@ if platform == "FanDuel":
             fd_player_display["Field Own %"] = np.nan
             fd_player_display = fd_player_display.drop(columns=["Field MVP Own %", "Field FLEX Own %"], errors="ignore")
 
+    from simmah_player_display import complete_player_display
+    _fd_mode = lineup_mode.replace(" ", "_").lower()
+    fd_player_display = complete_player_display(
+        fd_player_display,
+        st.session_state.get("fd_simulation_df_" + _fd_mode),
+        st.session_state.get("fd_assigned_display_" + _fd_mode, st.session_state.get(fd_build_key)),
+        st.session_state.get("fd_contest_field_" + _fd_mode),
+    )
+    st.caption("Simulation and ownership summaries fill after SIM completes. Pending values are not zero; external ownership and weather require available source data.")
     fd_snapshot_display = fd_player_display.copy()
     for sim_key, sim_label in [
         ("Mean", "Sim Pts"), ("P10", "Sim P10"), ("P25", "Sim P25"),
@@ -5462,6 +5471,7 @@ if platform == "FanDuel":
             st.caption("These lineups are used for both the portfolio report and entry replacement.")
             st.dataframe(fd_export_portfolio, use_container_width=True, hide_index=True)
 
+        st.session_state["fd_assigned_display_" + lineup_mode.replace(" ", "_").lower()] = fd_export_portfolio.copy()
         # Use the same player-by-player points layout as the DraftKings Portfolio.
         fd_display = fd_results.copy()
         fd_player_means = {
@@ -6491,6 +6501,14 @@ else:
 
     # Combine player details, simulated stats, realized exposure, and editable controls
     # into one table so exposure is visible beside the limits you can change.
+    from simmah_player_display import complete_player_display
+    player_display = complete_player_display(
+        player_display, st.session_state.get("simulation_df"),
+        st.session_state.get("classic_contest_entries_df", st.session_state.get("classic_lineups")) if lineup_mode == "Classic" else st.session_state.get("portfolio_df"),
+        st.session_state.get("classic_contest_field_df") if lineup_mode == "Classic" else st.session_state.get("contest_field_df"),
+        st.session_state.get("classic_ownership_snapshot") if lineup_mode == "Classic" else None,
+    )
+    st.caption("Simulation and ownership summaries fill after SIM completes. Pending values are not zero; unavailable weather is shown explicitly.")
     control_display = player_display.copy()
     for required_column in ["Name", "Position", "Team", "Opponent"]:
         if required_column not in control_display.columns:
@@ -6909,10 +6927,14 @@ else:
                     except Exception as ownership_error:
                         st.caption(f"Automatic DK ownership unavailable: {ownership_error}. Using uploaded ownership or estimated popularity.")
                     ownership_columns = [c for c in ["Name", "Team", "Opponent", "Position", "Salary", "Projected Ownership", "Ownership Source", "Ownership Updated UTC", "Ownership Draft Group"] if c in pool.columns]
-                    st.session_state["classic_ownership_snapshot"] = pool[ownership_columns].copy()
                     pool["Weight"] = opponent_field_selection_weights(
                         pool, pool["MeanPoints"].to_numpy(dtype=float)
                     )
+                    if "Ownership Source" not in pool.columns:
+                        pool["Ownership Source"] = "Uploaded ownership" if "Projected Ownership" in pool.columns else "Projection-rank popularity fallback (no external ownership)"
+                    pool["Opponent Selection Weight"] = pool["Weight"]
+                    ownership_columns = list(dict.fromkeys(ownership_columns + ["Ownership Source", "Opponent Selection Weight"]))
+                    st.session_state["classic_ownership_snapshot"] = pool[ownership_columns].copy()
                     contest_slots = [
                         ("QB", {"QB"}), ("RB1", {"RB"}), ("RB2", {"RB"}),
                         ("WR1", {"WR"}), ("WR2", {"WR"}), ("WR3", {"WR"}),
@@ -7221,8 +7243,9 @@ else:
             else:
                 st.info("Upload a DraftKings salary/template CSV containing player IDs to enable lineup export.")
 
-        # Keep the one-click Contest Sim results on screen. A later normal Streamlit
-        # interaction will refresh the Player Pool from the saved simulation state.
+        # Re-render the player table, which appears before the SIM button.
+        if classic_run_all:
+            st.rerun()
         st.stop()
 
 
