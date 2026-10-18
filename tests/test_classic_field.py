@@ -61,6 +61,8 @@ class ClassicFieldTest(unittest.TestCase):
         self.assertTrue(result.Salary.between(47000,50000).all())
         np.testing.assert_array_equal(result.Salary,pool.Salary.to_numpy()[picks].sum(axis=1))
         self.assertEqual(result.attrs['platform'],'DraftKings')
+        canonical=result[slots].apply(lambda row:tuple(sorted(row)),axis=1)
+        self.assertGreater(canonical.nunique(),.95*len(result))
 
     def test_field_weights_are_invariant_to_normalization(self):
         import pandas as pd
