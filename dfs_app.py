@@ -2270,9 +2270,9 @@ def full_roster_contest_parameters(contest, representative_count):
         "payouts_known": bool(tiers) and known_field and contest.get("entry_fee") is not None}
 
 @st.cache_data(show_spinner=False, max_entries=8)
-def evaluate_full_roster_portfolio_cached(outcomes, portfolio, field, slots, field_size, tiers, fee):
+def evaluate_full_roster_portfolio_cached(outcomes, portfolio, field, slots, field_size, tiers, fee, multipliers=None):
     from simmah_contests import evaluate_contest
-    return evaluate_contest(outcomes, portfolio, field, slots, field_size, tiers, fee, joint=True)
+    return evaluate_contest(outcomes, portfolio, field, slots, field_size, tiers, fee, multipliers=multipliers, joint=True)
 
 
 @st.cache_data(ttl=900, show_spinner=False)
@@ -5252,10 +5252,21 @@ if platform == "FanDuel":
                         st.session_state["fd_full_roster_evaluation_context"] = dict(st.session_state.get("selected_fd_contest") or {})
                         st.caption(f"All {len(_fd_roi_sim):,} independent evaluation outcomes scored against the same {len(_fd_final_field):,} opponents. Ties share occupied prizes; no extra ROI field is built.")
                     else:
-                        compared["BeatsOpponents"] = compared["ProjectedPoints"].apply(lambda score: int(np.sum(scores < float(score))))
-                        compared["FieldPercentile"] = compared["ProjectedPoints"].apply(lambda score: round(100.0 * np.mean(scores <= float(score)), 1))
-                        compared["FieldRank"] = compared["ProjectedPoints"].apply(lambda score: 1 + int(np.sum(scores > float(score))))
-                        compared = add_field_ranking_metrics(compared, scores)
+                        from simmah_contests import evaluate_contest
+                        _single_outcomes = st.session_state.get("fd_simulation_df_single_game")
+                        if not isinstance(_single_outcomes, pd.DataFrame) or len(_single_outcomes) != SIMULATION_COUNT:
+                            raise ValueError("Run a fresh Single Game SIM before contest evaluation")
+                        _single_spec = full_roster_contest_parameters(st.session_state.get("selected_fd_contest"), len(opponent_df))
+                        compared = evaluate_contest(_single_outcomes, compared, opponent_df, fd_slots,
+                            _single_spec["field_size"], _single_spec["tiers"], _single_spec["fee"],
+                            multipliers=[1.5, 1, 1, 1, 1, 1],
+                            progress=lambda fraction,text: fd_step4_progress.progress(fraction,text=text))
+                        if not _single_spec["payouts_known"]:
+                            compared = compared.drop(columns=["CashRate", "Expected Prize ($)", "Expected Net ($)", "Expected ROI (%)", "Entry Fee ($)"], errors="ignore")
+                            compared["ContestScore"] = compared["Top1"]
+                        st.session_state["fd_single_game_evaluation_context"] = dict(st.session_state.get("selected_fd_contest") or {})
+                        st.session_state["fd_single_game_evaluation_engine"] = "shared-contest-mvp-v1"
+                        st.caption("Candidates and opponents scored on the same independent game outcomes, including 1.5x MVP points. Cash and ROI require confirmed contest payouts.")
                     st.session_state["fd_contest_comparison_" + lineup_mode.replace(" ", "_").lower()] = compared
                     fd_step4_progress.progress(1.0, text="Step 4 of 4 complete: FanDuel contest comparison finished.")
                     fd_step4_status.success("Step 4 of 4 complete: contest comparison finished.")
@@ -5304,6 +5315,9 @@ if platform == "FanDuel":
         if lineup_mode == "Full Roster" and st.session_state.get("fd_full_roster_evaluation_context") != dict(st.session_state.get("selected_fd_contest") or {}):
             fd_rank_source = None
 
+        if lineup_mode == "Single Game" and (st.session_state.get("fd_single_game_evaluation_engine") != "shared-contest-mvp-v1" or st.session_state.get("fd_single_game_evaluation_context") != dict(st.session_state.get("selected_fd_contest") or {})):
+            fd_rank_source = None
+            st.warning("Run a fresh Single Game SIM to calculate shared-outcome finish rates.")
         if not isinstance(fd_rank_source, pd.DataFrame) or fd_rank_source.empty:
             fd_rank_source = add_field_ranking_metrics(fd_results, fd_results["ProjectedPoints"].to_numpy(dtype=float))
         # Persistent FanDuel Full Roster sanity check and opponent lineup viewer.
@@ -5417,6 +5431,15 @@ if platform == "FanDuel":
             _fd_single_owned = int((st.session_state.get("selected_fd_contest") or {}).get("your_entries") or len(fd_results))
             _fd_single_seed = fd_results.head(max(1, _fd_single_owned))
             fd_export_portfolio = _fd_single_seed.iloc[np.arange(max(1, _fd_single_owned)) % len(_fd_single_seed)].reset_index(drop=True)
+            _single_field = st.session_state.get("fd_contest_field_single_game")
+            _single_outcomes = st.session_state.get("fd_simulation_df_single_game")
+            if st.session_state.get("fd_single_game_evaluation_engine") == "shared-contest-mvp-v1" and st.session_state.get("fd_single_game_evaluation_context") == dict(st.session_state.get("selected_fd_contest") or {}) and isinstance(_single_field, pd.DataFrame) and isinstance(_single_outcomes, pd.DataFrame):
+                _single_spec = full_roster_contest_parameters(st.session_state.get("selected_fd_contest"), len(_single_field))
+                fd_export_portfolio = evaluate_full_roster_portfolio_cached(_single_outcomes, fd_export_portfolio,
+                    _single_field, fd_slots, _single_spec["field_size"], _single_spec["tiers"], _single_spec["fee"],
+                    multipliers=(1.5, 1, 1, 1, 1, 1))
+                if not _single_spec["payouts_known"]:
+                    fd_export_portfolio = fd_export_portfolio.drop(columns=["CashRate", "Expected Prize ($)", "Expected Net ($)", "Expected ROI (%)", "Entry Fee ($)"], errors="ignore")
             st.write("### Assigned contest portfolio")
             st.caption("These lineups are used for both the portfolio report and entry replacement.")
             st.dataframe(fd_export_portfolio, use_container_width=True, hide_index=True)
