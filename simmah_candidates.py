@@ -27,10 +27,37 @@ def offense_vs_defense_allowed(chosen, lookup):
                    for dteam,dopp in defense for oteam,oopp in offense)
 
 
+def construction_scenario_weights(values, diversity=1.0):
+    """Favor typical joint outcomes at low diversity; use all draws equally at 1.
+
+    Typicality is the mean squared player deviation from the simulated median,
+    scaled by each player's standard deviation (floored at one fantasy point).
+    Weight complete slate rows, never shuffle players or alter their scores.
+    This is a construction preference, not a change to event probabilities used
+    in independent contest evaluation.
+    """
+    diversity = float(diversity)
+    if not np.isfinite(diversity) or not 0 <= diversity <= 1:
+        raise ValueError('Scenario diversity must be between zero and one')
+    values = np.asarray(values, dtype=float)
+    if values.ndim != 2 or not values.size or not np.isfinite(values).all():
+        raise ValueError('Scenario values must be a finite nonempty matrix')
+    if diversity == 1:
+        return np.full(len(values), 1.0 / len(values))
+    scale = np.maximum(values.std(axis=0), 1.0)
+    distance = np.mean(((values - np.median(values, axis=0)) / scale) ** 2, axis=1)
+    # Equal-distance stories receive equal weights, including constant matrices.
+    _, inverse, counts = np.unique(distance, return_inverse=True, return_counts=True)
+    percentile = ((counts.cumsum() - counts / 2) / len(values))[inverse]
+    weights = np.exp(-6.0 * (1.0 - diversity) * percentile)
+    return weights / weights.sum()
+
+
 def build_candidates(pool,outcomes,roster,target=5000,salary_min=0,salary_max=50000,
                      multipliers=None,salary_costs=None,locks=(),special_allowed=None,
                      max_from_team=None,require_both_teams=False,validator=None,
-                     rng=None,progress=None,max_proposals=100000,noise=.08,penalties=None,primary_stacks=None,avoid_opposing_defense=False):
+                     rng=None,progress=None,max_proposals=100000,noise=.08,penalties=None,primary_stacks=None,avoid_opposing_defense=False,
+                     scenario_diversity=1.0):
     rng=np.random.default_rng() if rng is None else rng
     pool=pool.drop_duplicates('Name').reset_index(drop=True)
     names=pool['Name'].astype(str).to_numpy(object)
@@ -39,6 +66,8 @@ def build_candidates(pool,outcomes,roster,target=5000,salary_min=0,salary_max=50
     if missing:raise ValueError('Candidate outcomes are missing players: '+', '.join(sorted(missing)[:5]))
     values=outcomes.reindex(columns=names).to_numpy(dtype=np.float32)
     if not len(values) or not np.isfinite(values).all():raise ValueError('Candidate outcomes must be finite and nonempty')
+    scenario_weights = construction_scenario_weights(values, scenario_diversity)
+    scenario_draws = np.zeros(len(values), dtype=np.int64)
     slots=[slot for slot,_ in roster];count=len(slots)
     mult=np.ones(count) if multipliers is None else np.asarray(multipliers,float)
     salary=pd.to_numeric(pool['Salary'],errors='raise').to_numpy(float)
@@ -75,7 +104,9 @@ def build_candidates(pool,outcomes,roster,target=5000,salary_min=0,salary_max=50
     rejected={'incomplete_or_salary':0,'team_limit':0,'stack_rules':0,'duplicate':0}
     while len(records)<target and proposed<max_proposals:
         batch=min(256,max_proposals-proposed);proposed+=batch
-        scenario=rng.integers(0,len(values),batch)
+        scenario=(rng.integers(0,len(values),batch) if scenario_diversity == 1.0
+                  else rng.choice(len(values), size=batch, p=scenario_weights))
+        scenario_draws += np.bincount(scenario, minlength=len(values))
         joint=values[scenario]
         picks=np.full((batch,count),-1,dtype=int);fixed=np.zeros((batch,count),bool)
         total=np.zeros(batch);alive=np.ones(batch,bool)
@@ -192,7 +223,10 @@ def build_candidates(pool,outcomes,roster,target=5000,salary_min=0,salary_max=50
             if len(records)>=target:break
         if progress:progress(min(1,len(records)/target),f'Building from joint outcomes: {len(records):,} / {target:,}')
     result=pd.DataFrame(records)
-    result.attrs.update(engine='joint-outcome-search-v2',proposals=proposed,target=target,rejected=rejected,stack_seeded=bool(primary_stacks))
+    result.attrs.update(engine='joint-outcome-search-v3',proposals=proposed,target=target,rejected=rejected,stack_seeded=bool(primary_stacks),
+                        scenario_diversity=float(scenario_diversity),
+                        scenario_effective_outcomes=float(1.0 / np.sum(scenario_weights ** 2)),
+                        scenario_unique_draws=int(np.count_nonzero(scenario_draws)))
     return result
 
 

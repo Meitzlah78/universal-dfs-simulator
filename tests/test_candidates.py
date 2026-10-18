@@ -1,6 +1,6 @@
 import itertools,unittest
 import numpy as np,pandas as pd
-from simmah_candidates import build_candidates,summarize_candidates
+from simmah_candidates import build_candidates,summarize_candidates,construction_scenario_weights
 
 
 def fixture(site='DK'):
@@ -17,6 +17,43 @@ def fixture(site='DK'):
 
 
 class CandidateTest(unittest.TestCase):
+    def test_diversity_broadens_joint_scenario_sampling_without_changing_scores(self):
+        values=np.column_stack([np.arange(1000),np.arange(1000)[::-1]]).astype(float)
+        original=values.copy()
+        low=construction_scenario_weights(values,0)
+        middle=construction_scenario_weights(values,.5)
+        high=construction_scenario_weights(values,1)
+        extreme=(np.arange(1000)<100)|(np.arange(1000)>=900)
+        self.assertLess(low[extreme].sum(),middle[extreme].sum())
+        self.assertLess(middle[extreme].sum(),high[extreme].sum())
+        self.assertTrue(np.allclose(high,1/1000))
+        self.assertTrue((low>0).all())
+        self.assertTrue(np.array_equal(values,original))
+        self.assertLess(1/(low@low),1/(middle@middle))
+        self.assertLess(1/(middle@middle),1/(high@high))
+        constant=construction_scenario_weights(np.ones((10,4)),0)
+        self.assertTrue(np.allclose(constant,.1))
+
+    def test_diversity_reaches_full_roster_and_single_game_builds(self):
+        pool,out,roster=fixture()
+        for value in (0,.5,1):
+            result=build_candidates(pool,out,roster,target=20,scenario_diversity=value,rng=np.random.default_rng(7))
+            self.assertEqual(len(result),20)
+            self.assertEqual(result.attrs['scenario_diversity'],value)
+            self.assertGreater(result.attrs['scenario_unique_draws'],0)
+            if value==1:self.assertAlmostEqual(result.attrs['scenario_effective_outcomes'],len(out))
+        pool=pool.iloc[:24].copy();out=out[pool.Name]
+        roster=[('Captain',set())]+[(f'Flex{i}',set()) for i in range(1,6)]
+        for value in (0,1):
+            result=build_candidates(pool,out,roster,target=20,scenario_diversity=value,
+                                    multipliers=[1.5,1,1,1,1,1],rng=np.random.default_rng(8))
+            self.assertEqual(len(result),20)
+            self.assertEqual(result.attrs['scenario_diversity'],value)
+
+    def test_rejects_invalid_diversity(self):
+        for value in (-.1,1.1,np.nan):
+            with self.assertRaises(ValueError):construction_scenario_weights(np.ones((3,2)),value)
+
     def test_both_full_roster_sites_locks_and_limits(self):
         for site,minimum,maximum in [('DK',47000,50000),('FD',57000,60000)]:
             pool,out,roster=fixture(site)

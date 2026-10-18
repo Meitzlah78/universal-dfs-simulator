@@ -2609,7 +2609,7 @@ def save_automatic_pregame_snapshot(snapshot_df, format_label, correlation_pct=0
     snapshot["Field Size"] = pd.to_numeric(contest.get("field_size"), errors="coerce")
     snapshot["Your Entries"] = pd.to_numeric(contest.get("your_entries"), errors="coerce")
     snapshot["Game Correlation %"] = round(float(correlation_pct), 1)
-    snapshot["Build Aggressiveness %"] = round(float(aggressiveness_pct), 1)
+    snapshot["Simulation Diversity %"] = round(float(aggressiveness_pct), 1)
 
     slug = _safe_snapshot_slug(format_label)
     csv_path = _pregame_snapshot_dir() / f"{game_date}_{slug}_latest.csv"
@@ -2948,10 +2948,6 @@ st.caption("Workflow: Slate Setup → Contest → Player Pool → Build Settings
 
 # Initialize from the saved slider value; the control itself appears beside SIM.
 aggressiveness = float(st.session_state.get(f"lineup_build_aggressiveness_{platform}_{lineup_mode}", 100 if ((platform == "DraftKings" and lineup_mode == "Showdown") or (platform == "FanDuel" and lineup_mode == "Single Game")) else 50)) / 100.0
-P95_WEIGHT = 0.60 - 0.30 * aggressiveness
-P99_WEIGHT = 0.10 + 0.45 * aggressiveness
-MEAN_WEIGHT = 1.0 - P95_WEIGHT - P99_WEIGHT
-STDDEV_WEIGHT = 0.10 * (2.0 * aggressiveness - 1.0)
 
 # The correlation slider is displayed with Build Settings below.
 # Read its saved value here; the Build Settings control updates it before SIM runs.
@@ -4072,7 +4068,7 @@ def build_joint_candidate_pool(pool, platform_name, mode_name, evaluation_outcom
         salary_min=salary_min, salary_max=salary_max, multipliers=multipliers, salary_costs=salary_costs,
         locks=locks, special_allowed=special_allowed, max_from_team=(5 if multipliers else 4 if platform_name=="FanDuel" else 8),
         require_both_teams=True, validator=validator, rng=np.random.default_rng(),
-        noise=.12-.08*float(np.clip(aggressiveness,0,1)), penalties=penalty, primary_stacks=seed_patterns,
+        noise=.08, scenario_diversity=float(np.clip(aggressiveness,0,1)), penalties=penalty, primary_stacks=seed_patterns,
         avoid_opposing_defense=mode_name in {"Classic", "Full Roster"},
         progress=lambda fraction, text: progress.progress(fraction, text=text))
     metadata = dict(result.attrs)
@@ -4969,18 +4965,14 @@ if platform == "FanDuel":
         )
     with build_cols[1]:
         aggressiveness_pct = st.slider(
-            "Lineup Build Aggressiveness", 0, 100,
+            "Simulation diversity", 0, 100,
             100 if ((platform == "DraftKings" and lineup_mode == "Showdown") or (platform == "FanDuel" and lineup_mode == "Single Game")) else 50,
             step=5,
-            help="Aggressive searches more tightly around each simulated outcome; lower settings add search randomness. Does not change simulation or lineup counts.",
+            help="Lower settings favor typical simulated game outcomes. Higher settings spread candidate building across a broader range of complete game outcomes, including extremes. At 100%, every construction outcome is equally likely. Does not change contest evaluation, simulation counts, or portfolio exposure limits.",
             key=f"lineup_build_aggressiveness_{platform}_{lineup_mode}",
         )
         aggressiveness = aggressiveness_pct / 100.0
-        P95_WEIGHT = 0.60 - 0.30 * aggressiveness
-        P99_WEIGHT = 0.10 + 0.45 * aggressiveness
-        MEAN_WEIGHT = 1.0 - P95_WEIGHT - P99_WEIGHT
-        STDDEV_WEIGHT = 0.10 * (2.0 * aggressiveness - 1.0)
-        st.caption(f"Build style: {aggressiveness_pct}% aggressive. Candidates optimize individual joint game outcomes; the setting controls search randomness.")
+        st.caption(f"Simulation diversity: {aggressiveness_pct}%. Lower favors typical game stories; higher includes a broader range of outcomes. Applies to new candidate builds.")
         if lineup_mode in ("Showdown", "Single Game"):
             correlation_pct = st.slider(
                 "Game Correlation", 0, 100,
@@ -6864,18 +6856,14 @@ else:
         MIN_LINEUP_SALARY, MAX_LINEUP_SALARY = dk_salary_range
         with build_cols[1]:
             aggressiveness_pct = st.slider(
-                "Lineup Build Aggressiveness", 0, 100,
+                "Simulation diversity", 0, 100,
                 100 if ((platform == "DraftKings" and lineup_mode == "Showdown") or (platform == "FanDuel" and lineup_mode == "Single Game")) else 50,
                 step=5,
-                help="Aggressive searches more tightly around each simulated outcome; lower settings add search randomness. Does not change simulation or lineup counts.",
+                help="Lower settings favor typical simulated game outcomes. Higher settings spread candidate building across a broader range of complete game outcomes, including extremes. At 100%, every construction outcome is equally likely. Does not change contest evaluation, simulation counts, or portfolio exposure limits.",
                 key=f"lineup_build_aggressiveness_{platform}_{lineup_mode}",
             )
             aggressiveness = aggressiveness_pct / 100.0
-            P95_WEIGHT = 0.60 - 0.30 * aggressiveness
-            P99_WEIGHT = 0.10 + 0.45 * aggressiveness
-            MEAN_WEIGHT = 1.0 - P95_WEIGHT - P99_WEIGHT
-            STDDEV_WEIGHT = 0.10 * (2.0 * aggressiveness - 1.0)
-            st.caption(f"Build style: {aggressiveness_pct}% aggressive. Candidates optimize individual joint game outcomes; the setting controls search randomness.")
+            st.caption(f"Simulation diversity: {aggressiveness_pct}%. Lower favors typical game stories; higher includes a broader range of outcomes. Applies to new candidate builds.")
 
         dk_classic_stack_rules = st.multiselect(
             "Stacks to use in MY lineups",
@@ -7368,18 +7356,14 @@ with build_cols[0]:
 MIN_LINEUP_SALARY, MAX_LINEUP_SALARY = dk_salary_range
 with build_cols[1]:
     aggressiveness_pct = st.slider(
-        "Lineup Build Aggressiveness", 0, 100,
+        "Simulation diversity", 0, 100,
         100 if ((platform == "DraftKings" and lineup_mode == "Showdown") or (platform == "FanDuel" and lineup_mode == "Single Game")) else 50,
         step=5,
-        help="Aggressive searches more tightly around each simulated outcome; lower settings add search randomness. Does not change simulation or lineup counts.",
+        help="Lower settings favor typical simulated game outcomes. Higher settings spread candidate building across a broader range of complete game outcomes, including extremes. At 100%, every construction outcome is equally likely. Does not change contest evaluation, simulation counts, or portfolio exposure limits.",
         key=f"lineup_build_aggressiveness_{platform}_{lineup_mode}",
     )
     aggressiveness = aggressiveness_pct / 100.0
-    P95_WEIGHT = 0.60 - 0.30 * aggressiveness
-    P99_WEIGHT = 0.10 + 0.45 * aggressiveness
-    MEAN_WEIGHT = 1.0 - P95_WEIGHT - P99_WEIGHT
-    STDDEV_WEIGHT = 0.10 * (2.0 * aggressiveness - 1.0)
-    st.caption(f"Build style: {aggressiveness_pct}% aggressive. Candidates optimize individual joint game outcomes; the setting controls search randomness.")
+    st.caption(f"Simulation diversity: {aggressiveness_pct}%. Lower favors typical game stories; higher includes a broader range of outcomes. Applies to new candidate builds.")
     if lineup_mode in ("Showdown", "Single Game"):
         correlation_pct = st.slider(
             "Game Correlation", 0, 100,
@@ -7914,6 +7898,7 @@ with st.expander("Contest Payout Structure", expanded=False):
         st.session_state["contest_payout_source_name"] = "User-verified HOU vs JAX $300 Dime Package payout table"
         st.session_state["contest_payout_contest_id"] = "196867391"
         st.session_state["contest_payout_auto_loaded"] = True
+
 
     # Verified payout schedule supplied from the DraftKings contest details.
     # Keep it scoped to this exact contest ID; never apply it to another contest.
@@ -9179,6 +9164,7 @@ if "contest_results_df" in st.session_state and not (platform == "DraftKings" an
         portfolio_df["Simulated Opponent Copies"] = showdown_opponent_copies(
             portfolio_df, st.session_state.get("contest_field_df")
         )
+
     render_portfolio_roi_panel(portfolio_df, st.session_state.get("selected_dk_contest"))
     _payout_columns = ["Expected Prize ($)", "Expected Net ($)", "Expected ROI (%)"]
     if classic_mode:
