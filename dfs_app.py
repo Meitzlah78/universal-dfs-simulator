@@ -5899,6 +5899,9 @@ else:
     # Pregame contest simulation should use the contest capacity when DraftKings
     # provides it. Using current entries while a contest is still filling makes
     # estimated ranks, cash rates, payouts, and ROI too optimistic.
+    # Exact capacity supplied from the contest details, scoped to this contest.
+    if str(active_dk_selection.get("id", "")) == "196786594" and not auto_max_entries:
+        auto_max_entries = 35671
     auto_field_size = auto_max_entries or auto_current_entries
     try:
         fallback_field_size = int(previous_field_size) if previous_field_size else 45396
