@@ -1202,7 +1202,7 @@ def read_projection_csv(uploaded_file, source_label):
 
 
 @st.cache_data(show_spinner=False, ttl=900)
-def download_public_projection_table(source_name, platform_name, target_names=None):
+def download_public_projection_table(source_name, platform_name, target_names=None, target_teams=None):
     """Download real projections using the same HTML-table/row attributes tested in Colab."""
     import io
     import re
@@ -1215,12 +1215,50 @@ def download_public_projection_table(source_name, platform_name, target_names=No
         if normalize_projection_player_name(name)
     }
 
-    def matches_target(projections):
-        return not target_keys or bool(target_keys.intersection(projections))
+    expected_teams = {str(team).strip().upper() for team in (target_teams or []) if str(team).strip()}
+
+    def matches_target(projections, page_html=None):
+        if target_keys and not target_keys.intersection(projections):
+            return False
+        if source_name == "DFF" and is_single_game and len(expected_teams) == 2:
+            # Shared players alone cannot identify a game (GB vs MIN is not DAL vs GB).
+            document = page_html if page_html is not None else response.text
+            page_teams = set()
+            for tag in re.findall(r"<tr\b[^>]*projections-listing[^>]*>", document, re.IGNORECASE):
+                attrs = dict(re.findall(r"([\w-]+)\s*=\s*[\"']([^\"']*)[\"']", tag))
+                if attrs.get("data-team"):
+                    page_teams.add(attrs["data-team"].strip().upper())
+                if attrs.get("data-opp"):
+                    page_teams.add(attrs["data-opp"].strip().upper())
+            return page_teams == expected_teams
+        return True
 
     platform_key = str(platform_name).casefold()
     is_single_game = "single game" in platform_key or "showdown" in platform_key
     site = "fanduel" if "fanduel" in platform_key else "draftkings"
+
+    # Remember only the verified route, never the projection values. Manual
+    # refresh clears the data cache but can fetch this slate directly again.
+    route_key = (site, tuple(sorted(target_keys)), tuple(sorted(expected_teams)))
+    route_cache = st.session_state.setdefault("verified_dff_slate_routes", {})
+    if source_name == "DFF" and is_single_game and target_keys:
+        route = route_cache.get(route_key)
+        if route:
+            try:
+                direct = requests.get(route, headers={"User-Agent": "Mozilla/5.0"}, timeout=12)
+                direct.raise_for_status()
+                values = {}
+                for tag in re.findall(r"<tr\b[^>]*projections-listing[^>]*>", direct.text, re.IGNORECASE):
+                    attrs = dict(re.findall(r"([\w-]+)\s*=\s*[\"']([^\"']*)[\"']", tag))
+                    key = normalize_projection_player_name(unescape(attrs.get("data-name", "")))
+                    value = pd.to_numeric(attrs.get("data-ppg_proj"), errors="coerce")
+                    if key and pd.notna(value) and np.isfinite(float(value)) and float(value) >= 0:
+                        values[key] = float(value)
+                if len(target_keys.intersection(values)) >= min(2, len(target_keys)) and matches_target(values, direct.text):
+                    return values
+            except Exception:
+                pass
+            route_cache.pop(route_key, None)
 
     # FanDuel Single Game: bypass the legacy Showdown routing entirely. DFF's
     # recent-slates endpoint currently supplies dates without slate IDs, while
@@ -1329,7 +1367,9 @@ def download_public_projection_table(source_name, platform_name, target_names=No
                         best_values = values
                         best_overlap = len(overlap)
                         best_date = slate_date
+                        best_url = page_url
             if best_overlap >= min(2, len(target_keys)):
+                route_cache[route_key] = best_url
                 return best_values
 
             # DFF does not always expose alternate Single Game slate codes in
@@ -1702,7 +1742,7 @@ def download_public_projection_table(source_name, platform_name, target_names=No
                         # player name cannot select the wrong matchup.
                         overlap = target_keys.intersection(slate_result)
                         required_overlap = min(2, len(target_keys))
-                        if slate_result and len(overlap) >= required_overlap:
+                        if slate_result and len(overlap) >= required_overlap and matches_target(slate_result, slate_page.text):
                             return slate_result
             except Exception:
                 pass
@@ -1755,6 +1795,10 @@ def download_public_projection_table(source_name, platform_name, target_names=No
                 valid_dates = sorted({d for d, _ in candidates
                                       if current_date.isoformat() <= d <= (current_date + timedelta(days=7)).isoformat()})
                 candidates = [(d, code) for d, code in candidates if d in valid_dates]
+                preferred_codes = set()
+                selected_name = str(st.session_state.get("selected_dk_contest", {}).get("name", "")).upper()
+                matchup = re.search(r"\(([A-Z]{2,3})\s*@\s*([A-Z]{2,3})\)", selected_name)
+                preferred_teams = expected_teams or (set(matchup.groups()) if matchup and site == "draftkings" else set())
                 for slate_date in valid_dates:
                     discovery_url = (f"https://www.dailyfantasyfuel.com/nfl/"
                                      f"showdown-single-game-projections/{site}/{slate_date}/")
@@ -1776,10 +1820,13 @@ def download_public_projection_table(source_name, platform_name, target_names=No
                                 candidate = (slate_date, code)
                                 if candidate not in candidates:
                                     candidates.append(candidate)
+                                menu_teams = set(re.findall(r"\b[A-Z]{2,3}\b", str(item.get("slate_type", "")).upper()))
+                                if preferred_teams and menu_teams == preferred_teams:
+                                    preferred_codes.add(candidate)
                     except Exception:
                         continue
                 today = current_date.isoformat()
-                candidates.sort(key=lambda item: (item[0] < today, item[0], item[1]))
+                candidates.sort(key=lambda item: (item not in preferred_codes, item[0] < today, item[0], item[1]))
 
                 def parse_dff_candidate(candidate_html):
                     candidate_result = {}
@@ -1910,7 +1957,8 @@ def download_public_projection_table(source_name, platform_name, target_names=No
                                 break
                         overlap = target_keys.intersection(candidate_result)
                         required_overlap = min(2, len(target_keys))
-                        if candidate_result and len(overlap) >= required_overlap:
+                        if candidate_result and len(overlap) >= required_overlap and matches_target(candidate_result, candidate_response.text):
+                            route_cache[route_key] = candidate_url
                             return candidate_result
             except Exception:
                 pass
@@ -1983,7 +2031,7 @@ def download_public_projection_table(source_name, platform_name, target_names=No
                         value = pd.to_numeric(proj, errors="coerce")
                         if key and pd.notna(value) and np.isfinite(float(value)) and float(value) >= 0:
                             dated_result[key] = float(value)
-                    if dated_result and matches_target(dated_result):
+                    if dated_result and matches_target(dated_result, dated_html):
                         return dated_result
             except Exception:
                 pass
@@ -2188,19 +2236,20 @@ def automatic_projection_refresh(platform_name):
 
 
 
-def get_projection_source_data(uploaded_file, source_name, platform_name, target_names=None):
+def get_projection_source_data(uploaded_file, source_name, platform_name, target_names=None, target_teams=None):
     uploaded = read_projection_csv(uploaded_file, source_name)
     if uploaded:
         return uploaded, "uploaded CSV"
-    downloaded = download_public_projection_table(source_name, platform_name, target_names=target_names)
+    downloaded = download_public_projection_table(source_name, platform_name, target_names=target_names, target_teams=target_teams)
     return downloaded, "automatic download" if downloaded else "unavailable"
 
 def apply_external_projection_sources(players_frame, dff_file, draftedge_file, platform_name='DraftKings'):
     """Average every available external projection; never substitute internal estimates."""
     result = players_frame.copy()
     target_names = result["Name"].astype(str).tolist() if "Name" in result.columns else []
-    dff, dff_status = get_projection_source_data(dff_file, "DFF", platform_name, target_names)
-    draftedge, draftedge_status = get_projection_source_data(draftedge_file, "DraftEdge", platform_name, target_names)
+    target_teams = tuple(sorted(result["Team"].dropna().astype(str).str.upper().unique())) if "Team" in result.columns else ()
+    dff, dff_status = get_projection_source_data(dff_file, "DFF", platform_name, target_names, target_teams)
+    draftedge, draftedge_status = get_projection_source_data(draftedge_file, "DraftEdge", platform_name, target_names, target_teams)
     source_maps = (("DFF", dff), ("DraftEdge", draftedge))
     match_counts = {name: 0 for name, _ in source_maps}
     projections, sources = [], []
@@ -2862,6 +2911,10 @@ if st.session_state.pop("refresh_projections_requested", False):
     download_public_projection_table.clear()
     fetch_nfl_injury_statuses.clear()
     fetch_game_weather_json.clear()
+    # The player-pool load below fetches the selected slate's fresh data.
+    # Avoid first downloading a second, untargeted copy for the background check.
+    _refresh_throttle_key = "automatic_projection_last_check_" + str(selected_format).strip().casefold().replace(" ", "_")
+    st.session_state[_refresh_throttle_key] = _sticky_datetime.now(ZoneInfo("America/New_York"))
     st.session_state["projection_updates_found"] = False
     st.session_state["injury_updates_found"] = False
     st.session_state["shared_projection_updated_at"] = _sticky_datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %I:%M:%S %p %Z")
@@ -5903,6 +5956,7 @@ else:
     if str(active_dk_selection.get("id", "")) == "196786594" and not auto_max_entries:
         auto_max_entries = 35671
     auto_field_size = auto_max_entries or auto_current_entries
+
     try:
         fallback_field_size = int(previous_field_size) if previous_field_size else 45396
     except (TypeError, ValueError):
@@ -7843,6 +7897,7 @@ with st.expander("Contest Payout Structure", expanded=False):
         st.session_state["contest_payout_source_name"] = "User-verified DAL @ GB $3K Dime Package payout table"
         st.session_state["contest_payout_contest_id"] = "196786594"
         st.session_state["contest_payout_auto_loaded"] = True
+
 
     # Verified payout schedule supplied from the DraftKings contest details.
     # Keep it scoped to this exact contest ID; never apply it to another contest.
