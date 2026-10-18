@@ -623,8 +623,8 @@ def apply_learned_field(field, pool, slots, platform_name, mode_name, contest, t
             st.dataframe(report, use_container_width=True, hide_index=True)
             st.download_button("DOWNLOAD OWNERSHIP COMPARISON", report.to_csv(index=False).encode("utf-8"),
                 f"{platform_name}_{mode_name.replace(' ', '_')}_Ownership_Comparison.csv", "text/csv",
-                key=f"ownership_comparison_{platform_name}_{mode_name}", on_click="ignore")
-        st.session_state["ownership_comparison_" + platform_name + "_" + mode_name] = report
+                key=f"ownership_comparison_download_{platform_name}_{mode_name}", on_click="ignore")
+        st.session_state["ownership_comparison_data_" + platform_name + "_" + mode_name] = report
     return selected
 
 
