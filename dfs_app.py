@@ -5551,8 +5551,10 @@ if platform == "FanDuel":
             except ValueError as exc:
                 st.error(str(exc))
                 st.stop()
+            if _fd_diverse_portfolio.attrs.get("effective_auto_cap_pct", 80) > 80:
+                st.warning(f"The candidate pool cannot fill all assigned entries at the automatic 80% cap. Automatic cap increased to {_fd_diverse_portfolio.attrs['effective_auto_cap_pct']}%; your manual exposure limits remain enforced.")
             fd_all_ranked = put_portfolio_first(fd_all_ranked, _fd_diverse_portfolio, fd_slots)
-            st.caption("Assigned portfolio balances the selected ranking metric with roster overlap. Default player cap: 80%; locks and explicit higher minimums may exceed it. Manual maximums remain enforced. Candidate alternatives remain available below.")
+            st.caption("Assigned portfolio balances the selected ranking metric with roster overlap. Preferred automatic player cap: 80%; it may rise if infeasible. Locks and explicit higher minimums may exceed it. Manual maximums remain enforced. Candidate alternatives remain available below.")
         fd_results = fd_all_ranked.head(int(fd_rank_count)).copy()
 
         fd_export_portfolio = fd_all_ranked
@@ -7268,10 +7270,12 @@ else:
             except ValueError as exc:
                 st.error(str(exc))
                 st.stop()
+            if classic_export_portfolio.attrs.get("effective_auto_cap_pct", 80) > 80:
+                st.warning(f"The candidate pool cannot fill all assigned entries at the automatic 80% cap. Automatic cap increased to {classic_export_portfolio.attrs['effective_auto_cap_pct']}%; your manual exposure limits remain enforced.")
             _classic_unique_entries = classic_export_portfolio.copy()
             classic_top_portfolio = put_portfolio_first(classic_portfolio_source, classic_export_portfolio,
                 _classic_slots).head(int(classic_portfolio_count)).copy()
-            st.caption("Assigned portfolio balances the selected ranking metric with roster overlap. Default player cap: 80%; locks and explicit higher minimums may exceed it. Manual maximums remain enforced. Display count does not change assigned entries.")
+            st.caption("Assigned portfolio balances the selected ranking metric with roster overlap. Preferred automatic player cap: 80%; it may rise if infeasible. Locks and explicit higher minimums may exceed it. Manual maximums remain enforced. Display count does not change assigned entries.")
             st.session_state["classic_contest_entries_df"] = classic_export_portfolio.copy()
             classic_top_portfolio["Assigned to contest"] = np.arange(len(classic_top_portfolio)) < len(_classic_unique_entries)
             _classic_portfolio_field = st.session_state.get("classic_contest_field_df")

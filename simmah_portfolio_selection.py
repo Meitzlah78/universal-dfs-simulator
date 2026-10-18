@@ -27,6 +27,7 @@ def select_portfolio(candidates, slots, count, metric, controls=None, default_ma
     incidence=np.zeros((len(ranked),len(names)),np.int8)
     incidence[np.arange(len(ranked))[:,None],picks]=1
     lower=np.zeros(len(names),int);upper=np.zeros(len(names),int)
+    hard_upper=np.zeros(len(names),int);automatic=np.ones(len(names),bool)
     for i,name in enumerate(names):
         cfg=controls.get(name,{})
         def pct(key,default):
@@ -36,7 +37,9 @@ def select_portfolio(candidates, slots, count, metric, controls=None, default_ma
         locked=bool(cfg.get('Lock',False));faded=bool(cfg.get('Fade',False))
         minimum=100 if locked else manual_min
         maximum=manual_max if locked or manual_min>default_max else min(manual_max,default_max)
-        if faded:maximum=0
+        if faded:maximum=0;manual_max=0
+        automatic[i]=not locked and manual_min<=default_max
+        hard_upper[i]=0 if manual_max<=0 else max(1,math.floor(count*manual_max/100+1e-9))
         lower[i]=math.ceil(count*minimum/100-1e-9)
         upper[i]=0 if maximum<=0 else max(1,math.floor(count*maximum/100+1e-9))
         if lower[i]>upper[i]:raise ValueError(f'Conflicting portfolio exposure limits for {name}')
@@ -47,6 +50,7 @@ def select_portfolio(candidates, slots, count, metric, controls=None, default_ma
     utility=np.where(finite,(quality-lo)/max(hi-lo,1e-9),-np.inf)
     chosen=[];used=np.zeros(len(ranked),bool);counts=np.zeros(len(names),int)
     overlap=np.zeros(len(ranked),float)
+    selection_method="greedy";effective_auto_cap=default_max
     for turn in range(count):
         remaining=count-turn
         valid=(~used)&np.all(counts[picks]<upper[picks],axis=1)
@@ -60,15 +64,54 @@ def select_portfolio(candidates, slots, count, metric, controls=None, default_ma
         score[~valid]=-np.inf
         best=int(np.argmax(score))
         if not np.isfinite(score[best]):
-            raise ValueError(f'Exposure constraints allowed only {len(chosen)} of {count} portfolio entries. Adjust limits or expand candidates; no duplicates were added.')
+            chosen,effective_auto_cap=_repair_portfolio(incidence,lower,upper,hard_upper,automatic,
+                count,utility,finite,default_max)
+            selection_method="integer repair"
+            counts=incidence[chosen].sum(axis=0)
+            break
         chosen.append(best);used[best]=True;counts[picks[best]]+=1
         shared=incidence[:,picks[best]].sum(axis=1)/len(slots)
         overlap=np.maximum(overlap,shared)
-    if (counts<lower).any():raise ValueError('Candidate selection could not satisfy all minimum exposures')
+    if (counts<lower).any():
+        chosen,effective_auto_cap=_repair_portfolio(incidence,lower,upper,hard_upper,automatic,
+            count,utility,finite,default_max)
+        selection_method="integer repair"
     result=ranked.iloc[chosen].copy().reset_index(drop=True)
     result.attrs['portfolio_selection']='quality-overlap-exposure-v1'
     result.attrs['default_max_exposure_pct']=default_max
+    result.attrs['effective_auto_cap_pct']=effective_auto_cap
+    result.attrs['selection_method']=selection_method
     return result
+
+
+def _repair_portfolio(incidence,lower,upper,hard_upper,automatic,count,utility,finite,default_max):
+    """Reconsider all early choices with a sparse integer feasibility solve.
+
+    Automatic diversification is a preference. Only after proven infeasibility
+    may it relax in five-point steps. Manual maximums, minimums and locks never
+    relax. A timed-out search is not evidence that constraints are infeasible.
+    """
+    from scipy.optimize import milp,Bounds,LinearConstraint
+    from scipy.sparse import csc_matrix,vstack
+    matrix=vstack([csc_matrix(np.ones((1,len(incidence)))),csc_matrix(incidence.T)],format='csc')
+    objective=-np.where(finite,utility,0)+np.arange(len(incidence))*1e-10
+    bounds=Bounds(np.zeros(len(incidence)),finite.astype(float))
+    cap_levels=list(range(int(default_max),101,5))
+    if 100 not in cap_levels:cap_levels.append(100)
+    for cap in cap_levels:
+        current=upper.copy()
+        current[automatic]=np.minimum(hard_upper[automatic],max(1,math.floor(count*cap/100+1e-9)))
+        solution=milp(objective,integrality=np.ones(len(incidence)),bounds=bounds,
+            constraints=LinearConstraint(matrix,np.r_[count,lower],np.r_[count,current]),
+            options={'time_limit':5.,'mip_rel_gap':.05})
+        if solution.x is not None:
+            chosen=np.flatnonzero(solution.x>.5)
+            counts=incidence[chosen].sum(axis=0)
+            if len(chosen)==count and (counts>=lower).all() and (counts<=current).all():
+                return chosen.tolist(),cap
+        if solution.status!=2:
+            raise ValueError('Portfolio repair reached its search limit without a valid full portfolio. Manual exposure limits were kept; no duplicates were added.')
+    raise ValueError('No full unique portfolio satisfies the manual exposure limits. Adjust those limits or expand the candidate pool; no duplicates were added.')
 
 
 def put_portfolio_first(candidates,selected,slots):
