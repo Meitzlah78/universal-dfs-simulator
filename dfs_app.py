@@ -4265,6 +4265,12 @@ def apply_fd_correlated_simulations(sim_df, player_pool, strength=1.0, seed=2026
     return out
 
 
+@st.cache_data(ttl=900, show_spinner=False)
+def fit_projection_event_inputs_cached(pool, roles, platform, model_version):
+    from simmah_projection_inputs import fit_projection_inputs
+    return fit_projection_inputs(pool, roles, platform, score_nfl_stat_line)
+
+
 def simulate_fd_play_by_play(players_df, rng, n=SIMULATION_COUNT, correlation_strength=1.0, platform="FanDuel"):
     """Generate independent shared football outcomes, then apply exact DFS scoring."""
     from simmah_nfl_engine import simulate_stat_lines, ENGINE_VERSION
@@ -4330,8 +4336,14 @@ def simulate_fd_play_by_play(players_df, rng, n=SIMULATION_COUNT, correlation_st
             "wind_mph": row.get("Wind MPH", 0), "precip_pct": row.get("Precip %", 0),
             "heavy_snow": row.get("Heavy Snow", False), "indoor": row.get("Weather Indoor", False),
         }
+    from simmah_projection_inputs import VERSION as _fit_version
+    _fit_pool = pool[["Name", "Team", "Opponent", "Position", "Projection"]].copy()
+    progress.progress(0, text="Fitting football opportunities and passing rates to slate projections...")
+    _projection_inputs, _projection_fit_report = fit_projection_event_inputs_cached(
+        _fit_pool, _fd_hist_roles, platform, ENGINE_VERSION + _fit_version)
     stats = simulate_stat_lines(
         pool, _fd_hist_roles, rng, n, correlation_strength, weather_by_team=weather_by_team,
+        projection_inputs=_projection_inputs, scoring_platform=platform,
         progress=lambda fraction, text: progress.progress(fraction, text=text),
     )
     out = {}
@@ -4345,6 +4357,14 @@ def simulate_fd_play_by_play(players_df, rng, n=SIMULATION_COUNT, correlation_st
             raise ValueError("NFL engine returned invalid outcomes for " + name)
         out[name] = values
     result = pd.DataFrame(out)
+    _projection_fit_report = _projection_fit_report.copy()
+    _projection_fit_report["Actual Simulation Mean"] = _projection_fit_report["Name"].map(result.mean().to_dict())
+    _projection_fit_report["Simulation Minus Projection"] = _projection_fit_report["Actual Simulation Mean"] - _projection_fit_report["Projection"]
+    st.session_state["projection_event_fit_" + platform] = _projection_fit_report
+    _fit_offense = _projection_fit_report[_projection_fit_report["Calibration Status"].eq("Event inputs fitted")]
+    if not _fit_offense.empty:
+        _fit_mae = _fit_offense["Simulation Minus Projection"].abs().mean()
+        st.caption(f"Projection-informed event inputs: offensive-player mean absolute difference {_fit_mae:.2f} points. Fresh game paths retain shared stats; means are not forced to equal projections. Defense and kicker rates are not fitted by this calibration.")
     result.attrs["engine_version"] = ENGINE_VERSION
     result.attrs["independent_outcomes"] = n
     best = result.max(axis=1)
@@ -5702,6 +5722,10 @@ if platform == "FanDuel":
     from simmah_player_display import scoring_input_report
     _fd_scoring_report = scoring_input_report(fd_player_display,
         st.session_state.get("fd_simulation_df_" + lineup_mode.replace(" ", "_").lower()))
+    _fd_fit_report = st.session_state.get("projection_event_fit_FanDuel")
+    if isinstance(_fd_fit_report, pd.DataFrame) and not _fd_fit_report.empty:
+        _fd_fit_cols = [c for c in ["Name", "Before Calibration", "Pilot Mean", "Passing Input", "Opportunity Input", "Skill Gain Input", "Calibration Status"] if c in _fd_fit_report]
+        _fd_scoring_report = _fd_scoring_report.merge(_fd_fit_report[_fd_fit_cols], on="Name", how="left")
     _fd_scoring_download_slot.download_button("DOWNLOAD PLAYER SCORING INPUTS", _fd_scoring_report.to_csv(index=False).encode("utf-8"),
         "FanDuel_" + lineup_mode.replace(" ", "_") + "_Player_Scoring_Inputs.csv", "text/csv",
         key="fd_player_scoring_inputs_" + lineup_mode.replace(" ", "_").lower(), on_click="ignore")
