@@ -19,6 +19,7 @@ st.set_page_config(
 )
 
 st.title("Universal DFS Simulator")
+st.session_state["active_game_markets"] = {}
 
 def render_portfolio_roi_panel(portfolio, contest=None):
     from simmah_portfolio import portfolio_roi_totals
@@ -392,6 +393,8 @@ def attach_main_slate_ownership(pool, site):
 
 def opponent_field_selection_weights(pool, fallback_scores):
     """Use ownership as the primary opponent-construction signal for full-roster contests."""
+    from simmah_game_lines import field_market_factors
+    market_factors = field_market_factors(pool, st.session_state.get("active_game_markets", {}))
     fallback = np.asarray(fallback_scores, dtype=float)
     lookup = {str(c).strip().casefold(): c for c in pool.columns}
     # Never feed ownership measured from a previous simulated field back into
@@ -407,6 +410,10 @@ def opponent_field_selection_weights(pool, fallback_scores):
         ownership = pd.to_numeric(pool[own_col].astype(str).str.strip().str.replace("%", "", regex=False), errors="coerce").replace([np.inf, -np.inf], np.nan).fillna(0.0).to_numpy(dtype=float)
         ownership = np.clip(ownership, 0.0, None)
         if ownership.sum() > 0:
+            # The combined selection column can include explicitly marked fallback rows.
+            if "Ownership Source" in pool:
+                estimated = pool["Ownership Source"].astype(str).str.contains("fallback", case=False).to_numpy()
+                ownership[estimated] *= market_factors[estimated]
             return np.clip(ownership, 0.01, None)
 
     # Before field ownership exists, use a soft projection-rank proxy rather than
@@ -414,7 +421,7 @@ def opponent_field_selection_weights(pool, fallback_scores):
     if not len(fallback):
         return fallback
     ranks = pd.Series(fallback).rank(pct=True).to_numpy(dtype=float)
-    return np.clip(0.10 + ranks ** 2, 0.01, None)
+    return np.clip((0.10 + ranks ** 2) * market_factors, 0.01, None)
 
 
 def ownership_adjusted_player_scores(pool, names, base_scores, player_sim, projection_fallback=None):
@@ -2437,14 +2444,40 @@ def extract_slate_games(source_df):
 
 
 def show_detected_slate_games(source_df):
+    st.session_state["active_game_markets"] = {}
     games = extract_slate_games(source_df)
     if not games:
         return
-    st.write("#### Games on this slate")
-    if len(games) == 1:
-        st.info(games[0])
-    else:
-        st.caption(" • ".join(games))
+    from simmah_game_lines import implied_scores
+    from simmah_weather import team_key
+    import hashlib
+    # Include the dated source game strings so lines cannot leak to a later slate.
+    game_columns = [c for c in source_df if str(c).strip().casefold() in {"game info", "gameinfo", "game"}]
+    identity = sorted(set(source_df[game_columns].astype(str).agg("|".join, axis=1)))
+    slate_key = hashlib.sha256(repr((platform, lineup_mode, pd.Timestamp.now(tz="America/New_York").date().isoformat(), identity)).encode()).hexdigest()[:16]
+    st.write("#### Games on this slate — market-implied scores")
+    base = pd.DataFrame({"Game": games, "Game total": [None] * len(games),
+                         "Home spread": [None] * len(games)})
+    with st.expander("Enter pregame spreads and totals", expanded=False):
+        st.caption("Enter both values. Home spread is negative when the home team is favored; enter 0 for a pick'em. Use pregame lines, not live odds.")
+        lines = st.data_editor(base, disabled=["Game"], hide_index=True,
+            column_config={"Game total": st.column_config.NumberColumn(min_value=1., max_value=100., step=.5),
+                           "Home spread": st.column_config.NumberColumn(min_value=-50., max_value=50., step=.5)},
+            key="game_lines_" + slate_key, use_container_width=True)
+    markets = {}
+    for row in lines.to_dict("records"):
+        away, home = row["Game"].split(" @ ")
+        scores = implied_scores(row["Game total"], row["Home spread"])
+        if scores is None:
+            st.write(f"**{away} @ {home}** · Implied scores unavailable — enter valid total and spread")
+        else:
+            away_points, home_points = scores
+            markets[team_key(away)] = (away_points, home_points)
+            markets[team_key(home)] = (home_points, away_points)
+            st.write(f"**{away} {away_points:g} @ {home} {home_points:g}** · Total {float(row['Game total']):g} · {home} {float(row['Home spread']):+g}")
+    st.session_state["active_game_markets"] = markets
+    if markets:
+        st.caption("Source: manually entered pregame lines. Experimental field-popularity adjustment (maximum ±15%) applies only without imported ownership. Player projections stay unchanged. Rebuild opponents and rerun contest simulation after editing lines.")
 
 
 @st.cache_data(show_spinner=False, ttl=300)
@@ -2524,14 +2557,40 @@ def extract_slate_games(source_df):
 
 
 def show_detected_slate_games(source_df):
+    st.session_state["active_game_markets"] = {}
     games = extract_slate_games(source_df)
     if not games:
         return
-    st.write("#### Games on this slate")
-    if len(games) == 1:
-        st.info(games[0])
-    else:
-        st.caption(" • ".join(games))
+    from simmah_game_lines import implied_scores
+    from simmah_weather import team_key
+    import hashlib
+    # Include the dated source game strings so lines cannot leak to a later slate.
+    game_columns = [c for c in source_df if str(c).strip().casefold() in {"game info", "gameinfo", "game"}]
+    identity = sorted(set(source_df[game_columns].astype(str).agg("|".join, axis=1)))
+    slate_key = hashlib.sha256(repr((platform, lineup_mode, pd.Timestamp.now(tz="America/New_York").date().isoformat(), identity)).encode()).hexdigest()[:16]
+    st.write("#### Games on this slate — market-implied scores")
+    base = pd.DataFrame({"Game": games, "Game total": [None] * len(games),
+                         "Home spread": [None] * len(games)})
+    with st.expander("Enter pregame spreads and totals", expanded=False):
+        st.caption("Enter both values. Home spread is negative when the home team is favored; enter 0 for a pick'em. Use pregame lines, not live odds.")
+        lines = st.data_editor(base, disabled=["Game"], hide_index=True,
+            column_config={"Game total": st.column_config.NumberColumn(min_value=1., max_value=100., step=.5),
+                           "Home spread": st.column_config.NumberColumn(min_value=-50., max_value=50., step=.5)},
+            key="game_lines_" + slate_key, use_container_width=True)
+    markets = {}
+    for row in lines.to_dict("records"):
+        away, home = row["Game"].split(" @ ")
+        scores = implied_scores(row["Game total"], row["Home spread"])
+        if scores is None:
+            st.write(f"**{away} @ {home}** · Implied scores unavailable — enter valid total and spread")
+        else:
+            away_points, home_points = scores
+            markets[team_key(away)] = (away_points, home_points)
+            markets[team_key(home)] = (home_points, away_points)
+            st.write(f"**{away} {away_points:g} @ {home} {home_points:g}** · Total {float(row['Game total']):g} · {home} {float(row['Home spread']):+g}")
+    st.session_state["active_game_markets"] = markets
+    if markets:
+        st.caption("Source: manually entered pregame lines. Experimental field-popularity adjustment (maximum ±15%) applies only without imported ownership. Player projections stay unchanged. Rebuild opponents and rerun contest simulation after editing lines.")
 
 
 @st.cache_data(show_spinner=False, ttl=300)
