@@ -63,3 +63,21 @@ def build_fanduel_entry_export(template, portfolio, player_ids, contest, mode):
     output=io.StringIO(newline="")
     csv.writer(output,lineterminator="\r\n").writerows(rows)
     return output.getvalue().encode("utf-8"), len(targets)
+
+
+def direct_csv_download_link(data, filename, label="DIRECT FANDUEL UPLOAD DOWNLOAD"):
+    """Embed the exact verified bytes without the Streamlit media endpoint."""
+    import base64
+    from html import escape
+    if not isinstance(data, bytes):
+        raise ValueError("Download data must be verified CSV bytes")
+    header = next(csv.reader(io.StringIO(data.decode("utf-8-sig"))), [])
+    columns = {c.strip().casefold() for c in header}
+    if not columns.intersection({"entry_id", "entry id", "entryid"}) or not columns.intersection({"contest_id", "contest id", "contestid"}):
+        raise ValueError("Cannot offer an analysis report as a FanDuel upload")
+    encoded = base64.b64encode(data).decode("ascii")
+    return ('<a download="' + escape(filename, quote=True) + '" '
+            'href="data:text/csv;charset=utf-8;base64,' + encoded + '" '
+            'style="display:block;text-align:center;padding:0.65rem;border:1px solid #ff4b4b;'
+            'border-radius:0.5rem;color:inherit;text-decoration:none;font-weight:600;">'
+            + escape(label) + '</a>')

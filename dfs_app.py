@@ -5548,6 +5548,9 @@ if platform == "FanDuel":
                         file_name=_fd_export_name,
                         mime="text/csv", use_container_width=True, type="primary",
                         key="fd_entry_upload_v2_" + lineup_mode.replace(" ", "_").lower() + "_" + str(st.session_state["selected_fd_contest"]["id"]), on_click="ignore")
+                    from simmah_exports import direct_csv_download_link
+                    st.markdown(direct_csv_download_link(fd_entry_bytes, _fd_export_name), unsafe_allow_html=True)
+                    st.caption("If the main button downloads the wrong file, use DIRECT FANDUEL UPLOAD DOWNLOAD above. Both contain the same verified entry CSV.")
                 except Exception as exc:
                     st.error(f"Could not create FanDuel replacement CSV: {exc}")
         else:

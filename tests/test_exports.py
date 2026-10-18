@@ -51,3 +51,20 @@ class FanDuelExportTest(unittest.TestCase):
         p.loc[0,slots[1]]=p.loc[0,slots[0]]
         with self.assertRaisesRegex(ValueError,"same player"):
             build_fanduel_entry_export(raw,p,ids,{"id":"111-222"},"Full Roster")
+
+
+class DirectDownloadTest(unittest.TestCase):
+    def test_embedded_bytes_equal_export_and_filename_escaped(self):
+        import base64
+        import re
+        from simmah_exports import direct_csv_download_link
+        data = b"entry_id,contest_id,MVP,AnyFLEX\r\n123,111-222,111-1,111-2\r\n"
+        html = direct_csv_download_link(data, 'upload"test.csv')
+        payload = re.search(r'base64,([^"]+)', html).group(1)
+        self.assertEqual(base64.b64decode(payload), data)
+        self.assertIn('upload&quot;test.csv', html)
+
+    def test_analysis_report_blocked(self):
+        from simmah_exports import direct_csv_download_link
+        with self.assertRaises(ValueError):
+            direct_csv_download_link(b"MVP,FLEX1,Salary\nA,B,59000", "wrong.csv")
