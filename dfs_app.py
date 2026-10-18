@@ -4968,11 +4968,11 @@ if platform == "FanDuel":
             "Simulation diversity", 0, 100,
             100 if ((platform == "DraftKings" and lineup_mode == "Showdown") or (platform == "FanDuel" and lineup_mode == "Single Game")) else 50,
             step=5,
-            help="Lower settings favor typical simulated game outcomes. Higher settings spread candidate building across a broader range of complete game outcomes, including extremes. At 100%, every construction outcome is equally likely. Does not change contest evaluation, simulation counts, or portfolio exposure limits.",
+            help="Controls how many complete simulations are averaged for each candidate: 0% uses all construction simulations; 100% uses one. Intermediate settings use a logarithmic sample-count scale. Higher settings preserve more single-game variance. Contest evaluation and portfolio exposure limits are separate.",
             key=f"lineup_build_aggressiveness_{platform}_{lineup_mode}",
         )
         aggressiveness = aggressiveness_pct / 100.0
-        st.caption(f"Simulation diversity: {aggressiveness_pct}%. Lower favors typical game stories; higher includes a broader range of outcomes. Applies to new candidate builds.")
+        st.caption(f"Simulation diversity: {aggressiveness_pct}%. Each candidate averages {max(1, round(SIMULATION_COUNT ** (1.0 - aggressiveness_pct / 100.0))):,} construction simulations. Applies to new candidate builds.")
         if lineup_mode in ("Showdown", "Single Game"):
             correlation_pct = st.slider(
                 "Game Correlation", 0, 100,
@@ -6859,11 +6859,11 @@ else:
                 "Simulation diversity", 0, 100,
                 100 if ((platform == "DraftKings" and lineup_mode == "Showdown") or (platform == "FanDuel" and lineup_mode == "Single Game")) else 50,
                 step=5,
-                help="Lower settings favor typical simulated game outcomes. Higher settings spread candidate building across a broader range of complete game outcomes, including extremes. At 100%, every construction outcome is equally likely. Does not change contest evaluation, simulation counts, or portfolio exposure limits.",
+                help="Controls how many complete simulations are averaged for each candidate: 0% uses all construction simulations; 100% uses one. Intermediate settings use a logarithmic sample-count scale. Higher settings preserve more single-game variance. Contest evaluation and portfolio exposure limits are separate.",
                 key=f"lineup_build_aggressiveness_{platform}_{lineup_mode}",
             )
             aggressiveness = aggressiveness_pct / 100.0
-            st.caption(f"Simulation diversity: {aggressiveness_pct}%. Lower favors typical game stories; higher includes a broader range of outcomes. Applies to new candidate builds.")
+            st.caption(f"Simulation diversity: {aggressiveness_pct}%. Each candidate averages {max(1, round(SIMULATION_COUNT ** (1.0 - aggressiveness_pct / 100.0))):,} construction simulations. Applies to new candidate builds.")
 
         dk_classic_stack_rules = st.multiselect(
             "Stacks to use in MY lineups",
@@ -7359,11 +7359,11 @@ with build_cols[1]:
         "Simulation diversity", 0, 100,
         100 if ((platform == "DraftKings" and lineup_mode == "Showdown") or (platform == "FanDuel" and lineup_mode == "Single Game")) else 50,
         step=5,
-        help="Lower settings favor typical simulated game outcomes. Higher settings spread candidate building across a broader range of complete game outcomes, including extremes. At 100%, every construction outcome is equally likely. Does not change contest evaluation, simulation counts, or portfolio exposure limits.",
+        help="Controls how many complete simulations are averaged for each candidate: 0% uses all construction simulations; 100% uses one. Intermediate settings use a logarithmic sample-count scale. Higher settings preserve more single-game variance. Contest evaluation and portfolio exposure limits are separate.",
         key=f"lineup_build_aggressiveness_{platform}_{lineup_mode}",
     )
     aggressiveness = aggressiveness_pct / 100.0
-    st.caption(f"Simulation diversity: {aggressiveness_pct}%. Lower favors typical game stories; higher includes a broader range of outcomes. Applies to new candidate builds.")
+    st.caption(f"Simulation diversity: {aggressiveness_pct}%. Each candidate averages {max(1, round(SIMULATION_COUNT ** (1.0 - aggressiveness_pct / 100.0))):,} construction simulations. Applies to new candidate builds.")
     if lineup_mode in ("Showdown", "Single Game"):
         correlation_pct = st.slider(
             "Game Correlation", 0, 100,

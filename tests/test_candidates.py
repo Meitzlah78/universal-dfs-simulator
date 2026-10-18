@@ -1,6 +1,6 @@
 import itertools,unittest
 import numpy as np,pandas as pd
-from simmah_candidates import build_candidates,summarize_candidates,construction_scenario_weights
+from simmah_candidates import build_candidates,summarize_candidates,construction_sample_size,sample_construction_targets
 
 
 def fixture(site='DK'):
@@ -17,42 +17,57 @@ def fixture(site='DK'):
 
 
 class CandidateTest(unittest.TestCase):
-    def test_diversity_broadens_joint_scenario_sampling_without_changing_scores(self):
-        values=np.column_stack([np.arange(1000),np.arange(1000)[::-1]]).astype(float)
+    def test_diversity_uses_all_sims_at_zero_and_one_at_maximum(self):
+        self.assertEqual(construction_sample_size(0,10000),10000)
+        self.assertEqual(construction_sample_size(.5,10000),100)
+        self.assertEqual(construction_sample_size(1,10000),1)
+        counts=[construction_sample_size(v,10000) for v in np.linspace(0,1,21)]
+        self.assertEqual(counts,sorted(counts,reverse=True))
+
+    def test_uniform_sample_averages_preserve_complete_rows_and_reduce_variance(self):
+        values=np.column_stack([np.arange(1000),1000-np.arange(1000)]).astype(float)
         original=values.copy()
-        low=construction_scenario_weights(values,0)
-        middle=construction_scenario_weights(values,.5)
-        high=construction_scenario_weights(values,1)
-        extreme=(np.arange(1000)<100)|(np.arange(1000)>=900)
-        self.assertLess(low[extreme].sum(),middle[extreme].sum())
-        self.assertLess(middle[extreme].sum(),high[extreme].sum())
-        self.assertTrue(np.allclose(high,1/1000))
-        self.assertTrue((low>0).all())
-        self.assertTrue(np.array_equal(values,original))
-        self.assertLess(1/(low@low),1/(middle@middle))
-        self.assertLess(1/(middle@middle),1/(high@high))
-        constant=construction_scenario_weights(np.ones((10,4)),0)
-        self.assertTrue(np.allclose(constant,.1))
+        all_sims,_=sample_construction_targets(values,1000,256,np.random.default_rng(2))
+        single,ids=sample_construction_targets(values,1,256,np.random.default_rng(2))
+        middle,_=sample_construction_targets(values,100,256,np.random.default_rng(2))
+        np.testing.assert_allclose(all_sims,np.broadcast_to(values.mean(axis=0),(256,2)))
+        np.testing.assert_array_equal(single,values[ids])
+        np.testing.assert_allclose(middle.sum(axis=1),1000)
+        self.assertLess(middle[:,0].std(),single[:,0].std())
+        np.testing.assert_array_equal(values,original)
+        # Averaging two complete rows without replacement must use both.
+        pair,_=sample_construction_targets(values[:2],2,5,np.random.default_rng(8))
+        np.testing.assert_allclose(pair,np.broadcast_to(values[:2].mean(axis=0),(5,2)))
 
     def test_diversity_reaches_full_roster_and_single_game_builds(self):
         pool,out,roster=fixture()
         for value in (0,.5,1):
             result=build_candidates(pool,out,roster,target=20,scenario_diversity=value,rng=np.random.default_rng(7))
             self.assertEqual(len(result),20)
-            self.assertEqual(result.attrs['scenario_diversity'],value)
-            self.assertGreater(result.attrs['scenario_unique_draws'],0)
-            if value==1:self.assertAlmostEqual(result.attrs['scenario_effective_outcomes'],len(out))
+            expected=construction_sample_size(value,len(out))
+            self.assertTrue((result['Build Simulations']==expected).all())
+            self.assertEqual(result.attrs['construction_simulations_per_candidate'],expected)
+            if value==0:
+                self.assertTrue(result['Build Scenario'].isna().all())
+                for _,row in result.iterrows():
+                    self.assertAlmostEqual(row['Scenario Score'],out[[row[s] for s,_ in roster]].mean().sum(),places=3)
         pool=pool.iloc[:24].copy();out=out[pool.Name]
         roster=[('Captain',set())]+[(f'Flex{i}',set()) for i in range(1,6)]
         for value in (0,1):
             result=build_candidates(pool,out,roster,target=20,scenario_diversity=value,
                                     multipliers=[1.5,1,1,1,1,1],rng=np.random.default_rng(8))
-            self.assertEqual(len(result),20)
+            self.assertGreater(len(result),0)
+            self.assertLessEqual(len(result),20)
+            if value==1:self.assertEqual(len(result),20)
+            if value==0:
+                for _,row in result.iterrows():
+                    expected=1.5*out[row['Captain']].mean()+out[[row[f'Flex{i}'] for i in range(1,6)]].mean().sum()
+                    self.assertAlmostEqual(row['Scenario Score'],expected,places=3)
             self.assertEqual(result.attrs['scenario_diversity'],value)
 
     def test_rejects_invalid_diversity(self):
         for value in (-.1,1.1,np.nan):
-            with self.assertRaises(ValueError):construction_scenario_weights(np.ones((3,2)),value)
+            with self.assertRaises(ValueError):construction_sample_size(value,3)
 
     def test_both_full_roster_sites_locks_and_limits(self):
         for site,minimum,maximum in [('DK',47000,50000),('FD',57000,60000)]:

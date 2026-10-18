@@ -1,7 +1,8 @@
 """Bounded joint-outcome roster search shared by all NFL DFS formats.
 
-Each proposal optimizes ONE complete simulated slate outcome. Batched greedy
-seeds plus coordinate ascent are a heuristic, not a claim of global optimality.
+Each proposal optimizes a complete simulated slate outcome or the average of
+a uniform sample of outcomes. Batched greedy seeds plus coordinate ascent
+are a heuristic, not a claim of global optimality.
 Evaluation/contest outcomes must be generated independently by the caller.
 """
 import numpy as np
@@ -27,30 +28,45 @@ def offense_vs_defense_allowed(chosen, lookup):
                    for dteam,dopp in defense for oteam,oopp in offense)
 
 
-def construction_scenario_weights(values, diversity=1.0):
-    """Favor typical joint outcomes at low diversity; use all draws equally at 1.
+def construction_sample_size(diversity, outcome_count):
+    """Map 0 to every construction sim and 1 to one, using log interpolation.
 
-    Typicality is the mean squared player deviation from the simulated median,
-    scaled by each player's standard deviation (floored at one fantasy point).
-    Weight complete slate rows, never shuffle players or alter their scores.
-    This is a construction preference, not a change to event probabilities used
-    in independent contest evaluation.
+    The endpoints follow SaberSim's documented approach. Intermediate sample
+    counts are Simmah's mapping, not a claim about SaberSim's private settings.
     """
     diversity = float(diversity)
     if not np.isfinite(diversity) or not 0 <= diversity <= 1:
         raise ValueError('Scenario diversity must be between zero and one')
-    values = np.asarray(values, dtype=float)
-    if values.ndim != 2 or not values.size or not np.isfinite(values).all():
-        raise ValueError('Scenario values must be a finite nonempty matrix')
-    if diversity == 1:
-        return np.full(len(values), 1.0 / len(values))
-    scale = np.maximum(values.std(axis=0), 1.0)
-    distance = np.mean(((values - np.median(values, axis=0)) / scale) ** 2, axis=1)
-    # Equal-distance stories receive equal weights, including constant matrices.
-    _, inverse, counts = np.unique(distance, return_inverse=True, return_counts=True)
-    percentile = ((counts.cumsum() - counts / 2) / len(values))[inverse]
-    weights = np.exp(-6.0 * (1.0 - diversity) * percentile)
-    return weights / weights.sum()
+    if outcome_count < 1:
+        raise ValueError('Construction outcomes must be nonempty')
+    return max(1, min(outcome_count, int(round(outcome_count ** (1.0 - diversity)))))
+
+
+def sample_construction_targets(values, sample_size, batch, rng, full_mean=None):
+    """Average uniformly sampled complete rows, never individual player draws.
+
+    Random windows of a shuffled cycle are uniform subsets without replacement.
+    Sharing that shuffle within a batch bounds memory even near 10,000 sims per
+    candidate. Windows can overlap, so candidate samples are not independent;
+    contest evaluation is generated separately by the app.
+    """
+    values = np.asarray(values)
+    if not 1 <= sample_size <= len(values):
+        raise ValueError('Invalid construction sample size')
+    if sample_size == len(values) and sample_size > 1:
+        return np.broadcast_to(values.mean(axis=0, dtype=np.float64) if full_mean is None else full_mean, (batch, values.shape[1])), np.full(batch, -1)
+    if sample_size == 1:
+        indices = rng.integers(0, len(values), batch)
+        return values[indices], indices
+    permutation = rng.permutation(len(values))
+    cumulative = np.empty((len(values) + 1, values.shape[1]), dtype=np.float64)
+    cumulative[0] = 0
+    np.cumsum(values[permutation], axis=0, dtype=np.float64, out=cumulative[1:])
+    start = rng.integers(0, len(values), batch)
+    end = start + sample_size
+    totals = cumulative[np.minimum(end, len(values))] - cumulative[start]
+    totals += cumulative[np.maximum(end - len(values), 0)]
+    return totals / sample_size, np.full(batch, -1)
 
 
 def build_candidates(pool,outcomes,roster,target=5000,salary_min=0,salary_max=50000,
@@ -66,7 +82,8 @@ def build_candidates(pool,outcomes,roster,target=5000,salary_min=0,salary_max=50
     if missing:raise ValueError('Candidate outcomes are missing players: '+', '.join(sorted(missing)[:5]))
     values=outcomes.reindex(columns=names).to_numpy(dtype=np.float32)
     if not len(values) or not np.isfinite(values).all():raise ValueError('Candidate outcomes must be finite and nonempty')
-    scenario_weights = construction_scenario_weights(values, scenario_diversity)
+    sample_size = construction_sample_size(scenario_diversity, len(values))
+    full_mean = values.mean(axis=0, dtype=np.float64) if sample_size == len(values) else None
     scenario_draws = np.zeros(len(values), dtype=np.int64)
     slots=[slot for slot,_ in roster];count=len(slots)
     mult=np.ones(count) if multipliers is None else np.asarray(multipliers,float)
@@ -104,10 +121,9 @@ def build_candidates(pool,outcomes,roster,target=5000,salary_min=0,salary_max=50
     rejected={'incomplete_or_salary':0,'team_limit':0,'stack_rules':0,'duplicate':0}
     while len(records)<target and proposed<max_proposals:
         batch=min(256,max_proposals-proposed);proposed+=batch
-        scenario=(rng.integers(0,len(values),batch) if scenario_diversity == 1.0
-                  else rng.choice(len(values), size=batch, p=scenario_weights))
-        scenario_draws += np.bincount(scenario, minlength=len(values))
-        joint=values[scenario]
+        joint, scenario = sample_construction_targets(values, sample_size, batch, rng, full_mean)
+        if sample_size == 1:
+            scenario_draws += np.bincount(scenario, minlength=len(values))
         picks=np.full((batch,count),-1,dtype=int);fixed=np.zeros((batch,count),bool)
         total=np.zeros(batch);alive=np.ones(batch,bool)
         # Allocate all locked players first, with randomized eligible-slot choices.
@@ -218,15 +234,16 @@ def build_candidates(pool,outcomes,roster,target=5000,salary_min=0,salary_max=50
                 rejected['duplicate']+=1;continue
             seen.add(key)
             records.append({**chosen,'Salary':int(round(total[row])),
-                'Build Scenario':int(scenario[row]),
+                'Build Scenario':int(scenario[row]) if sample_size == 1 else None,
+                'Build Simulations':sample_size,
                 'Scenario Score':float((joint[row,pick]*mult).sum())})
             if len(records)>=target:break
         if progress:progress(min(1,len(records)/target),f'Building from joint outcomes: {len(records):,} / {target:,}')
     result=pd.DataFrame(records)
-    result.attrs.update(engine='joint-outcome-search-v3',proposals=proposed,target=target,rejected=rejected,stack_seeded=bool(primary_stacks),
+    result.attrs.update(engine='joint-outcome-search-v4',proposals=proposed,target=target,rejected=rejected,stack_seeded=bool(primary_stacks),
                         scenario_diversity=float(scenario_diversity),
-                        scenario_effective_outcomes=float(1.0 / np.sum(scenario_weights ** 2)),
-                        scenario_unique_draws=int(np.count_nonzero(scenario_draws)))
+                        construction_simulations_per_candidate=sample_size,
+                        scenario_unique_draws=int(np.count_nonzero(scenario_draws)) if sample_size == 1 else None)
     return result
 
 
