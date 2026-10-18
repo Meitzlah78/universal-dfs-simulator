@@ -3924,7 +3924,7 @@ def fetch_fanduel_contest_details(contest_id):
 def build_joint_candidate_pool(pool, platform_name, mode_name, evaluation_outcomes, roster,
                               salary_min, salary_max, locks=(), selected_stacks=(), secondary_stacks=(), special_allowed=None,
                               salary_costs=None, aggressiveness=.5):
-    from simmah_candidates import build_candidates, summarize_candidates
+    from simmah_candidates import build_candidates, summarize_candidates, offense_vs_defense_allowed
     # Separate random game draws keep candidate construction out of the contest
     # evaluation sample. Neither matrix is resampled from the other.
     previous_cap_hits = st.session_state.get("simulation_cap_hit_pct", {})
@@ -3938,7 +3938,10 @@ def build_joint_candidate_pool(pool, platform_name, mode_name, evaluation_outcom
         raise ValueError("Candidate construction returned an incomplete simulation matrix")
     multipliers = [1.5, 1, 1, 1, 1, 1] if mode_name in {"Showdown", "Single Game"} else None
     lookup = full_roster_stack_lookup(pool)
-    validator = (lambda chosen: full_roster_stack_matches(chosen, pool, selected_stacks, lookup, secondary_stacks)) if mode_name in {"Classic", "Full Roster"} else None
+    validator = (lambda chosen: offense_vs_defense_allowed(chosen, lookup) and
+                 full_roster_stack_matches(chosen, pool, selected_stacks, lookup, secondary_stacks)) if mode_name in {"Classic", "Full Roster"} else None
+    if mode_name in {"Classic", "Full Roster"}:
+        st.caption("Lineup rule: offensive players cannot face their own lineup's defense.")
     progress = st.progress(0, text="Building candidates from joint game outcomes...")
     own_lookup = {str(col).strip().casefold(): col for col in pool.columns}
     own_col = next((own_lookup[key] for key in ("projected ownership", "ownership", "ownership %", "own%") if key in own_lookup), None)
@@ -3950,6 +3953,7 @@ def build_joint_candidate_pool(pool, platform_name, mode_name, evaluation_outcom
         locks=locks, special_allowed=special_allowed, max_from_team=(5 if multipliers else 4 if platform_name=="FanDuel" else 8),
         require_both_teams=True, validator=validator, rng=np.random.default_rng(),
         noise=.12-.08*float(np.clip(aggressiveness,0,1)), penalties=penalty, primary_stacks=seed_patterns,
+        avoid_opposing_defense=mode_name in {"Classic", "Full Roster"},
         progress=lambda fraction, text: progress.progress(fraction, text=text))
     metadata = dict(result.attrs)
     if result.empty:

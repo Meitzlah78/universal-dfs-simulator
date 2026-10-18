@@ -48,6 +48,10 @@ class WorkflowIntegrationTest(unittest.TestCase):
         exec(compile(ast.Module(body=nodes,type_ignores=[]),'dfs_app.py','exec'),ns)
         result=ns['build_joint_candidate_pool'](pool,'DraftKings','Classic',evaluation,roster,47000,50000)
         self.assertEqual(len(result),5000)
+        from simmah_candidates import offense_vs_defense_allowed
+        lookup=pool.set_index('Name').to_dict('index')
+        slots=[slot for slot,_ in roster]
+        self.assertTrue(all(offense_vs_defense_allowed(row,lookup) for row in result[slots].to_dict('records')))
         self.assertEqual(simulate.call_count,1)
         self.assertEqual(simulate.call_args.args[2],len(construction))
         self.assertEqual(state['simulation_cap_hit_pct'],{'original':1})

@@ -8,10 +8,29 @@ import numpy as np
 import pandas as pd
 
 
+def offense_vs_defense_allowed(chosen, lookup):
+    """Reject an offensive player facing a defense in the same roster."""
+    aliases = {"LA":"LAR", "JAC":"JAX", "WSH":"WAS"}
+    def team(value):
+        key = str(value or "").strip().upper()
+        return aliases.get(key,key) if key not in {"NAN","NONE","—","-"} else ""
+    defense, offense = [], []
+    for slot,name in chosen.items():
+        row = lookup.get(str(name).strip(),{})
+        positions = set(str(row.get("Position","")).upper().replace(" ","").split("/"))
+        item = (team(row.get("Team")),team(row.get("Opponent")))
+        if positions & {"D","DST","DEF"} or slot in {"D","DST","DEF"}:
+            defense.append(item)
+        elif positions & {"QB","RB","WR","TE","K"}:
+            offense.append(item)
+    return not any((dopp and oteam == dopp) or (dteam and oopp == dteam)
+                   for dteam,dopp in defense for oteam,oopp in offense)
+
+
 def build_candidates(pool,outcomes,roster,target=5000,salary_min=0,salary_max=50000,
                      multipliers=None,salary_costs=None,locks=(),special_allowed=None,
                      max_from_team=None,require_both_teams=False,validator=None,
-                     rng=None,progress=None,max_proposals=100000,noise=.08,penalties=None,primary_stacks=None):
+                     rng=None,progress=None,max_proposals=100000,noise=.08,penalties=None,primary_stacks=None,avoid_opposing_defense=False):
     rng=np.random.default_rng() if rng is None else rng
     pool=pool.drop_duplicates('Name').reset_index(drop=True)
     names=pool['Name'].astype(str).to_numpy(object)
@@ -40,6 +59,18 @@ def build_candidates(pool,outcomes,roster,target=5000,salary_min=0,salary_max=50
     penalty=np.zeros(len(names)) if penalties is None else np.asarray(penalties,float)
     if penalty.shape!=(len(names),):raise ValueError('Ownership penalties do not align with player names')
     opponents=pool.get('Opponent',pd.Series('',index=pool.index)).astype(str).str.upper().to_numpy(object)
+    conflicts = None
+    if avoid_opposing_defense:
+        aliases={"LA":"LAR","JAC":"JAX","WSH":"WAS"}
+        normalized_teams=np.array([aliases.get(str(t).strip(),str(t).strip()) for t in teams])
+        normalized_opponents=np.array([aliases.get(str(t).strip(),str(t).strip()) for t in opponents])
+        defense=np.array([bool(p & {"D","DST","DEF"}) for p in positions])
+        offense=np.array([bool(p & {"QB","RB","WR","TE","K"}) for p in positions])
+        valid_teams=~np.isin(normalized_teams,["","NAN","NONE","—","-"])
+        valid_opps=~np.isin(normalized_opponents,["","NAN","NONE","—","-"])
+        facing=((normalized_teams[:,None]==normalized_opponents[None,:]) & valid_teams[:,None] & valid_opps[None,:])
+        relation=facing | facing.T
+        conflicts=relation & ((defense[:,None]&offense[None,:]) | (offense[:,None]&defense[None,:]))
     records=[];seen=set();proposed=0
     rejected={'incomplete_or_salary':0,'team_limit':0,'stack_rules':0,'duplicate':0}
     while len(records)<target and proposed<max_proposals:
@@ -111,6 +142,10 @@ def build_candidates(pool,outcomes,roster,target=5000,salary_min=0,salary_max=50
             low=(free*min_cost).sum(axis=1);high=(free*max_cost).sum(axis=1)
             next_total=total[row,None]+costs[slot,choices][None,:]
             feasible=(~used)&(next_total+low[:,None]<=salary_max)&(next_total+high[:,None]>=salary_min)
+            if conflicts is not None:
+                selected=picks[row]
+                blocked=(conflicts[np.maximum(selected,0)[:,:,None],choices[None,None,:]] & (selected>=0)[:,:,None]).any(axis=1)
+                feasible &= ~blocked
             objective=(joint[row[:,None],choices]-penalty[choices])*mult[slot]-price[row,None]*costs[slot,choices]
             objective+=rng.gumbel(size=objective.shape)*scale[row,None]*noise
             objective[~feasible]=-np.inf
@@ -129,6 +164,10 @@ def build_candidates(pool,outcomes,roster,target=5000,salary_min=0,salary_max=50
                 used=(picks[row,:,None]==choices[None,None,:]).any(axis=1)
                 adjusted=total[row,None]-costs[slot,current][:,None]+costs[slot,choices][None,:]
                 feasible=(~used)&(adjusted>=salary_min)&(adjusted<=salary_max)
+                if conflicts is not None:
+                    selected=picks[row]
+                    blocked=(conflicts[np.maximum(selected,0)[:,:,None],choices[None,None,:]] & (selected>=0)[:,:,None]).any(axis=1)
+                    feasible &= ~blocked
                 objective=(joint[row[:,None],choices]-penalty[choices])*mult[slot]
                 objective[~feasible]=-np.inf
                 best=objective.argmax(axis=1)
