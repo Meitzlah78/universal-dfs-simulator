@@ -5340,7 +5340,6 @@ if platform == "FanDuel":
         st.divider()
         st.write("## Portfolio")
         st.caption(f"{len(fd_results):,} candidate lineups available. Rank the pool, review your assigned entries, then export.")
-        fd_entry_export_controls = st.container()
 
         # Use the same ranking choices as DraftKings Showdown for both FanDuel formats.
         fd_comparison_key = "fd_contest_comparison_" + lineup_mode.replace(" ", "_").lower()
@@ -5457,42 +5456,6 @@ if platform == "FanDuel":
             st.caption("These lineups are used for both the portfolio report and entry replacement.")
             st.dataframe(fd_export_portfolio, use_container_width=True, hide_index=True)
 
-        with fd_entry_export_controls:
-            render_portfolio_roi_panel(fd_export_portfolio, st.session_state.get("selected_fd_contest"))
-            st.write("### Export to FanDuel")
-            st.caption("Use the entry file below to update your reserved FanDuel entries.")
-            with st.expander("Analysis report (optional)", expanded=False):
-                st.download_button(
-                    "DOWNLOAD PORTFOLIO REPORT (FOR REVIEW)",
-                    fd_export_portfolio.to_csv(index=False).encode("utf-8"),
-                    "FanDuel_Assigned_Portfolio_Report.csv", "text/csv",
-                    key="fd_portfolio_report_top_" + lineup_mode.replace(" ", "_").lower(),
-                    on_click="ignore", use_container_width=True,
-                )
-            render_entry_export_header("FanDuel")
-            if "FD_ID" in fd_players.columns:
-                if fd_entry_file is None or not st.session_state.get("selected_fd_contest"):
-                    st.warning("Upload the original FanDuel entries template and select your contest to enable the entry download.")
-                else:
-                    try:
-                        from simmah_exports import build_fanduel_entry_export
-                        fd_ids = dict(zip(fd_players["Name"], fd_players["FD_ID"].astype(str)))
-                        fd_entry_bytes, fd_entry_count = build_fanduel_entry_export(
-                            fd_entry_file.getvalue(), fd_export_portfolio, fd_ids,
-                            st.session_state["selected_fd_contest"], lineup_mode)
-                        st.success(f"Ready to replace {fd_entry_count} reserved entries. Entry IDs and original template details are preserved.")
-                        st.download_button(
-                            f"EXPORT TO FANDUEL — {fd_entry_count} ENTRIES",
-                            fd_entry_bytes,
-                            file_name="FanDuel_" + lineup_mode.replace(" ", "_") + "_Replacement.csv",
-                            mime="text/csv", use_container_width=True, type="primary",
-                            key="fd_export_" + lineup_mode.replace(" ", "_").lower(), on_click="ignore")
-                    except Exception as exc:
-                        st.error(f"Could not create FanDuel replacement CSV: {exc}")
-            else:
-                st.info("This CSV has no player ID column, so lineup export is unavailable.")
-
-
         # Use the same player-by-player points layout as the DraftKings Portfolio.
         fd_display = fd_results.copy()
         fd_player_means = {
@@ -5544,6 +5507,40 @@ if platform == "FanDuel":
             use_container_width=True,
             hide_index=True
         )
+
+        render_portfolio_roi_panel(fd_export_portfolio, st.session_state.get("selected_fd_contest"))
+        st.write("### Export to FanDuel")
+        st.caption("Use the entry file below to update your reserved FanDuel entries.")
+        with st.expander("Analysis report (optional)", expanded=False):
+            st.download_button(
+                "DOWNLOAD PORTFOLIO REPORT (FOR REVIEW)",
+                fd_export_portfolio.to_csv(index=False).encode("utf-8"),
+                "FanDuel_Assigned_Portfolio_Report.csv", "text/csv",
+                key="fd_portfolio_report_top_" + lineup_mode.replace(" ", "_").lower(),
+                on_click="ignore", use_container_width=True,
+            )
+        render_entry_export_header("FanDuel")
+        if "FD_ID" in fd_players.columns:
+            if fd_entry_file is None or not st.session_state.get("selected_fd_contest"):
+                st.warning("Upload the original FanDuel entries template and select your contest to enable the entry download.")
+            else:
+                try:
+                    from simmah_exports import build_fanduel_entry_export
+                    fd_ids = dict(zip(fd_players["Name"], fd_players["FD_ID"].astype(str)))
+                    fd_entry_bytes, fd_entry_count = build_fanduel_entry_export(
+                        fd_entry_file.getvalue(), fd_export_portfolio, fd_ids,
+                        st.session_state["selected_fd_contest"], lineup_mode)
+                    st.success(f"Ready to replace {fd_entry_count} reserved entries. Entry IDs and original template details are preserved.")
+                    st.download_button(
+                        f"EXPORT TO FANDUEL — {fd_entry_count} ENTRIES",
+                        fd_entry_bytes,
+                        file_name="FanDuel_" + lineup_mode.replace(" ", "_") + "_Replacement.csv",
+                        mime="text/csv", use_container_width=True, type="primary",
+                        key="fd_export_" + lineup_mode.replace(" ", "_").lower(), on_click="ignore")
+                except Exception as exc:
+                    st.error(f"Could not create FanDuel replacement CSV: {exc}")
+        else:
+            st.info("This CSV has no player ID column, so lineup export is unavailable.")
 
 
     st.stop()
@@ -7131,6 +7128,9 @@ else:
             else:
                 st.caption("Run CONTEST SIM for field-based portfolio metrics.")
             render_portfolio_roi_panel(classic_export_portfolio, classic_contest)
+            st.caption("Candidate alternatives — only rows marked Assigned to contest are included in your entry replacement.")
+            st.dataframe(classic_top_portfolio, use_container_width=True, hide_index=True)
+
             st.download_button(
                 label="DOWNLOAD ASSIGNED PORTFOLIO REPORT",
                 data=classic_export_portfolio.to_csv(index=False).encode("utf-8"),
@@ -7139,8 +7139,6 @@ else:
                 key="dk_classic_assigned_report",
                 on_click="ignore"
             )
-            st.caption("Candidate alternatives — only rows marked Assigned to contest are included in your entry replacement.")
-            st.dataframe(classic_top_portfolio, use_container_width=True, hide_index=True)
 
             classic_results = remove_out_players_from_lineups(
                 classic_results, ["QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "FLEX", "DST"], "DraftKings Classic"
@@ -9063,7 +9061,6 @@ if "contest_results_df" in st.session_state and not (platform == "DraftKings" an
     })
 
     st.write("### Assigned contest portfolio")
-    showdown_export_controls = st.container()
 
     st.dataframe(
         display_df,
@@ -9150,7 +9147,7 @@ else:
 # ============================================
 # DRAFTKINGS SHOWDOWN EXPORT BUTTON
 # Export the selected final portfolio using CPT and FLEX IDs from the uploaded DK template.
-with (showdown_export_controls if "showdown_export_controls" in locals() else st.container()):
+with st.container():
     if platform == "DraftKings" and lineup_mode == "Showdown":
         render_entry_export_header("DraftKings")
         export_portfolio = st.session_state.get("portfolio_df")
