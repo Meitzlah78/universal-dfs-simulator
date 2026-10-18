@@ -4855,12 +4855,10 @@ if platform == "FanDuel":
             "Allowed lineup salary range",
             min_value=0,
             max_value=60000,
-            # Real FanDuel NFL large-field data is heavily concentrated near the cap.
-            # Default Full Roster builds to the range containing ~97% of observed entries.
-            value=(59000, 60000) if lineup_mode == "Full Roster" else (54000, 60000),
+            value=(58000, 60000) if lineup_mode == "Full Roster" else (54000, 60000),
             step=100,
             format="$%d",
-            key="fd_build_salary_range_" + lineup_mode.replace(" ", "_").lower(),
+            key="fd_build_salary_range_" + lineup_mode.replace(" ", "_").lower() + ("_58000" if lineup_mode == "Full Roster" else ""),
             help="Only build lineups whose total salary falls inside this range."
         )
     with build_cols[1]:
@@ -6746,10 +6744,10 @@ else:
                 "Allowed lineup salary range",
                 min_value=0,
                 max_value=50000,
-                value=(47000, 50000),
+                value=(48000, 50000),
                 step=100,
                 format="$%d",
-                key="dk_build_salary_range_" + lineup_mode.replace(" ", "_").lower(),
+                key="dk_build_salary_range_" + lineup_mode.replace(" ", "_").lower() + "_48000",
                 help="Only build lineups whose total salary falls inside this range."
             )
         MIN_LINEUP_SALARY, MAX_LINEUP_SALARY = dk_salary_range
@@ -7240,7 +7238,7 @@ with build_cols[0]:
     st.write("### Build Settings")
     _fd_full = platform == "FanDuel" and lineup_mode == "Full Roster"
     _salary_cap = 60000 if _fd_full else 50000
-    _salary_default = (57000, 60000) if _fd_full else ((40000, 50000) if lineup_mode in ("Showdown", "Single Game") else (45000, 50000))
+    _salary_default = (58000, 60000) if _fd_full else ((40000, 50000) if lineup_mode in ("Showdown", "Single Game") else (48000, 50000))
     dk_salary_range = st.slider(
         "Allowed lineup salary range",
         min_value=0,
