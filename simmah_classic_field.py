@@ -33,7 +33,7 @@ def build_full_roster_field(pool, weights, slots, target, rng=None, progress=Non
     rng=np.random.default_rng() if rng is None else rng
     target=int(target)
     draftkings=str(platform).casefold() in {"draftkings", "dk"}
-    cap,floor,team_limit=(50000,47000,8) if draftkings else (60000,59000,4)
+    cap,floor,team_limit=(50000,48500,8) if draftkings else (60000,59000,4)
     names=pool.Name.astype(str).to_numpy()
     salaries=pd.to_numeric(pool.Salary,errors='raise').to_numpy(float)
     means=pd.to_numeric(pool.get('MeanPoints',pool.Projection),errors='coerce').fillna(pool.Projection).to_numpy(float)
@@ -126,7 +126,7 @@ def build_full_roster_field(pool, weights, slots, target, rng=None, progress=Non
         if progress:progress(min(1,accepted/max(target,1)),f'Building {platform} opponent field: {accepted:,} / {target:,}')
     if accepted<target:raise ValueError(f'Built {accepted:,} of {target:,} {platform} opponents after {attempted:,} proposals; check player availability and salary feasibility')
     result=pd.concat(chunks,ignore_index=True) if chunks else pd.DataFrame(columns=list(slots)+['Salary','ProjectedPoints'])
-    result.attrs.update(proposals=attempted,target=target,engine='batched-full-roster-field-v5',platform=platform, salary_model='historical distribution within supported salary range' if learned_salary else 'baseline')
+    result.attrs.update(proposals=attempted,target=target,engine='batched-full-roster-field-v6',platform=platform, salary_model='historical distribution within supported salary range' if learned_salary else 'baseline')
     return result
 
 

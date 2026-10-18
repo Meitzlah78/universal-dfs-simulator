@@ -58,7 +58,7 @@ class ClassicFieldTest(unittest.TestCase):
         index={n:i for i,n in enumerate(pool.Name)}
         picks=np.array([[index[n] for n in row] for row in result[slots].itertuples(index=False,name=None)])
         self.assertTrue(classic_tournament_mask(picks,pool.Team,pool.Position).all())
-        self.assertTrue(result.Salary.between(47000,50000).all())
+        self.assertTrue(result.Salary.between(48500,50000).all())
         np.testing.assert_array_equal(result.Salary,pool.Salary.to_numpy()[picks].sum(axis=1))
         self.assertEqual(result.attrs['platform'],'DraftKings')
         canonical=result[slots].apply(lambda row:tuple(sorted(row)),axis=1)
