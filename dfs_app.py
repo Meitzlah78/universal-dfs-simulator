@@ -4972,14 +4972,7 @@ if platform == "FanDuel":
         )
         fd_players = fd_players[~fd_players["Injury Status"].astype(str).str.casefold().eq("out")].copy()
     fd_player_display = _fd_edited_pool.copy() if isinstance(_fd_edited_pool, pd.DataFrame) else fd_player_display
-    _fd_scoring_report = fd_player_display.copy()
-    _fd_current_outcomes = st.session_state.get("fd_simulation_df_" + lineup_mode.replace(" ", "_").lower())
-    if isinstance(_fd_current_outcomes, pd.DataFrame) and not _fd_current_outcomes.empty:
-        _fd_scoring_report["Actual Simulation Mean"] = _fd_scoring_report["Name"].map(_fd_current_outcomes.mean().to_dict())
-        _fd_scoring_report["Simulation Minus Projection"] = _fd_scoring_report["Actual Simulation Mean"] - pd.to_numeric(_fd_scoring_report["Projection"], errors="coerce")
-    st.download_button("DOWNLOAD PLAYER SCORING INPUTS", _fd_scoring_report.to_csv(index=False).encode("utf-8"),
-        "FanDuel_" + lineup_mode.replace(" ", "_") + "_Player_Scoring_Inputs.csv", "text/csv",
-        key="fd_player_scoring_inputs_" + lineup_mode.replace(" ", "_").lower(), on_click="ignore")
+    _fd_scoring_download_slot = st.empty()
     with st.expander("Copy Player Info to ChatGPT"):
         st.caption("Click inside the text box, press Ctrl+A, then Ctrl+C. Paste the copied text into ChatGPT.")
         fd_copy_text = fd_player_display.to_csv(index=False, sep="\t", na_rep="")
@@ -5704,6 +5697,14 @@ if platform == "FanDuel":
             st.info("This CSV has no player ID column, so lineup export is unavailable.")
 
 
+    # Populate the earlier download location after SIM/BUILD has updated this
+    # run's session state. The download's bytes must not capture pre-SIM values.
+    from simmah_player_display import scoring_input_report
+    _fd_scoring_report = scoring_input_report(fd_player_display,
+        st.session_state.get("fd_simulation_df_" + lineup_mode.replace(" ", "_").lower()))
+    _fd_scoring_download_slot.download_button("DOWNLOAD PLAYER SCORING INPUTS", _fd_scoring_report.to_csv(index=False).encode("utf-8"),
+        "FanDuel_" + lineup_mode.replace(" ", "_") + "_Player_Scoring_Inputs.csv", "text/csv",
+        key="fd_player_scoring_inputs_" + lineup_mode.replace(" ", "_").lower(), on_click="ignore")
     st.stop()
 
 else:

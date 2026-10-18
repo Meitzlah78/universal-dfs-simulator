@@ -53,3 +53,15 @@ def complete_player_display(players, outcomes=None, portfolio=None, field=None, 
         result['Ownership Source'] = 'Projection-rank popularity fallback (no external ownership)'
     result['Simulation Status'] = np.where(result['Sim Pts'].notna(),'Complete','Pending / player not simulated')
     return result
+
+
+def scoring_input_report(players,outcomes=None):
+    """Export only measured simulation summaries, never projection placeholders."""
+    clean=players.drop(columns=[c for c in players if c.startswith('Sim P') or c in {'Sim Pts','Cap Hit %','Simulation Status','Actual Simulation Mean','Simulation Minus Projection'}],errors='ignore').copy()
+    report=complete_player_display(clean,outcomes)
+    report['Actual Simulation Mean']=np.nan
+    if _frame(outcomes):
+        report['Actual Simulation Mean']=report.Name.astype(str).str.strip().map(
+            {str(c).strip():v for c,v in outcomes.mean().items()})
+    report['Simulation Minus Projection']=report['Actual Simulation Mean']-pd.to_numeric(report['Projection'],errors='coerce')
+    return report

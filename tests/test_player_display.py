@@ -22,3 +22,20 @@ class DisplayTests(unittest.TestCase):
         r=complete_player_display(p,portfolio=f,field=f)
         self.assertEqual(r['Field MVP Own %'].tolist(),[100,0])
         self.assertEqual(r['Projected Own %'].tolist(),[0,40])
+
+class ScoringInputReportTests(unittest.TestCase):
+    def test_pending_placeholders_are_never_exported_as_completed_sims(self):
+        from simmah_player_display import scoring_input_report
+        players=pd.DataFrame({'Name':['A'],'Projection':[20.],'Sim Pts':[20.],'Sim P95':[36.],'Simulation Status':['Complete']})
+        report=scoring_input_report(players)
+        self.assertTrue(pd.isna(report['Sim Pts'].iloc[0]))
+        self.assertTrue(pd.isna(report['Actual Simulation Mean'].iloc[0]))
+        self.assertIn('Pending',report['Simulation Status'].iloc[0])
+
+    def test_actual_latest_scores_replace_edited_placeholder_columns(self):
+        from simmah_player_display import scoring_input_report
+        players=pd.DataFrame({'Name':['B','A'],'Projection':[10.,20.],'Sim Pts':[10.,20.]})
+        report=scoring_input_report(players,pd.DataFrame({'A':[12.,16.],'B':[1.,3.]}))
+        self.assertEqual(report['Actual Simulation Mean'].tolist(),[2.,14.])
+        self.assertEqual(report['Simulation Minus Projection'].tolist(),[-8.,-6.])
+        self.assertEqual(report['Sim Pts'].tolist(),[2.,14.])
