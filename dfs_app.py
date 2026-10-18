@@ -5413,7 +5413,7 @@ if platform == "FanDuel":
         _fd_rank_options = [label for label, column in PORTFOLIO_METRICS.items() if column in fd_rank_source.columns]
         fd_rank_label = st.selectbox(
             "Rank lineups by", _fd_rank_options, index=_fd_rank_options.index("Top 1%") if "Top 1%" in _fd_rank_options else 0,
-            key="fd_rank_metric_" + lineup_mode.replace(" ", "_").lower()
+            key="fd_rank_metric_top1_default_v2_" + lineup_mode.replace(" ", "_").lower()
         )
         fd_rank_column = PORTFOLIO_METRICS[fd_rank_label]
         fd_rank_source = fd_rank_source.sort_values(fd_rank_column, ascending=False, kind="stable").reset_index(drop=True)
@@ -7091,10 +7091,10 @@ else:
                 key="dk_classic_portfolio_count"
             )
             classic_rank_label = st.selectbox(
-                "Rank Classic lineups by",
+                "Rank lineups by",
                 classic_rank_options,
-                index=0,
-                key="dk_classic_portfolio_metric"
+                index=classic_rank_options.index("Top 1%"),
+                key="dk_classic_portfolio_metric_top1_default_v2"
             )
             classic_rank_metric = PORTFOLIO_METRICS[classic_rank_label]
             classic_top_portfolio = (
@@ -8617,7 +8617,7 @@ if "contest_results_df" in st.session_state and not (platform == "DraftKings" an
         "Rank lineups by",
         list(PORTFOLIO_METRICS.keys()),
         index=list(PORTFOLIO_METRICS.keys()).index("Top 1%"),
-        key="portfolio_metric"
+        key="portfolio_metric_top1_default_v2"
     )
 
     portfolio_metric = PORTFOLIO_METRICS[
