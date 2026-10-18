@@ -369,6 +369,14 @@ def preserve_uploaded_ownership(players, raw):
     return result
 
 
+@st.cache_data(ttl=900, show_spinner=False)
+def fetch_experimental_dk_ownership():
+    from simmah_ownership import URL
+    response = requests.get(URL, timeout=12)
+    response.raise_for_status()
+    return response.text
+
+
 def opponent_field_selection_weights(pool, fallback_scores):
     """Use ownership as the primary opponent-construction signal for full-roster contests."""
     fallback = np.asarray(fallback_scores, dtype=float)
@@ -6896,6 +6904,14 @@ else:
                     mean_scores = sim_df.mean(axis=0).to_dict()
                     pool = classic_pool.copy()
                     pool["MeanPoints"] = pool["Name"].map(mean_scores).fillna(pool["Projection"])
+                    try:
+                        from simmah_ownership import apply_sharksnip
+                        pool, ownership_note = apply_sharksnip(pool, fetch_experimental_dk_ownership())
+                        st.caption(ownership_note)
+                    except Exception as ownership_error:
+                        st.caption(f"Automatic DK ownership unavailable: {ownership_error}. Using uploaded ownership or estimated popularity.")
+                    ownership_columns = [c for c in ["Name", "Team", "Opponent", "Position", "Salary", "Projected Ownership", "Ownership Source", "Ownership Updated UTC", "Ownership Draft Group"] if c in pool.columns]
+                    st.session_state["classic_ownership_snapshot"] = pool[ownership_columns].copy()
                     pool["Weight"] = opponent_field_selection_weights(
                         pool, pool["MeanPoints"].to_numpy(dtype=float)
                     )
@@ -7112,6 +7128,10 @@ else:
                     st.dataframe(pd.DataFrame(_diagnostic_rows), hide_index=True, use_container_width=True)
                     st.download_button("DOWNLOAD CLASSIC OPPONENT FIELD", _classic_portfolio_field.to_csv(index=False).encode("utf-8"),
                         "DraftKings_Classic_Opponent_Field.csv", "text/csv", key="classic_field_diagnostics", on_click="ignore")
+                    _ownership_snapshot = st.session_state.get("classic_ownership_snapshot")
+                    if isinstance(_ownership_snapshot, pd.DataFrame) and not _ownership_snapshot.empty:
+                        st.download_button("DOWNLOAD OWNERSHIP SNAPSHOT", _ownership_snapshot.to_csv(index=False).encode("utf-8"),
+                            "DraftKings_Classic_Ownership_Snapshot.csv", "text/csv", key="classic_ownership_snapshot_download", on_click="ignore")
                     st.download_button("DOWNLOAD CLASSIC PLAYER INPUTS", classic_pool.to_csv(index=False).encode("utf-8"),
                         "DraftKings_Classic_Player_Inputs.csv", "text/csv", key="classic_player_diagnostics", on_click="ignore")
 
