@@ -1398,7 +1398,11 @@ def download_public_projection_table(source_name, platform_name, target_names=No
         response = requests.get(url, headers=headers, timeout=30)
         response.raise_for_status()
     except Exception:
-        return {}
+        if source_name != "DFF" or not is_single_game:
+            return {}
+        # A failed default matchup must not skip dated/slate discovery.
+        from types import SimpleNamespace
+        response = SimpleNamespace(text="")
 
     # DraftEdge's working Colab method: inspect every HTML table and select
     # whichever table has a player column and a projection column.
@@ -1742,24 +1746,56 @@ def download_public_projection_table(source_name, platform_name, target_names=No
                             collect_slate_candidates(value, inherited_date)
 
                 collect_slate_candidates(slate_payload)
-                today = date.today().isoformat()
+                # The bare API returns dates with an EMPTY slates list.
+                # Its AJAX menu requires both date and the page's window.url.
+                # Without that request every date opens only its first game.
+                from datetime import datetime, timedelta
+                from zoneinfo import ZoneInfo
+                current_date = datetime.now(ZoneInfo("America/New_York")).date()
+                valid_dates = sorted({d for d, _ in candidates
+                                      if current_date.isoformat() <= d <= (current_date + timedelta(days=7)).isoformat()})
+                candidates = [(d, code) for d, code in candidates if d in valid_dates]
+                for slate_date in valid_dates:
+                    discovery_url = (f"https://www.dailyfantasyfuel.com/nfl/"
+                                     f"showdown-single-game-projections/{site}/{slate_date}/")
+                    try:
+                        discovery = requests.get(discovery_url, headers=headers, timeout=30)
+                        discovery.raise_for_status()
+                        code_match = re.search(r"window\.url\s*=\s*['\"]([A-Za-z0-9]+)['\"]", discovery.text)
+                        if not code_match:
+                            continue
+                        menu = requests.get(
+                            f"https://www.dailyfantasyfuel.com/data/slates/recent/nfl/{site}",
+                            params={"date": slate_date, "url": code_match.group(1)},
+                            headers=headers, timeout=30,
+                        )
+                        menu.raise_for_status()
+                        for item in menu.json().get("slates", []):
+                            code = str(item.get("url", ""))
+                            if item.get("showdown_flag") and re.fullmatch(r"[A-Za-z0-9]+", code):
+                                candidate = (slate_date, code)
+                                if candidate not in candidates:
+                                    candidates.append(candidate)
+                    except Exception:
+                        continue
+                today = current_date.isoformat()
                 candidates.sort(key=lambda item: (item[0] < today, item[0], item[1]))
 
                 def parse_dff_candidate(candidate_html):
                     candidate_result = {}
                     candidate_rows = re.findall(
-                        r"<tr\\b[^>]*class=['\\\"][^'\\\"]*projections-listing[^'\\\"]*['\\\"][^>]*>.*?</tr>",
+                        r"<tr\b[^>]*class=['\"][^'\"]*projections-listing[^'\"]*['\"][^>]*>.*?</tr>",
                         candidate_html,
                         flags=re.IGNORECASE | re.DOTALL
                     )
                     for candidate_row in candidate_rows:
-                        opening = re.search(r'<tr\\b[^>]*>', candidate_row, flags=re.IGNORECASE | re.DOTALL)
+                        opening = re.search(r'<tr\b[^>]*>', candidate_row, flags=re.IGNORECASE | re.DOTALL)
                         opening_tag = opening.group(0) if opening else candidate_row
 
                         def candidate_attr(attrs, source):
                             for attr in attrs:
                                 match = re.search(
-                                    r"\\b" + re.escape(attr) + r"\\s*=\\s*['\\\"]([^'\\\"]*)['\\\"]",
+                                    r"\b" + re.escape(attr) + r"\s*=\s*['\"]([^'\"]*)['\"]",
                                     source,
                                     flags=re.IGNORECASE
                                 )
@@ -1770,7 +1806,7 @@ def download_public_projection_table(source_name, platform_name, target_names=No
                         name = candidate_attr(('data-player', 'data-name'), opening_tag)
                         if not name:
                             name_match = re.search(
-                                r"<div\\b[^>]*class=['\\\"][^'\\\"]*\\bbold\\b[^'\\\"]*['\\\"][^>]*>\\s*([^<]+)",
+                                r"<div\b[^>]*class=['\"][^'\"]*\bbold\b[^'\"]*['\"][^>]*>\s*([^<]+)",
                                 candidate_row,
                                 flags=re.IGNORECASE | re.DOTALL
                             )
@@ -1784,12 +1820,12 @@ def download_public_projection_table(source_name, platform_name, target_names=No
 
                         if pd.isna(value):
                             cells = re.findall(
-                                r'<td\\b[^>]*>(.*?)</td>', candidate_row,
+                                r'<td\b[^>]*>(.*?)</td>', candidate_row,
                                 flags=re.IGNORECASE | re.DOTALL
                             )
                             if len(cells) > 6:
                                 visible = unescape(re.sub(r'<[^>]+>', ' ', cells[6]))
-                                visible = re.sub(r'\\s+', ' ', visible).strip()
+                                visible = re.sub(r'\s+', ' ', visible).strip()
                                 value = pd.to_numeric(
                                     visible.replace(',', '').replace('$', ''), errors='coerce'
                                 )
@@ -1829,7 +1865,7 @@ def download_public_projection_table(source_name, platform_name, target_names=No
                             candidate_response.raise_for_status()
                         except Exception:
                             continue
-                        candidate_result = {}
+                        candidate_result = parse_dff_candidate(candidate_response.text)
                         try:
                             candidate_tables = pd.read_html(io.StringIO(candidate_response.text))
                         except Exception:
