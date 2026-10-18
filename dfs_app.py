@@ -7827,6 +7827,20 @@ with st.expander("Contest Payout Structure", expanded=False):
         except Exception as exc:
             st.error(f"Could not read payout table: {type(exc).__name__}: {exc}")
 
+    # User-verified DAL @ GB $3K Dime Package payouts, scoped to the entry CSV's contest ID.
+    if (
+        str(st.session_state.get("selected_dk_contest", {}).get("id", "")) == "196786594"
+        and str(st.session_state.get("contest_payout_contest_id", "")) != "196786594"
+    ):
+        _dal_gb_dime_ranges = [[1,1,150],[2,2,100],[3,3,60],[4,4,45],[5,5,35],[6,6,25],[7,8,20],[9,10,15],[11,13,10],[14,16,8],[17,20,6],[21,25,5],[26,35,4],[36,45,3],[46,60,2],[61,80,1.5],[81,135,1],[136,275,0.75],[276,625,0.5],[626,1420,0.4],[1421,3460,0.3],[3461,8545,0.2]]
+        _dal_gb_dime_schedule = np.zeros(8545, dtype=float)
+        for _rank_start, _rank_end, _rank_prize in _dal_gb_dime_ranges:
+            _dal_gb_dime_schedule[_rank_start - 1:_rank_end] = _rank_prize
+        st.session_state["contest_payout_schedule"] = _dal_gb_dime_schedule
+        st.session_state["contest_payout_source_name"] = "User-verified DAL @ GB $3K Dime Package payout table"
+        st.session_state["contest_payout_contest_id"] = "196786594"
+        st.session_state["contest_payout_auto_loaded"] = True
+
     # Verified payout schedule supplied from the DraftKings contest details.
     # Keep it scoped to this exact contest ID; never apply it to another contest.
     if (
