@@ -4,6 +4,21 @@ from simmah_classic_field import classic_tournament_mask
 
 
 class ClassicFieldTest(unittest.TestCase):
+    def test_numeric_team_codes_preserve_string_comparisons(self):
+        from simmah_field_construction import construction_labels
+        positions=np.array(['QB','RB','RB','WR','WR','WR','TE','TE','DST'])
+        teams=np.array(['A','B','C','A','B','D','A','E','F'])
+        opponents=np.array(['B','A','D','B','A','C','B','F','E'])
+        picks=np.array([np.arange(9),[0,1,2,3,4,5,7,6,8]])
+        _,codes=np.unique(np.concatenate([teams,opponents]),return_inverse=True)
+        numeric_teams,numeric_opponents=codes[:9],codes[9:]
+        np.testing.assert_array_equal(
+            classic_tournament_mask(picks,teams,positions),
+            classic_tournament_mask(picks,numeric_teams,positions))
+        np.testing.assert_array_equal(
+            construction_labels(picks,teams,positions,opponents),
+            construction_labels(picks,numeric_teams,positions,numeric_opponents))
+
     def test_running_back_does_not_satisfy_qb_pass_catcher_stack(self):
         positions=np.array(['QB','RB','RB','WR','WR','WR','TE','TE','DST'])
         teams=np.array(['A','A','B','C','D','E','F','G','H'])

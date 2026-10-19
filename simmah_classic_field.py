@@ -8,7 +8,7 @@ import numpy as np
 
 def classic_tournament_mask(picks, teams, positions, max_from_team=8, require_stack=True):
     picks=np.asarray(picks,dtype=int)
-    teams=np.asarray(teams,dtype=str)
+    teams=np.asarray(teams)
     positions=np.asarray(positions,dtype=str)
     if picks.ndim!=2 or picks.shape[1]!=9:
         raise ValueError('Classic fields require nine roster slots')
@@ -48,6 +48,12 @@ def build_full_roster_field(pool, weights, slots, target, rng=None, progress=Non
     opponents=pool.get("Opponent",pd.Series("",index=pool.index)).fillna("").astype(str).to_numpy()
     if learned_construction is not None and (opponents=="").any():
         raise ValueError("Learned bring-backs require verified opponents")
+    # Shared codes preserve exact string equality while avoiding string comparisons
+    # throughout every proposal batch. Include opponents in the same vocabulary.
+    _, codes=np.unique(np.concatenate([teams,opponents]),return_inverse=True)
+    teams=codes[:len(pool)];opponents=codes[len(pool):]
+    catcher_mask=np.array([bool(set(p.split('/')) & {'WR','TE'}) for p in positions])
+    offense_mask=np.array([bool(set(p.split('/')) & {'RB','WR','TE'}) for p in positions])
     weights=np.asarray(weights,float)
     if weights.shape!=(len(pool),) or not np.isfinite(weights).all():raise ValueError('Invalid field weights')
     if not np.isfinite(salaries).all() or (salaries<=0).any():raise ValueError('Invalid field salaries')
@@ -93,8 +99,8 @@ def build_full_roster_field(pool, weights, slots, target, rng=None, progress=Non
             if learned_construction is not None and slot:
                 qb_team=teams[picks[:,0]];qb_opp=opponents[picks[:,0]]
                 candidate_teams=teams[choices][None,:]
-                catcher=np.array([bool(set(p.split('/'))&{'WR','TE'}) for p in positions[choices]])[None,:]
-                offensive=np.array([bool(set(p.split('/'))&{'RB','WR','TE'}) for p in positions[choices]])[None,:]
+                catcher=catcher_mask[choices][None,:]
+                offensive=offense_mask[choices][None,:]
                 same=candidate_teams==qb_team[:,None];opposing=candidate_teams==qb_opp[:,None]
                 required=((stack_goal>=1)&(slot==3)) | ((stack_goal>=2)&(slot==4))
                 feasible &= (~required[:,None]) | (same & catcher)
@@ -116,7 +122,7 @@ def build_full_roster_field(pool, weights, slots, target, rng=None, progress=Non
                 z=np.clip((points-np.median(points))/max(float(points.std()),1),-3,3)
                 spend=np.clip((total[viable]-48500)/1200,-3,1.25)
                 skills=picks[viable,1:8]
-                catcher=np.array([bool(set(p.split('/'))&{'WR','TE'}) for p in positions])
+                catcher=catcher_mask
                 stacks=((teams[skills]==teams[picks[viable,0],None])&catcher[skills]).sum(axis=1)
                 human=np.exp(.85*z+.55*spend)*np.where(stacks>=2,2.,1.45)
                 # Accept each independent proposal at most once. Duplicate

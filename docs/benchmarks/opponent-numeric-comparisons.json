@@ -1,0 +1,10 @@
+{
+  "scope": "Opponent proposal sampler only; saved 267-player slate; projection weights are a benchmark proxy, not archived ownership; no contest evaluation",
+  "target": 10000,
+  "seed": 42,
+  "old_seconds": 13.25260114899902,
+  "new_seconds": 4.9540892010008974,
+  "exact_equal": true,
+  "proposals": 155648,
+  "players": 267
+}
