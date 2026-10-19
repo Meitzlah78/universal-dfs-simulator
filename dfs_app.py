@@ -262,7 +262,19 @@ FULL_ROSTER_STACK_OPTIONS = [
     "Single stack + bring-back",
     "Double stack + bring-back",
 ]
+ANY_STACK_OPTION = "Any / All stacks (includes no stack)"
+NO_STACK_OPTION = "No stack: no QB + WR/TE"
+BUILD_STACK_OPTIONS = [ANY_STACK_OPTION, *FULL_ROSTER_STACK_OPTIONS, NO_STACK_OPTION]
 SECONDARY_STACK_OPTIONS = ["RB + same-team defense", "Secondary game mini-stack"]
+
+
+def full_roster_stack_patterns(selected_stacks):
+    """Any (or no selection) leaves construction unrestricted, including no stack."""
+    if not selected_stacks or ANY_STACK_OPTION in selected_stacks:
+        return None
+    patterns = dict(zip(FULL_ROSTER_STACK_OPTIONS, [(1, False), (2, False), (1, True), (2, True)]))
+    patterns[NO_STACK_OPTION] = (0, False)
+    return [patterns[label] for label in selected_stacks if label in patterns]
 
 
 def full_roster_stack_lookup(pool):
@@ -295,6 +307,8 @@ def full_roster_stack_matches(chosen, pool, selected_stacks, stack_lookup=None, 
     pass_catchers = sum(pos in {"WR", "TE"} and team == qb_team for pos, team, _ in players)
     bring_back = any(pos in {"RB", "WR", "TE"} and team == qb_opp for pos, team, _ in players) if qb_opp else False
     rules = {
+        ANY_STACK_OPTION: True,
+        NO_STACK_OPTION: pass_catchers == 0,
         FULL_ROSTER_STACK_OPTIONS[0]: pass_catchers == 1,
         FULL_ROSTER_STACK_OPTIONS[1]: pass_catchers == 2,
         FULL_ROSTER_STACK_OPTIONS[2]: pass_catchers == 1 and bring_back,
@@ -4165,8 +4179,7 @@ def build_joint_candidate_pool(pool, platform_name, mode_name, evaluation_outcom
     # Salary-constrained joint outcomes find value. Contest evaluation handles
     # ownership through the field; popular players receive no blanket penalty.
     penalty = None
-    primary_patterns = [(1,False),(2,False),(1,True),(2,True)]
-    seed_patterns = [primary_patterns[i] for i, label in enumerate(FULL_ROSTER_STACK_OPTIONS) if label in selected_stacks] if mode_name in {"Classic", "Full Roster"} else None
+    seed_patterns = full_roster_stack_patterns(selected_stacks) if mode_name in {"Classic", "Full Roster"} else None
     result = build_candidates(pool, construction, roster, target=5000,
         salary_min=salary_min, salary_max=salary_max, multipliers=multipliers, salary_costs=salary_costs,
         locks=locks, special_allowed=special_allowed, max_from_team=(5 if multipliers else 4 if platform_name=="FanDuel" else 8),
@@ -5170,10 +5183,10 @@ if platform == "FanDuel":
             if lineup_mode == "Full Roster":
                 fd_stack_rules = st.multiselect(
                     "Stacks to use in MY lineups",
-                    FULL_ROSTER_STACK_OPTIONS,
-                    default=FULL_ROSTER_STACK_OPTIONS,
+                    BUILD_STACK_OPTIONS,
+                    default=[ANY_STACK_OPTION],
                     key="fd_full_roster_stack_rules_v2",
-                    help="Accept any selected structure. Single = exactly one WR/TE with your QB; double = exactly two. Bring-back = opposing RB/WR/TE. Clear selections for no primary requirement.",
+                    help="Any / All allows every primary structure, including unstacked lineups, and takes precedence over other primary choices. No stack requires zero same-team WR/TE with your QB. Otherwise, accept any selected structure. Optional secondary rules still apply. Clear selections also allows any structure.",
                 )
                 fd_secondary_stack_rules = st.multiselect(
                     "Optional secondary stacks",
@@ -7122,10 +7135,10 @@ else:
             with _build_controls:
                 dk_classic_stack_rules = st.multiselect(
                     "Stacks to use in MY lineups",
-                    FULL_ROSTER_STACK_OPTIONS,
-                    default=FULL_ROSTER_STACK_OPTIONS,
+                    BUILD_STACK_OPTIONS,
+                    default=[ANY_STACK_OPTION],
                     key="dk_classic_stack_rules_v2",
-                    help="Accept any selected structure. Single = exactly one WR/TE with your QB; double = exactly two. Bring-back = opposing RB/WR/TE. Clear selections for no primary requirement.",
+                    help="Any / All allows every primary structure, including unstacked lineups, and takes precedence over other primary choices. No stack requires zero same-team WR/TE with your QB. Otherwise, accept any selected structure. Optional secondary rules still apply. Clear selections also allows any structure.",
                 )
                 dk_secondary_stack_rules = st.multiselect(
                     "Optional secondary stacks",

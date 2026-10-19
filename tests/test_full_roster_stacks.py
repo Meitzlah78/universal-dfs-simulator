@@ -8,6 +8,7 @@ import pandas as pd
 def load_rules():
     tree = ast.parse(Path('dfs_app.py').read_text())
     names = {'FULL_ROSTER_STACK_OPTIONS', 'SECONDARY_STACK_OPTIONS',
+             'ANY_STACK_OPTION', 'NO_STACK_OPTION', 'BUILD_STACK_OPTIONS', 'full_roster_stack_patterns',
              'full_roster_stack_lookup', 'full_roster_stack_matches'}
     nodes = [node for node in tree.body
              if (isinstance(node, ast.FunctionDef) and node.name in names)
@@ -52,6 +53,27 @@ class StackRulesTest(unittest.TestCase):
         self.assertTrue(self.matches(['WR'], self.options))
         self.assertTrue(self.matches(['WR', 'TE', 'Opp'], self.options))
         self.assertTrue(self.matches(['RB'], []))
+
+    def test_any_includes_no_stack_and_all_stack_sizes(self):
+        any_rule = [self.ns['ANY_STACK_OPTION']]
+        for players in (['Unrelated'], ['WR'], ['WR', 'TE'], ['WR', 'TE', 'WR2', 'Opp']):
+            self.assertTrue(self.matches(players, any_rule))
+        self.assertFalse(self.matches(['Unrelated'], any_rule, self.secondary[:1]))
+
+    def test_no_stack_and_mixed_choices(self):
+        no_stack = self.ns['NO_STACK_OPTION']
+        self.assertTrue(self.matches(['RB', 'Opp', 'Unrelated'], [no_stack]))
+        self.assertFalse(self.matches(['WR'], [no_stack]))
+        self.assertTrue(self.matches(['Unrelated'], [no_stack, self.options[1]]))
+        self.assertTrue(self.matches(['WR', 'TE'], [no_stack, self.options[1]]))
+        self.assertFalse(self.matches(['WR'], [no_stack, self.options[1]]))
+
+    def test_construction_patterns_match_selection(self):
+        patterns = self.ns['full_roster_stack_patterns']
+        self.assertIsNone(patterns([self.ns['ANY_STACK_OPTION'], self.options[1]]))
+        self.assertIsNone(patterns([]))
+        self.assertEqual(patterns([self.ns['NO_STACK_OPTION']]), [(0, False)])
+        self.assertEqual(patterns([self.options[3], self.ns['NO_STACK_OPTION']]), [(2, True), (0, False)])
 
     def test_rb_defense_is_additional_requirement(self):
         self.assertTrue(self.matches(['WR', 'RB', 'DST'], self.options, self.secondary[:1]))
