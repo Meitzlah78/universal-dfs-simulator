@@ -17,6 +17,19 @@ def fixture(site='DK'):
 
 
 class CandidateTest(unittest.TestCase):
+    def test_refinement_retains_search_diversity_with_mean_outcomes(self):
+        pool,out,roster=fixture()
+        result=build_candidates(pool,out,roster,target=300,salary_min=48000,salary_max=50000,
+            scenario_diversity=0,rng=np.random.default_rng(15),max_proposals=512)
+        self.assertEqual(len(result),300)
+        slots=[slot for slot,_ in roster]
+        keys={tuple(sorted(row)) for row in result[slots].itertuples(index=False,name=None)}
+        self.assertEqual(len(keys),300)
+        self.assertTrue(result.Salary.between(48000,50000).all())
+        self.assertTrue((result['Build Simulations']==len(out)).all())
+        for _,row in result.iterrows():
+            self.assertAlmostEqual(row['Scenario Score'],out[[row[s] for s in slots]].mean().sum(),places=3)
+
     def test_diversity_uses_all_sims_at_zero_and_one_at_maximum(self):
         self.assertEqual(construction_sample_size(0,10000),10000)
         self.assertEqual(construction_sample_size(.5,10000),100)

@@ -181,6 +181,10 @@ def build_candidates(pool,outcomes,roster,target=5000,salary_min=0,salary_max=50
         scale=np.maximum(joint.std(axis=1),1)
         # Vary the salary opportunity cost between proposals, not player outcomes.
         price=rng.uniform(0,.004,batch)
+        # Keep the same search perturbation and salary opportunity cost through
+        # refinement. Removing them after seeding collapses independent starts
+        # onto a few identical local optima, especially at low sim diversity.
+        exploration=rng.gumbel(size=joint.shape)*scale[:,None]*noise
         for slot,choices in enumerate(eligible):
             row=np.flatnonzero(alive & (picks[:,slot]<0))
             if not len(row):continue
@@ -194,7 +198,7 @@ def build_candidates(pool,outcomes,roster,target=5000,salary_min=0,salary_max=50
                 blocked=(conflicts[np.maximum(selected,0)[:,:,None],choices[None,None,:]] & (selected>=0)[:,:,None]).any(axis=1)
                 feasible &= ~blocked
             objective=(joint[row[:,None],choices]-penalty[choices])*mult[slot]-price[row,None]*costs[slot,choices]
-            objective+=rng.gumbel(size=objective.shape)*scale[row,None]*noise
+            objective+=exploration[row[:,None],choices]
             objective[~feasible]=-np.inf
             valid=feasible.any(axis=1);alive[row[~valid]]=False
             best=objective.argmax(axis=1);row=row[valid];best=best[valid]
@@ -215,7 +219,8 @@ def build_candidates(pool,outcomes,roster,target=5000,salary_min=0,salary_max=50
                     selected=picks[row]
                     blocked=(conflicts[np.maximum(selected,0)[:,:,None],choices[None,None,:]] & (selected>=0)[:,:,None]).any(axis=1)
                     feasible &= ~blocked
-                objective=(joint[row[:,None],choices]-penalty[choices])*mult[slot]
+                objective=(joint[row[:,None],choices]-penalty[choices])*mult[slot]-price[row,None]*costs[slot,choices]
+                objective+=exploration[row[:,None],choices]
                 objective[~feasible]=-np.inf
                 best=objective.argmax(axis=1)
                 picks[row,slot]=choices[best];total[row]=adjusted[np.arange(len(row)),best]
@@ -240,7 +245,7 @@ def build_candidates(pool,outcomes,roster,target=5000,salary_min=0,salary_max=50
             if len(records)>=target:break
         if progress:progress(min(1,len(records)/target),f'Building from joint outcomes: {len(records):,} / {target:,}')
     result=pd.DataFrame(records)
-    result.attrs.update(engine='joint-outcome-search-v4',proposals=proposed,target=target,rejected=rejected,stack_seeded=bool(primary_stacks),
+    result.attrs.update(engine='joint-outcome-search-v5',proposals=proposed,target=target,rejected=rejected,stack_seeded=bool(primary_stacks),
                         scenario_diversity=float(scenario_diversity),
                         construction_simulations_per_candidate=sample_size,
                         scenario_unique_draws=int(np.count_nonzero(scenario_draws)) if sample_size == 1 else None)
