@@ -3028,6 +3028,11 @@ with _tab_roster:
                 st.error(f"Could not read the projection accuracy file: {exc}")
 platform, lineup_mode = format_options[selected_format]
 _build_controls.caption(selected_format)
+# Render single-game rules before projection/contest loaders can stop the script.
+if lineup_mode in {"Showdown", "Single Game"}:
+    with _build_controls:
+        st.write("### Stack Options")
+        render_single_stack_controls(st, platform, lineup_mode)
 if st.session_state.pop("refresh_projections_requested", False):
     download_public_projection_table.clear()
     download_rotowire_projections.clear()
@@ -5150,10 +5155,6 @@ if platform == "FanDuel":
                     help="Each selected secondary rule is required in addition to a selected QB stack. Mini-stacks use another game.",
                 )
                 st.caption("Choose your FanDuel Full Roster stack rules before pressing BUILD.")
-
-        if lineup_mode == "Single Game":
-            with _build_controls:
-                render_single_stack_controls(st, platform, lineup_mode)
 
         _build_controls.write("### Run")
         _fd_run_center = _build_controls.container()
@@ -7540,9 +7541,6 @@ else:
 
 with _tab_build:
     render_saved_market_calibration(platform, lineup_mode, players_df)
-    if lineup_mode == "Showdown":
-        with _build_controls:
-            render_single_stack_controls(st, platform, lineup_mode)
     build_cols = [_build_controls.container() for _ in range(3)]
     with build_cols[0]:
         st.write("### Build Settings")
