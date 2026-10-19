@@ -2564,7 +2564,7 @@ def show_detected_slate_games(source_df):
         for r in lines.to_dict("records") if implied_scores(r["Game total"], r["Home spread"]) is not None
     ]
     if markets:
-        st.caption("Pregame lines populate implied team scores. Experimental field-popularity adjustment (maximum ±15%) applies only without imported ownership. Player projections stay unchanged. Rebuild opponents and rerun contest simulation after editing lines.")
+        st.caption("Pregame lines populate implied team scores. Experimental field-popularity adjustment (maximum ±15%) applies only without imported ownership. Player projection inputs stay unchanged; new game simulations calibrate team scoring environments to these targets. Run a new build after changing lines.")
 
 
 @st.cache_data(show_spinner=False, ttl=300)
@@ -4118,7 +4118,7 @@ def build_joint_candidate_pool(pool, platform_name, mode_name, evaluation_outcom
         raise ValueError("Run SIM: the evaluation matrix does not contain the required outcome count")
     st.info("Loading prepared construction outcomes; BUILD does not rerun the football simulator.")
     construction = construction_for_build(evaluation_outcomes, pool, platform_name, simulation_cache_root(),
-        count=SIMULATION_COUNT,
+        count=SIMULATION_COUNT, market_targets=st.session_state.get("active_game_markets", {}),
         correlation_strength=(1.0 if mode_name in {"Classic", "Full Roster"} else
             float(st.session_state.get("active_game_correlation_strength", 0.0))))
     multipliers = [1.5, 1, 1, 1, 1, 1] if mode_name in {"Showdown", "Single Game"} else None
@@ -4402,9 +4402,14 @@ def simulate_fd_play_by_play(players_df, rng, n=SIMULATION_COUNT, correlation_st
     _fit_pool = pool[["Name", "Team", "Opponent", "Position", "Projection"]].copy()
     prepared = prepare_simulations(_fit_pool, _fd_hist_roles, platform, simulation_cache_root(),
         count=n, correlation_strength=correlation_strength, weather_by_team=weather_by_team,
+        market_targets=st.session_state.get("active_game_markets", {}),
         progress=lambda fraction,text: progress.progress(fraction,text=text))
     result = prepared["evaluation"].copy()
     result.attrs["preparation_key"] = prepared["metadata"]["key"]
+    if prepared["metadata"].get("market_report"):
+        with st.expander("Market scoring calibration", expanded=False):
+            st.caption("Spreads and totals calibrate team event efficiency before the games are simulated. Pilot means may differ from targets; individual fantasy projections are not multiplied afterward.")
+            st.dataframe(pd.DataFrame(prepared["metadata"]["market_report"]), hide_index=True)
     _projection_fit_report = prepared["fit_report"]
     st.session_state["simulation_preparation_" + platform] = prepared["metadata"]
     _prep_timing = prepared["metadata"]["timings"]

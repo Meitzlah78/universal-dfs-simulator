@@ -6,7 +6,7 @@ Rates are model assumptions/history inputs, not learned from contest uploads.
 """
 import numpy as np
 
-ENGINE_VERSION = 'shared-nfl-v4-confirmed-qb-roles'
+ENGINE_VERSION = 'shared-nfl-v5-market-environment'
 STAT_KEYS = (
     'passing_yards', 'passing_tds', 'interceptions', 'rushing_yards',
     'rushing_tds', 'receiving_yards', 'receiving_tds', 'receptions',
@@ -17,11 +17,12 @@ STAT_KEYS = (
 )
 
 
-def simulate_stat_lines(pool, roles, rng, n, correlation_strength=1.0, progress=None, return_diagnostics=False, weather_by_team=None, projection_inputs=None, scoring_platform="FanDuel"):
+def simulate_stat_lines(pool, roles, rng, n, correlation_strength=1.0, progress=None, return_diagnostics=False, weather_by_team=None, projection_inputs=None, scoring_platform="FanDuel", market_gain=None):
     """Return name -> stat arrays; no point scaling, clipping or bootstrapping."""
     from simmah_weather import weather_factors
     weather_by_team = weather_by_team or {}
     projection_inputs = projection_inputs or {}
+    market_gain = market_gain or {}
     reception_points = 1. if str(scoring_platform).casefold() in {"draftkings","dk"} else .5
     n = int(n)
     if n < 1:
@@ -277,6 +278,10 @@ def simulate_stat_lines(pool, roles, rng, n, correlation_strength=1.0, progress=
                         role = roles.get(name, {}); carries = role.get('carries', 0)
                         ypc = np.clip(role.get('rush_yards', 0)/carries, 2, 8.5) if carries else 4.35
                         gain[loc] = np.clip(rng.normal(np.clip(ypc*role.get('matchup_rushing',1.)*projection_inputs.get(name,{}).get('skill_gain',1.),1,8.5), 5.5, len(loc))*np.sqrt(environment[idx[loc]]), -5, 65)
+                if market_gain:
+                    # Yardage changes happen before TDs, first downs, player stats
+                    # and opposing-DST accounting, preserving shared events.
+                    gain = np.where(gain > 0, gain * float(market_gain.get(teams[side], 1.)), gain)
                 gain = np.clip(gain, -field[idx], 100-field[idx])
                 for name in p['receivers']:
                     loc = np.flatnonzero(caught & (carrier == player_ids[name]))

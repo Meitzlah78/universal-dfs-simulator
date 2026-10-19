@@ -19,7 +19,8 @@ def app_functions():
     for node in nodes:
         if isinstance(node,ast.FunctionDef):node.decorator_list=[]
     progress = SimpleNamespace(progress=lambda *a, **kw: None)
-    ns = {'np': np, 'pd': pd, 'SIMULATION_COUNT': 10000,
+    from simmah_injury_display import injury_frame
+    ns = {'np': np, 'pd': pd, 'injury_frame': injury_frame, 'SIMULATION_COUNT': 10000,
           'st': SimpleNamespace(expander=lambda *a, **kw: nullcontext(), dataframe=lambda *a, **kw: None, progress=lambda *a, **kw: progress, caption=lambda *a, **kw: None, session_state={}),
           'load_nfl_historical_player_stats': lambda: pd.DataFrame(),
           'load_matchup_schedule': lambda: pd.DataFrame()}

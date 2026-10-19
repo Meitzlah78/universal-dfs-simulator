@@ -41,7 +41,7 @@ def _hash(raw):
 def _model_digest():
     root=Path(__file__).parent
     names=['simmah_simulation_store.py','simmah_nfl_engine.py','simmah_projection_inputs.py',
-           'simmah_nfl_scoring.py','simmah_weather.py','simmah_qb_roles.py','simmah_matchups.py']
+           'simmah_nfl_scoring.py','simmah_market_calibration.py','simmah_weather.py','simmah_qb_roles.py','simmah_matchups.py']
     return _hash(_json({name:_hash((root/name).read_bytes()) for name in names}))
 
 
@@ -109,6 +109,7 @@ def _read_prepared(directory,key,names,count):
         if _hash(report_raw)!=manifest['fit_report_sha256']:
             raise CacheIntegrityError('Fit-report checksum mismatch')
         result['fit_report']=pd.DataFrame(**json.loads(report_raw))
+        result['market_report']=manifest.get('market_report', [])
         return result
     except CacheIntegrityError:
         raise
@@ -118,7 +119,7 @@ def _read_prepared(directory,key,names,count):
 
 def prepare_simulations(pool,roles,platform,cache_root,count=10000,correlation_strength=1.,
                         weather_by_team=None,evaluation_seed=530001,construction_seed=530002,
-                        pilot_n=1024,iterations=8,progress=None):
+                        pilot_n=1024,iterations=8,progress=None,market_targets=None):
     """Return two DataFrames, fit report and timings. No candidate/field work here.
 
     Confirm QB roles before this call. Input row order is part of the key because
@@ -153,11 +154,13 @@ def prepare_simulations(pool,roles,platform,cache_root,count=10000,correlation_s
         club=team_key(team)
         canonical_weather[club]=dict(canonical_weather.get(club,{}),**values)
     weather_by_team=canonical_weather
+    from simmah_market_calibration import canonical_targets, calibrate_market_inputs
+    market_targets=canonical_targets(market_targets)
     fit_spec={'schema':SCHEMA,'model_digest':_model_digest(),'players':inputs.to_dict('records'),
               'roles':roles,'platform':platform,'pilot_n':pilot_n,'iterations':iterations}
     fit_key=_hash(_json(fit_spec))
     spec={'schema':SCHEMA,'fit_key':fit_key,'count':count,'correlation_strength':correlation_strength,
-          'weather':weather_by_team,'evaluation_seed':int(evaluation_seed),'construction_seed':int(construction_seed)}
+          'weather':weather_by_team,'market_targets':market_targets,'evaluation_seed':int(evaluation_seed),'construction_seed':int(construction_seed)}
     key=_hash(_json(spec));directory=root/'prepared'/key
     with _cache_lock(root/'locks'/('outcomes-'+key+'.lock')):
         cached=_read_prepared(directory,key,names,count)
@@ -165,18 +168,20 @@ def prepare_simulations(pool,roles,platform,cache_root,count=10000,correlation_s
             cached['metadata']={'key':key,'fit_key':fit_key,'cache_hit':True,'count':count,
                 'platform':platform,'input_players':fit_spec['players'],'weather':weather_by_team,
                 'correlation_strength':correlation_strength,
+                'market_targets':market_targets, 'market_report':cached.get('market_report', []),
                 'timings':{'load_seconds':time.perf_counter()-started}}
             return cached
         timings={};mark=time.perf_counter()
         parameters,report,fit_hit=_fit(inputs,roles,platform,root,fit_key,pilot_n,iterations,
             (lambda f,t:progress(.3*f,t)) if progress else None)
         timings['fit_seconds']=time.perf_counter()-mark
+        market_gain,market_report=calibrate_market_inputs(inputs,roles,parameters,weather_by_team,platform,market_targets,pilot_n=max(512,int(pilot_n)))
         result={}
         for index,(kind,seed) in enumerate([('evaluation',evaluation_seed),('construction',construction_seed)]):
             mark=time.perf_counter()
             if progress:progress(.3+.35*index,'Preparing '+kind+' outcomes')
             stats=simulate_stat_lines(inputs,roles,np.random.default_rng(seed),count,correlation_strength,
-                weather_by_team=weather_by_team,projection_inputs=parameters,scoring_platform=platform,
+                weather_by_team=weather_by_team,projection_inputs=parameters,scoring_platform=platform,market_gain=market_gain,
                 progress=(lambda fraction,text:progress(.3+.35*index+.35*fraction,text)) if progress else None)
             values={}
             for row in inputs.itertuples():
@@ -194,13 +199,14 @@ def prepare_simulations(pool,roles,platform,cache_root,count=10000,correlation_s
         _atomic_write(directory/'outcomes.npz',raw);_atomic_write(directory/'fit_report.json',report_raw)
         # Manifest is the commit marker; readers never accept a partial write.
         manifest={'schema':SCHEMA,'key':key,'spec':spec,'fit_spec':fit_spec,'names':names,'model_digest':_model_digest(),
-                  'outcomes_sha256':_hash(raw),'fit_report_sha256':_hash(report_raw)}
+                  'outcomes_sha256':_hash(raw),'fit_report_sha256':_hash(report_raw), 'market_report':market_report}
         _atomic_write(directory/'manifest.json',_json(manifest))
         timings['persist_seconds']=time.perf_counter()-mark;timings['total_seconds']=time.perf_counter()-started
         result['fit_report']=report
         result['metadata']={'key':key,'fit_key':fit_key,'cache_hit':False,'fit_cache_hit':fit_hit,
                             'count':count,'timings':timings,'platform':platform,'input_players':fit_spec['players'],
-                            'weather':weather_by_team,'correlation_strength':correlation_strength}
+                            'weather':weather_by_team,'correlation_strength':correlation_strength,
+                            'market_targets':market_targets,'market_report':market_report}
         if progress:progress(1.,'Prepared simulation bundle ready')
         return result
 
@@ -224,6 +230,7 @@ def load_prepared(cache_root,key):
         result['metadata']={'key':key,'cache_hit':True,'count':manifest['spec']['count'],
             'platform':manifest['fit_spec']['platform'],'input_players':manifest['fit_spec']['players'],
             'weather':manifest['spec']['weather'],'correlation_strength':manifest['spec']['correlation_strength'],
+            'market_targets':manifest['spec'].get('market_targets',{}),'market_report':manifest.get('market_report',[]),
             'timings':{'load_seconds':time.perf_counter()-started}}
         return result
     except CacheIntegrityError:raise
@@ -251,7 +258,7 @@ def weather_snapshot(pool):
     return result
 
 
-def construction_for_build(evaluation,pool,platform,cache_root,count=10000,correlation_strength=None):
+def construction_for_build(evaluation,pool,platform,cache_root,count=10000,correlation_strength=None,market_targets=None):
     """Load matching construction outcomes; never fit, simulate or fetch here."""
     key=evaluation.attrs.get('preparation_key')
     if not key:raise ValueError('Run SIM to prepare independent construction/evaluation outcomes before BUILD')
@@ -260,6 +267,10 @@ def construction_for_build(evaluation,pool,platform,cache_root,count=10000,corre
         raise ValueError('Prepared scoring platform or outcome count changed; run SIM again')
     if correlation_strength is not None and metadata['correlation_strength']!=float(correlation_strength):
         raise ValueError('Game correlation changed; run SIM again')
+    if market_targets is not None:
+        from simmah_market_calibration import canonical_targets
+        if metadata.get('market_targets',{}) != canonical_targets(market_targets):
+            raise ValueError('Spreads or totals changed; run SIM again to prepare matching game outcomes')
     frozen={row['Name']:row for row in metadata['input_players']}
     for row in pool[['Name','Team','Opponent','Position','Projection']].to_dict('records'):
         previous=frozen.get(row['Name'])
