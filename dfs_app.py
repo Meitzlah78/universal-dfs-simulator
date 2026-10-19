@@ -18,6 +18,8 @@ st.set_page_config(
     layout="wide"
 )
 
+from simmah_injury_display import injury_frame
+from simmah_lineup_editor import render_editor
 from simmah_ui import render_brand, player_columns, player_column_config, render_diversity_controls
 render_brand(st)
 st.session_state["active_game_markets"] = {}
@@ -28,7 +30,7 @@ st.session_state["active_slate_identity"] = ""
 _shared_header = st.container()
 _workspace_main, _workspace_rail = st.columns([4.3, 1.25], gap="medium")
 with _workspace_main:
-    _tab_contests, _tab_roster, _tab_build = st.tabs(["Contests", "Roster & Projections", "Lineups"])
+    _tab_contests, _tab_roster, _tab_build, _tab_lineups = st.tabs(["Contests", "Roster & Projections", "Build", "Lineups"])
 with _workspace_rail:
     _build_controls = st.container(key="simmah_build_panel", border=True)
     with _build_controls:
@@ -153,7 +155,7 @@ with _contest_history:
                 st.error(f"Backup could not be restored: {_exc}")
         st.caption(f"Available: {len(_history_store['contests'])} contest profile(s), {sum(p['lineups'] for p in _history_store['contests']):,} historical entries.")
         if _history_store["contests"]:
-            st.dataframe(pd.DataFrame([{"Format": p["format"], "Stakes": p["stake_bucket"], "Entries": p["lineups"], "Learned features": ", ".join(p["features"])} for p in _history_store["contests"]]), use_container_width=True, hide_index=True)
+            st.dataframe(injury_frame(st, pd.DataFrame([{"Format": p["format"], "Stakes": p["stake_bucket"], "Entries": p["lineups"], "Learned features": ", ".join(p["features"])} for p in _history_store["contests"]])), use_container_width=True, hide_index=True)
         st.download_button("DOWNLOAD FIELD-HISTORY BACKUP", _history_json.dumps(_history_store, indent=2), "Simmah_Field_History.json", "application/json")
         st.caption("New profiles survive app reruns and sessions on this server. Download a backup to retain them across hosting redeploys; checked-in seed profiles are always restored.")
 
@@ -418,7 +420,7 @@ def render_value_leverage_finder(pool, comparison, field, slots, key, special_sl
         options = [c for c in options if c in report]
         sort = st.selectbox("Find plays by", options, index=options.index("Sim Leverage (pp)") if report["Sim Leverage (pp)"].notna().any() else 0, key="leverage_sort_" + key)
         cols = [c for c in ["Name", "Team", "Position", "Salary", "Projection", "Projected Pts / $1k", "P95 Pts / $1k", "Position Value Percentile", "Top1-weighted Presence %", "Field Own %", "Sim Leverage (pp)", "CPT/MVP Weighted Presence %", "Field CPT/MVP Own %", "CPT/MVP Leverage (pp)"] if c in report]
-        st.dataframe(report[cols].sort_values(sort, ascending=False, na_position="last"), hide_index=True, use_container_width=True)
+        st.dataframe(injury_frame(st, report[cols].sort_values(sort, ascending=False, na_position="last")), hide_index=True, use_container_width=True)
 
 
 def ownership_adjusted_player_scores(pool, names, base_scores, player_sim, projection_fallback=None):
@@ -527,7 +529,7 @@ def show_field_ownership(field_df, slots, title, captain_slot=None):
         st.write("### " + title)
         st.caption(f"Ownership calculated from {len(field_df):,} simulated opponent lineups. Captain/MVP ownership is shown separately where applicable.")
         st.dataframe(
-            ownership_df,
+            injury_frame(st, ownership_df),
             use_container_width=True,
             hide_index=True,
             column_config={"Name": st.column_config.TextColumn("Name", pinned=True)},
@@ -630,7 +632,7 @@ def apply_learned_field(field, pool, slots, platform_name, mode_name, contest, t
         if max_error > 3:
             st.warning("Some ownership targets cannot be closely matched within the available legal proposals and salary mix. Review the final ownership comparison; projected ownership remains an estimate.")
         with st.expander("Projected versus final opponent ownership", expanded=False):
-            st.dataframe(report, use_container_width=True, hide_index=True)
+            st.dataframe(injury_frame(st, report), use_container_width=True, hide_index=True)
             st.download_button("DOWNLOAD OWNERSHIP COMPARISON", report.to_csv(index=False).encode("utf-8"),
                 f"{platform_name}_{mode_name.replace(' ', '_')}_Ownership_Comparison.csv", "text/csv",
                 key=f"ownership_comparison_download_{platform_name}_{mode_name}", on_click="ignore")
@@ -1000,10 +1002,12 @@ def apply_injury_statuses(frame, key_prefix):
                 st.session_state.pop(key, None)
         st.warning("Saved lineups containing Out players were cleared. Run SIM again to rebuild safely.")
 
+    st.session_state["display_injury_statuses"] = dict(zip(result["Name"].astype(str), result["Injury Status"]))
     questionable = result.loc[result["Injury Status"].str.casefold() == "questionable", "Name"].astype(str).tolist()
+    doubtful = result.loc[result["Injury Status"].str.casefold() == "doubtful", "Name"].astype(str).tolist()
     excluded = result.loc[result["Injury Status"].str.casefold() == "out", "Name"].astype(str).tolist()
     st.write("### Automatic Injury Statuses")
-    st.caption(f"Out: {len(excluded)} | Questionable: {len(questionable)}. Players listed as Out are automatically removed from the player pool.")
+    st.caption(f"Out: {len(excluded)} | Questionable: {len(questionable)} | Doubtful: {len(doubtful)}. [Q] = Questionable; [D] = Doubtful. Players listed as Out are automatically removed from the player pool.")
     if questionable:
         st.warning("QUESTIONABLE: " + ", ".join(questionable))
     if excluded:
@@ -1121,9 +1125,9 @@ def render_fantasypros_access_check(key_prefix):
         if coverage:
             import json
             st.write(f"Coverage check: season {coverage['season']}, week {coverage['week']}")
-            st.dataframe(pd.DataFrame([{
+            st.dataframe(injury_frame(st, pd.DataFrame([{
                 "Position":r["position"], "Players":r.get("player_count", 0),
-                "Status":r["status"]} for r in coverage["positions"]]), hide_index=True)
+                "Status":r["status"]} for r in coverage["positions"]])), hide_index=True)
             st.download_button("Download FantasyPros coverage report", json.dumps(coverage, indent=2),
                 file_name=f"fantasypros_coverage_{coverage['season']}_week_{coverage['week']}.json",
                 mime="application/json", key=prefix + "_coverage_download")
@@ -3053,16 +3057,16 @@ with _tab_roster:
                         for col in ["Average Bias", "MAE", "RMSE"]:
                             summary_df[col] = pd.to_numeric(summary_df[col], errors="coerce").round(2)
                         st.write("#### Accuracy breakdown")
-                        st.dataframe(summary_df, use_container_width=True, hide_index=True)
+                        st.dataframe(injury_frame(st, summary_df), use_container_width=True, hide_index=True)
                         st.write("#### Largest projection misses")
                         misses = accuracy_df.sort_values("Absolute Error", ascending=False).head(20)
                         st.dataframe(
-                            misses[[
+                            injury_frame(st, misses[[
                                 c for c in [
                                     "GameDate", "Name", "Position", "ProjectionSource",
                                     "Projection", "ActualPoints", "Error", "Absolute Error"
                                 ] if c in misses.columns
-                            ]].round(2),
+                            ]].round(2)),
                             use_container_width=True,
                             hide_index=True,
                         )
@@ -4281,7 +4285,7 @@ def apply_game_weather_context(players_frame, source_frame=None):
                 "Status": weather["status"], "Wind MPH": weather.get("wind_mph"),
                 "Precip %": weather.get("precip_pct"), "Forecast": weather.get("summary", "Unavailable")})
         if summary:
-            st.dataframe(pd.DataFrame(summary), use_container_width=True, hide_index=True)
+            st.dataframe(injury_frame(st, pd.DataFrame(summary)), use_container_width=True, hide_index=True)
         else:
             st.caption("Weather unavailable: no verified matchups.")
         st.caption("Both teams use the same game venue and kickoff-to-four-hours-later forecast. Unavailable weather leaves simulation rates unchanged. Source projections are preserved.")
@@ -4434,7 +4438,7 @@ def simulate_fd_play_by_play(players_df, rng, n=SIMULATION_COUNT, correlation_st
         _fd_hist_roles.setdefault(_name, {}).update(_context)
     with st.expander("Defensive matchup context", expanded=False):
         st.caption("nflverse weekly statistics; only dated games before kickoff. Minimum four games; rates shrink toward league averages. External projections remain the scoring targets. Neutral when data is unavailable.")
-        st.dataframe(_matchup_report, hide_index=True, use_container_width=True)
+        st.dataframe(injury_frame(st, _matchup_report), hide_index=True, use_container_width=True)
 
     progress = st.progress(0, text=f"Preparing {n:,} independent NFL game outcomes...")
     from simmah_weather import team_key
@@ -5364,7 +5368,7 @@ if platform == "FanDuel":
                 own_cols = [c for c in ["Name", "Team", "Position", "Projected Ownership", "Ownership Selection Weight", "Ownership Source", "Ownership Updated UTC", "Ownership Week"] if c in fd_pool.columns]
                 st.session_state["fd_full_ownership_snapshot"] = fd_pool[own_cols].copy()
                 with st.expander("Opponent projected ownership inputs", expanded=False):
-                    st.dataframe(fd_pool[own_cols], use_container_width=True, hide_index=True)
+                    st.dataframe(injury_frame(st, fd_pool[own_cols]), use_container_width=True, hide_index=True)
                     st.download_button("DOWNLOAD OWNERSHIP SNAPSHOT", fd_pool[own_cols].to_csv(index=False).encode("utf-8"), "FanDuel_Full_Ownership_Snapshot.csv", "text/csv", key="fd_full_ownership_snapshot_download", on_click="ignore")
             fd_weights = opponent_field_selection_weights(
                 fd_pool, fd_pool["MeanPoints"].to_numpy(dtype=float)
@@ -5491,7 +5495,7 @@ if platform == "FanDuel":
                                 "Field metric": ["P10", "P25", "P50", "P75", "P90", "P95", "P99"],
                                 "Projected points": [float(_fd_q.loc[q]) for q in [0.10, 0.25, 0.50, 0.75, 0.90, 0.95, 0.99]],
                             })
-                            st.dataframe(_fd_sanity_table, use_container_width=True, hide_index=True)
+                            st.dataframe(injury_frame(st, _fd_sanity_table), use_container_width=True, hide_index=True)
                             if not _fd_user_proj.empty:
                                 _fd_user_vs_field = float(np.mean([
                                     np.mean(_fd_field_proj.to_numpy(dtype=float) <= score)
@@ -5566,7 +5570,7 @@ if platform == "FanDuel":
                         fd_step4_progress.progress(1.0, text="Step 4 of 4 complete: FanDuel contest comparison finished.")
                         fd_step4_status.success("Step 4 of 4 complete: contest comparison finished.")
                         st.write("### FanDuel Lineups vs. Simulated Contest Field")
-                        st.dataframe(compared, use_container_width=True, hide_index=True)
+                        st.dataframe(injury_frame(st, compared), use_container_width=True, hide_index=True)
                         if all(c in compared.columns for c in ["Top1", "Top5", "Top10", "CashRate"]):
                             _fd_sanity = pd.DataFrame([{
                                 "Top 1%": round(100 * float(compared["Top1"].mean()), 2),
@@ -5575,7 +5579,7 @@ if platform == "FanDuel":
                                 "Cash %": round(100 * float(compared["CashRate"].mean()), 2),
                             }])
                             st.write("### Field Sanity Check")
-                            st.dataframe(_fd_sanity, use_container_width=True, hide_index=True)
+                            st.dataframe(injury_frame(st, _fd_sanity), use_container_width=True, hide_index=True)
                         # Keep the contest results area consistent with DraftKings Classic and Showdown.
                 else:
                     st.error("Could not create valid FanDuel opponent lineups. Check the player pool and salary range.")
@@ -5646,10 +5650,10 @@ if platform == "FanDuel":
                     if not _fd_field_proj.empty:
                         _fd_q_levels = [0.10, 0.25, 0.50, 0.75, 0.90, 0.95, 0.99]
                         _fd_q = _fd_field_proj.quantile(_fd_q_levels)
-                        st.dataframe(pd.DataFrame({
+                        st.dataframe(injury_frame(st, pd.DataFrame({
                             "Opponent field": ["P10", "P25", "P50", "P75", "P90", "P95", "P99"],
                             "Projected points": [round(float(_fd_q.loc[q]), 2) for q in _fd_q_levels],
-                        }), use_container_width=True, hide_index=True)
+                        })), use_container_width=True, hide_index=True)
                         if not _fd_my_proj.empty:
                             _fd_field_values = _fd_field_proj.to_numpy(dtype=float)
                             _fd_my_percentiles = [float(np.mean(_fd_field_values <= x)) for x in _fd_my_proj.to_numpy(dtype=float)]
@@ -5669,7 +5673,7 @@ if platform == "FanDuel":
                         _fd_opponent_show["Salary"] = pd.to_numeric(_fd_opponent_show.get("Salary"), errors="coerce")
                         _fd_opponent_show = _fd_opponent_show.sort_values("ProjectedPoints", ascending=False, na_position="last")
                         st.caption("Showing the 100 highest-projected simulated opponent lineups. Download contains the full opponent field, including duplicates.")
-                        st.dataframe(_fd_opponent_show.head(100), use_container_width=True, hide_index=True)
+                        st.dataframe(injury_frame(st, _fd_opponent_show.head(100)), use_container_width=True, hide_index=True)
                         st.download_button(
                             "Download Full Opponent Field CSV",
                             data=_fd_opponent_show.to_csv(index=False).encode("utf-8"),
@@ -5711,6 +5715,10 @@ if platform == "FanDuel":
                     st.warning(f"The candidate pool cannot fill all assigned entries at the preferred exposure cap. Automatic cap increased to {_fd_diverse_portfolio.attrs['effective_auto_cap_pct']}%; your manual exposure limits remain enforced.")
                 fd_all_ranked = put_portfolio_first(fd_all_ranked, _fd_diverse_portfolio, fd_slots)
                 st.caption(f"Lineup exposure diversity: {portfolio_diversity}%. Preferred player cap: {100 - .4 * portfolio_diversity:.0f}%. Locks and manual limits remain enforced. Candidate alternatives remain available below.")
+            with _tab_lineups:
+                _fd_diverse_portfolio = render_editor(st, _fd_diverse_portfolio, fd_players, fd_slots,
+                    "FanDuel", lineup_mode, st.session_state.get("selected_fd_contest", {}),
+                    validator=(lambda row: full_roster_stack_matches(row, fd_players, fd_stack_rules, secondary_stacks=fd_secondary_stack_rules)) if lineup_mode == "Full Roster" else None)
             fd_results = fd_all_ranked.head(int(fd_rank_count)).copy()
 
             fd_export_portfolio = fd_all_ranked
@@ -5735,7 +5743,7 @@ if platform == "FanDuel":
                 st.session_state["fd_full_roster_assigned_portfolio"] = fd_export_portfolio.copy()
                 st.write("### Assigned contest portfolio")
                 st.caption(f"These {_fd_spec['owned']} entries are the source for both downloads. Additional displayed candidates are alternatives.")
-                st.dataframe(fd_export_portfolio, use_container_width=True, hide_index=True)
+                st.dataframe(injury_frame(st, fd_export_portfolio), use_container_width=True, hide_index=True)
                 st.caption("Candidate alternatives — the assigned portfolio above is used for your entry replacement.")
 
             if lineup_mode == "Single Game":
@@ -5752,7 +5760,7 @@ if platform == "FanDuel":
                         fd_export_portfolio = fd_export_portfolio.drop(columns=["CashRate", "Expected Prize ($)", "Expected Net ($)", "Expected ROI (%)", "Entry Fee ($)"], errors="ignore")
                 st.write("### Assigned contest portfolio")
                 st.caption("These lineups are used for both the portfolio report and entry replacement.")
-                st.dataframe(fd_export_portfolio, use_container_width=True, hide_index=True)
+                st.dataframe(injury_frame(st, fd_export_portfolio), use_container_width=True, hide_index=True)
 
             st.session_state["fd_assigned_display_" + lineup_mode.replace(" ", "_").lower()] = fd_export_portfolio.copy()
             st.write("### Candidate Lineups")
@@ -5804,7 +5812,7 @@ if platform == "FanDuel":
                 col for col in fd_display_columns if col in fd_display.columns
             ))
             st.dataframe(
-                fd_display[fd_display_columns] if fd_display_columns else fd_display,
+                injury_frame(st, fd_display[fd_display_columns] if fd_display_columns else fd_display),
                 use_container_width=True,
                 hide_index=True
             )
@@ -6464,7 +6472,7 @@ else:
                     "It is a useful warning signal, not a true percentile backtest: archived pregame projections are unavailable, "
                     "and historical scoring may differ from the selected site's scoring rules. Treat small samples cautiously."
                 )
-                st.dataframe(volatility_check, use_container_width=True, hide_index=True)
+                st.dataframe(injury_frame(st, volatility_check), use_container_width=True, hide_index=True)
                 st.download_button(
                     "Download Historical Volatility Check",
                     data=volatility_check.to_csv(index=False).encode("utf-8"),
@@ -7335,7 +7343,7 @@ else:
                         st.success(f"Compared your {len(user_lineups)} lineups against {len(contest_field_df):,} simulated opponent lineups.")
                         st.write("### Your Lineups vs. Contest Field")
                         st.caption("Contest metrics use all independent evaluation outcomes against an estimated opponent field and the selected payout ladder.")
-                        st.dataframe(user_lineups, use_container_width=True, hide_index=True)
+                        st.dataframe(injury_frame(st, user_lineups), use_container_width=True, hide_index=True)
                         st.metric("Simulated opponent lineups", f"{len(contest_field_df):,}")
                         if all(c in user_lineups.columns for c in ["Top1", "Top5", "Top10", "CashRate"]):
                             _classic_sanity = pd.DataFrame([{
@@ -7345,7 +7353,7 @@ else:
                                 "Cash %": round(100 * float(user_lineups["CashRate"].mean()), 2),
                             }])
                             st.write("### Field Sanity Check")
-                            st.dataframe(_classic_sanity, use_container_width=True, hide_index=True)
+                            st.dataframe(injury_frame(st, _classic_sanity), use_container_width=True, hide_index=True)
                         # Field ownership is already shown in the Player Pool.
                     else:
                         st.error("Could not create valid opponent lineups. Check the player pool and salary range.")
@@ -7356,7 +7364,7 @@ else:
                 _saved_classic_field = st.session_state.get("classic_contest_field_df")
                 if isinstance(_saved_classic_comparison, pd.DataFrame) and not _saved_classic_comparison.empty:
                     st.write("### Your Lineups vs. Contest Field")
-                    st.dataframe(_saved_classic_comparison, use_container_width=True, hide_index=True)
+                    st.dataframe(injury_frame(st, _saved_classic_comparison), use_container_width=True, hide_index=True)
                     if isinstance(_saved_classic_field, pd.DataFrame) and not _saved_classic_field.empty:
                         st.metric("Simulated opponent lineups", f"{len(_saved_classic_field):,}")
                     if all(c in _saved_classic_comparison.columns for c in ["Top1", "Top5", "Top10", "CashRate"]):
@@ -7367,7 +7375,7 @@ else:
                             "Cash %": round(100 * float(_saved_classic_comparison["CashRate"].mean()), 2),
                         }])
                         st.write("### Field Sanity Check")
-                        st.dataframe(_saved_classic_sanity, use_container_width=True, hide_index=True)
+                        st.dataframe(injury_frame(st, _saved_classic_sanity), use_container_width=True, hide_index=True)
 
             classic_results = st.session_state.get("classic_lineups")
             if classic_results is not None:
@@ -7431,7 +7439,7 @@ else:
                     ordered_cols.extend(c for c in classic_display.columns if c not in ordered_cols)
                     classic_display = classic_display[ordered_cols]
                 st.dataframe(
-                    classic_display,
+                    injury_frame(st, classic_display),
                     use_container_width=True,
                     hide_index=True
                 )
@@ -7479,6 +7487,10 @@ else:
                     st.stop()
                 if classic_export_portfolio.attrs.get("effective_auto_cap_pct", 100) > (100 - .4 * portfolio_diversity):
                     st.warning(f"The candidate pool cannot fill all assigned entries at the preferred exposure cap. Automatic cap increased to {classic_export_portfolio.attrs['effective_auto_cap_pct']}%; your manual exposure limits remain enforced.")
+                with _tab_lineups:
+                    classic_export_portfolio = render_editor(st, classic_export_portfolio, classic_pool, _classic_slots,
+                        "DraftKings", "Classic", st.session_state.get("selected_dk_contest", {}),
+                        validator=lambda row: full_roster_stack_matches(row, classic_pool, dk_classic_stack_rules, secondary_stacks=dk_secondary_stack_rules))
                 _classic_unique_entries = classic_export_portfolio.copy()
                 classic_top_portfolio = put_portfolio_first(classic_portfolio_source, classic_export_portfolio,
                     _classic_slots).head(int(classic_portfolio_count)).copy()
@@ -7495,7 +7507,7 @@ else:
                             _diagnostic_rows.append({"Group": _label, "Lineups": len(_frame),
                                 "Mean salary": float(pd.to_numeric(_frame["Salary"], errors="coerce").mean()),
                                 "Mean simulated points": float(pd.to_numeric(_frame["ProjectedPoints"], errors="coerce").mean())})
-                        st.dataframe(pd.DataFrame(_diagnostic_rows), hide_index=True, use_container_width=True)
+                        st.dataframe(injury_frame(st, pd.DataFrame(_diagnostic_rows)), hide_index=True, use_container_width=True)
                         st.download_button("DOWNLOAD CLASSIC OPPONENT FIELD", _classic_portfolio_field.to_csv(index=False).encode("utf-8"),
                             "DraftKings_Classic_Opponent_Field.csv", "text/csv", key="classic_field_diagnostics", on_click="ignore")
                         _ownership_snapshot = st.session_state.get("classic_ownership_snapshot")
@@ -7514,12 +7526,12 @@ else:
                     st.session_state["classic_contest_entries_df"] = classic_export_portfolio
                     st.caption(f"{_classic_assignment_count} assigned contest entries are evaluated jointly, including repeated lineups when needed to fill the entry template. Additional displayed candidates are alternatives, not extra owned entries. The opponent field remains an estimate.")
                     st.write("### Assigned contest portfolio")
-                    st.dataframe(classic_export_portfolio, use_container_width=True, hide_index=True)
+                    st.dataframe(injury_frame(st, classic_export_portfolio), use_container_width=True, hide_index=True)
                 else:
                     st.caption("Run CONTEST SIM for field-based portfolio metrics.")
                 render_portfolio_roi_panel(classic_export_portfolio, classic_contest)
                 st.caption("Candidate alternatives — only rows marked Assigned to contest are included in your entry replacement.")
-                st.dataframe(classic_top_portfolio, use_container_width=True, hide_index=True)
+                st.dataframe(injury_frame(st, classic_top_portfolio), use_container_width=True, hide_index=True)
 
                 lineup_export_download(
                     label="DOWNLOAD ASSIGNED PORTFOLIO REPORT",
@@ -8752,7 +8764,7 @@ with _tab_build:
         if isinstance(_sanity,dict):
             st.write("### Field Sanity Check")
             st.caption("20 random simulated opponent lineups. Normal baseline: about 1% / 5% / 10% for Top 1 / Top 5 / Top 10.")
-            st.dataframe(pd.DataFrame([_sanity]),use_container_width=True,hide_index=True)
+            st.dataframe(injury_frame(st, pd.DataFrame([_sanity])),use_container_width=True,hide_index=True)
 
     # ============================================
 
@@ -9061,6 +9073,9 @@ with _tab_build:
             ).reset_index(drop=True)
         st.session_state["portfolio_df"] = portfolio_df.copy()
         st.session_state["portfolio_metric_used"] = portfolio_metric
+        with _tab_lineups:
+            portfolio_df = render_editor(st, portfolio_df, players_df, portfolio_lineup_columns,
+                "DraftKings", "Showdown", st.session_state.get("selected_dk_contest", {}))
         portfolio_df = add_lineup_field_ownership(portfolio_df)
 
         # Add each lineup's total salary to the portfolio display and export.
@@ -9328,7 +9343,7 @@ with _tab_build:
         st.write("### Assigned contest portfolio")
 
         st.dataframe(
-            display_df,
+            injury_frame(st, display_df),
             use_container_width=True,
             hide_index=True
         )
@@ -9638,7 +9653,7 @@ with _tab_build:
                                 "Field Own %", "Actual Field Own %", "Field CPT Own %", "Field MVP Own %",
                                 "Actual CPT/MVP Own %", "Sim P10", "Sim P50", "Sim P90", "Sim P95", "Sim P99"
                             ] if c in comparison.columns]
-                            st.dataframe(comparison[show_cols], use_container_width=True, hide_index=True)
+                            st.dataframe(injury_frame(st, comparison[show_cols]), use_container_width=True, hide_index=True)
 
                             output_name = _safe_snapshot_slug(str(snapshot_meta.get("contest_id") or completed_contest_file.name))
                             learning_path = _postgame_learning_dir() / f"{output_name}_learning.csv"
@@ -9778,7 +9793,7 @@ with _tab_build:
                 roi_metrics[1].metric("Total Winnings", f"${total_roi_winnings:,.2f}")
                 roi_metrics[2].metric("Net Profit / Loss", f"${total_roi_net:,.2f}")
                 roi_metrics[3].metric("Overall ROI", f"{total_roi_pct:.1f}%")
-                st.dataframe(roi_history, use_container_width=True, hide_index=True)
+                st.dataframe(injury_frame(st, roi_history), use_container_width=True, hide_index=True)
                 st.download_button(
                     "DOWNLOAD ROI HISTORY CSV",
                     data=roi_history[ROI_COLUMNS].to_csv(index=False).encode("utf-8"),
