@@ -2786,7 +2786,9 @@ def save_export_checkpoint(snapshot, metadata, export_data, export_name):
         st.error(f"Lineup download is available, but saving its snapshot failed: {exc}")
 
 
+@st.fragment
 def lineup_export_download(*args, **kwargs):
+    """Keep export checkpoint callbacks inside a small fragment, not a full app rerun."""
     import copy
     data = kwargs.get("data", args[1] if len(args) > 1 else None)
     name = kwargs.get("file_name", args[2] if len(args) > 2 else "lineups.csv")
