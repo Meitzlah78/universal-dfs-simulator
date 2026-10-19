@@ -4107,6 +4107,21 @@ def fetch_fanduel_contest_details(contest_id):
 
 
 
+def render_saved_market_calibration(platform_name, mode_name, pool):
+    metadata = st.session_state.get("simulation_preparation_" + platform_name, {})
+    rows = metadata.get("market_report", [])
+    saved_names = {str(row.get("Name", "")) for row in metadata.get("input_players", [])}
+    if not rows or saved_names != set(pool["Name"].astype(str)):
+        return
+    with st.expander("Market scoring calibration — last completed simulation", expanded=True):
+        st.caption("Market target is the implied team score from the spread and total. Pilot mean is the scoring average after calibration; it need not match exactly.")
+        report = pd.DataFrame(rows)
+        st.dataframe(report, hide_index=True, use_container_width=True)
+        st.download_button("DOWNLOAD MARKET CALIBRATION", report.to_csv(index=False).encode("utf-8"),
+            "Simmah_Market_Calibration.csv", "text/csv", key="market_calibration_" + platform_name + mode_name,
+            on_click="ignore")
+
+
 def build_joint_candidate_pool(pool, platform_name, mode_name, evaluation_outcomes, roster,
                               salary_min, salary_max, locks=(), selected_stacks=(), secondary_stacks=(), special_allowed=None,
                               salary_costs=None, aggressiveness=.5):
@@ -4406,10 +4421,6 @@ def simulate_fd_play_by_play(players_df, rng, n=SIMULATION_COUNT, correlation_st
         progress=lambda fraction,text: progress.progress(fraction,text=text))
     result = prepared["evaluation"].copy()
     result.attrs["preparation_key"] = prepared["metadata"]["key"]
-    if prepared["metadata"].get("market_report"):
-        with st.expander("Market scoring calibration", expanded=False):
-            st.caption("Spreads and totals calibrate team event efficiency before the games are simulated. Pilot means may differ from targets; individual fantasy projections are not multiplied afterward.")
-            st.dataframe(pd.DataFrame(prepared["metadata"]["market_report"]), hide_index=True)
     _projection_fit_report = prepared["fit_report"]
     st.session_state["simulation_preparation_" + platform] = prepared["metadata"]
     _prep_timing = prepared["metadata"]["timings"]
@@ -5092,6 +5103,7 @@ if platform == "FanDuel":
         fd_players = apply_game_weather_context(fd_players, fd_raw)
 
     with _tab_build:
+        render_saved_market_calibration(platform, lineup_mode, fd_players)
         with _build_controls:
             st.write("### Build Settings")
         _build_controls.caption("The 5,000-lineup build automatically spreads player exposure while still favoring stronger simulated scores.")
@@ -7005,6 +7017,7 @@ else:
     # ============================================
 
     with _tab_build:
+        render_saved_market_calibration(platform, lineup_mode, players_df)
         if platform == "DraftKings" and lineup_mode == "Classic":
             st.write("### DraftKings Classic Lineups")
             st.caption(
@@ -7526,6 +7539,7 @@ else:
 # builds the opponent field, then scores the contest.
 
 with _tab_build:
+    render_saved_market_calibration(platform, lineup_mode, players_df)
     if lineup_mode == "Showdown":
         with _build_controls:
             render_single_stack_controls(st, platform, lineup_mode)
