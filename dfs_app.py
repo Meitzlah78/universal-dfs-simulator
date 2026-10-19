@@ -672,169 +672,46 @@ def apply_learned_field(field, pool, slots, platform_name, mode_name, contest, t
 def build_showdown_opponent_field(available_players, simulation_df, players_df,
                                   salary_map, captain_salary_map, salary_cap, target,
                                   progress_bar=None, progress_text=None):
-    """Build Showdown opponents with cached NumPy arrays to avoid repeated pandas work."""
-    columns = ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5", "Salary"]
-    if target <= 0 or len(available_players) < 6:
-        return pd.DataFrame(columns=columns)
-
-    requested_target = int(target)
+    """Build distinct legal proposals; never feed generated ownership back in."""
+    from simmah_showdown_field import build_unique_field
+    pool = players_df.drop_duplicates("Name").set_index("Name").reindex(list(available_players)).reset_index()
+    pool["Salary"] = pool["Name"].map(salary_map)
+    pool["CaptainSalary"] = pool["Name"].map(captain_salary_map)
+    means = simulation_df.mean(axis=0).reindex(pool["Name"]).fillna(0).to_numpy(float)
+    flex_weights = opponent_field_selection_weights(pool, means)
+    points = pd.to_numeric(pool["Projection"], errors="coerce").fillna(0).clip(lower=0).to_numpy(float)
+    captain_weights = points ** 2
+    # Only supplied/projected CPT ownership is an input. Field CPT Own % is
+    # output from an earlier generated field and must not create feedback.
+    lookup = {str(c).strip().casefold(): c for c in pool}
+    for key in ("projected cpt own %", "projected captain ownership", "captain ownership %", "cpt ownership %"):
+        if key in lookup:
+            supplied = pd.to_numeric(pool[lookup[key]], errors="coerce")
+            valid = supplied.between(0, 100) & np.isfinite(supplied)
+            if valid.any() and supplied[valid].sum() > 0:
+                fallback = captain_weights / max(captain_weights.sum(), 1e-12) * 100
+                captain_weights = np.where(valid, supplied, fallback)
+                break
+    requested = int(target)
     contest = st.session_state.get("selected_dk_contest", {})
-    target = learned_field_proposal_target("DraftKings", "Showdown", contest, 6, requested_target, players_df)
-    names = np.asarray(list(available_players), dtype=object)
-    means = simulation_df.mean(axis=0).reindex(names).fillna(0.01).to_numpy(dtype=float)
-
-    # Opponent construction is ownership-first. Projection/sim strength is only
-    # the fallback before a usable ownership estimate exists for the slate.
-    ownership_pool = players_df.drop_duplicates("Name", keep="first").set_index("Name").reindex(names).reset_index()
-    weights = opponent_field_selection_weights(ownership_pool, means)
-    weights = np.clip(weights, 0.01, None)
-    weights /= weights.sum()
-
-    cpt_lookup = {str(c).strip().casefold(): c for c in ownership_pool.columns}
-    cpt_col = next((cpt_lookup[k] for k in (
-        "field cpt own %", "field captain own %", "captain ownership %", "cpt ownership %"
-    ) if k in cpt_lookup), None)
-    if cpt_col is not None:
-        captain_base_weights = pd.to_numeric(ownership_pool[cpt_col], errors="coerce").fillna(0.0).to_numpy(dtype=float)
-        if captain_base_weights.sum() <= 0:
-            captain_base_weights = weights.copy()
-    else:
-        captain_base_weights = weights.copy()
-    salaries = np.asarray([int(salary_map.get(name, 0)) for name in names], dtype=np.int64)
-    captain_salaries = np.asarray([int(captain_salary_map.get(name, salary_map.get(name, 0))) for name in names], dtype=np.int64)
-    team_lookup = players_df.drop_duplicates("Name").set_index("Name")["Team"].to_dict()
-    teams = np.asarray([str(team_lookup.get(name, "")) for name in names], dtype=object)
+    proposals = learned_field_proposal_target("DraftKings", "Showdown", contest, 6, requested, players_df)
     rng = np.random.default_rng(123)
-    rows = []
-    attempts = 0
-    max_attempts = max(200000, int(target) * 10)
-
-    while len(rows) < target and attempts < max_attempts:
-        attempts += 1
-        if progress_bar is not None and (attempts % 1000 == 0 or len(rows) >= target):
-            progress_bar.progress(
-                min(0.99, attempts / max_attempts),
-                text=f"Building opponent lineups: {len(rows):,} of {target:,} accepted (attempt {attempts:,})"
-            )
-        # Build the public field the same way we learned from the completed
-        # Showdown study: choose Captain from Captain ownership first, then choose
-        # five FLEX players from overall field ownership. Choosing six players first
-        # and only then assigning Captain distorts both Captain ownership and lineup
-        # construction.
-        captain_weights = np.clip(captain_base_weights, 0.01, None)
-        captain_weights = captain_weights / captain_weights.sum()
-        captain_idx = int(rng.choice(len(names), p=captain_weights))
-
-        flex_weights = weights.copy()
-        flex_weights[captain_idx] = 0.0
-        if flex_weights.sum() <= 0:
-            continue
-        flex_weights /= flex_weights.sum()
-        flex_idx = rng.choice(len(names), size=5, replace=False, p=flex_weights)
-        picked = np.concatenate(([captain_idx], flex_idx))
-
-        salary = int(captain_salaries[captain_idx] + salaries[flex_idx].sum())
-        if salary > salary_cap:
-            continue
-
-        # Diagnostic based on the real completed field: salary was concentrated
-        # close to the cap, with a median near $49.7K. Require $49K+ opponents.
-        # This affects only the simulated opponent field, never the user's BUILD.
-        if salary < 49000:
-            continue
-
-        if len(set(teams[picked])) < 2:
-            continue
-        rows.append((
-            names[captain_idx],
-            names[flex_idx[0]], names[flex_idx[1]], names[flex_idx[2]],
-            names[flex_idx[3]], names[flex_idx[4]], salary
-        ))
-
-    field = pd.DataFrame.from_records(rows, columns=columns)
-    return apply_learned_field(field, players_df, columns[:6], "DraftKings", "Showdown", contest, requested_target, rng)
-
+    def report(fraction, text):
+        if progress_bar is not None:
+            progress_bar.progress(min(.99, fraction), text=text)
+    field = build_unique_field(pool, flex_weights, captain_weights, proposals,
+        salary_cap=salary_cap, min_salary=48000, rng=rng, progress=report)
+    result = apply_learned_field(field, players_df, ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"],
+        "DraftKings", "Showdown", contest, requested, rng)
+    result.attrs.update(field.attrs, unique_sample=len(result), requested_unique=requested)
+    return result
 
 
 def expand_showdown_field_by_ownership(sample_field, full_field_size, seed=20261012):
-    """Expand a 10k sampled Showdown field into a full estimated field with duplicates.
+    """Expand the selected field without a second ownership weighting."""
+    from simmah_showdown_field import expand_field
+    return expand_field(sample_field, full_field_size, seed)
 
-    Each sampled lineup receives a probability weight based on the simulated
-    Captain and FLEX ownership observed in the sample. Draws are with replacement,
-    so exact lineups can repeat. This is an ownership-based estimate, not actual
-    opponent-entry data.
-    """
-    if sample_field is None or sample_field.empty:
-        return sample_field
-    try:
-        full_field_size = int(full_field_size)
-    except (TypeError, ValueError):
-        return sample_field
-    if full_field_size <= len(sample_field):
-        return sample_field.reset_index(drop=True)
-
-    slots = ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"]
-    field = sample_field.copy().reset_index(drop=True)
-    if not all(slot in field.columns for slot in slots):
-        return field
-
-    total = len(field)
-    overall_counts = {}
-    captain_counts = field["Captain"].astype(str).str.strip().value_counts().to_dict()
-    for slot in slots:
-        counts = field[slot].astype(str).str.strip().value_counts().to_dict()
-        for player, count in counts.items():
-            overall_counts[player] = overall_counts.get(player, 0) + int(count)
-
-    # Estimate lineup popularity from the observed per-player rates. Captain
-    # ownership is slot-specific; FLEX ownership uses the player's five FLEX
-    # appearances. A geometric mean prevents six ownership rates from becoming
-    # so small that floating-point underflow erases all useful differences.
-    captain_rate = {p: max(c / total, 1e-6) for p, c in captain_counts.items()}
-    flex_counts = {}
-    for slot in slots[1:]:
-        for player, count in field[slot].astype(str).str.strip().value_counts().items():
-            flex_counts[player] = flex_counts.get(player, 0) + int(count)
-    flex_rate = {p: max(c / (total * 5), 1e-6) for p, c in flex_counts.items()}
-
-    log_weights = np.zeros(total, dtype=np.float64)
-    for slot in slots:
-        rates = captain_rate if slot == "Captain" else flex_rate
-        values = field[slot].astype(str).str.strip().map(rates).fillna(1e-6).to_numpy(dtype=np.float64)
-        log_weights += np.log(values)
-    # Calibrated from the actual 59,453-entry BUF@LAR DK Dime Package field:
-    # 12,029 unique lineups, median duplicate count 2, max 397, with a broad
-    # duplicate tail (1,340 lineups at 10+ copies and 569 at 20+). The prior
-    # 20-lineup chalk bucket over-concentrated duplication into too few lineups.
-    # Spread the chalk component across a much wider slice of the candidate field
-    # while retaining a small sharper component for the very chalkiest builds.
-    centered_log_weights = log_weights - np.max(log_weights)
-    base_weights = np.exp(centered_log_weights * 0.38)
-    base_weights /= base_weights.sum()
-
-    broad_count = max(250, min(1800, max(250, total // 5)))
-    broad_count = min(broad_count, total)
-    broad_indices = np.argpartition(log_weights, -broad_count)[-broad_count:]
-    broad_weights = np.zeros(total, dtype=np.float64)
-    broad_strength = np.exp(centered_log_weights[broad_indices] * 0.80)
-    if broad_strength.sum() > 0:
-        broad_weights[broad_indices] = broad_strength / broad_strength.sum()
-
-    top_count = max(10, min(40, total))
-    top_indices = np.argpartition(log_weights, -top_count)[-top_count:]
-    top_weights = np.zeros(total, dtype=np.float64)
-    top_strength = np.exp(centered_log_weights[top_indices] * 1.20)
-    if top_strength.sum() > 0:
-        top_weights[top_indices] = top_strength / top_strength.sum()
-
-    weights = 0.76 * base_weights + 0.20 * broad_weights + 0.04 * top_weights
-    weights /= weights.sum()
-
-    rng = np.random.default_rng(seed)
-    sampled_indices = rng.choice(total, size=full_field_size, replace=True, p=weights)
-    expanded = field.iloc[sampled_indices].copy().reset_index(drop=True)
-    expanded["Salary"] = pd.to_numeric(expanded["Salary"], errors="coerce").fillna(0).astype(int)
-    return expanded
 
 
 def build_dk_contest_entry_export(entry_df, selected_contest_id, lineup_ids_df, expected_slots, slate_label):
@@ -6218,6 +6095,9 @@ else:
     # Pull the current contest size automatically from DraftKings when available.
     # Keep the manual input only as a fallback if DraftKings does not return usable details.
     previous_field_size = active_dk_selection.get("field_size")
+    _rounded_capacity_estimate = 59400 if str(active_dk_selection.get("id", "")) == "196786696" else None
+    if _rounded_capacity_estimate:
+        previous_field_size = _rounded_capacity_estimate
     auto_current_entries, auto_max_entries = fetch_draftkings_contest_size(
         active_dk_selection.get("id")
     )
@@ -6229,7 +6109,7 @@ else:
         auto_max_entries = 35671
     if str(active_dk_selection.get("id", "")) == "196867391" and not auto_max_entries:
         auto_max_entries = 3567
-    auto_field_size = auto_max_entries or auto_current_entries
+    auto_field_size = auto_max_entries or (None if _rounded_capacity_estimate else auto_current_entries)
 
     try:
         fallback_field_size = int(previous_field_size) if previous_field_size else 45396
@@ -6251,10 +6131,12 @@ else:
             max_value=200000,
             value=max(2, min(200000, fallback_field_size)),
             step=100,
-            key=f"dk_field_size_{dk_slate_key}",
-            help="DraftKings contest details could not be loaded automatically, so enter the current total entries shown in the lobby."
+            key=f"dk_field_capacity_v2_{dk_slate_key}_{active_dk_selection.get('id', 'unknown')}",
+            help="Enter the exact maximum contest capacity, not the current registration count. For contest 196786696, 59,400 is an estimate from the rounded 59.4K display until the exact capacity is confirmed."
         )
-        st.caption("SIMMAH will use this manual field size only when the DraftKings contest lookup is unavailable.")
+        st.caption("SIMMAH uses this manual capacity when the DraftKings contest lookup is unavailable.")
+        if _rounded_capacity_estimate and int(active_field_size) == _rounded_capacity_estimate:
+            st.warning("59,400 is estimated from the rounded 59.4K lobby capacity. Enter the exact maximum capacity when available; ROI remains an estimate.")
 
     active_dk_selection["field_size"] = int(active_field_size)
     dk_saved_contests[dk_slate_key] = active_dk_selection
@@ -7797,7 +7679,9 @@ if build_clicked:
         workflow_status.error(f"Step 3 failed while building opponent lineups: {type(exc).__name__}: {exc}")
         st.exception(exc)
         st.stop()
-    field_progress.progress(1.0, text=f"Step 3 of 4 complete: {len(contest_field_sample_df):,} sample opponent lineups created")
+    field_progress.progress(1.0, text=f"Step 3 of 4 complete: {len(contest_field_sample_df):,} unique sample opponent lineups created")
+    if len(contest_field_sample_df) < dk_opponent_target:
+        st.warning(f"Only {len(contest_field_sample_df):,} distinct legal opponents are available under the current pool and salary limits; requested {dk_opponent_target:,}. No duplicate sample rows were added.")
     if contest_field_sample_df.empty:
         workflow_status.error(
             "Step 3 could not create any valid opponent lineups. Check the salary cap and eligible player pool."
@@ -7828,14 +7712,14 @@ if build_clicked:
             f"Contest selected from your entry CSV: {selected_contest.get('name', 'DraftKings contest')} "
             f"(ID {selected_contest.get('id', 'unknown')}). Your uploaded file has "
             f"{own_entries} of your entries in this contest. Built {len(contest_field_sample_df):,} "
-            f"representative lineups, then expanded them with ownership-weighted sampling to "
+            f"unique representative lineups, then expanded them without a second ownership weighting to "
             f"{len(contest_field_df):,} estimated opponent entries, allowing exact lineup duplicates. "
             "This is an estimate; the entry CSV does not contain the actual opponent lineups."
         )
     else:
         st.info(
             f"Built {len(contest_field_sample_df):,} representative lineups and expanded them to "
-            f"{len(contest_field_df):,} ownership-weighted estimated opponent entries."
+            f"{len(contest_field_df):,} estimated opponent entries, expanded without reweighting ownership."
         )
 
 
@@ -8307,6 +8191,17 @@ with st.expander("Contest Payout Structure", expanded=False):
             st.session_state["contest_payout_auto_loaded"] = True
             return True
         return False
+
+    # User-provided WAS @ SF payout table, scoped to this exact contest.
+    if str(st.session_state.get("selected_dk_contest", {}).get("id", "")) == "196786696":
+        _was_sf_ranges = [(1, 1, 250), (2, 2, 150), (3, 3, 100), (4, 4, 75), (5, 5, 50), (6, 6, 40), (7, 8, 30), (9, 10, 25), (11, 13, 20), (14, 16, 15), (17, 20, 10), (21, 25, 8), (26, 35, 6), (36, 45, 5), (46, 60, 4), (61, 75, 3), (76, 100, 2), (101, 135, 1.5), (136, 215, 1), (216, 425, 0.75), (426, 945, 0.5), (946, 2165, 0.4), (2166, 5385, 0.3), (5386, 14240, 0.2)]
+        _was_sf_schedule = np.zeros(14240, dtype=float)
+        for _first, _last, _prize in _was_sf_ranges:
+            _was_sf_schedule[_first - 1:_last] = _prize
+        st.session_state["contest_payout_schedule"] = _was_sf_schedule
+        st.session_state["contest_payout_contest_id"] = "196786696"
+        st.session_state["contest_payout_source_name"] = "User-verified WAS @ SF $5K payout table"
+        st.session_state["contest_payout_auto_loaded"] = True
 
     _try_saved_dk_payout_library()
 
