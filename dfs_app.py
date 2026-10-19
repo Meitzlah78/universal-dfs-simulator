@@ -19,6 +19,7 @@ st.set_page_config(
 )
 
 from simmah_injury_display import injury_frame, injury_player_pool
+from simmah_single_stacks import render_controls as render_single_stack_controls, selected_validator as single_stack_validator
 from simmah_build_state import uploaded_slate_signature, signature_matches_upload
 from simmah_lineup_editor import render_editor
 from simmah_ui import render_brand, player_columns, player_column_config, render_diversity_controls
@@ -4132,7 +4133,7 @@ def build_joint_candidate_pool(pool, platform_name, mode_name, evaluation_outcom
     multipliers = [1.5, 1, 1, 1, 1, 1] if mode_name in {"Showdown", "Single Game"} else None
     lookup = full_roster_stack_lookup(pool)
     validator = (lambda chosen: offense_vs_defense_allowed(chosen, lookup) and
-                 full_roster_stack_matches(chosen, pool, selected_stacks, lookup, secondary_stacks)) if mode_name in {"Classic", "Full Roster"} else None
+                 full_roster_stack_matches(chosen, pool, selected_stacks, lookup, secondary_stacks)) if mode_name in {"Classic", "Full Roster"} else single_stack_validator(st, platform_name, mode_name, lookup)
     if mode_name in {"Classic", "Full Roster"}:
         st.caption("Lineup rule: offensive players cannot face their own lineup's defense.")
     progress = st.progress(0, text="Building candidates from joint game outcomes...")
@@ -5142,6 +5143,10 @@ if platform == "FanDuel":
                 )
                 st.caption("Choose your FanDuel Full Roster stack rules before pressing BUILD.")
 
+        if lineup_mode == "Single Game":
+            with _build_controls:
+                render_single_stack_controls(st, platform, lineup_mode)
+
         _build_controls.write("### Run")
         _fd_run_center = _build_controls.container()
         with _fd_run_center:
@@ -5665,7 +5670,7 @@ if platform == "FanDuel":
             with _tab_lineups:
                 _fd_diverse_portfolio = render_editor(st, _fd_diverse_portfolio, fd_players, fd_slots,
                     "FanDuel", lineup_mode, st.session_state.get("selected_fd_contest", {}),
-                    validator=(lambda row: full_roster_stack_matches(row, fd_players, fd_stack_rules, secondary_stacks=fd_secondary_stack_rules)) if lineup_mode == "Full Roster" else None)
+                    validator=(lambda row: full_roster_stack_matches(row, fd_players, fd_stack_rules, secondary_stacks=fd_secondary_stack_rules)) if lineup_mode == "Full Roster" else single_stack_validator(st, "FanDuel", lineup_mode, full_roster_stack_lookup(fd_players)))
             fd_results = fd_all_ranked.head(int(fd_rank_count)).copy()
 
             fd_export_portfolio = fd_all_ranked
@@ -7525,6 +7530,9 @@ else:
 # builds the opponent field, then scores the contest.
 
 with _tab_build:
+    if lineup_mode == "Showdown":
+        with _build_controls:
+            render_single_stack_controls(st, platform, lineup_mode)
     build_cols = [_build_controls.container() for _ in range(3)]
     with build_cols[0]:
         st.write("### Build Settings")
@@ -8981,7 +8989,8 @@ with _tab_build:
         st.session_state["portfolio_metric_used"] = portfolio_metric
         with _tab_lineups:
             portfolio_df = render_editor(st, portfolio_df, players_df, portfolio_lineup_columns,
-                "DraftKings", "Showdown", st.session_state.get("selected_dk_contest", {}))
+                "DraftKings", "Showdown", st.session_state.get("selected_dk_contest", {}),
+                validator=single_stack_validator(st, "DraftKings", "Showdown", full_roster_stack_lookup(players_df)))
         portfolio_df = add_lineup_field_ownership(portfolio_df)
 
         # Add each lineup's total salary to the portfolio display and export.
