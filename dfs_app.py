@@ -4424,6 +4424,17 @@ def simulation_cache_root():
     return Path(configured) if configured else Path(__file__).resolve().parent / "data" / "simulation_cache"
 
 
+@st.cache_data(show_spinner=False, ttl=86400)
+def load_matchup_schedule():
+    try:
+        response = requests.get("https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv", timeout=(4, 10))
+        response.raise_for_status()
+        import io
+        return pd.read_csv(io.StringIO(response.text), usecols=["game_id", "gameday"])
+    except Exception:
+        return pd.DataFrame(columns=["game_id", "gameday"])
+
+
 def simulate_fd_play_by_play(players_df, rng, n=SIMULATION_COUNT, correlation_strength=1.0, platform="FanDuel"):
     """Prepare or reuse separate shared game samples with exact DFS scoring.
 
@@ -4483,6 +4494,14 @@ def simulate_fd_play_by_play(players_df, rng, n=SIMULATION_COUNT, correlation_st
                 }
             except Exception:
                 continue
+
+    from simmah_matchups import matchup_inputs
+    _matchup_roles, _matchup_report = matchup_inputs(pool, _fd_hist, load_matchup_schedule())
+    for _name, _context in _matchup_roles.items():
+        _fd_hist_roles.setdefault(_name, {}).update(_context)
+    with st.expander("Defensive matchup context", expanded=False):
+        st.caption("nflverse weekly statistics; only dated games before kickoff. Minimum four games; rates shrink toward league averages. External projections remain the scoring targets. Neutral when data is unavailable.")
+        st.dataframe(_matchup_report, hide_index=True, use_container_width=True)
 
     progress = st.progress(0, text=f"Preparing {n:,} independent NFL game outcomes...")
     from simmah_weather import team_key

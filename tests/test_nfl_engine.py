@@ -2,6 +2,7 @@
 import ast
 from pathlib import Path
 from types import SimpleNamespace
+from contextlib import nullcontext
 import unittest
 import numpy as np
 import pandas as pd
@@ -19,8 +20,9 @@ def app_functions():
         if isinstance(node,ast.FunctionDef):node.decorator_list=[]
     progress = SimpleNamespace(progress=lambda *a, **kw: None)
     ns = {'np': np, 'pd': pd, 'SIMULATION_COUNT': 10000,
-          'st': SimpleNamespace(progress=lambda *a, **kw: progress, caption=lambda *a, **kw: None, session_state={}),
-          'load_nfl_historical_player_stats': lambda: pd.DataFrame()}
+          'st': SimpleNamespace(expander=lambda *a, **kw: nullcontext(), dataframe=lambda *a, **kw: None, progress=lambda *a, **kw: progress, caption=lambda *a, **kw: None, session_state={}),
+          'load_nfl_historical_player_stats': lambda: pd.DataFrame(),
+          'load_matchup_schedule': lambda: pd.DataFrame()}
     exec(compile(ast.Module(body=nodes, type_ignores=[]), 'dfs_app.py', 'exec'), ns)
     import tempfile
     ns['_temporary_cache'] = tempfile.TemporaryDirectory()

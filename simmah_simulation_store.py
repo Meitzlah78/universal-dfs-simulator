@@ -41,7 +41,7 @@ def _hash(raw):
 def _model_digest():
     root=Path(__file__).parent
     names=['simmah_simulation_store.py','simmah_nfl_engine.py','simmah_projection_inputs.py',
-           'simmah_nfl_scoring.py','simmah_weather.py','simmah_qb_roles.py']
+           'simmah_nfl_scoring.py','simmah_weather.py','simmah_qb_roles.py','simmah_matchups.py']
     return _hash(_json({name:_hash((root/name).read_bytes()) for name in names}))
 
 

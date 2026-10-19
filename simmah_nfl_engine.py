@@ -239,7 +239,7 @@ def simulate_stat_lines(pool, roles, rng, n, correlation_strength=1.0, progress=
                 sack = np.zeros(len(idx), dtype=bool)
                 caught = np.zeros(len(idx), dtype=bool)
                 if passing.any():
-                    sack = passing & (rng.random(len(idx)) < .065)
+                    sack = passing & (rng.random(len(idx)) < p['role'].get('matchup_sack_rate', .065))
                     gain[sack] = -np.clip(rng.normal(6, 3, sack.sum()), 1, 15)
                     add(defense, 'sacks', idx[sack])
                     role = p['role']; attempts = role.get('pass_attempts', 0)
@@ -265,7 +265,7 @@ def simulate_stat_lines(pool, roles, rng, n, correlation_strength=1.0, progress=
                             complete = loc[rng.random(len(loc)) < chance]
                             caught[complete] = True
                             ypr = np.clip(role.get('rec_yards', 0)/rec, 5, 20) if rec else 11.2
-                            gain[complete] = np.clip(rng.gamma(1.5, np.clip(ypr*projection_inputs.get(name,{}).get('skill_gain',1.)*p['pass_gain']**.80,3,24)/1.5, len(complete))*environment[idx[complete]]*factors['pass_yards'], 0, 85)
+                            gain[complete] = np.clip(rng.gamma(1.5, np.clip(ypr*role.get('matchup_receiving',1.)*projection_inputs.get(name,{}).get('skill_gain',1.)*p['pass_gain']**.80,3,24)/1.5, len(complete))*environment[idx[complete]]*factors['pass_yards'], 0, 85)
                 running = ~passing
                 selected = select(p['runners'], p['rush_w'], int(running.sum()))
                 if not p['runners']:
@@ -276,7 +276,7 @@ def simulate_stat_lines(pool, roles, rng, n, correlation_strength=1.0, progress=
                         loc = np.flatnonzero(running & (carrier == player_ids[name]))
                         role = roles.get(name, {}); carries = role.get('carries', 0)
                         ypc = np.clip(role.get('rush_yards', 0)/carries, 2, 8.5) if carries else 4.35
-                        gain[loc] = np.clip(rng.normal(np.clip(ypc*projection_inputs.get(name,{}).get('skill_gain',1.),1,8.5), 5.5, len(loc))*np.sqrt(environment[idx[loc]]), -5, 65)
+                        gain[loc] = np.clip(rng.normal(np.clip(ypc*role.get('matchup_rushing',1.)*projection_inputs.get(name,{}).get('skill_gain',1.),1,8.5), 5.5, len(loc))*np.sqrt(environment[idx[loc]]), -5, 65)
                 gain = np.clip(gain, -field[idx], 100-field[idx])
                 for name in p['receivers']:
                     loc = np.flatnonzero(caught & (carrier == player_ids[name]))
