@@ -898,9 +898,9 @@ def normalize_injury_team(value):
         "seattle": "sea", "seattleseahawks": "sea",
         "tampa": "tb", "tampabay": "tb", "tampabaybuccaneers": "tb",
         "tennessee": "ten", "tennesseetitans": "ten",
-        "washington": "wsh", "washingtoncommanders": "wsh",
+        "washington": "was", "washingtoncommanders": "was", "wsh": "was",
     }
-    return aliases.get(raw, raw.upper())
+    return aliases.get(raw, raw).upper()
 
 
 @st.cache_data(ttl=600, show_spinner=False)
@@ -923,7 +923,7 @@ def fetch_nfl_injury_statuses():
     statuses = {}
     for team_block in payload.get("injuries", []):
         team_data = team_block.get("team", {}) or {}
-        team = normalize_injury_team(team_data.get("abbreviation") or team_data.get("displayName") or team_data.get("name"))
+        team = normalize_injury_team(team_data.get("abbreviation") or team_data.get("displayName") or team_data.get("name") or team_block.get("displayName") or team_block.get("name"))
         for injury in team_block.get("injuries", []) or []:
             athlete = injury.get("athlete", {}) or {}
             name = normalize_injury_player_name(athlete.get("fullName") or athlete.get("displayName") or athlete.get("shortName"))
