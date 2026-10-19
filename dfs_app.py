@@ -1119,10 +1119,42 @@ def resolve_quarterback_roles_for_build(frame, format_label):
     return resolved
 
 
+
+def render_fantasypros_access_check(key_prefix):
+    from datetime import datetime
+    from simmah_fantasypros import check_weekly_access
+    prefix = "fantasypros_check_" + str(key_prefix or "shared")
+    with st.expander("FantasyPros API connection", expanded=False):
+        st.caption("Test weekly projection access using FANTASYPROS_API_KEY from Streamlit Secrets. These results do not change your player projections.")
+        season = st.number_input("FantasyPros season", min_value=2020, max_value=2100,
+            value=datetime.now(ZoneInfo("America/New_York")).year, key=prefix + "_season")
+        week = st.number_input("FantasyPros week — match your salary slate", min_value=1, max_value=22,
+            value=6, key=prefix + "_week")
+        if st.button("Test FantasyPros connection", key=prefix + "_button"):
+            try:
+                api_key = st.secrets.get("FANTASYPROS_API_KEY", "")
+            except Exception:
+                api_key = ""
+            with st.spinner("Checking FantasyPros weekly access…"):
+                report = check_weekly_access(api_key, season, week)
+            st.session_state[prefix + "_report"] = report
+        report = st.session_state.get(prefix + "_report")
+        if report:
+            if report["ok"]:
+                st.success(report["status"])
+                st.write(f"Season {report['season']}, week {report['week']}: {report['qb_players']} QB records.")
+                st.caption("Available scoring fields: " + ", ".join(report["scoring_fields"]))
+                st.info("Connection verified. DK/FD scoring compatibility still needs verification before these projections enter builds.")
+            else:
+                st.warning(report["status"])
+
+
 def show_projection_refresh_status(source_files, key_prefix=None):
     """Show one shared refresh control and timestamp across all sites, slates, and formats."""
     import hashlib
     from datetime import datetime
+
+    render_fantasypros_access_check(key_prefix)
 
     signatures = []
     for label, uploaded_file in source_files:
