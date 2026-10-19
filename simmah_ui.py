@@ -31,6 +31,9 @@ button[data-baseweb="tab"][aria-selected="true"] { color:#19d3b0; font-weight:70
 [data-testid="stMetric"] { background:#0a1c2e; border:1px solid #193c55; border-radius:6px; padding:.65rem; }
 [data-testid="stMetricValue"] { font-size:1.25rem; color:#19d3b0; }
 .st-key-simmah_build_panel { background:linear-gradient(160deg,#0c2338,#071727); border:1px solid #21435d; border-radius:8px; padding:.75rem; }
+@media(min-width:901px) {
+ .st-key-simmah_build_panel { position:fixed !important; top:10rem; right:max(1.5rem, calc((100vw - 1800px) / 2 + 1.5rem)); width:calc((100vw - 4rem) * .2252252) !important; max-width:391px; height:calc(100dvh - 11rem); overflow-y:auto !important; overflow-x:hidden; overscroll-behavior:contain; scrollbar-gutter:stable; z-index:980; box-shadow:0 8px 24px #0004; }
+}
 .st-key-simmah_build_panel [data-testid="stVerticalBlock"] { gap:.4rem; }
 .st-key-simmah_build_panel [data-testid="stCaptionContainer"] { font-size:.69rem; }
 .st-key-sticky_projection_bar { position:fixed !important; top:3rem; left:50%; transform:translateX(-50%); width:calc(100% - 3rem) !important; max-width:1752px; z-index:990; padding:.45rem .8rem !important; background:rgba(6,19,33,.98) !important; border:1px solid #193c55 !important; border-radius:8px; margin:0 !important; box-shadow:0 5px 16px #0005; }
@@ -39,7 +42,7 @@ button[data-baseweb="tab"][aria-selected="true"] { color:#19d3b0; font-weight:70
 @media(max-width:640px) { [data-testid="stTabs"] [data-baseweb="tab-list"] { left:.5rem; width:calc(100% - 1rem); padding:.15rem; overflow-x:auto; } .st-key-sticky_projection_bar { width:calc(100% - 1rem) !important; padding:.35rem .5rem !important; } .st-key-sticky_projection_bar [data-testid="stHorizontalBlock"] { flex-wrap:nowrap !important; } .st-key-sticky_projection_bar [data-testid="stColumn"] { min-width:0 !important; } .st-key-sticky_projection_bar button p { font-size:.65rem !important; } }
 .st-key-sticky_projection_bar [data-testid="stMarkdownContainer"] p { color:#91aac2 !important; font-size:.75rem; }
 @media(max-width:900px) {
- [data-testid="stMainBlockContainer"] { padding:.7rem .7rem 1.2rem !important; }
+ [data-testid="stMainBlockContainer"] { padding:10.5rem .7rem 1.2rem !important; }
  .simmah-brand-name { font-size:1.45rem; }
  [data-baseweb="tab-list"] { gap:.65rem; }
  button[data-baseweb="tab"] { font-size:.74rem; }
