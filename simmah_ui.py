@@ -51,7 +51,7 @@ def render_brand(st):
 
 
 def player_columns(frame):
-    preferred=['Name','Injury Status','Position','Team','Opponent','Salary','Projection','ProjectionSource',
+    preferred=['Player' if 'Player' in frame else 'Name','Injury Status','Position','Team','Opponent','Salary','Projection','ProjectionSource',
         'Sim Pts','Sim P10','Sim P95','Projected Ownership','Field Own %','Field CPT Own %',
         'Min Exposure %','Max Exposure %','Captain Min %','Captain Max %','Lock','Fade']
     return [c for c in preferred if c in frame.columns]

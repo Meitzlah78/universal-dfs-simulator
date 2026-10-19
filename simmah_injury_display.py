@@ -20,3 +20,11 @@ def injury_frame(st, frame):
         if col in roster_columns or str(col).lower() in {'flex1', 'flex2', 'flex3', 'flex4', 'flex5'}:
             result[col] = result[col].map(lambda name: injury_label(name, statuses))
     return result
+
+
+def injury_player_pool(frame):
+    """Add a read-only display name while preserving the canonical Name column."""
+    result = frame.copy()
+    statuses = dict(zip(result['Name'].astype(str), result.get('Injury Status', pd.Series('Active', index=result.index))))
+    result['Player'] = result['Name'].map(lambda name: injury_label(name, statuses))
+    return result

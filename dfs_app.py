@@ -18,7 +18,7 @@ st.set_page_config(
     layout="wide"
 )
 
-from simmah_injury_display import injury_frame
+from simmah_injury_display import injury_frame, injury_player_pool
 from simmah_lineup_editor import render_editor
 from simmah_ui import render_brand, player_columns, player_column_config, render_diversity_controls
 render_brand(st)
@@ -931,7 +931,9 @@ def fetch_nfl_injury_statuses():
                 continue
             if any(word in raw_status for word in ("injured reserve", "reserve/injured", "physically unable to perform", "out", "suspended")):
                 status = "Out"
-            elif any(word in raw_status for word in ("doubtful", "questionable", "day-to-day", "probable")):
+            elif "doubtful" in raw_status:
+                status = "Doubtful"
+            elif any(word in raw_status for word in ("questionable", "day-to-day", "probable")):
                 status = "Questionable"
             else:
                 continue
@@ -5108,6 +5110,7 @@ if platform == "FanDuel":
             )
         _fd_show_all_columns = st.checkbox("Show all player columns", value=False,
             key="fd_show_all_player_columns_" + lineup_mode.replace(" ", "_").lower())
+        fd_player_display = injury_player_pool(fd_player_display)
         _fd_edited_pool = st.data_editor(
             fd_player_display,
             use_container_width=True,
@@ -5118,7 +5121,8 @@ if platform == "FanDuel":
             disabled=[c for c in fd_player_display.columns if c not in {"Fade", "Lock", "Injury Status", "Min Exposure %", "Max Exposure %"}],
             column_config={
                 **player_column_config(st),
-                "Name": st.column_config.TextColumn("Name", pinned=True),
+                "Name": st.column_config.TextColumn("Name"),
+                "Player": st.column_config.TextColumn("Player", pinned=True),
                 "Injury Status": st.column_config.SelectboxColumn("Injury Status", options=["Active", "Questionable", "Doubtful", "Out"], required=True),
             },
             key="fd_player_pool_editor_" + lineup_mode.replace(" ", "_").lower(),
@@ -6912,6 +6916,8 @@ else:
         ]
         _dk_show_all_columns = st.checkbox("Show all player columns", value=False,
             key="dk_show_all_player_columns_" + lineup_mode.replace(" ", "_").lower())
+        control_display = injury_player_pool(control_display)
+        disabled_control_columns.append("Player")
         edited_player_controls = st.data_editor(
             control_display,
             use_container_width=True,
@@ -6922,7 +6928,8 @@ else:
             disabled=disabled_control_columns,
             column_config={
                 **player_column_config(st),
-                "Name": st.column_config.TextColumn("Name", pinned=True),
+                "Name": st.column_config.TextColumn("Name"),
+                "Player": st.column_config.TextColumn("Player", pinned=True),
                 "Lock": st.column_config.CheckboxColumn("Lock", help="Force this player into lineup builds."),
                 "Min Exposure %": st.column_config.NumberColumn("Min Exp %", min_value=0, max_value=100, step=5, format="%d%%"),
                 "Max Exposure %": st.column_config.NumberColumn("Max Exp %", min_value=0, max_value=100, step=5, format="%d%%"),
