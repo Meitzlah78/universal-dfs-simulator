@@ -1138,6 +1138,25 @@ def render_fantasypros_access_check(key_prefix):
             with st.spinner("Checking FantasyPros weekly access…"):
                 report = check_weekly_access(api_key, season, week)
             st.session_state[prefix + "_report"] = report
+        if st.button("Check all FantasyPros positions", key=prefix + "_all_button"):
+            from simmah_fantasypros import check_all_positions
+            try:
+                api_key = st.secrets.get("FANTASYPROS_API_KEY", "")
+            except Exception:
+                api_key = ""
+            with st.spinner("Checking QB, RB, WR, TE, K and DST coverage…"):
+                st.session_state[prefix + "_coverage"] = check_all_positions(api_key, season, week)
+        coverage = st.session_state.get(prefix + "_coverage")
+        if coverage:
+            import json
+            st.write(f"Coverage check: season {coverage['season']}, week {coverage['week']}")
+            st.dataframe(pd.DataFrame([{
+                "Position":r["position"], "Players":r.get("player_count", 0),
+                "Status":r["status"]} for r in coverage["positions"]]), hide_index=True)
+            st.download_button("Download FantasyPros coverage report", json.dumps(coverage, indent=2),
+                file_name=f"fantasypros_coverage_{coverage['season']}_week_{coverage['week']}.json",
+                mime="application/json", key=prefix + "_coverage_download")
+            st.caption("Share this report to verify player coverage and scoring. It contains no API key. Projections are not yet used in builds.")
         report = st.session_state.get(prefix + "_report")
         if report:
             if report["ok"]:

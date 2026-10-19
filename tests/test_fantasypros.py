@@ -21,4 +21,26 @@ class FantasyProsTests(unittest.TestCase):
         self.assertFalse(check_weekly_access('test',2026,6,opener)['ok'])
         self.assertFalse(check_weekly_access('',2026,6,opener)['ok'])
 
+class CoverageTests(unittest.TestCase):
+    def test_all_positions_are_requested_and_numeric_stats_exported(self):
+        from simmah_fantasypros import check_all_positions
+        from urllib.parse import urlparse,parse_qs
+        seen=[]
+        def opener(request,timeout):
+            pos=parse_qs(urlparse(request.full_url).query)['position'][0];seen.append(pos)
+            return io.StringIO(json.dumps({'season':2026,'week':6,'players':[
+                {'name':'Player','team_id':'SF','position_id':pos,'stats':[{'rec_rec':'5.5','points':None,'private':'secret'}]}]}))
+        result=check_all_positions('secret',2026,6,opener)
+        self.assertEqual(seen,['QB','RB','WR','TE','K','DST'])
+        self.assertEqual(result['positions'][1]['players'][0]['stats'],[{'rec_rec':5.5}])
+        self.assertNotIn('secret',json.dumps(result))
+    def test_rate_limit_stops_remaining_requests(self):
+        from simmah_fantasypros import check_all_positions
+        calls=[]
+        def opener(request,timeout):
+            calls.append(request.full_url)
+            raise HTTPError(request.full_url,429,'secret',{},None)
+        result=check_all_positions('secret',2026,6,opener)
+        self.assertEqual(len(calls),1);self.assertEqual(len(result['positions']),1)
+
 if __name__=='__main__':unittest.main()
