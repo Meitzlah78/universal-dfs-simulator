@@ -23,6 +23,12 @@ st.session_state["active_game_markets"] = {}
 st.session_state["active_game_lines"] = []
 st.session_state["active_slate_identity"] = ""
 
+@st.cache_data(show_spinner=False, max_entries=8)
+def leverage_opportunities_cached(outcomes, candidates):
+    from simmah_leverage import candidate_opportunities
+    return candidate_opportunities(outcomes, candidates)
+
+
 def render_portfolio_roi_panel(portfolio, contest=None):
     from simmah_portfolio import portfolio_roi_totals
     totals = portfolio_roi_totals(portfolio, contest)
@@ -5065,6 +5071,11 @@ if platform == "FanDuel":
         st.session_state.get("fd_assigned_display_" + _fd_mode, st.session_state.get(fd_build_key)),
         st.session_state.get("fd_contest_field_" + _fd_mode),
     )
+    from simmah_leverage import attach_leverage
+    fd_player_display = attach_leverage(fd_player_display, leverage_opportunities_cached(
+        st.session_state.get("fd_simulation_df_" + _fd_mode),
+        st.session_state.get(fd_build_key)))
+    st.caption("Leverage (pp) = candidate-best selection share minus projected ownership, or simulated-field ownership when projections are unavailable. Positive values suggest underownership within this candidate set, not guaranteed profit. CPT/MVP and FLEX leverage use separate simulated-field ownership. Values fill after SIM, BUILD and field generation.")
     st.caption("Simulation and ownership summaries fill after SIM completes. Pending values are not zero; external ownership and weather require available source data.")
     from simmah_leverage import add_value_columns
     fd_player_display = add_value_columns(fd_player_display)
@@ -6856,6 +6867,11 @@ else:
         st.session_state.get("classic_contest_field_df") if lineup_mode == "Classic" else st.session_state.get("contest_field_df"),
         st.session_state.get("classic_ownership_snapshot") if lineup_mode == "Classic" else None,
     )
+    from simmah_leverage import attach_leverage
+    player_display = attach_leverage(player_display, leverage_opportunities_cached(
+        st.session_state.get("simulation_df"),
+        st.session_state.get("classic_lineups") if lineup_mode == "Classic" else st.session_state.get("candidates_df")))
+    st.caption("Leverage (pp) = candidate-best selection share minus projected ownership, or simulated-field ownership when projections are unavailable. Positive values suggest underownership within this candidate set, not guaranteed profit. CPT/MVP and FLEX leverage use separate simulated-field ownership. Values fill after SIM, BUILD and field generation.")
     st.caption("Simulation and ownership summaries fill after SIM completes. Pending values are not zero; unavailable weather is shown explicitly.")
     control_display = player_display.copy()
     for required_column in ["Name", "Position", "Team", "Opponent"]:

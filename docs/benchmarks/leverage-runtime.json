@@ -1,0 +1,10 @@
+{
+  "scope": "Synthetic full-size leverage computation; runtime only; roster samples are not validated salary/position lineups",
+  "simulations": 10000,
+  "candidates": 5000,
+  "players": 267,
+  "cold_seconds": 0.8371139769999445,
+  "all_outcomes_used": true,
+  "basis": "Best among generated candidates, not global optimality",
+  "cache": "App caches by outcome and candidate data; ordinary reruns reuse results"
+}
