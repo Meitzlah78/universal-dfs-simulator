@@ -8,8 +8,11 @@ import numpy as np
 import pandas as pd
 
 
-def select_portfolio(candidates, slots, count, metric, controls=None, default_max=80):
+def select_portfolio(candidates, slots, count, metric, controls=None, default_max=80, diversity=None):
     count=int(count);controls=controls or {}
+    strength=.5 if diversity is None else float(np.clip(diversity,0,100))/100
+    if diversity is not None:default_max=100-40*strength
+    overlap_penalty=.7*strength
     if count<1:raise ValueError('Portfolio size must be positive')
     if candidates.empty or metric not in candidates:raise ValueError('Ranked candidates are unavailable')
     ranked=candidates.sort_values(metric,ascending=False,kind='stable').copy()
@@ -43,24 +46,44 @@ def select_portfolio(candidates, slots, count, metric, controls=None, default_ma
         lower[i]=math.ceil(count*minimum/100-1e-9)
         upper[i]=0 if maximum<=0 else max(1,math.floor(count*maximum/100+1e-9))
         if lower[i]>upper[i]:raise ValueError(f'Conflicting portfolio exposure limits for {name}')
+    # Special-role exposure is an additional hard constraint, not part of the
+    # automatic overall cap. Keep explicit CPT/MVP limits authoritative.
+    if special:
+        special_picks=ranked[special].astype(str).map(lookup).to_numpy(int)
+        role_incidence=np.zeros_like(incidence)
+        role_incidence[np.arange(len(ranked)),special_picks]=1
+        role_lower=[];role_upper=[]
+        prefix='Captain' if special=='Captain' else 'MVP'
+        for name in names:
+            cfg=controls.get(name,{})
+            minimum=float(pd.to_numeric(cfg.get(prefix+' Min %',0),errors='coerce'))
+            maximum=float(pd.to_numeric(cfg.get(prefix+' Max %',100),errors='coerce'))
+            minimum=float(np.clip(minimum if np.isfinite(minimum) else 0,0,100))
+            maximum=float(np.clip(maximum if np.isfinite(maximum) else 100,0,100))
+            role_lower.append(math.ceil(count*minimum/100-1e-9))
+            role_upper.append(math.floor(count*maximum/100+1e-9))
+        if np.any(np.asarray(role_lower)>role_upper):raise ValueError('Conflicting special-role exposure limits')
+        incidence=np.column_stack([incidence,role_incidence])
+        lower=np.r_[lower,role_lower];upper=np.r_[upper,role_upper]
+        hard_upper=np.r_[hard_upper,role_upper];automatic=np.r_[automatic,np.zeros(len(names),bool)]
     quality=pd.to_numeric(ranked[metric],errors='coerce').fillna(-np.inf).to_numpy(float)
     finite=np.isfinite(quality)
     if not finite.any():raise ValueError('No finite lineup ranking values')
     lo,hi=quality[finite].min(),quality[finite].max()
     utility=np.where(finite,(quality-lo)/max(hi-lo,1e-9),-np.inf)
-    chosen=[];used=np.zeros(len(ranked),bool);counts=np.zeros(len(names),int)
+    chosen=[];used=np.zeros(len(ranked),bool);counts=np.zeros(incidence.shape[1],int)
     overlap=np.zeros(len(ranked),float)
     selection_method="greedy";effective_auto_cap=default_max
     for turn in range(count):
         remaining=count-turn
-        valid=(~used)&np.all(counts[picks]<upper[picks],axis=1)
+        valid=(~used)&np.all(counts+incidence<=upper,axis=1)
         # Players whose minimum must occur in every remaining roster are hard
         # requirements. Other deficits get priority to make progress early.
         deficit=np.maximum(0,lower-counts)
         mandatory=deficit>=remaining
         if mandatory.any():valid &= incidence[:,mandatory].sum(axis=1)==mandatory.sum()
         urgency=(incidence@deficit.astype(float))/max(remaining,1)
-        score=utility-.35*overlap+2*urgency
+        score=utility-overlap_penalty*overlap+2*urgency
         score[~valid]=-np.inf
         best=int(np.argmax(score))
         if not np.isfinite(score[best]):
@@ -69,7 +92,7 @@ def select_portfolio(candidates, slots, count, metric, controls=None, default_ma
             selection_method="integer repair"
             counts=incidence[chosen].sum(axis=0)
             break
-        chosen.append(best);used[best]=True;counts[picks[best]]+=1
+        chosen.append(best);used[best]=True;counts+=incidence[best]
         shared=incidence[:,picks[best]].sum(axis=1)/len(slots)
         overlap=np.maximum(overlap,shared)
     if (counts<lower).any():
@@ -81,6 +104,7 @@ def select_portfolio(candidates, slots, count, metric, controls=None, default_ma
     result.attrs['default_max_exposure_pct']=default_max
     result.attrs['effective_auto_cap_pct']=effective_auto_cap
     result.attrs['selection_method']=selection_method
+    result.attrs['exposure_diversity_pct']=100*strength
     return result
 
 

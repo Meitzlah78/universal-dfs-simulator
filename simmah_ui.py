@@ -63,3 +63,19 @@ def player_column_config(st):
         'Sim Pts':st.column_config.NumberColumn('Sim Pts',format='%.1f'),
         'Sim P10':st.column_config.NumberColumn('Floor (P10)',format='%.1f'),
         'Sim P95':st.column_config.NumberColumn('Ceiling (P95)',format='%.1f')}
+
+
+def render_diversity_controls(st, platform, mode, simulation_count):
+    """Portfolio exposure choice is independent of construction-scenario choice."""
+    value = st.slider("Lineup exposure diversity",0,100,50,step=5,
+        key=f"portfolio_exposure_diversity_{platform}_{mode}_v1",
+        help="Higher settings spread player exposure and penalize similar rosters in the final portfolio. Manual exposure limits and player locks remain authoritative. Changing this reselects existing candidates; it does not reduce simulation counts.")
+    cap=100-.4*value
+    st.caption(f"Preferred player exposure cap: {cap:.0f}%. Automatic limits may relax if needed to fill entries; manual limits stay enforced.")
+    with st.expander("Advanced: candidate construction",expanded=False):
+        scenario=st.slider("Game-scenario construction",0,100,
+            100 if mode in ("Showdown","Single Game") else 50,step=5,
+            key=f"lineup_build_aggressiveness_{platform}_{mode}",
+            help="Separate from final lineup exposure. Higher settings build candidates from fewer joint construction scenarios. Only affects newly built candidates.")
+        st.caption(f"Each candidate averages {max(1,round(simulation_count**(1-scenario/100))):,} construction scenarios. Contest evaluation retains the full simulation set.")
+    return value,scenario/100

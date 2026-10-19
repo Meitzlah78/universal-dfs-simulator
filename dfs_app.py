@@ -18,7 +18,7 @@ st.set_page_config(
     layout="wide"
 )
 
-from simmah_ui import render_brand, player_columns, player_column_config
+from simmah_ui import render_brand, player_columns, player_column_config, render_diversity_controls
 render_brand(st)
 st.session_state["active_game_markets"] = {}
 st.session_state["active_game_lines"] = []
@@ -5153,15 +5153,7 @@ if platform == "FanDuel":
                 help="Only build lineups whose total salary falls inside this range."
             )
         with build_cols[1]:
-            aggressiveness_pct = st.slider(
-                "Simulation diversity", 0, 100,
-                100 if ((platform == "DraftKings" and lineup_mode == "Showdown") or (platform == "FanDuel" and lineup_mode == "Single Game")) else 50,
-                step=5,
-                help="Controls how many complete simulations are averaged for each candidate: 0% uses all construction simulations; 100% uses one. Intermediate settings use a logarithmic sample-count scale. Higher settings preserve more single-game variance. Contest evaluation and portfolio exposure limits are separate.",
-                key=f"lineup_build_aggressiveness_{platform}_{lineup_mode}",
-            )
-            aggressiveness = aggressiveness_pct / 100.0
-            st.caption(f"Simulation diversity: {aggressiveness_pct}%. Each candidate averages {max(1, round(SIMULATION_COUNT ** (1.0 - aggressiveness_pct / 100.0))):,} construction simulations. Applies to new candidate builds.")
+            portfolio_diversity, aggressiveness = render_diversity_controls(st, platform, lineup_mode, SIMULATION_COUNT)
             if lineup_mode in ("Showdown", "Single Game"):
                 correlation_pct = st.slider(
                     "Game Correlation", 0, 100,
@@ -5693,19 +5685,19 @@ if platform == "FanDuel":
             # how many rows are shown on screen, not how many get downloaded.
             fd_all_ranked = fd_rank_source.copy()
             _fd_diverse_portfolio = None
-            if lineup_mode == "Full Roster":
+            if lineup_mode in ("Full Roster", "Single Game"):
                 from simmah_portfolio_selection import select_portfolio, put_portfolio_first
                 _fd_owned_count = full_roster_contest_parameters(st.session_state.get("selected_fd_contest") or {}, 1)["owned"]
                 try:
                     _fd_diverse_portfolio = select_portfolio(fd_all_ranked, fd_slots, _fd_owned_count, fd_rank_column,
-                        controls=fd_player_display.set_index("Name").to_dict("index"))
+                        controls=fd_player_display.set_index("Name").to_dict("index"), diversity=portfolio_diversity)
                 except ValueError as exc:
                     st.error(str(exc))
                     st.stop()
-                if _fd_diverse_portfolio.attrs.get("effective_auto_cap_pct", 80) > 80:
-                    st.warning(f"The candidate pool cannot fill all assigned entries at the automatic 80% cap. Automatic cap increased to {_fd_diverse_portfolio.attrs['effective_auto_cap_pct']}%; your manual exposure limits remain enforced.")
+                if _fd_diverse_portfolio.attrs.get("effective_auto_cap_pct", 100) > (100 - .4 * portfolio_diversity):
+                    st.warning(f"The candidate pool cannot fill all assigned entries at the preferred exposure cap. Automatic cap increased to {_fd_diverse_portfolio.attrs['effective_auto_cap_pct']}%; your manual exposure limits remain enforced.")
                 fd_all_ranked = put_portfolio_first(fd_all_ranked, _fd_diverse_portfolio, fd_slots)
-                st.caption("Assigned portfolio balances the selected ranking metric with roster overlap. Preferred automatic player cap: 80%; it may rise if infeasible. Locks and explicit higher minimums may exceed it. Manual maximums remain enforced. Candidate alternatives remain available below.")
+                st.caption(f"Lineup exposure diversity: {portfolio_diversity}%. Preferred player cap: {100 - .4 * portfolio_diversity:.0f}%. Locks and manual limits remain enforced. Candidate alternatives remain available below.")
             fd_results = fd_all_ranked.head(int(fd_rank_count)).copy()
 
             fd_export_portfolio = fd_all_ranked
@@ -5735,8 +5727,7 @@ if platform == "FanDuel":
 
             if lineup_mode == "Single Game":
                 _fd_single_owned = int((st.session_state.get("selected_fd_contest") or {}).get("your_entries") or len(fd_results))
-                _fd_single_seed = fd_results.head(max(1, _fd_single_owned))
-                fd_export_portfolio = _fd_single_seed.iloc[np.arange(max(1, _fd_single_owned)) % len(_fd_single_seed)].reset_index(drop=True)
+                fd_export_portfolio = _fd_diverse_portfolio.copy()
                 _single_field = st.session_state.get("fd_contest_field_single_game")
                 _single_outcomes = st.session_state.get("fd_simulation_df_single_game")
                 if st.session_state.get("fd_single_game_evaluation_engine") == "shared-contest-mvp-v1" and st.session_state.get("fd_single_game_evaluation_context") == dict(st.session_state.get("selected_fd_contest") or {}) and isinstance(_single_field, pd.DataFrame) and isinstance(_single_outcomes, pd.DataFrame):
@@ -7126,15 +7117,7 @@ else:
                 )
             MIN_LINEUP_SALARY, MAX_LINEUP_SALARY = dk_salary_range
             with build_cols[1]:
-                aggressiveness_pct = st.slider(
-                    "Simulation diversity", 0, 100,
-                    100 if ((platform == "DraftKings" and lineup_mode == "Showdown") or (platform == "FanDuel" and lineup_mode == "Single Game")) else 50,
-                    step=5,
-                    help="Controls how many complete simulations are averaged for each candidate: 0% uses all construction simulations; 100% uses one. Intermediate settings use a logarithmic sample-count scale. Higher settings preserve more single-game variance. Contest evaluation and portfolio exposure limits are separate.",
-                    key=f"lineup_build_aggressiveness_{platform}_{lineup_mode}",
-                )
-                aggressiveness = aggressiveness_pct / 100.0
-                st.caption(f"Simulation diversity: {aggressiveness_pct}%. Each candidate averages {max(1, round(SIMULATION_COUNT ** (1.0 - aggressiveness_pct / 100.0))):,} construction simulations. Applies to new candidate builds.")
+                portfolio_diversity, aggressiveness = render_diversity_controls(st, platform, lineup_mode, SIMULATION_COUNT)
 
             with _build_controls:
                 dk_classic_stack_rules = st.multiselect(
@@ -7477,16 +7460,16 @@ else:
                 _classic_slots = [col for col in ["QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "FLEX", "DST"] if col in classic_portfolio_source]
                 try:
                     classic_export_portfolio = select_portfolio(classic_portfolio_source, _classic_slots,
-                        _classic_assignment_count, classic_rank_metric, controls=control_map)
+                        _classic_assignment_count, classic_rank_metric, controls=control_map, diversity=portfolio_diversity)
                 except ValueError as exc:
                     st.error(str(exc))
                     st.stop()
-                if classic_export_portfolio.attrs.get("effective_auto_cap_pct", 80) > 80:
-                    st.warning(f"The candidate pool cannot fill all assigned entries at the automatic 80% cap. Automatic cap increased to {classic_export_portfolio.attrs['effective_auto_cap_pct']}%; your manual exposure limits remain enforced.")
+                if classic_export_portfolio.attrs.get("effective_auto_cap_pct", 100) > (100 - .4 * portfolio_diversity):
+                    st.warning(f"The candidate pool cannot fill all assigned entries at the preferred exposure cap. Automatic cap increased to {classic_export_portfolio.attrs['effective_auto_cap_pct']}%; your manual exposure limits remain enforced.")
                 _classic_unique_entries = classic_export_portfolio.copy()
                 classic_top_portfolio = put_portfolio_first(classic_portfolio_source, classic_export_portfolio,
                     _classic_slots).head(int(classic_portfolio_count)).copy()
-                st.caption("Assigned portfolio balances the selected ranking metric with roster overlap. Preferred automatic player cap: 80%; it may rise if infeasible. Locks and explicit higher minimums may exceed it. Manual maximums remain enforced. Display count does not change assigned entries.")
+                st.caption(f"Lineup exposure diversity: {portfolio_diversity}%. Preferred player cap: {100 - .4 * portfolio_diversity:.0f}%. Manual limits remain enforced; display count does not change assigned entries.")
                 st.session_state["classic_contest_entries_df"] = classic_export_portfolio.copy()
                 classic_top_portfolio["Assigned to contest"] = np.arange(len(classic_top_portfolio)) < len(_classic_unique_entries)
                 _classic_portfolio_field = st.session_state.get("classic_contest_field_df")
@@ -7629,15 +7612,7 @@ with _tab_build:
         )
     MIN_LINEUP_SALARY, MAX_LINEUP_SALARY = dk_salary_range
     with build_cols[1]:
-        aggressiveness_pct = st.slider(
-            "Simulation diversity", 0, 100,
-            100 if ((platform == "DraftKings" and lineup_mode == "Showdown") or (platform == "FanDuel" and lineup_mode == "Single Game")) else 50,
-            step=5,
-            help="Controls how many complete simulations are averaged for each candidate: 0% uses all construction simulations; 100% uses one. Intermediate settings use a logarithmic sample-count scale. Higher settings preserve more single-game variance. Contest evaluation and portfolio exposure limits are separate.",
-            key=f"lineup_build_aggressiveness_{platform}_{lineup_mode}",
-        )
-        aggressiveness = aggressiveness_pct / 100.0
-        st.caption(f"Simulation diversity: {aggressiveness_pct}%. Each candidate averages {max(1, round(SIMULATION_COUNT ** (1.0 - aggressiveness_pct / 100.0))):,} construction simulations. Applies to new candidate builds.")
+        portfolio_diversity, aggressiveness = render_diversity_controls(st, platform, lineup_mode, SIMULATION_COUNT)
         if lineup_mode in ("Showdown", "Single Game"):
             correlation_pct = st.slider(
                 "Game Correlation", 0, 100,
@@ -9023,7 +8998,11 @@ with _tab_build:
                 (
                     str(name),
                     float(values.get("Max Exposure %", 100)),
-                    float(values.get("Captain Max %", 100))
+                    float(values.get("Captain Max %", 100)),
+                    float(values.get("Min Exposure %", 0)),
+                    float(values.get("Captain Min %", 0)),
+                    bool(values.get("Lock", False)),
+                    bool(values.get("Fade", False))
                 )
                 for name, values in control_map.items()
             )
@@ -9033,172 +9012,26 @@ with _tab_build:
             or st.session_state.get("portfolio_count_used") != portfolio_count
             or st.session_state.get("portfolio_control_signature") != current_control_signature
             or st.session_state.get("portfolio_metric_used") != portfolio_metric
+            or st.session_state.get("portfolio_exposure_diversity_used") != portfolio_diversity
         ):
 
-            old_portfolio = st.session_state.get("portfolio_df")
-
-            if (
-                isinstance(old_portfolio, pd.DataFrame)
-                and "Locked" in old_portfolio.columns
-                and all(col in old_portfolio.columns for col in portfolio_lineup_columns)
-            ):
-                locked_df = old_portfolio[
-                    old_portfolio["Locked"] == True
-                ].copy()
-
-                available_count = max(
-                    0,
-                    int(portfolio_count) - len(locked_df)
-                )
-
-                lineup_columns = portfolio_lineup_columns
-                ranked_df = (
-                    results_df
-                    .drop_duplicates(subset=lineup_columns, keep="first")
-                    .sort_values(
-                        portfolio_metric,
-                        ascending=False
-                    )
-                    .copy()
-                )
-
-                lineup_columns = portfolio_lineup_columns
-
-                locked_keys = set(
-                    tuple(row)
-                    for row in locked_df[lineup_columns].to_numpy()
-                )
-
-                selected_rows = []
-
-                for _, row in ranked_df.iterrows():
-
-                    key = tuple(
-                        row[lineup_columns]
-                    )
-
-                    if key not in locked_keys:
-                        selected_rows.append(row)
-
-                    if len(selected_rows) >= available_count:
-                        break
-
-                new_rows = pd.DataFrame(
-                    selected_rows
-                )
-
-                if len(new_rows) > 0:
-                    new_rows["Locked"] = False
-
-                portfolio_df = pd.concat(
-                    [
-                        locked_df,
-                        new_rows
-                    ],
-                    ignore_index=True
-                ).head(int(portfolio_count))
-
-            else:
-                # Rank candidates by the selected metric, then build a diversified
-                # portfolio from those strong lineups. Prefer lineups that differ by
-                # multiple players; if the candidate pool cannot fill the portfolio,
-                # fill remaining spots with the next best unique lineups.
-                ranked_df = (
-                    results_df
-                    .drop_duplicates(subset=portfolio_lineup_columns, keep="first")
-                    .sort_values(portfolio_metric, ascending=False, kind="stable")
-                    .reset_index(drop=True)
-                )
-
-                lineup_columns = portfolio_lineup_columns
-                slot_count = len(lineup_columns)
-                # Showdown has 6 roster spots; Classic has 9. Avoid near-duplicates
-                # while keeping the selected lineups near the top of the chosen metric.
-                max_shared_players = max(1, slot_count - 2)
-                selected_indices = []
-                selected_sets = []
-                selected_keys = set()
-                selected_player_counts = {}
-
-                # Default portfolio diversification guard. A player may still exceed
-                # 80% when the user explicitly locks that player or sets Min Exposure
-                # above 80%. A lower manual Max Exposure always remains authoritative.
-                auto_diversification_pct = 80.0
-
-                def portfolio_player_limit(player_name):
-                    settings = control_map.get(str(player_name), {})
-                    try:
-                        manual_max = float(settings.get("Max Exposure %", 100))
-                    except (TypeError, ValueError):
-                        manual_max = 100.0
-                    try:
-                        manual_min = float(settings.get("Min Exposure %", 0))
-                    except (TypeError, ValueError):
-                        manual_min = 0.0
-                    manual_max = float(np.clip(manual_max, 0.0, 100.0))
-                    manual_min = float(np.clip(manual_min, 0.0, 100.0))
-                    if bool(settings.get("Lock", False)):
-                        effective_max = 100.0
-                    elif manual_min > auto_diversification_pct:
-                        effective_max = manual_max
-                    else:
-                        effective_max = min(manual_max, auto_diversification_pct)
-                    if effective_max <= 0:
-                        return 0
-                    return max(1, int(np.ceil(int(portfolio_count) * effective_max / 100.0)))
-
-                def portfolio_lineup_fits_player_limits(player_set):
-                    return all(
-                        selected_player_counts.get(str(player), 0) < portfolio_player_limit(player)
-                        for player in player_set
-                    )
-
-                def record_portfolio_players(player_set):
-                    for player in player_set:
-                        name = str(player)
-                        selected_player_counts[name] = selected_player_counts.get(name, 0) + 1
-
-                for idx, row in ranked_df.iterrows():
-                    lineup_key = tuple(str(row[col]) for col in lineup_columns)
-                    if lineup_key in selected_keys:
-                        continue
-                    player_set = set(lineup_key)
-                    if not portfolio_lineup_fits_player_limits(player_set):
-                        continue
-                    if all(
-                        len(player_set.intersection(existing)) <= max_shared_players
-                        for existing in selected_sets
-                    ):
-                        selected_indices.append(idx)
-                        selected_sets.append(player_set)
-                        selected_keys.add(lineup_key)
-                        record_portfolio_players(player_set)
-                        if len(selected_indices) >= int(portfolio_count):
-                            break
-
-                # Fallback relaxes only the overlap rule. It still respects player
-                # exposure limits, preventing one strong play from silently reaching 100%.
-                if len(selected_indices) < int(portfolio_count):
-                    for idx, row in ranked_df.iterrows():
-                        lineup_key = tuple(str(row[col]) for col in lineup_columns)
-                        if lineup_key in selected_keys:
-                            continue
-                        player_set = set(lineup_key)
-                        if not portfolio_lineup_fits_player_limits(player_set):
-                            continue
-                        selected_indices.append(idx)
-                        selected_keys.add(lineup_key)
-                        record_portfolio_players(player_set)
-                        if len(selected_indices) >= int(portfolio_count):
-                            break
-
-                portfolio_df = ranked_df.iloc[selected_indices].copy().reset_index(drop=True)
-                portfolio_df["Locked"] = False
+            from simmah_portfolio_selection import select_portfolio
+            try:
+                portfolio_df = select_portfolio(results_df, portfolio_lineup_columns,
+                    int(portfolio_count), portfolio_metric, controls=control_map,
+                    diversity=portfolio_diversity)
+            except ValueError as exc:
+                st.error(str(exc))
+                st.stop()
+            portfolio_df["Locked"] = False
+            if portfolio_df.attrs.get("effective_auto_cap_pct",100) > (100-.4*portfolio_diversity):
+                st.warning(f"Automatic exposure cap increased to {portfolio_df.attrs['effective_auto_cap_pct']}% to fill entries. Manual limits remain enforced.")
 
             st.session_state["portfolio_df"] = portfolio_df
             st.session_state["portfolio_count_used"] = portfolio_count
             st.session_state["portfolio_metric_used"] = portfolio_metric
             st.session_state["portfolio_control_signature"] = current_control_signature
+            st.session_state["portfolio_exposure_diversity_used"] = portfolio_diversity
 
         # Changing the sort option must reorder the existing pool, not select a new one.
         # This keeps the exact same lineups while letting the user inspect a different ranking.

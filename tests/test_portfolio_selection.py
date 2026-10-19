@@ -78,4 +78,32 @@ class PortfolioRepairTests(unittest.TestCase):
         self.assertEqual(counts['A'],1)
         self.assertEqual(counts['D'],1)
 
+class ExposureDiversityTests(unittest.TestCase):
+    def test_higher_diversity_reduces_concentration_without_rebuilding_candidates(self):
+        candidates,slots=fixture();before=candidates.copy(deep=True)
+        low=select_portfolio(candidates,slots,20,'Top1',diversity=0)
+        high=select_portfolio(candidates,slots,20,'Top1',diversity=100)
+        self.assertEqual(low.attrs['default_max_exposure_pct'],100)
+        self.assertEqual(high.attrs['default_max_exposure_pct'],60)
+        self.assertGreater(low[slots].stack().value_counts().max(),high[slots].stack().value_counts().max())
+        self.assertLessEqual(high[slots].stack().value_counts().max(),12)
+        pd.testing.assert_frame_equal(candidates,before)
+    def test_zero_diversity_is_rank_order_when_unconstrained(self):
+        d,slots=fixture();p=select_portfolio(d,slots,20,'Top1',diversity=0)
+        self.assertEqual(p.Top1.tolist(),d.head(20).Top1.tolist())
+    def test_captain_and_mvp_hard_limits_survive_high_diversity(self):
+        for special,prefix in [('Captain','Captain'),('MVP','MVP')]:
+            d,slots=fixture();d=d.rename(columns={slots[0]:special});slots=[special]+slots[1:]
+            p=select_portfolio(d,slots,20,'Top1',diversity=100,
+                controls={'P0':{prefix+' Max %':0},'P20':{prefix+' Min %':10}})
+            self.assertFalse(p[special].eq('P0').any());self.assertGreaterEqual(p[special].eq('P20').sum(),2)
+    def test_app_all_four_formats_share_exposure_selection(self):
+        import ast
+        from pathlib import Path
+        tree=ast.parse(Path('dfs_app.py').read_text())
+        calls=[n for n in ast.walk(tree) if isinstance(n,ast.Call) and isinstance(n.func,ast.Name) and n.func.id=='select_portfolio']
+        self.assertEqual(len(calls),3) # Shared FanDuel branch covers both FD formats.
+        self.assertTrue(all(any(k.arg=='diversity' for k in n.keywords) for n in calls))
+        source=Path('dfs_app.py').read_text();self.assertNotIn('_fd_single_seed.iloc',source)
+
 if __name__=='__main__':unittest.main()

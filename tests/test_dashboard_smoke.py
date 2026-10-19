@@ -31,4 +31,19 @@ st.session_state['returned_columns']=list(edited.columns)
         self.assertFalse(app.exception)
         self.assertIn('Internal diagnostic',app.session_state['returned_columns'])
 
+class DiversityControlTests(unittest.TestCase):
+    def test_exposure_slider_does_not_change_scenario_construction(self):
+        app=AppTest.from_string("""
+import streamlit as st
+from simmah_ui import render_diversity_controls
+exposure,construction=render_diversity_controls(st,'FanDuel','Single Game',10000)
+st.session_state['observed']=(exposure,construction)
+""",default_timeout=10).run()
+        self.assertFalse(app.exception)
+        self.assertEqual(app.session_state['observed'],(50,1.))
+        app.slider(key='portfolio_exposure_diversity_FanDuel_Single Game_v1').set_value(100).run()
+        self.assertFalse(app.exception)
+        self.assertEqual(app.session_state['observed'],(100,1.))
+        self.assertEqual(app.slider(key='lineup_build_aggressiveness_FanDuel_Single Game').value,100)
+
 if __name__=='__main__':unittest.main()
