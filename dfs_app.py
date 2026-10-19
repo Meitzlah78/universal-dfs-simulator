@@ -2295,6 +2295,12 @@ def get_projection_source_data(uploaded_file, source_name, platform_name, target
     downloaded = download_public_projection_table(source_name, platform_name, target_names=target_names, target_teams=target_teams)
     return downloaded, "automatic download" if downloaded else "unavailable"
 
+@st.cache_data(show_spinner=False, ttl=900)
+def download_rotowire_projections(platform_name, target_teams, slate_dates):
+    from simmah_rotowire import download
+    return download(platform_name, target_teams, slate_dates)
+
+
 def apply_external_projection_sources(players_frame, dff_file, draftedge_file, platform_name='DraftKings'):
     """Average every available external projection; never substitute internal estimates."""
     result = players_frame.copy()
@@ -2302,7 +2308,21 @@ def apply_external_projection_sources(players_frame, dff_file, draftedge_file, p
     target_teams = tuple(sorted(result["Team"].dropna().astype(str).str.upper().unique())) if "Team" in result.columns else ()
     dff, dff_status = get_projection_source_data(dff_file, "DFF", platform_name, target_names, target_teams)
     draftedge, draftedge_status = get_projection_source_data(draftedge_file, "DraftEdge", platform_name, target_names, target_teams)
-    source_maps = (("DFF", dff), ("DraftEdge", draftedge))
+    rotowire, rotowire_status = {}, "skipped: uploaded CSV priority"
+    if dff_file is None and draftedge_file is None:
+        from simmah_rotowire import salary_dates
+        from datetime import datetime
+        dates = salary_dates(result)
+        date_note = ""
+        if not dates:
+            dates = (datetime.now(ZoneInfo("America/New_York")).date().isoformat(),)
+            date_note = "; salary file undated, matching today's games only"
+        try:
+            rotowire, rw_slate = download_rotowire_projections(platform_name, target_teams, dates)
+            rotowire_status = "automatic download, slate " + rw_slate + date_note
+        except Exception:
+            rotowire_status = "unavailable: no verified matching slate or download failed" + date_note
+    source_maps = (("DFF", dff), ("DraftEdge", draftedge), ("RotoWire", rotowire))
     match_counts = {name: 0 for name, _ in source_maps}
     projections, sources = [], []
     averaged = missing_external = 0
@@ -2343,8 +2363,8 @@ def apply_external_projection_sources(players_frame, dff_file, draftedge_file, p
     result["ProjectionSource"] = sources
     st.caption(
         f"External projection matches: DFF {match_counts['DFF']}; "
-        f"DraftEdge {match_counts['DraftEdge']}; averaged {averaged}; missing {missing_external}. "
-        f"DFF: {dff_status}; DraftEdge: {draftedge_status}. "
+        f"DraftEdge {match_counts['DraftEdge']}; RotoWire {match_counts['RotoWire']}; averaged {averaged}; missing {missing_external}. "
+        f"DFF: {dff_status}; DraftEdge: {draftedge_status}; RotoWire: {rotowire_status}. "
         "Internal estimates are disabled. Players without a valid external projection, including zero projections, "
         "are removed from the lineup pool."
     )
@@ -3084,6 +3104,7 @@ with st.expander("Projection Accuracy Report", expanded=False):
 platform, lineup_mode = format_options[selected_format]
 if st.session_state.pop("refresh_projections_requested", False):
     download_public_projection_table.clear()
+    download_rotowire_projections.clear()
     fetch_nfl_injury_statuses.clear()
     fetch_game_weather_json.clear()
     # The player-pool load below fetches the selected slate's fresh data.
@@ -4725,6 +4746,10 @@ if platform == "FanDuel":
             errors="coerce"
         )
         fd_players["Team"] = fd_raw[fd_team_col].astype(str).str.strip().str.upper()
+        for _game_col in fd_raw.columns:
+            if str(_game_col).lower().replace(" ", "") in {"gameinfo", "game", "starttime", "kickoff"}:
+                fd_players[_game_col] = fd_raw[_game_col]
+
         show_detected_slate_games(fd_raw)
         fd_opponent_col = fd_find_column(fd_raw, ["Opponent", "Opp"])
         if fd_opponent_col is not None:
@@ -4830,7 +4855,7 @@ if platform == "FanDuel":
     fd_valid_projection_count = int(pd.to_numeric(fd_players.get("Projection"), errors="coerce").gt(0).sum())
     if fd_valid_projection_count == 0 and not fd_players.empty:
         st.warning(
-            "Players loaded successfully, but DFF/DraftEdge projections are not available for this slate yet. "
+            "Players loaded successfully, but external projections are not available for this slate yet. "
             "Click REFRESH PROJECTIONS + INJURY NEWS later after projections are posted."
         )
     elif fd_valid_projection_count < len(fd_players):
@@ -6342,6 +6367,10 @@ else:
                     errors="coerce"
                 )
                 loaded_players["Team"] = uploaded_df[team_col].astype(str).str.strip().str.upper()
+                for _game_col in uploaded_df.columns:
+                    if str(_game_col).lower().replace(" ", "") in {"gameinfo", "game", "starttime", "kickoff"}:
+                        loaded_players[_game_col] = uploaded_df[_game_col]
+
                 show_detected_slate_games(uploaded_df)
                 loaded_players["Position"] = (
                     uploaded_df[position_col].astype(str).str.strip()
@@ -6408,7 +6437,7 @@ else:
     dk_valid_projection_count = int(pd.to_numeric(players_df.get("Projection"), errors="coerce").gt(0).sum())
     if dk_valid_projection_count == 0 and not players_df.empty:
         st.warning(
-            "Players loaded successfully, but DFF/DraftEdge projections are not available for this slate yet. "
+            "Players loaded successfully, but external projections are not available for this slate yet. "
             "Click REFRESH PROJECTIONS + INJURY NEWS later after projections are posted."
         )
     elif dk_valid_projection_count < len(players_df):
@@ -6431,7 +6460,7 @@ else:
         )
 
     internal_key = internal_slate_key(all_dk_players_df)
-    st.caption("Projection values average all available valid DFF and DraftEdge projections; a single available source is used directly. All salary-file players remain visible; players without a positive external projection stay out of SIM/BUILD until a refresh finds one.")
+    st.caption("Automatic projection values average all available valid DFF, DraftEdge and RotoWire projections; uploaded CSVs keep priority and a single available source is used directly. All salary-file players remain visible; players without a positive external projection stay out of SIM/BUILD until a refresh finds one.")
     if st.session_state.get("nfl_historical_stats_status"):
         st.caption(st.session_state["nfl_historical_stats_status"])
         if st.session_state.get("nfl_historical_players_matched") is not None:
