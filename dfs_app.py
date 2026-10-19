@@ -19,6 +19,7 @@ st.set_page_config(
 )
 
 from simmah_injury_display import injury_frame, injury_player_pool
+from simmah_build_state import uploaded_slate_signature, signature_matches_upload
 from simmah_lineup_editor import render_editor
 from simmah_ui import render_brand, player_columns, player_column_config, render_diversity_controls
 render_brand(st)
@@ -5233,18 +5234,17 @@ if platform == "FanDuel":
                     "Step 2 of 4: Preparing rankings and building your candidate lineups..."
                 )
 
-        fd_signature = (
-            "FanDuel",
-            lineup_mode,
-            tuple(fd_players[["Name", "Position", "Team", "Salary", "Projection"]]
-                  .astype(str).itertuples(index=False, name=None))
-        )
+        # Exposure/ranking changes reuse this upload's candidates and simulations.
+        # Live projection values and dataframe ordering are not slate identity.
+        fd_signature = uploaded_slate_signature(fd_slate_file, "FanDuel", lineup_mode)
         if "fd_saved_builds" not in st.session_state:
             st.session_state["fd_saved_builds"] = {}
         fd_build_key = "fd_lineups_" + lineup_mode.replace(" ", "_").lower()
         fd_active_key = "fd_active_signature_" + lineup_mode.replace(" ", "_").lower()
         previous_fd_signature = st.session_state.get(fd_active_key)
-        if previous_fd_signature != fd_signature:
+        if signature_matches_upload(previous_fd_signature, fd_signature, fd_players[["Name", "Position", "Team", "Salary"]].astype(str).itertuples(index=False, name=None)):
+            st.session_state[fd_active_key] = fd_signature
+        else:
             if previous_fd_signature is not None and fd_build_key in st.session_state:
                 st.session_state["fd_saved_builds"][previous_fd_signature] = {
                     "lineups": st.session_state[fd_build_key]
@@ -5559,6 +5559,11 @@ if platform == "FanDuel":
 
         fd_results = st.session_state.get(fd_build_key)
         if fd_results is not None:
+            _fd_eligible_now = set(fd_players["Name"].astype(str))
+            fd_results = fd_results.loc[fd_results[fd_slots].isin(_fd_eligible_now).all(axis=1)].copy()
+            if fd_results.empty:
+                st.warning("No saved candidates remain eligible after player-pool changes. Run Build to generate new candidates.")
+                st.stop()
             fd_results = remove_out_players_from_lineups(fd_results, fd_slots, "FanDuel")
             st.session_state[fd_build_key] = fd_results
             st.divider()
@@ -5568,6 +5573,8 @@ if platform == "FanDuel":
             # Use the same ranking choices as DraftKings Showdown for both FanDuel formats.
             fd_comparison_key = "fd_contest_comparison_" + lineup_mode.replace(" ", "_").lower()
             fd_rank_source = st.session_state.get(fd_comparison_key)
+            if isinstance(fd_rank_source, pd.DataFrame) and all(slot in fd_rank_source for slot in fd_slots):
+                fd_rank_source = fd_rank_source.loc[fd_rank_source[fd_slots].isin(_fd_eligible_now).all(axis=1)].copy()
             if lineup_mode == "Full Roster" and st.session_state.get("fd_full_roster_evaluation_context") != dict(st.session_state.get("selected_fd_contest") or {}):
                 fd_rank_source = None
 
