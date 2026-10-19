@@ -28,7 +28,7 @@ st.session_state["active_slate_identity"] = ""
 _shared_header = st.container()
 _workspace_main, _workspace_rail = st.columns([4.3, 1.25], gap="medium")
 with _workspace_main:
-    _tab_contests, _tab_roster, _tab_build = st.tabs(["Contests", "Roster & Projections", "Build"])
+    _tab_contests, _tab_roster, _tab_build = st.tabs(["Contests", "Roster & Projections", "Lineups"])
 with _workspace_rail:
     _build_controls = st.container(key="simmah_build_panel", border=True)
     with _build_controls:

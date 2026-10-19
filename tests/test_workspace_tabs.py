@@ -13,7 +13,7 @@ class WorkspaceTabsTests(unittest.TestCase):
         return found
     def test_three_ordered_tabs(self):
         calls=[n for n in ast.walk(self.tree) if isinstance(n,ast.Call) and ast.unparse(n.func)=='st.tabs']
-        self.assertEqual(len(calls),1);self.assertEqual(ast.literal_eval(calls[0].args[0]),['Contests','Roster & Projections','Build'])
+        self.assertEqual(len(calls),1);self.assertEqual(ast.literal_eval(calls[0].args[0]),['Contests','Roster & Projections','Lineups'])
     def test_main_sections_are_routed(self):
         expected={'### Projection Sources':'_tab_roster','### Build Settings':'_tab_build','### Contest Selector':'_contest_setup','### Slate Setup':'_contest_setup','### Player Pool — Stats, Simulation, Exposure & Controls':'_tab_roster'}
         counts={label:0 for label in expected}
