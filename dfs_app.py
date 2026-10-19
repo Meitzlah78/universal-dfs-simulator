@@ -8503,42 +8503,15 @@ if (
         # when the full portfolio was appended to the comparison field.
         sorted_field = sorted_combined
 
-        # Batched binary search: find each candidate's insertion position in its
-        # simulation's sorted opponent scores. This preserves searchsorted(side="right")
-        # behavior while avoiding a Python loop over every simulation.
-        batch_count = batch_end - batch_start
+        from simmah_contest_scoring import score_insertion_bounds
         comparison_field_size = total_field + max(0, n_candidates - 1)
         search_field_size = sorted_field.shape[1]
-        low = np.zeros((batch_count, n_candidates), dtype=np.int32)
-        high = np.full((batch_count, n_candidates), search_field_size, dtype=np.int32)
-        sim_rows = np.arange(batch_count)[:, None]
-
-        while np.any(low < high):
-            active = low < high
-            mid = np.minimum((low + high) // 2, search_field_size - 1)
-            mid_values = sorted_field[sim_rows, mid]
-            move_right = (mid_values <= batch_candidate_scores) & active
-            move_left = (mid_values > batch_candidate_scores) & active
-            low = np.where(move_right, mid + 1, low)
-            high = np.where(move_left, mid, high)
+        left_low, low = score_insertion_bounds(sorted_field, batch_candidate_scores)
 
         count_greater = search_field_size - low
         # The candidate itself is never greater than its own score, so no removal
         # is needed from count_greater. Percentiles use opponents + other entries.
         percentiles = 1.0 - (count_greater / max(1, comparison_field_size))
-
-        # Find the left insertion point too, so equal-scoring entries can share
-        # the prize money for every rank occupied by the tie.
-        left_low = np.zeros((batch_count, n_candidates), dtype=np.int32)
-        left_high = np.full((batch_count, n_candidates), search_field_size, dtype=np.int32)
-        while np.any(left_low < left_high):
-            active_left = left_low < left_high
-            mid_left = np.minimum((left_low + left_high) // 2, search_field_size - 1)
-            mid_left_values = sorted_field[sim_rows, mid_left]
-            move_right_left = (mid_left_values < batch_candidate_scores) & active_left
-            move_left_left = (mid_left_values >= batch_candidate_scores) & active_left
-            left_low = np.where(move_right_left, mid_left + 1, left_low)
-            left_high = np.where(move_left_left, mid_left, left_high)
 
         # Convert sampled opponent results to a smoothed full-field rank estimate.
         # The +1 continuity correction prevents a lineup that beats every sampled
