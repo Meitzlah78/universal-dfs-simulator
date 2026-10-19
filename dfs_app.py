@@ -5926,25 +5926,10 @@ else:
     # DRAFTKINGS SALARY FILE UPLOAD
     # ================================
 
-    with _contest_setup:
-        st.divider()
-        st.write("### Slate Setup")
-        st.caption(
-            "Upload the DraftKings My Contests CSV once. SIMMAH reads your contests and entries from the top "
-            "and the player/salary table from the same file automatically."
-        )
-        if auto_slate_file is not None:
-            dk_slate_file = auto_slate_file
-            st.caption("Using the slate file uploaded above.")
-        else:
-            dk_slate_file = st.file_uploader(
-                "Upload DraftKings Slate / Entries CSV",
-                type=["csv"],
-                key="dk_slate_setup_file",
-                help="Use the original DraftKings My Contests CSV for this slate. No separate salary upload is needed."
-            )
-        salary_file = dk_slate_file
-        entry_file = dk_slate_file
+    # The universal uploader supplies both salary references and reserved entries.
+    dk_slate_file = auto_slate_file
+    salary_file = dk_slate_file
+    entry_file = dk_slate_file
 
     with _contest_setup:
         selected_contest_id = None
@@ -6170,7 +6155,6 @@ else:
                 "entry_fee": previous_selection.get("entry_fee"),
                 "field_size": None,
             }
-            st.caption("Upload your DraftKings contest entry CSV if you want to target existing entries.")
 
         dk_saved_contests[dk_slate_key] = active_dk_selection
         st.session_state["selected_dk_contests_by_slate"] = dk_saved_contests
