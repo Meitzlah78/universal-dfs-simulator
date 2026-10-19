@@ -2373,6 +2373,31 @@ def full_roster_contest_parameters(contest, representative_count):
         "fee": float(contest.get("entry_fee") or 0),
         "payouts_known": bool(tiers) and known_field and contest.get("entry_fee") is not None}
 
+@st.cache_resource(show_spinner=False, max_entries=2)
+def showdown_sorted_field_cached(outcomes, field_indices, multiplier, start, end):
+    """Reuse opponent scores across portfolio changes, backed by temporary disk."""
+    import tempfile
+    from pathlib import Path
+    owner = tempfile.TemporaryDirectory(prefix="simmah-field-")
+    path = Path(owner.name) / "sorted.npy"
+    result = None
+    for offset in range(start, end, 128):
+        stop = min(offset + 128, end)
+        values = outcomes[offset:stop]
+        scores = values[:, field_indices].sum(axis=2)
+        if multiplier != 1.0:
+            scores += values[:, field_indices[:, 0]] * (multiplier - 1.0)
+        if result is None:
+            result = np.lib.format.open_memmap(path, mode="w+", dtype=scores.dtype,
+                shape=(end-start, len(field_indices)))
+        result[offset-start:stop-start] = np.sort(scores, axis=1)
+    if result is None:
+        raise ValueError("No evaluation simulations are available")
+    result.flush()
+    del result
+    return owner, np.load(path, mmap_mode="r")
+
+
 @st.cache_data(show_spinner=False, max_entries=8)
 def evaluate_full_roster_portfolio_cached(outcomes, portfolio, field, slots, field_size, tiers, fee, multipliers=None):
     from simmah_contests import evaluate_contest
@@ -9087,25 +9112,20 @@ with _tab_build:
                 _portfolio_cumulative_prizes = np.concatenate((
                     [0.0], np.cumsum(_portfolio_rank_prizes, dtype=np.float64)
                 ))
+                _field_cache_owner, _portfolio_cached_field = showdown_sorted_field_cached(
+                    simulation_values, contest_idx, scoring_multiplier, holdout_start, n_sims)
                 for _portfolio_batch_start in range(holdout_start, n_sims, _portfolio_batch_size):
                     _portfolio_batch_end = min(_portfolio_batch_start + _portfolio_batch_size, n_sims)
                     _portfolio_values = simulation_values[_portfolio_batch_start:_portfolio_batch_end]
                     _portfolio_scores = _portfolio_values[:, _portfolio_slot_indices].sum(axis=2)
-                    _portfolio_field_scores = _portfolio_values[:, contest_idx].sum(axis=2)
                     if scoring_multiplier != 1.0:
                         _portfolio_scores += (
                             _portfolio_values[:, _portfolio_slot_indices[:, 0]]
                             * (scoring_multiplier - 1.0)
                         )
-                        _portfolio_field_scores += (
-                            _portfolio_values[:, contest_idx[:, 0]]
-                            * (scoring_multiplier - 1.0)
-                        )
-                    # Sort each simulation's opponent scores, then use batched binary
-                    # searches instead of building a field-by-entry comparison matrix for
-                    # every simulation. This keeps the payout estimate but greatly reduces
-                    # the time spent before the lineup table can render.
-                    _portfolio_sorted_field = np.sort(_portfolio_field_scores, axis=1)
+                    # Field scores are unchanged when exposure diversity changes.
+                    _portfolio_sorted_field = _portfolio_cached_field[
+                        _portfolio_batch_start-holdout_start:_portfolio_batch_end-holdout_start]
                     _portfolio_batch_count = _portfolio_batch_end - _portfolio_batch_start
                     _portfolio_sim_rows = np.arange(_portfolio_batch_count)[:, None]
 
