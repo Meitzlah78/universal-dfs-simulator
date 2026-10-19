@@ -1189,6 +1189,51 @@ def exclude_zero_projection_players(frame, slate_label):
     return result
 
 
+
+def resolve_quarterback_roles_for_build(frame, format_label):
+    from simmah_qb_roles import quarterback_conflicts, resolve_quarterbacks
+    import hashlib
+    conflicts = quarterback_conflicts(frame)
+    selected = {}
+    unresolved = []
+    if conflicts:
+        st.warning("Multiple quarterbacks have positive projections for the same team. Confirm each starter; projection size is not starter confirmation.")
+        for team, names in conflicts.items():
+            token = hashlib.sha256((format_label + team + "|".join(names)).encode()).hexdigest()[:16]
+            choice = st.selectbox("Starting QB — " + team, names, index=None,
+                placeholder="Confirm the starting quarterback",
+                key="confirmed_starting_qb_" + token)
+            if choice is None:
+                unresolved.append(team)
+            else:
+                selected[team] = choice
+        if unresolved:
+            st.info("Select the starting QB for " + ", ".join(unresolved) + " to continue. No game results are used to choose a starter.")
+            st.stop()
+    resolved = resolve_quarterbacks(frame, selected)
+    position = resolved["Position"].astype(str).str.upper().str.strip()
+    signature = tuple(sorted(resolved.loc[position.eq("QB"), ["Team", "Name"]].astype(str).itertuples(index=False, name=None)))
+    key = "confirmed_qb_role_signature_" + format_label.replace(" ", "_").lower()
+    if st.session_state.get(key) != signature:
+        # Clear derived data, never widget values or uploaded files.
+        mode = format_label.split(" ", 1)[1].replace(" ", "_").lower()
+        data_keys = ["simulation_df", "simulations_ready", "contest_field_df", "contest_field_sample_df",
+            "contest_field_ready", "contest_field_count", "candidates_df", "candidates_ready",
+            "contest_results_df", "portfolio_df", "final_lineups", "classic_lineups",
+            "classic_contest_comparison_df", "classic_contest_entries_df", "classic_contest_field_df",
+            "classic_contest_field_ready", "classic_field_context", "saved_builds_by_slate",
+            "active_slate_signature", "fd_saved_builds", "fd_full_roster_assigned_portfolio"]
+        data_keys += [prefix + mode for prefix in ["fd_lineups_", "fd_simulation_df_",
+            "fd_player_sim_", "fd_contest_comparison_", "fd_contest_field_", "fd_active_signature_",
+            "fd_assigned_display_", "fd_last_completed_workflow_"]]
+        for data_key in data_keys:
+            st.session_state.pop(data_key, None)
+        st.session_state[key] = signature
+    if len(resolved) < len(frame):
+        st.caption("Confirmed QB roles applied to candidate and opponent pools. Other projected quarterbacks for those teams are excluded from this run.")
+    return resolved
+
+
 def show_projection_refresh_status(source_files, key_prefix=None):
     """Show one shared refresh control and timestamp across all sites, slates, and formats."""
     import hashlib
@@ -4875,6 +4920,7 @@ if platform == "FanDuel":
         )
     fd_players = exclude_zero_projection_players(fd_players, "FanDuel " + lineup_mode)
     fd_players = apply_injury_statuses(fd_players, "injury_status_fd_" + lineup_mode.replace(" ", "_").lower())
+    fd_players = resolve_quarterback_roles_for_build(fd_players, "FanDuel " + lineup_mode)
 
     # Restore FanDuel's saved simulation summaries on every Streamlit rerun.
     fd_sim_key = "fd_player_sim_" + lineup_mode.replace(" ", "_").lower()
@@ -6494,6 +6540,7 @@ else:
 
     # Build/simulate only players with a positive external projection.
     players_df = exclude_zero_projection_players(all_dk_players_df, "DraftKings " + lineup_mode)
+    players_df = resolve_quarterback_roles_for_build(players_df, "DraftKings " + lineup_mode)
     players_df["Opponent"] = players_df["Team"].map(opponent_map).fillna("—")
     players_df["CaptainSalary"] = (players_df["Salary"] * 1.5).astype(int)
 

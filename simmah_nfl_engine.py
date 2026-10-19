@@ -6,7 +6,7 @@ Rates are model assumptions/history inputs, not learned from contest uploads.
 """
 import numpy as np
 
-ENGINE_VERSION = 'shared-nfl-v3-projection-inputs'
+ENGINE_VERSION = 'shared-nfl-v4-confirmed-qb-roles'
 STAT_KEYS = (
     'passing_yards', 'passing_tds', 'interceptions', 'rushing_yards',
     'rushing_tds', 'receiving_yards', 'receiving_tds', 'receptions',
@@ -59,6 +59,10 @@ def simulate_stat_lines(pool, roles, rng, n, correlation_strength=1.0, progress=
         def best(pos):
             options = [r for r in players if position(r) in pos]
             return str(max(options, key=lambda r: float(r.get('Projection', 0)))['Name']) if options else None
+        projected_qbs=[r for r in players if position(r)=='QB' and float(r.get('Projection',0))>0]
+        if len({str(r['Name']) for r in projected_qbs})>1:
+            raise ValueError('Multiple projected quarterbacks for '+team+
+                '; confirm the starter before simulation: '+', '.join(str(r['Name']) for r in projected_qbs))
         qb = best({'QB'})
         receivers = [r for r in players if position(r) in {'WR', 'TE', 'RB'}]
         runners = [r for r in players if position(r) == 'RB']
