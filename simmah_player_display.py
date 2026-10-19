@@ -50,7 +50,7 @@ def complete_player_display(players, outcomes=None, portfolio=None, field=None, 
             result['Ownership Source'] = 'Uploaded ownership'
     else:
         result['Projected Own %'] = np.nan
-        result['Ownership Source'] = 'Projection-rank popularity fallback (no external ownership)'
+        result['Ownership Source'] = 'Projection/value popularity fallback (no external ownership)'
     result['Simulation Status'] = np.where(result['Sim Pts'].notna(),'Complete','Pending / player not simulated')
     return result
 

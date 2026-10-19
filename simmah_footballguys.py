@@ -18,7 +18,13 @@ def name_key(value):
 
 
 def has_uploaded_ownership(pool):
-    return any(str(c).strip().lower() in ALIASES for c in pool.columns)
+    import pandas as pd
+    import numpy as np
+    for column in pool:
+        if str(column).strip().lower() in ALIASES:
+            values=pd.to_numeric(pool[column].astype(str).str.replace('%','',regex=False),errors='coerce')
+            if (np.isfinite(values) & values.between(0,100)).any():return True
+    return False
 
 
 def parse_footballguys(html, site, now=None):
@@ -92,11 +98,12 @@ def apply_footballguys(pool, html, site, now=None):
     own = pd.Series(matches, index=result.index, dtype=float)
     # Unlisted players are unknown, not a posted zero. Keep their estimated
     # popularity explicit; never advertise the fallback as external ownership.
-    proxy = .1 + pd.to_numeric(result['MeanPoints'], errors='coerce').fillna(0).rank(pct=True)**2
+    from simmah_field_popularity import estimated_field_weights
+    proxy = pd.Series(estimated_field_weights(result, pd.to_numeric(result['MeanPoints'],errors='coerce').to_numpy()),index=result.index).clip(lower=1e-8)
     scale = float((own[own.notna()] / proxy[own.notna()]).median())
     result['Projected Ownership'] = own
     result['Ownership Selection Weight'] = own.fillna(proxy * scale).clip(0,100)
-    result['Ownership Source'] = ['Footballguys' if v is not None else 'Projection-rank fallback (unlisted)' for v in matches]
+    result['Ownership Source'] = ['Footballguys' if v is not None else 'Projection/value fallback (unlisted)' for v in matches]
     result['Ownership Updated UTC'] = meta['updated']
     result['Ownership Week'] = meta['week']
     return result, f"Footballguys {site} ownership: {count}/{len(result)} matched; {len(result)-count} unlisted use estimated popularity. Week {meta['week']}; updated {meta['updated']}. These are projected ownership inputs, not guaranteed final field frequencies."

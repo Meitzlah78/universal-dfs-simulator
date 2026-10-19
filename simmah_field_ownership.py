@@ -14,6 +14,28 @@ def has_ownership_targets(pool):
     return bool((own.notna() & own.between(0,100)).sum() >= 10 and own.fillna(0).sum() > 0)
 
 
+def quota_probabilities(weights,quota):
+    """Capped proportional inclusion probabilities with an exact feasible quota.
+
+    Solve the saturated portion directly rather than stopping an iterative
+    normalization while concentrated probabilities still have missing mass.
+    """
+    weights=np.asarray(weights,float);quota=int(quota)
+    if not np.isfinite(weights).all() or (weights<0).any():raise ValueError('Invalid inclusion weights')
+    result=np.zeros(len(weights));positive=weights>0
+    if quota<0 or quota>positive.sum():raise ValueError('Insufficient inclusion capacity')
+    if quota==0:return result
+    if quota==positive.sum():result[positive]=1.;return result
+    w=weights[positive]/weights[positive].max()
+    ordered=np.sort(w)[::-1]
+    suffix=np.cumsum(ordered[::-1])[::-1]
+    saturated=np.arange(quota+1)
+    scale=(quota-saturated)/suffix[saturated]
+    index=np.flatnonzero(scale*ordered[saturated]<=1)[0]
+    result[positive]=np.minimum(1,w*scale[index])
+    return result
+
+
 def calibrate_field_ownership(field, pool, slots, target, rng=None, iterations=160):
     import pandas as pd
     target = int(target)
@@ -83,13 +105,7 @@ def calibrate_field_ownership(field, pool, slots, target, rng=None, iterations=1
             continue
         rows = np.flatnonzero(groups == group)
         rng.shuffle(rows)
-        p = best[rows].copy()
-        # Normalize tiny numerical residuals; capacity is guaranteed above.
-        for _ in range(50):
-            mass = p.sum()
-            if abs(mass-quota) < 1e-8:
-                break
-            p = np.minimum(1,p*quota/max(mass,1e-300))
+        p = quota_probabilities(best[rows],quota)
         cumulative = np.cumsum(p)
         cumulative[-1] = quota
         chosen = rows[np.searchsorted(cumulative,rng.random()+np.arange(quota),side='right')]

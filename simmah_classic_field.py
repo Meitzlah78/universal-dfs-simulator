@@ -115,6 +115,15 @@ def build_full_roster_field(pool, weights, slots, target, rng=None, progress=Non
             index=(cumulative<=draw[:,None]).sum(axis=1).clip(max=len(choices)-1)
             picks[:,slot]=choices[index];total+=salaries[picks[:,slot]]
         valid=alive&(total>=floor)&(total<=cap)&classic_tournament_mask(picks,teams,positions,max_from_team=team_limit,require_stack=learned_construction is None)
+        # FD previously accepted salary-feasible proposals without the projected
+        # strength preference already present in DK. Retain stochastic sampling,
+        # but discourage weak rosters using pregame points, never actual scores.
+        quality=np.ones(n)
+        viable=np.flatnonzero(valid)
+        if not draftkings and len(viable):
+            points=means[picks[viable]].sum(axis=1)
+            z=np.clip((points-np.median(points))/max(float(points.std()),1),-3,3)
+            quality[viable]=np.exp(.85*z)
         if draftkings:
             viable=np.flatnonzero(valid)
             if len(viable):
@@ -137,11 +146,11 @@ def build_full_roster_field(pool, weights, slots, target, rng=None, progress=Non
             viable=np.flatnonzero(valid)
             if len(viable):
                 costs=total[viable].astype(int)
-                values,counts=np.unique(costs,return_counts=True)
-                source=dict(zip(values,counts))
+                values,inverse=np.unique(costs,return_inverse=True)
+                source=dict(zip(values,np.bincount(inverse,weights=quality[viable])))
                 # Correct for proposal frequency: an acceptance curve alone
                 # cannot reproduce a historical salary distribution.
-                mass=np.array([learned_salary.get(int(v),0)/source[v] for v in costs])
+                mass=quality[viable]*np.array([learned_salary.get(int(v),0)/source[v] for v in costs])
                 if mass.sum()>0:
                     # Independent rejection keeps each generated proposal at
                     # most once. Resampling a small batch with replacement
@@ -155,6 +164,7 @@ def build_full_roster_field(pool, weights, slots, target, rng=None, progress=Non
             chosen=picks[selected];cost=total[selected]
         else:
             probability=np.array([acceptance.get(int(s),.01 if s>=58000 else .002) for s in total])
+            if len(viable):probability *= quality/max(float(quality[viable].max()),1e-300)
             valid &= rng.random(n)<=probability
             chosen=picks[valid];cost=total[valid]
             if learned_construction is None:
@@ -176,7 +186,7 @@ def build_full_roster_field(pool, weights, slots, target, rng=None, progress=Non
         if progress:progress(min(1,accepted/max(target,1)),f'Building {platform} opponent field: {accepted:,} / {target:,}')
     if accepted<target:raise ValueError(f'Built {accepted:,} of {target:,} {platform} opponents after {attempted:,} proposals; check player availability and salary feasibility')
     result=pd.concat(chunks,ignore_index=True) if chunks else pd.DataFrame(columns=list(slots)+['Salary','ProjectedPoints'])
-    result.attrs.update(proposals=attempted,target=target,engine='batched-full-roster-field-v7',platform=platform, salary_model='historical distribution within supported salary range' if learned_salary else 'baseline')
+    result.attrs.update(proposals=attempted,target=target,engine='batched-full-roster-field-v8',platform=platform, salary_model='historical distribution within supported salary range' if learned_salary else 'baseline')
     if learned_construction is not None:
         result.attrs['construction_distribution']=(learned_construction/learned_construction.sum()).tolist()
     return result

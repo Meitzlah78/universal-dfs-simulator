@@ -402,13 +402,15 @@ def attach_main_slate_ownership(pool, site):
 def opponent_field_selection_weights(pool, fallback_scores):
     """Use ownership as the primary opponent-construction signal for full-roster contests."""
     from simmah_game_lines import field_market_factors
-    market_factors = field_market_factors(pool, st.session_state.get("active_game_markets", {}))
+    context = globals().get("st")
+    markets = getattr(context, "session_state", {}).get("active_game_markets", {})
+    market_factors = field_market_factors(pool, markets)
     fallback = np.asarray(fallback_scores, dtype=float)
     lookup = {str(c).strip().casefold(): c for c in pool.columns}
     # Never feed ownership measured from a previous simulated field back into
     # the next FanDuel opponent build. That creates a self-reinforcing field and
     # can make the representative opponents much weaker than the user's lineups.
-    # Prefer true/pregame projected ownership; fall back to the projection-rank
+    # Prefer true/pregame projected ownership; fall back to projection/value
     # proxy below when no external ownership is available.
     own_col = next((lookup[k] for k in (
         "ownership selection weight", "projected own %", "ownership %", "projected ownership",
@@ -424,12 +426,12 @@ def opponent_field_selection_weights(pool, fallback_scores):
                 ownership[estimated] *= market_factors[estimated]
             return np.clip(ownership, 0.01, None)
 
-    # Before field ownership exists, use a soft projection-rank proxy rather than
+    # Before field ownership exists, use projection/value estimates rather than
     # forcing the user's stack rules onto opponents.
     if not len(fallback):
         return fallback
-    ranks = pd.Series(fallback).rank(pct=True).to_numpy(dtype=float)
-    return np.clip((0.10 + ranks ** 2) * market_factors, 0.01, None)
+    from simmah_field_popularity import estimated_field_weights
+    return estimated_field_weights(pool, fallback) * market_factors
 
 
 def render_value_leverage_finder(pool, comparison, field, slots, key, special_slot=None):

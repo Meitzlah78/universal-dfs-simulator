@@ -86,3 +86,15 @@ class FullRosterCalibrationIntegrationTests(unittest.TestCase):
             floor,cap=(59000,60000) if site=='FanDuel' else (48500,50000)
             self.assertTrue(result.Salary.between(floor,cap).all())
             self.assertLess(report['Difference (pp)'].abs().mean(),1.2)
+
+class InclusionCapacityTests(unittest.TestCase):
+    def test_concentrated_weights_retain_exact_capacity(self):
+        from simmah_field_ownership import quota_probabilities
+        for w,q in [([1]+[1e-100]*10,5),([1,1e-300],2),([0,1,1e-100,1e-100],2)]:
+            p=quota_probabilities(w,q)
+            self.assertAlmostEqual(p.sum(),q,places=10)
+            self.assertTrue(((p>=0)&(p<=1)).all())
+            for offset in [.01,.5,.99]:
+                cumulative=np.cumsum(p);cumulative[-1]=q
+                chosen=np.searchsorted(cumulative,offset+np.arange(q),side='right')
+                self.assertEqual(len(np.unique(chosen)),q)
