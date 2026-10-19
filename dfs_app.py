@@ -2411,49 +2411,6 @@ def extract_slate_games(source_df):
     return games
 
 
-def show_detected_slate_games(source_df):
-    st.session_state["active_game_markets"] = {}
-    st.session_state["active_game_lines"] = []
-    st.session_state["active_slate_identity"] = ""
-    games = extract_slate_games(source_df)
-    if not games:
-        return
-    from simmah_game_lines import implied_scores
-    from simmah_weather import team_key
-    import hashlib
-    # Include the dated source game strings so lines cannot leak to a later slate.
-    game_columns = [c for c in source_df if str(c).strip().casefold() in {"game info", "gameinfo", "game"}]
-    identity = sorted(set(source_df[game_columns].astype(str).agg("|".join, axis=1)))
-    slate_key = hashlib.sha256(repr((platform, lineup_mode, pd.Timestamp.now(tz="America/New_York").date().isoformat(), identity)).encode()).hexdigest()[:16]
-    st.write("#### Games on this slate — market-implied scores")
-    base = pd.DataFrame({"Game": games, "Game total": [None] * len(games),
-                         "Home spread": [None] * len(games)})
-    with st.expander("Enter pregame spreads and totals", expanded=False):
-        st.caption("Enter both values. Home spread is negative when the home team is favored; enter 0 for a pick'em. Use pregame lines, not live odds.")
-        lines = st.data_editor(base, disabled=["Game"], hide_index=True,
-            column_config={"Game total": st.column_config.NumberColumn(min_value=1., max_value=100., step=.5),
-                           "Home spread": st.column_config.NumberColumn(min_value=-50., max_value=50., step=.5)},
-            key="game_lines_" + slate_key, use_container_width=True)
-    markets = {}
-    for row in lines.to_dict("records"):
-        away, home = row["Game"].split(" @ ")
-        scores = implied_scores(row["Game total"], row["Home spread"])
-        if scores is None:
-            st.write(f"**{away} @ {home}** · Implied scores unavailable — enter valid total and spread")
-        else:
-            away_points, home_points = scores
-            markets[team_key(away)] = (away_points, home_points)
-            markets[team_key(home)] = (home_points, away_points)
-            st.write(f"**{away} {away_points:g} @ {home} {home_points:g}** · Total {float(row['Game total']):g} · {home} {float(row['Home spread']):+g}")
-    st.session_state["active_game_markets"] = markets
-    st.session_state["active_slate_identity"] = slate_key
-    st.session_state["active_game_lines"] = [
-        {"matchup": r["Game"], "total": float(r["Game total"]), "home_spread": float(r["Home spread"]),
-         "source": "Manual pregame entry"}
-        for r in lines.to_dict("records") if implied_scores(r["Game total"], r["Home spread"]) is not None
-    ]
-    if markets:
-        st.caption("Source: manually entered pregame lines. Experimental field-popularity adjustment (maximum ±15%) applies only without imported ownership. Player projections stay unchanged. Rebuild opponents and rerun contest simulation after editing lines.")
 
 
 @st.cache_data(show_spinner=False, ttl=300)
@@ -2532,6 +2489,12 @@ def extract_slate_games(source_df):
     return games
 
 
+@st.cache_data(ttl=300, show_spinner=False)
+def automatic_game_lines_cached(games, dates):
+    from simmah_auto_game_lines import download_lines
+    return download_lines(games, dates)
+
+
 def show_detected_slate_games(source_df):
     st.session_state["active_game_markets"] = {}
     st.session_state["active_game_lines"] = []
@@ -2549,12 +2512,39 @@ def show_detected_slate_games(source_df):
     st.write("#### Games on this slate — market-implied scores")
     base = pd.DataFrame({"Game": games, "Game total": [None] * len(games),
                          "Home spread": [None] * len(games)})
-    with st.expander("Enter pregame spreads and totals", expanded=False):
-        st.caption("Enter both values. Home spread is negative when the home team is favored; enter 0 for a pick'em. Use pregame lines, not live odds.")
+    from simmah_rotowire import salary_dates
+    dates = tuple(sorted(salary_dates(source_df)))
+    if not dates:
+        dates = (pd.Timestamp.now(tz="America/New_York").date().isoformat(),)
+        st.caption("Salary file is undated: automatic lines match today's games only.")
+    try:
+        automatic = automatic_game_lines_cached(tuple(games), dates)
+        automatic = {game: record for game, record in automatic.items()
+                     if pd.Timestamp(record["kickoff"]) > pd.Timestamp.now(tz="UTC")}
+    except Exception:
+        automatic = {}
+        st.caption("Automatic pregame lines unavailable. You can enter verified pregame lines below.")
+    with st.expander("Override spreads and totals (optional)", expanded=False):
+        st.caption("Leave blank to use automatic lines. Home spread is negative when the home team is favored; 0 means pick’em. Manual values override the corresponding automatic values.")
         lines = st.data_editor(base, disabled=["Game"], hide_index=True,
             column_config={"Game total": st.column_config.NumberColumn(min_value=1., max_value=100., step=.5),
                            "Home spread": st.column_config.NumberColumn(min_value=-50., max_value=50., step=.5)},
             key="game_lines_" + slate_key, use_container_width=True)
+    lines = lines.copy()
+    sources = {}
+    for idx, row in lines.iterrows():
+        auto = automatic.get(row["Game"], {})
+        manual = False
+        for column, field in [("Game total", "total"), ("Home spread", "home_spread")]:
+            if pd.isna(row[column]):
+                lines.at[idx, column] = auto.get(field)
+            else:
+                manual = True
+        sources[row["Game"]] = "Manual pregame override" if manual else auto.get("source", "Unavailable")
+    if automatic:
+        fetched = min(record["fetched_at"] for record in automatic.values())
+        stamp = pd.Timestamp(fetched).tz_convert("America/New_York").strftime("%I:%M %p ET")
+        st.caption(f"Automatic pregame lines: {len(automatic)}/{len(games)} games · fetched {stamp} · cached up to 5 minutes.")
     markets = {}
     for row in lines.to_dict("records"):
         away, home = row["Game"].split(" @ ")
@@ -2565,16 +2555,16 @@ def show_detected_slate_games(source_df):
             away_points, home_points = scores
             markets[team_key(away)] = (away_points, home_points)
             markets[team_key(home)] = (home_points, away_points)
-            st.write(f"**{away} {away_points:g} @ {home} {home_points:g}** · Total {float(row['Game total']):g} · {home} {float(row['Home spread']):+g}")
+            st.write(f"**{away} {away_points:g} @ {home} {home_points:g}** · Total {float(row['Game total']):g} · {home} {float(row['Home spread']):+g} · {sources[row['Game']]}")
     st.session_state["active_game_markets"] = markets
     st.session_state["active_slate_identity"] = slate_key
     st.session_state["active_game_lines"] = [
         {"matchup": r["Game"], "total": float(r["Game total"]), "home_spread": float(r["Home spread"]),
-         "source": "Manual pregame entry"}
+         "source": sources[r["Game"]], "fetched_at": automatic.get(r["Game"], {}).get("fetched_at")}
         for r in lines.to_dict("records") if implied_scores(r["Game total"], r["Home spread"]) is not None
     ]
     if markets:
-        st.caption("Source: manually entered pregame lines. Experimental field-popularity adjustment (maximum ±15%) applies only without imported ownership. Player projections stay unchanged. Rebuild opponents and rerun contest simulation after editing lines.")
+        st.caption("Pregame lines populate implied team scores. Experimental field-popularity adjustment (maximum ±15%) applies only without imported ownership. Player projections stay unchanged. Rebuild opponents and rerun contest simulation after editing lines.")
 
 
 @st.cache_data(show_spinner=False, ttl=300)
@@ -3043,6 +3033,7 @@ if st.session_state.pop("refresh_projections_requested", False):
     download_rotowire_projections.clear()
     fetch_nfl_injury_statuses.clear()
     fetch_game_weather_json.clear()
+    automatic_game_lines_cached.clear()
     # The player-pool load below fetches the selected slate's fresh data.
     # Avoid first downloading a second, untargeted copy for the background check.
     _refresh_throttle_key = "automatic_projection_last_check_" + str(selected_format).strip().casefold().replace(" ", "_")
