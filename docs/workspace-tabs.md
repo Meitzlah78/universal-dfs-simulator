@@ -13,3 +13,11 @@ This is a layout reorganization, not a change to projection formulas, simulation
 New saved metadata lives in `data/saved_contests_local.json` on the current server. The Contests tab offers JSON backup/restore for redeploys. It does not pretend local hosting storage survives every deployment, or treat a past contest's payout family as a new contest's verified schedule.
 
 Validation covers tab routing, preserved entry-widget keys, exact-ID/format restore, preserved current entry count, deduplication, invalid payouts and backup round-trip. Static AST comparison verifies every original function body is unchanged. Live Streamlit visual testing is still required after deployment.
+
+## Reference dashboard styling
+
+The October 19 reference image guides the navy/teal theme, SIMMAH wordmark, compact player grid and permanent right-hand build rail. The three requested task tabs remain in the main column. Native Streamlit widgets are retained for keyboard access and existing event handling. No sample player values, ownership estimates, team badges, simulated completion states or nonfunctional mock controls are introduced.
+
+`simmah_ui.py` supplies presentation only; `.streamlit/config.toml` sets the native dark theme so dataframe cells match the surrounding interface. Editable tables default to a concise column set with a Show all player columns switch. Hiding display columns does not remove those fields from the editor's returned dataframe or downstream calculations.
+
+Real Streamlit AppTest smoke checks render all four format shells with external requests disabled, and confirm hidden editor columns are retained. These checks validate rendering and data preservation, not browser screenshot equivalence or a live slate build. The former fixed refresh strip is now in normal header flow, avoiding overlap with navigation on smaller screens.

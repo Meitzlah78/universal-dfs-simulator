@@ -13,19 +13,28 @@ SIMULATION_COUNT = 10000
 MAX_SIMULATED_OPPONENTS = 10000
 
 st.set_page_config(
-    page_title="Universal DFS Simulator",
+    page_title="Simmah | NFL DFS Simulator",
     page_icon="🏈",
     layout="wide"
 )
 
-st.title("Universal DFS Simulator")
+from simmah_ui import render_brand, player_columns, player_column_config
+render_brand(st)
 st.session_state["active_game_markets"] = {}
 st.session_state["active_game_lines"] = []
 st.session_state["active_slate_identity"] = ""
 
 # Shared header stays above the three format-independent workspaces.
 _shared_header = st.container()
-_tab_contests, _tab_roster, _tab_build = st.tabs(["Contests", "Roster & Projections", "Build"])
+_workspace_main, _workspace_rail = st.columns([4.3, 1.25], gap="medium")
+with _workspace_main:
+    _tab_contests, _tab_roster, _tab_build = st.tabs(["Contests", "Roster & Projections", "Build"])
+with _workspace_rail:
+    _build_controls = st.container(key="simmah_build_panel", border=True)
+    with _build_controls:
+        st.markdown("### Build Lineups")
+        st.caption("10,000 player simulations · 5,000 candidate target")
+
 with _tab_contests:
     st.caption("1. Upload your entries file, select a contest, and confirm its field size and payouts.")
     _contest_setup = st.container()
@@ -162,73 +171,6 @@ with _shared_header.container(key="sticky_projection_bar"):
             st.session_state["refresh_projections_requested"] = True
             st.rerun()
 
-st.markdown(
-    """
-    <style>
-    .st-key-sticky_projection_bar {
-        position: fixed !important;
-        top: 3.25rem !important;
-        left: 0 !important;
-        right: 0 !important;
-        z-index: 999999 !important;
-        width: 100% !important;
-        box-sizing: border-box !important;
-        padding: 0.35rem 1rem;
-        background: #111111 !important;
-        color: #ffffff !important;
-        border: 1px solid #444444;
-        border-radius: 0;
-        margin: 0 !important;
-    }
-    section.main > div.block-container {
-        padding-top: 5.2rem !important;
-        padding-bottom: 1.5rem !important;
-        max-width: 1600px;
-    }
-    .st-key-sticky_projection_bar [data-testid="stHorizontalBlock"] {
-        align-items: center;
-        gap: 0.65rem;
-    }
-    .st-key-sticky_projection_bar p {
-        margin-bottom: 0.15rem;
-        color: #ffffff !important;
-    }
-    /* Tighten default Streamlit spacing so the main workflow is easier to scan. */
-    section.main [data-testid="stVerticalBlock"] {
-        gap: 0.55rem;
-    }
-    section.main [data-testid="stHorizontalBlock"] {
-        gap: 0.75rem;
-    }
-    section.main h1 {
-        margin-top: 0.15rem;
-        margin-bottom: 0.4rem;
-        font-size: 1.7rem;
-    }
-    section.main h2 {
-        margin-top: 0.65rem;
-        margin-bottom: 0.25rem;
-        font-size: 1.25rem;
-    }
-    section.main h3 {
-        margin-top: 0.45rem;
-        margin-bottom: 0.15rem;
-        font-size: 1.05rem;
-    }
-    section.main [data-testid="stCaptionContainer"] {
-        margin-top: -0.15rem;
-        margin-bottom: 0.1rem;
-    }
-    section.main [data-testid="stExpander"] {
-        border-radius: 0.45rem;
-    }
-    section.main [data-testid="stDataFrame"] {
-        margin-top: 0.1rem;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
 
 # Shared ranking choices across every supported format.
 PORTFOLIO_METRICS = {
@@ -3120,6 +3062,7 @@ with _tab_roster:
             except Exception as exc:
                 st.error(f"Could not read the projection accuracy file: {exc}")
 platform, lineup_mode = format_options[selected_format]
+_build_controls.caption(selected_format)
 if st.session_state.pop("refresh_projections_requested", False):
     download_public_projection_table.clear()
     download_rotowire_projections.clear()
@@ -5146,12 +5089,18 @@ if platform == "FanDuel":
             fd_player_display["Injury Status"] = fd_player_display.apply(
                 lambda row: _fd_manual_injuries.get(str(row.get("Name", "")), row.get("Injury Status", "Active")), axis=1
             )
+        _fd_show_all_columns = st.checkbox("Show all player columns", value=False,
+            key="fd_show_all_player_columns_" + lineup_mode.replace(" ", "_").lower())
         _fd_edited_pool = st.data_editor(
             fd_player_display,
             use_container_width=True,
             hide_index=True,
+            column_order=None if _fd_show_all_columns else player_columns(fd_player_display),
+            row_height=32,
+            height=660,
             disabled=[c for c in fd_player_display.columns if c not in {"Fade", "Lock", "Injury Status", "Min Exposure %", "Max Exposure %"}],
             column_config={
+                **player_column_config(st),
                 "Name": st.column_config.TextColumn("Name", pinned=True),
                 "Injury Status": st.column_config.SelectboxColumn("Injury Status", options=["Active", "Questionable", "Doubtful", "Out"], required=True),
             },
@@ -5188,9 +5137,10 @@ if platform == "FanDuel":
         fd_players = apply_game_weather_context(fd_players, fd_raw)
 
     with _tab_build:
-        st.write("### Build Settings")
-        st.caption("The 5,000-lineup build automatically spreads player exposure while still favoring stronger simulated scores.")
-        build_cols = st.columns([1, 1])
+        with _build_controls:
+            st.write("### Build Settings")
+        _build_controls.caption("The 5,000-lineup build automatically spreads player exposure while still favoring stronger simulated scores.")
+        build_cols = [_build_controls.container() for _ in range(2)]
         with build_cols[0]:
             fd_salary_range = st.slider(
                 "Allowed lineup salary range",
@@ -5224,28 +5174,29 @@ if platform == "FanDuel":
             else:
                 correlation_strength = 1.0
             st.session_state["active_game_correlation_strength"] = correlation_strength
-        if lineup_mode == "Full Roster":
-            fd_stack_rules = st.multiselect(
-                "Stacks to use in MY lineups",
-                FULL_ROSTER_STACK_OPTIONS,
-                default=FULL_ROSTER_STACK_OPTIONS,
-                key="fd_full_roster_stack_rules_v2",
-                help="Accept any selected structure. Single = exactly one WR/TE with your QB; double = exactly two. Bring-back = opposing RB/WR/TE. Clear selections for no primary requirement.",
-            )
-            fd_secondary_stack_rules = st.multiselect(
-                "Optional secondary stacks",
-                SECONDARY_STACK_OPTIONS,
-                default=[],
-                key="fd_full_roster_stack_rules_secondary_v2",
-                help="Each selected secondary rule is required in addition to a selected QB stack. Mini-stacks use another game.",
-            )
-            st.caption("Choose your FanDuel Full Roster stack rules before pressing BUILD.")
+        with _build_controls:
+            if lineup_mode == "Full Roster":
+                fd_stack_rules = st.multiselect(
+                    "Stacks to use in MY lineups",
+                    FULL_ROSTER_STACK_OPTIONS,
+                    default=FULL_ROSTER_STACK_OPTIONS,
+                    key="fd_full_roster_stack_rules_v2",
+                    help="Accept any selected structure. Single = exactly one WR/TE with your QB; double = exactly two. Bring-back = opposing RB/WR/TE. Clear selections for no primary requirement.",
+                )
+                fd_secondary_stack_rules = st.multiselect(
+                    "Optional secondary stacks",
+                    SECONDARY_STACK_OPTIONS,
+                    default=[],
+                    key="fd_full_roster_stack_rules_secondary_v2",
+                    help="Each selected secondary rule is required in addition to a selected QB stack. Mini-stacks use another game.",
+                )
+                st.caption("Choose your FanDuel Full Roster stack rules before pressing BUILD.")
 
-        st.write("### Run")
-        _fd_run_left, _fd_run_center, _fd_run_right = st.columns([1, 2, 1])
+        _build_controls.write("### Run")
+        _fd_run_center = _build_controls.container()
         with _fd_run_center:
             fd_sim_button = st.button(
-                "SIM",
+                "Run Build",
                 type="primary",
                 use_container_width=True,
                 key="fd_sim_" + lineup_mode.replace(" ", "_").lower(),
@@ -6963,12 +6914,18 @@ else:
             column for column in control_display.columns
             if column not in editable_control_columns
         ]
+        _dk_show_all_columns = st.checkbox("Show all player columns", value=False,
+            key="dk_show_all_player_columns_" + lineup_mode.replace(" ", "_").lower())
         edited_player_controls = st.data_editor(
             control_display,
             use_container_width=True,
             hide_index=True,
+            column_order=None if _dk_show_all_columns else player_columns(control_display),
+            row_height=32,
+            height=660,
             disabled=disabled_control_columns,
             column_config={
+                **player_column_config(st),
                 "Name": st.column_config.TextColumn("Name", pinned=True),
                 "Lock": st.column_config.CheckboxColumn("Lock", help="Force this player into lineup builds."),
                 "Min Exposure %": st.column_config.NumberColumn("Min Exp %", min_value=0, max_value=100, step=5, format="%d%%"),
@@ -7154,7 +7111,7 @@ else:
                 ("TE", {"TE"}), ("FLEX", {"RB", "WR", "TE"}), ("DST", {"DST"})
             ]
 
-            build_cols = st.columns([1, 1, 0.65])
+            build_cols = [_build_controls.container() for _ in range(3)]
             with build_cols[0]:
                 st.write("### Build Settings")
                 dk_salary_range = st.slider(
@@ -7179,21 +7136,22 @@ else:
                 aggressiveness = aggressiveness_pct / 100.0
                 st.caption(f"Simulation diversity: {aggressiveness_pct}%. Each candidate averages {max(1, round(SIMULATION_COUNT ** (1.0 - aggressiveness_pct / 100.0))):,} construction simulations. Applies to new candidate builds.")
 
-            dk_classic_stack_rules = st.multiselect(
-                "Stacks to use in MY lineups",
-                FULL_ROSTER_STACK_OPTIONS,
-                default=FULL_ROSTER_STACK_OPTIONS,
-                key="dk_classic_stack_rules_v2",
-                help="Accept any selected structure. Single = exactly one WR/TE with your QB; double = exactly two. Bring-back = opposing RB/WR/TE. Clear selections for no primary requirement.",
-            )
-            dk_secondary_stack_rules = st.multiselect(
-                "Optional secondary stacks",
-                SECONDARY_STACK_OPTIONS,
-                default=[],
-                key="dk_classic_stack_rules_secondary_v2",
-                help="Each selected secondary rule is required in addition to a selected QB stack. Mini-stacks use another game.",
-            )
-            st.caption("Choose your DraftKings Classic stack rules before pressing BUILD.")
+            with _build_controls:
+                dk_classic_stack_rules = st.multiselect(
+                    "Stacks to use in MY lineups",
+                    FULL_ROSTER_STACK_OPTIONS,
+                    default=FULL_ROSTER_STACK_OPTIONS,
+                    key="dk_classic_stack_rules_v2",
+                    help="Accept any selected structure. Single = exactly one WR/TE with your QB; double = exactly two. Bring-back = opposing RB/WR/TE. Clear selections for no primary requirement.",
+                )
+                dk_secondary_stack_rules = st.multiselect(
+                    "Optional secondary stacks",
+                    SECONDARY_STACK_OPTIONS,
+                    default=[],
+                    key="dk_classic_stack_rules_secondary_v2",
+                    help="Each selected secondary rule is required in addition to a selected QB stack. Mini-stacks use another game.",
+                )
+                st.caption("Choose your DraftKings Classic stack rules before pressing BUILD.")
 
             # Real DraftKings Classic main-slate contests supplied by the user.
             # Each payout tuple is (first_place, last_place, prize_dollars).
@@ -7653,7 +7611,7 @@ else:
 # builds the opponent field, then scores the contest.
 
 with _tab_build:
-    build_cols = st.columns([1, 1, 0.65])
+    build_cols = [_build_controls.container() for _ in range(3)]
     with build_cols[0]:
         st.write("### Build Settings")
         _fd_full = platform == "FanDuel" and lineup_mode == "Full Roster"
@@ -7695,7 +7653,7 @@ with _tab_build:
     with build_cols[2]:
         st.write("### Run")
         build_clicked = st.button(
-            "SIM",
+            "Run Build",
             type="primary",
             use_container_width=True
         )
