@@ -17,8 +17,8 @@ import numpy as np
 import pandas as pd
 
 SCHEMA = 1
-SLOTS = {'QB','RB','WR','TE','FLEX','DST','D','DEF','CPT','CAPTAIN','MVP','UTIL','ANYFLEX'}
-TOKEN = re.compile(r'\b(CAPTAIN|ANYFLEX|FLEX|CPT|MVP|QB|RB|WR|TE|DST|DEF|UTIL|D)\s*:?[ ]+(.+?)(?=\s+(?:CAPTAIN|ANYFLEX|FLEX|CPT|MVP|QB|RB|WR|TE|DST|DEF|UTIL|D)\s*:?[ ]+|$)')
+SLOTS = {'QB','RB','WR','TE','K','FLEX','DST','D','DEF','CPT','CAPTAIN','MVP','UTIL','ANYFLEX'}
+TOKEN = re.compile(r'\b(CAPTAIN|ANYFLEX|FLEX|CPT|MVP|QB|RB|WR|TE|K|DST|DEF|UTIL|D)\s*:?[ ]+(.+?)(?=\s+(?:CAPTAIN|ANYFLEX|FLEX|CPT|MVP|QB|RB|WR|TE|K|DST|DEF|UTIL|D)\s*:?[ ]+|$)')
 BINS = {
     'ownership_sum': np.arange(0, 951, 10),
     'captain_popularity': np.arange(0, 102, 2),
@@ -133,6 +133,41 @@ def summarize(features):
     return result
 
 
+def verified_fanduel_mvp_first(frame, lineups):
+    """Recognize FD positional-token Single Game exports using score evidence.
+
+    First-listed MVP is accepted only when every complete roster's published
+    score equals 1.5 times its first player's base FPTS plus five FLEX scores.
+    Scores establish export schema only; they are never model features.
+    """
+    required={'Player','FPTS','Points','Lineup'}
+    if not required <= set(frame.columns):
+        raise ValueError('Cannot verify first-listed FanDuel MVP without player and lineup scores')
+    player_scores={}
+    for name,points in frame[['Player','FPTS']].itertuples(index=False,name=None):
+        if pd.isna(name) or pd.isna(points):continue
+        key=name_key(name);value=float(points)
+        if not np.isfinite(value) or (key in player_scores and abs(player_scores[key]-value)>1e-6):
+            raise ValueError('Conflicting FanDuel player scores')
+        player_scores[key]=value
+    roster_scores={}
+    for raw,points in frame[['Lineup','Points']].itertuples(index=False,name=None):
+        if pd.isna(raw) or pd.isna(points):continue
+        keys=tuple(name_key(name.strip(' ,;|')) for _,name in TOKEN.findall(str(raw)))
+        value=float(points)
+        if keys in roster_scores and abs(roster_scores[keys]-value)>.02:
+            raise ValueError('Conflicting FanDuel lineup scores')
+        roster_scores[keys]=value
+    for row in lineups:
+        keys=tuple(name_key(name) for _,name in row)
+        if len(keys)!=6 or not all(key in player_scores for key in keys) or keys not in roster_scores:
+            raise ValueError('Incomplete score evidence for first-listed FanDuel MVP')
+        expected=sum(player_scores[key] for key in keys)+.5*player_scores[keys[0]]
+        if not np.isfinite(roster_scores[keys]) or abs(expected-roster_scores[keys])>.02:
+            raise ValueError('First-listed FanDuel MVP does not reconcile to lineup points')
+    return [[('MVP',row[0][1])]+[('FLEX',name) for _,name in row[1:]] for row in lineups]
+
+
 def ingest_frames(frames, digest, platform='Auto', mode='Auto', fee=None, max_entries=None, metadata=None, game_count=None):
     profiles=[]
     for index,frame in enumerate(frames):
@@ -151,6 +186,10 @@ def ingest_frames(frames, digest, platform='Auto', mode='Auto', fee=None, max_en
             elif any(slot=='MVP' for slot,_ in lineups[0]): site='FanDuel'
             elif any(slot=='CPT' for slot,_ in lineups[0]): site='DraftKings'
             else: raise ValueError('Select the source platform for this standings file')
+        if ('fanduel' in str(site).casefold() or str(site).casefold()=='fd') and all(
+                len(row)==6 and not any(slot in {'CPT','MVP'} for slot,_ in row) for row in lineups):
+            if str(mode).casefold() in {'auto','single game'}:
+                lineups=verified_fanduel_mvp_first(frame,lineups)
         inferred=mode
         if str(mode).casefold()=='auto':
             inferred='Single Game' if any(slot in {'CPT','MVP'} for slot,_ in lineups[0]) else 'Full Roster'
