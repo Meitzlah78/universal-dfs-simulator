@@ -1,0 +1,9 @@
+{
+  "classification": "Synthetic two-team app-wrapper test with stubbed Streamlit; not live host timing",
+  "evaluation_outcomes": 10000,
+  "construction_outcomes": 10000,
+  "cold_seconds": 10.043573500999628,
+  "warm_seconds": 0.042986444999769446,
+  "warm_fit_and_simulator_calls": 0,
+  "same_preparation_key": true
+}

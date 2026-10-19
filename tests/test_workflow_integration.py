@@ -1,7 +1,7 @@
 import ast
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 import unittest
 import numpy as np,pandas as pd
 from test_candidates import fixture
@@ -43,17 +43,20 @@ class WorkflowIntegrationTest(unittest.TestCase):
         pool,construction,roster=fixture()
         # A different matrix makes accidental construction/evaluation reuse visible.
         evaluation=construction*2+1
-        simulate=Mock(return_value=construction)
-        ns={'np':np,'pd':pd,'st':st,'SIMULATION_COUNT':len(construction),'simulate_fd_play_by_play':simulate}
+        simulate=Mock(side_effect=AssertionError("BUILD must not simulate"))
+        loader=Mock(return_value=construction)
+        ns={'np':np,'pd':pd,'st':st,'SIMULATION_COUNT':len(construction),'simulate_fd_play_by_play':simulate,'simulation_cache_root':lambda:Path('/unused')}
         exec(compile(ast.Module(body=nodes,type_ignores=[]),'dfs_app.py','exec'),ns)
-        result=ns['build_joint_candidate_pool'](pool,'DraftKings','Classic',evaluation,roster,47000,50000)
+        with patch('simmah_simulation_store.construction_for_build',loader):
+            result=ns['build_joint_candidate_pool'](pool,'DraftKings','Classic',evaluation,roster,47000,50000)
         self.assertEqual(len(result),5000)
         from simmah_candidates import offense_vs_defense_allowed
         lookup=pool.set_index('Name').to_dict('index')
         slots=[slot for slot,_ in roster]
         self.assertTrue(all(offense_vs_defense_allowed(row,lookup) for row in result[slots].to_dict('records')))
-        self.assertEqual(simulate.call_count,1)
-        self.assertEqual(simulate.call_args.args[2],len(construction))
+        simulate.assert_not_called()
+        self.assertEqual(loader.call_count,1)
+        self.assertEqual(loader.call_args.kwargs["count"],len(construction))
         self.assertEqual(state['simulation_cap_hit_pct'],{'original':1})
         first=result.iloc[0];names=[first[s] for s,_ in roster]
         self.assertAlmostEqual(first['SimMean'],evaluation[names].sum(axis=1).mean(),places=3)
@@ -75,7 +78,7 @@ class WorkflowIntegrationTest(unittest.TestCase):
         self.assertNotIn('st.dataframe(_saved_classic_entries',source)
         self.assertIn('data=classic_export_portfolio.to_csv(index=False).encode("utf-8")',source)
         self.assertIn('for _, lineup in classic_export_portfolio.iterrows():',source)
-        self.assertIn('.sort_values(classic_rank_metric, ascending=False, kind="stable")',source)
+        self.assertIn("select_portfolio(classic_portfolio_source",source)
 
     def test_fanduel_joint_roi_reuses_selected_field_without_hidden_expansion(self):
         source=Path('dfs_app.py').read_text()
@@ -106,35 +109,54 @@ class WorkflowIntegrationTest(unittest.TestCase):
         self.assertTrue(preset['payouts_known'])
         self.assertEqual(preset['field_size'],215568)
 
+    @staticmethod
+    def portfolio_fixture():
+        from simmah_candidates import build_candidates
+        pool,outcomes,roster=fixture()
+        frame=build_candidates(pool,outcomes,roster,target=60,rng=np.random.default_rng(15))
+        frame['Top1']=np.linspace(1,.1,len(frame))
+        return pool,frame,[slot for slot,_ in roster]
+
     def test_fanduel_assigned_count_matches_owned_and_report_export_source(self):
+        from simmah_portfolio_selection import select_portfolio
         tree=ast.parse(Path('dfs_app.py').read_text())
-        assignments=sorted((n for n in ast.walk(tree) if isinstance(n,ast.Assign) and any(isinstance(t,ast.Name) and t.id in {'_fd_entry_seed','fd_export_portfolio'} for t in n.targets)),key=lambda n:n.lineno)
-        nodes=[n for n in assignments if n.targets[0].id=='_fd_entry_seed' or isinstance(n.value,ast.Call) and isinstance(n.value.func,ast.Attribute) and n.value.func.attr=='reset_index' and '_fd_entry_seed' in ast.unparse(n.value)]
+        nodes=[]
+        for n in sorted((n for n in ast.walk(tree) if isinstance(n,ast.Assign) and isinstance(n.targets[0],ast.Name)),key=lambda n:n.lineno):
+            name=n.targets[0].id
+            if name=='_fd_owned_count':nodes.append(n)
+            if name=='_fd_diverse_portfolio' and isinstance(n.value,ast.Call):nodes.append(n)
+            if name=='fd_export_portfolio' and isinstance(n.value,ast.Call) and ast.unparse(n.value)=='_fd_diverse_portfolio.copy()':nodes.append(n)
+        pool,frame,slots=self.portfolio_fixture()
         for shown in [3,100]:
-            frame=pd.DataFrame({'QB':[f'p{i}' for i in range(shown)]})
-            ns={'pd':pd,'np':np,'fd_results':frame,'_fd_spec':{'owned':20}}
+            ns={'np':np,'pd':pd,'select_portfolio':select_portfolio,'fd_all_ranked':frame,
+                'fd_slots':slots,'fd_rank_column':'Top1','fd_rank_count':shown,
+                'fd_player_display':pool,'st':SimpleNamespace(session_state={'selected_fd_contest':{'your_entries':20}}),
+                'full_roster_contest_parameters':lambda *args:{'owned':20}}
             exec(compile(ast.Module(body=nodes,type_ignores=[]),'app','exec'),ns)
             assigned=ns['fd_export_portfolio']
             self.assertEqual(len(assigned),20)
-            self.assertEqual(assigned.QB.nunique(),min(shown,20))
+            self.assertEqual(assigned[slots].apply(lambda row:tuple(sorted(row)),axis=1).nunique(),20)
 
     def test_classic_assignment_matches_owned_entries_not_display_count(self):
+        from simmah_portfolio_selection import select_portfolio
         tree=ast.parse(Path('dfs_app.py').read_text())
-        wanted={'_classic_assignment_count','_classic_unique_entries','classic_export_portfolio'}
-        nodes=sorted((n for n in ast.walk(tree) if isinstance(n,ast.Assign) and any(isinstance(t,ast.Name) and t.id in wanted for t in n.targets)),key=lambda n:n.lineno)
+        wanted={'_classic_assignment_count','_classic_slots','classic_export_portfolio','_classic_unique_entries'}
+        nodes=sorted((n for n in ast.walk(tree) if isinstance(n,ast.Assign) and isinstance(n.targets[0],ast.Name) and n.targets[0].id in wanted),key=lambda n:n.lineno)
         first=[];seen=set()
         for node in nodes:
             name=node.targets[0].id
+            if name=='_classic_slots' and 'classic_portfolio_source' not in ast.unparse(node.value):continue
             if name not in seen:first.append(node);seen.add(name)
+        pool,frame,slots=self.portfolio_fixture()
         for displayed,owned in [(3,20),(100,20)]:
-            frame=pd.DataFrame({'QB':[f'p{i}' for i in range(displayed)]})
-            ns={'np':np,'st':SimpleNamespace(session_state={'selected_dk_contest':{'your_entries':owned}}),
-                'classic_entry_count':owned,'classic_top_portfolio':frame}
+            ns={'np':np,'select_portfolio':select_portfolio,
+                'st':SimpleNamespace(session_state={'selected_dk_contest':{'your_entries':owned}}),
+                'classic_entry_count':owned,'classic_top_portfolio':frame.head(displayed),
+                'classic_portfolio_source':frame,'classic_rank_metric':'Top1','control_map':{}}
             exec(compile(ast.Module(body=first,type_ignores=[]),'dfs_app.py','exec'),ns)
             assigned=ns['classic_export_portfolio']
             self.assertEqual(len(assigned),owned)
-            self.assertLessEqual(assigned['QB'].nunique(),min(displayed,owned))
-            self.assertTrue(set(assigned['QB']).issubset(set(frame.head(owned)['QB'])))
+            self.assertEqual(assigned[slots].apply(lambda row:tuple(sorted(row)),axis=1).nunique(),owned)
 
 
 if __name__=='__main__':unittest.main()

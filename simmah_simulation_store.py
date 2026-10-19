@@ -146,7 +146,13 @@ def prepare_simulations(pool,roles,platform,cache_root,count=10000,correlation_s
         raise ValueError('Positive external projections are required')
     conflicts=quarterback_conflicts(inputs)
     if conflicts:raise ValueError('Confirm starting quarterbacks before preparing simulations: '+str(conflicts))
-    root=Path(cache_root);names=inputs.Name.tolist();weather_by_team=weather_by_team or {}
+    root=Path(cache_root);names=inputs.Name.tolist()
+    from simmah_weather import team_key
+    canonical_weather=weather_snapshot(inputs)
+    for team,values in (weather_by_team or {}).items():
+        club=team_key(team)
+        canonical_weather[club]=dict(canonical_weather.get(club,{}),**values)
+    weather_by_team=canonical_weather
     fit_spec={'schema':SCHEMA,'model_digest':_model_digest(),'players':inputs.to_dict('records'),
               'roles':roles,'platform':platform,'pilot_n':pilot_n,'iterations':iterations}
     fit_key=_hash(_json(fit_spec))
@@ -157,6 +163,8 @@ def prepare_simulations(pool,roles,platform,cache_root,count=10000,correlation_s
         cached=_read_prepared(directory,key,names,count)
         if cached is not None:
             cached['metadata']={'key':key,'fit_key':fit_key,'cache_hit':True,'count':count,
+                'platform':platform,'input_players':fit_spec['players'],'weather':weather_by_team,
+                'correlation_strength':correlation_strength,
                 'timings':{'load_seconds':time.perf_counter()-started}}
             return cached
         timings={};mark=time.perf_counter()
@@ -185,13 +193,14 @@ def prepare_simulations(pool,roles,platform,cache_root,count=10000,correlation_s
         raw=buffer.getvalue();report_raw=_json(report.astype(object).where(pd.notna(report),None).to_dict(orient='split'))
         _atomic_write(directory/'outcomes.npz',raw);_atomic_write(directory/'fit_report.json',report_raw)
         # Manifest is the commit marker; readers never accept a partial write.
-        manifest={'schema':SCHEMA,'key':key,'spec':spec,'names':names,'model_digest':_model_digest(),
+        manifest={'schema':SCHEMA,'key':key,'spec':spec,'fit_spec':fit_spec,'names':names,'model_digest':_model_digest(),
                   'outcomes_sha256':_hash(raw),'fit_report_sha256':_hash(report_raw)}
         _atomic_write(directory/'manifest.json',_json(manifest))
         timings['persist_seconds']=time.perf_counter()-mark;timings['total_seconds']=time.perf_counter()-started
         result['fit_report']=report
         result['metadata']={'key':key,'fit_key':fit_key,'cache_hit':False,'fit_cache_hit':fit_hit,
-                            'count':count,'timings':timings}
+                            'count':count,'timings':timings,'platform':platform,'input_players':fit_spec['players'],
+                            'weather':weather_by_team,'correlation_strength':correlation_strength}
         if progress:progress(1.,'Prepared simulation bundle ready')
         return result
 
@@ -207,16 +216,62 @@ def load_prepared(cache_root,key):
     started=time.perf_counter();directory=Path(cache_root)/'prepared'/key
     try:
         manifest=json.loads((directory/'manifest.json').read_bytes())
-        if _hash(_json(manifest['spec']))!=key or manifest['model_digest']!=_model_digest():
+        if (_hash(_json(manifest['spec']))!=key or manifest['model_digest']!=_model_digest()
+            or _hash(_json(manifest['fit_spec']))!=manifest['spec']['fit_key']):
             raise CacheIntegrityError('Prepared simulations belong to different inputs or model code')
         result=_read_prepared(directory,key,manifest['names'],int(manifest['spec']['count']))
         if result is None:raise CacheIntegrityError('Preparation is incomplete')
         result['metadata']={'key':key,'cache_hit':True,'count':manifest['spec']['count'],
+            'platform':manifest['fit_spec']['platform'],'input_players':manifest['fit_spec']['players'],
+            'weather':manifest['spec']['weather'],'correlation_strength':manifest['spec']['correlation_strength'],
             'timings':{'load_seconds':time.perf_counter()-started}}
         return result
     except CacheIntegrityError:raise
     except (OSError,ValueError,KeyError,TypeError) as exc:
         raise CacheIntegrityError('Prepared simulation bundle is unavailable') from exc
+
+
+def weather_snapshot(pool):
+    """Canonical finite weather inputs for preparation and stale-input checks."""
+    from simmah_weather import team_key
+    result={}
+    def number(value):
+        try:value=float(value)
+        except (TypeError,ValueError):return 0.
+        return value if np.isfinite(value) else 0.
+    def flag(value):
+        if value is None or pd.isna(value):return False
+        if isinstance(value,str):return value.strip().lower() in {'true','yes','1'}
+        return bool(value)
+    for row in pool.to_dict('records'):
+        status=row.get('Weather Status','Unavailable')
+        result[team_key(row.get('Team'))]={'status':str(status) if pd.notna(status) else 'Unavailable',
+            'wind_mph':number(row.get('Wind MPH',0)),'precip_pct':number(row.get('Precip %',0)),
+            'heavy_snow':flag(row.get('Heavy Snow',False)),'indoor':flag(row.get('Weather Indoor',False))}
+    return result
+
+
+def construction_for_build(evaluation,pool,platform,cache_root,count=10000,correlation_strength=None):
+    """Load matching construction outcomes; never fit, simulate or fetch here."""
+    key=evaluation.attrs.get('preparation_key')
+    if not key:raise ValueError('Run SIM to prepare independent construction/evaluation outcomes before BUILD')
+    prepared=load_prepared(cache_root,key);metadata=prepared['metadata']
+    if metadata['platform']!=platform or metadata['count']!=count:
+        raise ValueError('Prepared scoring platform or outcome count changed; run SIM again')
+    if correlation_strength is not None and metadata['correlation_strength']!=float(correlation_strength):
+        raise ValueError('Game correlation changed; run SIM again')
+    frozen={row['Name']:row for row in metadata['input_players']}
+    for row in pool[['Name','Team','Opponent','Position','Projection']].to_dict('records'):
+        previous=frozen.get(row['Name'])
+        if previous is None or any(str(row[c])!=str(previous[c]) for c in ['Name','Team','Opponent','Position']) or float(row['Projection'])!=float(previous['Projection']):
+            raise ValueError('Player inputs changed since preparation; run SIM again')
+    current_weather=weather_snapshot(pool)
+    if any(metadata['weather'].get(team)!=weather for team,weather in current_weather.items()):
+        raise ValueError('Weather inputs changed since preparation; run SIM again')
+    reference=prepared['evaluation']
+    if list(evaluation.columns)!=list(reference.columns) or evaluation.shape!=reference.shape or not np.array_equal(evaluation.to_numpy(),reference.to_numpy()):
+        raise ValueError('Evaluation outcomes do not match preparation; run SIM again')
+    return prepared['construction']
 
 
 def main():

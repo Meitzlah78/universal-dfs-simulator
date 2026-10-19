@@ -12,7 +12,7 @@ def app_functions():
     tree = ast.parse(Path('dfs_app.py').read_text())
     wanted = {'DFS_SCORING_RULES', 'score_nfl_stat_line', 'simulate_fd_play_by_play',
               '_historical_player_average', '_normalize_historical_player_names',
-              '_build_historical_name_index', 'normalize_projection_player_name', 'fit_projection_event_inputs_cached'}
+              '_build_historical_name_index', 'normalize_projection_player_name', 'fit_projection_event_inputs_cached','simulation_cache_root'}
     nodes = [x for x in tree.body if isinstance(x, ast.FunctionDef) and x.name in wanted
              or isinstance(x, ast.Assign) and any(isinstance(t, ast.Name) and t.id in wanted for t in x.targets)]
     for node in nodes:
@@ -22,6 +22,9 @@ def app_functions():
           'st': SimpleNamespace(progress=lambda *a, **kw: progress, caption=lambda *a, **kw: None, session_state={}),
           'load_nfl_historical_player_stats': lambda: pd.DataFrame()}
     exec(compile(ast.Module(body=nodes, type_ignores=[]), 'dfs_app.py', 'exec'), ns)
+    import tempfile
+    ns['_temporary_cache'] = tempfile.TemporaryDirectory()
+    ns['simulation_cache_root'] = lambda: Path(ns['_temporary_cache'].name)
     return ns
 
 
@@ -102,7 +105,7 @@ class NFLGameTest(unittest.TestCase):
         for site in ('DraftKings','FanDuel'):
             result = self.app['simulate_fd_play_by_play'](self.pool,np.random.default_rng(7),1000,platform=site)
             params,_ = self.app['fit_projection_event_inputs_cached'](self.pool,{},site,'test')
-            raw = simulate_stat_lines(self.pool,{},np.random.default_rng(7),1000,projection_inputs=params,scoring_platform=site)
+            raw = simulate_stat_lines(self.pool,{},np.random.default_rng(530001),1000,projection_inputs=params,scoring_platform=site)
             for name,line in raw.items():
                 expected = self.app['score_nfl_stat_line'](dict(line,is_defense=int(name.endswith('DST'))),site)
                 np.testing.assert_array_equal(result[name], expected)
@@ -136,7 +139,7 @@ class NFLGameTest(unittest.TestCase):
         history = pd.DataFrame([dict(player_display_name='Alpha Quarterback', week=1,
             season=2026, attempts=34, completions=22, carries=4, rushing_yards=20)])
         ns['load_nfl_historical_player_stats'] = lambda: history
-        with patch('simmah_nfl_engine.simulate_stat_lines', wraps=simulate_stat_lines) as engine:
+        with patch('simmah_simulation_store.simulate_stat_lines', wraps=simulate_stat_lines) as engine:
             ns['simulate_fd_play_by_play'](pool,np.random.default_rng(7),n=50)
             roles = engine.call_args.args[1]
             self.assertEqual(roles['Alpha Quarterback']['pass_attempts'],34)

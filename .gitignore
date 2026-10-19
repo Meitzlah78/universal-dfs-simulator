@@ -2,3 +2,6 @@
 # Host-local anonymous field learning; use the app backup/restore controls.
 data/field_history_local.json
 data/field_history_local.json.lock
+
+# Host-local prepared simulation matrices; never commit player data/cache files.
+data/simulation_cache/

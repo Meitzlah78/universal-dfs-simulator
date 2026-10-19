@@ -4219,15 +4219,14 @@ def build_joint_candidate_pool(pool, platform_name, mode_name, evaluation_outcom
     from simmah_candidates import build_candidates, summarize_candidates, offense_vs_defense_allowed
     # Separate random game draws keep candidate construction out of the contest
     # evaluation sample. Neither matrix is resampled from the other.
-    previous_cap_hits = st.session_state.get("simulation_cap_hit_pct", {})
+    from simmah_simulation_store import construction_for_build
     if len(evaluation_outcomes) != SIMULATION_COUNT:
-        raise ValueError("Run a fresh SIM: the evaluation matrix does not contain the required outcome count")
-    st.info(f"Generating independent construction outcomes; contest scoring uses the original {len(evaluation_outcomes):,} evaluation outcomes.")
-    construction = simulate_fd_play_by_play(pool, np.random.default_rng(), SIMULATION_COUNT,
-        float(st.session_state.get("active_game_correlation_strength", 1.0)), platform=platform_name)
-    st.session_state["simulation_cap_hit_pct"] = previous_cap_hits
-    if len(construction) != SIMULATION_COUNT:
-        raise ValueError("Candidate construction returned an incomplete simulation matrix")
+        raise ValueError("Run SIM: the evaluation matrix does not contain the required outcome count")
+    st.info("Loading prepared construction outcomes; BUILD does not rerun the football simulator.")
+    construction = construction_for_build(evaluation_outcomes, pool, platform_name, simulation_cache_root(),
+        count=SIMULATION_COUNT,
+        correlation_strength=(1.0 if mode_name in {"Classic", "Full Roster"} else
+            float(st.session_state.get("active_game_correlation_strength", 0.0))))
     multipliers = [1.5, 1, 1, 1, 1, 1] if mode_name in {"Showdown", "Single Game"} else None
     lookup = full_roster_stack_lookup(pool)
     validator = (lambda chosen: offense_vs_defense_allowed(chosen, lookup) and
@@ -4410,9 +4409,20 @@ def fit_projection_event_inputs_cached(pool, roles, platform, model_version):
     return fit_projection_inputs(pool, roles, platform, score_nfl_stat_line)
 
 
+def simulation_cache_root():
+    from pathlib import Path
+    import os
+    configured = os.environ.get("SIMMAH_SIMULATION_CACHE_DIR")
+    return Path(configured) if configured else Path(__file__).resolve().parent / "data" / "simulation_cache"
+
+
 def simulate_fd_play_by_play(players_df, rng, n=SIMULATION_COUNT, correlation_strength=1.0, platform="FanDuel"):
-    """Generate independent shared football outcomes, then apply exact DFS scoring."""
-    from simmah_nfl_engine import simulate_stat_lines, ENGINE_VERSION
+    """Prepare or reuse separate shared game samples with exact DFS scoring.
+
+    rng is retained for call compatibility; persisted sample seeds belong to the
+    preparation key. Candidate sampling remains randomized on each BUILD.
+    """
+    from simmah_nfl_engine import ENGINE_VERSION
     if not isinstance(players_df, pd.DataFrame) or players_df.empty:
         return pd.DataFrame()
     n = max(1, int(n))
@@ -4475,27 +4485,20 @@ def simulate_fd_play_by_play(players_df, rng, n=SIMULATION_COUNT, correlation_st
             "wind_mph": row.get("Wind MPH", 0), "precip_pct": row.get("Precip %", 0),
             "heavy_snow": row.get("Heavy Snow", False), "indoor": row.get("Weather Indoor", False),
         }
-    from simmah_projection_inputs import VERSION as _fit_version
+    from simmah_simulation_store import prepare_simulations, weather_snapshot
+    weather_by_team = weather_snapshot(pool)
     _fit_pool = pool[["Name", "Team", "Opponent", "Position", "Projection"]].copy()
-    progress.progress(0, text="Fitting football opportunities and passing rates to slate projections (first fit may take several minutes)...")
-    _projection_inputs, _projection_fit_report = fit_projection_event_inputs_cached(
-        _fit_pool, _fd_hist_roles, platform, ENGINE_VERSION + _fit_version)
-    stats = simulate_stat_lines(
-        pool, _fd_hist_roles, rng, n, correlation_strength, weather_by_team=weather_by_team,
-        projection_inputs=_projection_inputs, scoring_platform=platform,
-        progress=lambda fraction, text: progress.progress(.3+.7*fraction, text=text),
-    )
-    out = {}
-    for row in pool.to_dict("records"):
-        name = str(row["Name"])
-        line = stats[name]
-        position = str(row.get("Position", "")).upper().split("/")[0].strip()
-        line["is_defense"] = int(position in {"D", "DST", "DEF"})
-        values = np.asarray(score_nfl_stat_line(line, platform), dtype=float)
-        if len(values) != n or not np.isfinite(values).all():
-            raise ValueError("NFL engine returned invalid outcomes for " + name)
-        out[name] = values
-    result = pd.DataFrame(out)
+    prepared = prepare_simulations(_fit_pool, _fd_hist_roles, platform, simulation_cache_root(),
+        count=n, correlation_strength=correlation_strength, weather_by_team=weather_by_team,
+        progress=lambda fraction,text: progress.progress(fraction,text=text))
+    result = prepared["evaluation"].copy()
+    result.attrs["preparation_key"] = prepared["metadata"]["key"]
+    _projection_fit_report = prepared["fit_report"]
+    st.session_state["simulation_preparation_" + platform] = prepared["metadata"]
+    _prep_timing = prepared["metadata"]["timings"]
+    st.caption("Prepared simulation cache: " + ("reused" if prepared["metadata"]["cache_hit"] else "created") +
+        f"; {n:,} evaluation and {n:,} separate construction outcomes. " +
+        ", ".join(f"{stage}: {seconds:.2f}s" for stage,seconds in _prep_timing.items()))
     _projection_fit_report = _projection_fit_report.copy()
     _projection_fit_report["Actual Simulation Mean"] = _projection_fit_report["Name"].map(result.mean().to_dict())
     _projection_fit_report["Simulation Minus Projection"] = _projection_fit_report["Actual Simulation Mean"] - _projection_fit_report["Projection"]
@@ -4503,7 +4506,7 @@ def simulate_fd_play_by_play(players_df, rng, n=SIMULATION_COUNT, correlation_st
     _fit_offense = _projection_fit_report[_projection_fit_report["Calibration Status"].eq("Event inputs fitted")]
     if not _fit_offense.empty:
         _fit_mae = _fit_offense["Simulation Minus Projection"].abs().mean()
-        st.caption(f"Projection-informed event inputs: offensive-player mean absolute difference {_fit_mae:.2f} points. Fresh game paths retain shared stats; means are not forced to equal projections. Defense and kicker rates are not fitted by this calibration.")
+        st.caption(f"Projection-informed event inputs: offensive-player mean absolute difference {_fit_mae:.2f} points. Prepared independent game paths retain shared stats; means are not forced to equal projections. Defense and kicker rates are not fitted by this calibration.")
     result.attrs["engine_version"] = ENGINE_VERSION
     result.attrs["independent_outcomes"] = n
     best = result.max(axis=1)
@@ -9950,6 +9953,7 @@ with st.expander("SIMMAH ROI Tracker", expanded=False):
         )
     else:
         st.info("No contest results recorded yet. Enter actual fees and winnings above to start tracking ROI.")
+
 
 
 

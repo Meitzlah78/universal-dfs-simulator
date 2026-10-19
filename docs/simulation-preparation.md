@@ -62,13 +62,28 @@ No completed-contest result can supply or automatically choose a starter.
   Ephemeral host replacement can erase it. Durable external storage and retention
   policy are still needed before promising reuse across every deployment/reboot.
 
-## Current integration boundary
+## App integration
 
-The pure scoring extraction is connected to the app. Persistent preparation and
-load-only APIs are tested offline; the live SIM/BUILD workflow has NOT yet been
-switched to use them. Its existing session workflow remains until that integration
-is tested. This checkpoint alone does not speed the live app.
+The app's shared SIM wrapper now calls persistent preparation, returning the
+10,000 evaluation outcomes and retaining the bundle key on the dataframe. Both
+samples are prepared on a cold miss. Warm SIM calls reload matching bundles.
 
-The next integration must associate a frozen input key with the slate, prepare both
-matrices as a separate stage, and make BUILD load that key. It must reject a missing
-or stale preparation rather than silently performing another expensive simulation.
+All four candidate formats use `construction_for_build`, which is load-only.
+BUILD never calls fitting or the football simulator. It verifies scoring site,
+outcome count, current candidate projections/team/position/opponent inputs,
+weather, correlation, and the evaluation matrix against the stored bundle.
+Removing players from the candidate pool is allowed: their outcomes remain part
+of the simulated games. Changing salary/ownership/diversity does not rerun PBP.
+
+Legacy session outcomes without a preparation key require SIM once. Missing,
+corrupt, stale or incompatible preparation fails explicitly; BUILD does not hide
+an expensive regeneration inside candidate search.
+
+Persisted sample seeds belong to the preparation specification. Repeating SIM on
+identical inputs reuses those samples; each BUILD still draws randomized scenario
+groups and performs candidate search independently of the evaluation sample.
+
+The backend reports preparation/load timings. These do not include historical
+source downloads, candidate search, opponent proposal generation or contest
+scoring. A Streamlit-host performance benchmark remains necessary; offline
+synthetic timings are not a promise of full-slate application speed.
