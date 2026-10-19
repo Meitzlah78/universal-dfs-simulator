@@ -17,6 +17,17 @@ def fixture(site='DK'):
 
 
 class CandidateTest(unittest.TestCase):
+    def test_classic_defense_aliases_and_missing_position_diagnostics(self):
+        pool,out,roster=fixture()
+        for alias in ['D','DEF','DST']:
+            changed=pool.copy();changed.loc[changed.Position.eq('DST'),'Position']=alias
+            result=build_candidates(changed,out,roster,target=10,rng=np.random.default_rng(4))
+            self.assertEqual(len(result),10)
+            self.assertTrue(set(result.DST)<=set(changed.loc[changed.Position.eq(alias),'Name']))
+        changed=pool[~pool.Position.eq('TE')].copy()
+        with self.assertRaisesRegex(ValueError,r'roster slot\(s\): TE'):
+            build_candidates(changed,out,roster,target=10)
+
     def test_refinement_retains_search_diversity_with_mean_outcomes(self):
         pool,out,roster=fixture()
         result=build_candidates(pool,out,roster,target=300,salary_min=48000,salary_max=50000,

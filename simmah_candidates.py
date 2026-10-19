@@ -92,9 +92,17 @@ def build_candidates(pool,outcomes,roster,target=5000,salary_min=0,salary_max=50
     if len(mult)!=count or costs.shape!=(count,len(names)) or not np.isfinite(costs).all() or (costs<=0).any():
         raise ValueError('Invalid slot multiplier or salary-cost matrix')
     positions=[set(str(p).upper().replace(' ','').split('/')) for p in pool['Position']]
+    # Salary sources use D, DEF and DST for the same NFL roster position.
+    for position in positions:
+        if position & {'D','DEF','DST'}:position.update({'D','DEF','DST'})
     eligible=[np.array([i for i,p in enumerate(positions) if not allowed or p & allowed],dtype=int) for _,allowed in roster]
     if special_allowed is not None:eligible[0]=np.array([i for i in eligible[0] if names[i] in special_allowed])
-    if any(not len(x) for x in eligible):raise ValueError('A roster slot has no eligible players')
+    missing_slots=[slot for (slot,_),choices in zip(roster,eligible) if not len(choices)]
+    if missing_slots:
+        counts=pd.Series(pool['Position'].astype(str)).value_counts().to_dict()
+        raise ValueError('No eligible players for roster slot(s): '+', '.join(missing_slots)+
+                         '. Available pool positions: '+str(counts)+
+                         '. Check positive projections, injury/exclusion filters and the uploaded format.')
     lookup={name:i for i,name in enumerate(names)}
     if any(name not in lookup for name in locks):raise ValueError('A locked player is unavailable')
     locked=np.array([lookup[name] for name in locks],int)
