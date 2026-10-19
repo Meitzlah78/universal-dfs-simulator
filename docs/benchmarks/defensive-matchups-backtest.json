@@ -1,0 +1,140 @@
+{
+  "scope": "Single completed FD full slate paired ablation, not a multi-slate holdout or portfolio profit backtest. Neutral weather in both arms; common pregame-only roles reconstructed from current historical files. As-of publication timestamps unavailable. Target-day stats excluded. No parameter tuning on outcomes.",
+  "slate": "2026-10-18",
+  "players": 271,
+  "matched_actuals": 262,
+  "unmatched_players": [
+    "Jake Briningstool",
+    "Ko Kieft",
+    "Dalen Cambre",
+    "Cameron Latu",
+    "Kene Nwangwu",
+    "Chris Manhertz",
+    "Charlie Jones",
+    "Pharaoh Brown",
+    "Kalel Mullings"
+  ],
+  "outcomes_per_arm": 20000,
+  "independent_streams_per_arm": 2,
+  "history_through": "2026-10-15",
+  "role_matches": 242,
+  "matchups_applied": 251,
+  "context_status": {
+    "Historical efficiency context": 251
+  },
+  "overall": {
+    "baseline": {
+      "mean_abs_error": 3.5413261118316126,
+      "crps": 2.401643071078586,
+      "p10_p90_coverage": 0.8053435114503816
+    },
+    "matchup": {
+      "mean_abs_error": 3.537965109031316,
+      "crps": 2.3971383204367056,
+      "p10_p90_coverage": 0.8091603053435115
+    }
+  },
+  "by_position": {
+    "D": {
+      "baseline": {
+        "mean_abs_error": 4.2975650000000005,
+        "crps": 3.0646498662500004,
+        "p10_p90_coverage": 0.8
+      },
+      "matchup": {
+        "mean_abs_error": 4.27879,
+        "crps": 3.0203640044999998,
+        "p10_p90_coverage": 0.8
+      }
+    },
+    "QB": {
+      "baseline": {
+        "mean_abs_error": 4.6965132206382485,
+        "crps": 3.0633247439810174,
+        "p10_p90_coverage": 1.0
+      },
+      "matchup": {
+        "mean_abs_error": 4.659007961161143,
+        "crps": 3.0578793365726193,
+        "p10_p90_coverage": 0.95
+      }
+    },
+    "RB": {
+      "baseline": {
+        "mean_abs_error": 3.7495012605297506,
+        "crps": 2.6054638361680817,
+        "p10_p90_coverage": 0.75
+      },
+      "matchup": {
+        "mean_abs_error": 3.7552383827941327,
+        "crps": 2.60709523384163,
+        "p10_p90_coverage": 0.7678571428571429
+      }
+    },
+    "TE": {
+      "baseline": {
+        "mean_abs_error": 3.2650381750299404,
+        "crps": 2.1647169120210097,
+        "p10_p90_coverage": 0.7846153846153846
+      },
+      "matchup": {
+        "mean_abs_error": 3.243678097541161,
+        "crps": 2.1507724226609053,
+        "p10_p90_coverage": 0.7846153846153846
+      }
+    },
+    "WR": {
+      "baseline": {
+        "mean_abs_error": 3.2252111378267863,
+        "crps": 2.1787962209028815,
+        "p10_p90_coverage": 0.8118811881188119
+      },
+      "matchup": {
+        "mean_abs_error": 3.2382027085775733,
+        "crps": 2.1850280451967756,
+        "p10_p90_coverage": 0.8217821782178217
+      }
+    }
+  },
+  "preparation_keys": {
+    "baseline": "019960e9cf6b46b79a3f24f2e524be520f35a2a1cf9070470d6e26eed5facd3d",
+    "matchup": "1a2dacdac517076c0ababe99e3de6395d09f23cbb9b900753bb4d498dc797009"
+  },
+  "sources": {
+    "../upload/FanDuel_Full_Roster_Player_Scoring_Inputs.csv": "b01116ca6788e0296a274279db63b5a491f325e90c18187bb1d083052fb722b8",
+    "/tmp/matchup-schedule.csv": "fa274fd237fdd315145c72b5f594b82bc4e84708d24c1d96068292709e7bd69e",
+    "/tmp/matchup-stats2025.csv": "e5e0615b3d96a3eaebfaee91e55afb4a4e7fe0caf057454177bcd7d6ad4bcfc2",
+    "/tmp/matchup-stats2026.csv": "ddb8f2967b9db32292ad5023ec1e8ebd7270c3b6d7650f796a4f8bbd17924555"
+  },
+  "crps_improved_players": 123,
+  "projected_8_plus": {
+    "players": 78,
+    "metrics": {
+      "baseline": {
+        "mean_abs_error": 5.642489565706148,
+        "crps": 3.6952791721135876,
+        "p10_p90_coverage": 0.8461538461538461
+      },
+      "matchup": {
+        "mean_abs_error": 5.6564840547513615,
+        "crps": 3.7093804745395245,
+        "p10_p90_coverage": 0.8333333333333334
+      }
+    }
+  },
+  "crps_delta_game_cluster_bootstrap_95pct": [
+    -0.014748405970919413,
+    0.006880838788633047
+  ],
+  "crps_delta_matchup_minus_baseline": -0.004504750641880333,
+  "independent_stream_crps": {
+    "evaluation": {
+      "baseline": 2.4014235595922546,
+      "matchup": 2.3973864010712367
+    },
+    "construction": {
+      "baseline": 2.40205850652188,
+      "matchup": 2.3971003111735407
+    }
+  }
+}
