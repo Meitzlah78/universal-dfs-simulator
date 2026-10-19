@@ -1,0 +1,101 @@
+{
+  "version": "dk-classic-audit-v1",
+  "evidence_fingerprint": "a7e68a3d1fe35fd6f2482cc07c408d1d446dcdad1321e11c5d0a37802c4b11b4",
+  "code_sha256": "c3329cd8b4542e597c9df2dd652842ed7a2b651e4b501613d3b84e8ad2f6b076",
+  "mode": "saved-portfolio diagnostic only",
+  "fresh_build_ready": false,
+  "fresh_build_blockers": [
+    "Same-team projected quarterbacks lack saved starter confirmation",
+    "Pregame input timestamp provenance not independently verified",
+    "Projected ownership snapshot missing"
+  ],
+  "quarterback_conflicts": {
+    "BAL": [
+      "Lamar Jackson",
+      "Tyler Huntley"
+    ],
+    "PHI": [
+      "Jalen Hurts",
+      "Tanner McKee"
+    ]
+  },
+  "portfolio_rules": {
+    "rows": 20,
+    "unique_rosters": 20,
+    "max_copies": 1,
+    "violations": {},
+    "construction_groups": {
+      "2": 3,
+      "3": 3,
+      "4": 9,
+      "5": 5
+    }
+  },
+  "field_rules": {
+    "rows": 10000,
+    "unique_rosters": 10000,
+    "max_copies": 1,
+    "violations": {},
+    "construction_groups": {
+      "0": 1423,
+      "1": 727,
+      "2": 2721,
+      "3": 2025,
+      "4": 1665,
+      "5": 1439
+    }
+  },
+  "actual_result": {
+    "entries": 20,
+    "entry_fees": 2.0,
+    "winnings": 0.0,
+    "net": -2.0,
+    "roi_pct": -100.0,
+    "cashing_entries": 0,
+    "mean_score": 105.787,
+    "best_score": 135.78,
+    "best_rank": 15324
+  },
+  "projection_baseline": {
+    "entries": 20,
+    "entry_fees": 2.0,
+    "winnings": 0.6,
+    "net": -1.4,
+    "roi_pct": -70.0,
+    "cashing_entries": 3,
+    "mean_score": 124.699,
+    "best_score": 145.4,
+    "best_rank": 8203
+  },
+  "projection_baseline_policy": {
+    "salary_min": 48000,
+    "salary_max": 50000,
+    "max_player_exposure_pct": 80,
+    "unique_rosters": true,
+    "opposing_defense_excluded": true,
+    "stacks_required": false,
+    "note": "Sequential projection-optimal roster selection; fixed policy, no outcome-based tuning"
+  },
+  "field_actual_scores": {
+    "supported_rows": 9787,
+    "excluded_rows": 213,
+    "mean": 110.97006028405026
+  },
+  "real_field_actual_mean": 121.83290343323054,
+  "reported_simulated_roi_pct": 226.63774999997054,
+  "timings": {
+    "input_validation_seconds": 0.43414318399936747,
+    "projection_baseline_build_seconds": 7.260483920999832,
+    "completed_contest_evaluation_seconds": 1.0226550469997164,
+    "audit_total_seconds": 8.759850432999883
+  },
+  "limitations": [
+    "No fresh simulation was run",
+    "Projection baseline runs only when explicitly requested",
+    "No distributions can be reconstructed from lineup means alone",
+    "This audit does not establish independent holdout performance"
+  ],
+  "contest_id": "196672013",
+  "evaluation_classification": "Diagnostic: this slate already informed construction calibration",
+  "baseline_selection_inputs": "Frozen external player projections only; actual results opened after selection"
+}
