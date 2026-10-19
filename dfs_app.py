@@ -613,6 +613,12 @@ def learned_field_profiles(platform_name, mode_name, contest, roster_size, pool=
         platform_name, mode_name, fee=fee, max_entries=maximum, roster_size=roster_size, game_count=game_count)
 
 
+def opponent_construction_distribution(platform_name, mode_name, contest, pool):
+    from simmah_field_construction import learned_construction_distribution
+    return learned_construction_distribution(
+        learned_field_profiles(platform_name, mode_name, contest, 9, pool))
+
+
 def ownership_proposal_target(pool, mode_name, target):
     from simmah_field_ownership import has_ownership_targets
     return 5 * int(target) if mode_name in {"Classic", "Full Roster"} and has_ownership_targets(pool) else int(target)
@@ -641,7 +647,7 @@ def apply_learned_field(field, pool, slots, platform_name, mode_name, contest, t
         diagnostics = selected.attrs.get("ownership_calibration", {})
         mean_error = diagnostics.get("mean_absolute_error_pp", 0)
         max_error = diagnostics.get("max_error_pp", 0)
-        st.caption(f"Final ownership calibration: mean error {mean_error:.2f} percentage points; largest difference {max_error:.2f}. Salary frequencies retained; each generated proposal selected at most once.")
+        st.caption(f"Final ownership calibration: mean error {mean_error:.2f} percentage points; largest difference {max_error:.2f}. Salary frequencies and learned construction targets retained; each generated proposal selected at most once.")
         if max_error > 3:
             st.warning("Some ownership targets cannot be closely matched within the available legal proposals and salary mix. Review the final ownership comparison; projected ownership remains an estimate.")
         with st.expander("Projected versus final opponent ownership", expanded=False):
@@ -650,6 +656,8 @@ def apply_learned_field(field, pool, slots, platform_name, mode_name, contest, t
                 f"{platform_name}_{mode_name.replace(' ', '_')}_Ownership_Comparison.csv", "text/csv",
                 key=f"ownership_comparison_download_{platform_name}_{mode_name}", on_click="ignore")
         st.session_state["ownership_comparison_data_" + platform_name + "_" + mode_name] = report
+    if selected.attrs.get("construction_distribution") is not None:
+        st.caption("Opponent stack/bring-back mix uses matching completed-contest history with verified player metadata; joint construction targets are retained through field calibration. This does not calibrate duplicate counts.")
     return selected
 
 
@@ -5430,7 +5438,8 @@ if platform == "FanDuel":
                             _fd_salary_counts = _fd_salary_history["salary_counts"]
                     _fd_batched_field = build_full_roster_field(fd_pool, fd_weights, fd_slots, _fd_generation_target,
                         rng=rng, progress=lambda fraction,text: fd_field_progress.progress(fraction,text=text),
-                        salary_counts=_fd_salary_counts)
+                        salary_counts=_fd_salary_counts, construction_distribution=opponent_construction_distribution(
+                            "FanDuel", "Full Roster", st.session_state.get("selected_fd_contest", {}), fd_pool))
                     if _fd_salary_counts:
                         st.caption("Opponent salary usage uses completed 11-game FD history, conditioned on the supported $59,000–$60,000 range. Ownership and duplicate rates remain estimates.")
 
@@ -5444,7 +5453,10 @@ if platform == "FanDuel":
                     )
                     opponent_rows = _fd_single_field.to_dict("records")
             fd_field_progress.empty()
-            opponent_df = apply_learned_field(pd.DataFrame(opponent_rows), fd_pool, fd_slots, "FanDuel", lineup_mode,
+            _fd_field_input = pd.DataFrame(opponent_rows)
+            if lineup_mode == "Full Roster":
+                _fd_field_input.attrs.update(_fd_batched_field.attrs)
+            opponent_df = apply_learned_field(_fd_field_input, fd_pool, fd_slots, "FanDuel", lineup_mode,
                 st.session_state.get("selected_fd_contest", {}), fd_opponent_target, rng)
             st.session_state["fd_contest_field_" + lineup_mode.replace(" ", "_").lower()] = opponent_df
             st.session_state["fd_contest_field_ready_" + lineup_mode.replace(" ", "_").lower()] = not opponent_df.empty
@@ -7257,10 +7269,11 @@ else:
                     _classic_field_progress = st.progress(0, text=f"Building DraftKings opponent field: 0 / {field_target:,}")
                     contest_field_df = build_full_roster_field(pool, pool["Weight"].to_numpy(float), field_slot_names,
                         field_target, rng=rng, platform="DraftKings",
+                        construction_distribution=opponent_construction_distribution("DraftKings", "Classic", classic_contest, pool),
                         progress=lambda fraction,text: _classic_field_progress.progress(fraction,text=text))
                     _classic_field_progress.empty()
                     contest_field_df = apply_learned_field(contest_field_df, pool, field_slot_names, "DraftKings", "Classic", classic_contest, int(dk_opponent_target), rng)
-                    st.caption("Classic opponent baseline: each lineup has a QB + WR/TE stack; RBs do not satisfy this rule. This is a tournament construction assumption, not a learned stack frequency. Field popularity uses external ownership when supplied, otherwise a projection-rank proxy.")
+                    st.caption("Opponent construction uses matching completed-contest stack/bring-back frequencies when available; otherwise the baseline requires a QB + WR/TE stack. Field popularity uses external ownership when available, otherwise estimated popularity.")
                     user_lineups = st.session_state["classic_lineups"].copy()
                     opponent_scores = contest_field_df["ProjectedPoints"].to_numpy(dtype=float) if not contest_field_df.empty else np.array([])
                     if len(opponent_scores):
@@ -9915,4 +9928,5 @@ with st.expander("SIMMAH ROI Tracker", expanded=False):
         )
     else:
         st.info("No contest results recorded yet. Enter actual fees and winnings above to start tracking ROI.")
+
 

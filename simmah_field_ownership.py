@@ -33,13 +33,10 @@ def calibrate_field_ownership(field, pool, slots, target, rng=None, iterations=1
     own = pd.to_numeric(pool['Projected Ownership'],errors='coerce').to_numpy(float)
     known = np.isfinite(own) & (own >= 0) & (own <= 100)
     desired = np.where(known,own/100,0)
-    # Keep salary frequencies (largest remainder allocation gives exactly N).
-    _, groups = np.unique(field.Salary.to_numpy(),return_inverse=True)
+    # Retain learned joint stack/bring-back mix and conditional salary counts.
+    from simmah_field_construction import construction_quotas
+    groups, quotas = construction_quotas(field,target)
     sizes = np.bincount(groups)
-    quota_raw = sizes * (target/len(field))
-    quotas = np.floor(quota_raw).astype(int)
-    order = np.argsort(-(quota_raw-quotas),kind='stable')
-    quotas[order[:target-int(quotas.sum())]] += 1
     supported = np.bincount(picks.ravel(),minlength=len(pool)) > 0
     fit = known & supported
     # A posted zero is exact, not an invitation to invent exposure.

@@ -175,6 +175,12 @@ def ingest_frames(frames, digest, platform='Auto', mode='Auto', fee=None, max_en
             'roster_size':next(iter(sizes)),'game_count':game_count,'lineups':len(lineups),
             'unique_lineups':len(duplicates),'mean_copies':len(lineups)/len(duplicates),
             'features':summarize(feats),'imported_at':datetime.now(timezone.utc).isoformat()})
+        if {'qb_pass_catcher_stack_count','bring_back_count'} <= set(feats.columns):
+            paired=feats[['qb_pass_catcher_stack_count','bring_back_count']].dropna()
+            if len(paired):
+                labels=np.minimum(paired.iloc[:,0].to_numpy(int),2)*2+(paired.iloc[:,1].to_numpy(int)>0)
+                profiles[-1]['joint_stack_bringback']={'counts':np.bincount(labels,minlength=6).tolist(),
+                    'supported_lineups':len(paired),'grouping':'stack 0/1/2+ crossed with bring-back 0/1+'}
     if not profiles: raise ValueError('No complete lineups were found; no learning was applied')
     return profiles
 
@@ -266,7 +272,17 @@ def calibrate_field(field,pool,slots,profiles,target,rng):
         used.append(key)
     if not used:return field.head(target).copy(),{'applied':False,'reason':'No compatible features'}
     weights=.25+.75*np.exp(np.clip(log_weight/max(len(used),1),-1.4,1.4))
-    chosen=rng.choice(len(field),size=target,replace=False,p=weights/weights.sum())
+    if field.attrs.get('construction_distribution') is not None:
+        from simmah_field_construction import construction_quotas
+        groups,quotas=construction_quotas(field,target)
+        chosen=[]
+        for group,quota in enumerate(quotas):
+            if not quota:continue
+            rows=np.flatnonzero(groups==group);w=weights[rows]
+            chosen.extend(rng.choice(rows,size=quota,replace=False,p=w/w.sum()).tolist())
+        chosen=np.asarray(chosen,int)
+    else:
+        chosen=rng.choice(len(field),size=target,replace=False,p=weights/weights.sum())
     return field.iloc[chosen].reset_index(drop=True),{'applied':True,'contests':len(profiles),
         'historical_entries':sum(p['lineups'] for p in profiles),'features':used,
         'formats':sorted({p['format'] for p in profiles}),'profile_ids':[p['id'] for p in profiles]}

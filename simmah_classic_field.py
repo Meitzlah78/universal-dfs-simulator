@@ -6,7 +6,7 @@ frequency. It is independent of the user's selected candidate stack rules.
 import numpy as np
 
 
-def classic_tournament_mask(picks, teams, positions, max_from_team=8):
+def classic_tournament_mask(picks, teams, positions, max_from_team=8, require_stack=True):
     picks=np.asarray(picks,dtype=int)
     teams=np.asarray(teams,dtype=str)
     positions=np.asarray(positions,dtype=str)
@@ -20,10 +20,10 @@ def classic_tournament_mask(picks, teams, positions, max_from_team=8):
     skills=picks[:,1:8]
     pass_catcher=np.array([bool(set(p.split('/')) & {'WR','TE'}) for p in positions],dtype=bool)
     stacked=((teams[skills]==teams[picks[:,0],None]) & pass_catcher[skills]).any(axis=1)
-    return unique & legal_teams & stacked
+    return unique & legal_teams & (stacked if require_stack else True)
 
 
-def build_full_roster_field(pool, weights, slots, target, rng=None, progress=None, max_proposals=None, platform="FanDuel", salary_counts=None):
+def build_full_roster_field(pool, weights, slots, target, rng=None, progress=None, max_proposals=None, platform="FanDuel", salary_counts=None, construction_distribution=None):
     """Shared batched full-roster opponent sampler with site-specific rules.
 
     Keeps the existing salary acceptance curve, ownership/mean blend, QB stack,
@@ -34,11 +34,20 @@ def build_full_roster_field(pool, weights, slots, target, rng=None, progress=Non
     target=int(target)
     draftkings=str(platform).casefold() in {"draftkings", "dk"}
     cap,floor,team_limit=(50000,48500,8) if draftkings else (60000,59000,4)
+    from simmah_field_construction import construction_labels, allocate_counts
+    learned_construction = None
+    if construction_distribution is not None:
+        learned_construction=np.asarray(construction_distribution,float)
+        if learned_construction.shape!=(6,):raise ValueError("Expected six construction frequencies")
+        construction_remaining=allocate_counts(learned_construction,target)
     names=pool.Name.astype(str).to_numpy()
     salaries=pd.to_numeric(pool.Salary,errors='raise').to_numpy(float)
     means=pd.to_numeric(pool.get('MeanPoints',pool.Projection),errors='coerce').fillna(pool.Projection).to_numpy(float)
     positions=pool.Position.astype(str).str.upper().to_numpy()
     teams=pool.Team.astype(str).to_numpy()
+    opponents=pool.get("Opponent",pd.Series("",index=pool.index)).fillna("").astype(str).to_numpy()
+    if learned_construction is not None and (opponents=="").any():
+        raise ValueError("Learned bring-backs require verified opponents")
     weights=np.asarray(weights,float)
     if weights.shape!=(len(pool),) or not np.isfinite(weights).all():raise ValueError('Invalid field weights')
     if not np.isfinite(salaries).all() or (salaries<=0).any():raise ValueError('Invalid field salaries')
@@ -67,16 +76,39 @@ def build_full_roster_field(pool, weights, slots, target, rng=None, progress=Non
     while accepted<target and attempted<limit:
         n=min(4096,limit-attempted);attempted+=n
         picks=np.full((n,9),-1,int);total=np.zeros(n);alive=np.ones(n,bool)
+        if learned_construction is not None:
+            requested=rng.choice(6,n,p=construction_remaining/construction_remaining.sum())
+            stack_goal=requested//2;back_goal=requested%2
+            # Seed required pass catchers; choose the bring-back slot separately
+            # so RB/TE bring-backs remain possible, not just opposing WRs.
+            back_choices=np.broadcast_to(np.arange(1,8),(n,7))
+            permitted=~(((back_choices==3)&(stack_goal[:,None]>=1)) | ((back_choices==4)&(stack_goal[:,None]>=2)))
+            draw=rng.random((n,7));draw[~permitted]=-1
+            back_slot=1+draw.argmax(axis=1)
+
         for slot,choices in enumerate(eligible):
             used=(picks[:,:slot,None]==choices[None,None,:]).any(axis=1)
             next_total=total[:,None]+salaries[choices]
             feasible=(~used)&(next_total+minimum[slot+1:].sum()<=cap)&(next_total+maximum[slot+1:].sum()>=floor)
+            if learned_construction is not None and slot:
+                qb_team=teams[picks[:,0]];qb_opp=opponents[picks[:,0]]
+                candidate_teams=teams[choices][None,:]
+                catcher=np.array([bool(set(p.split('/'))&{'WR','TE'}) for p in positions[choices]])[None,:]
+                offensive=np.array([bool(set(p.split('/'))&{'RB','WR','TE'}) for p in positions[choices]])[None,:]
+                same=candidate_teams==qb_team[:,None];opposing=candidate_teams==qb_opp[:,None]
+                required=((stack_goal>=1)&(slot==3)) | ((stack_goal>=2)&(slot==4))
+                feasible &= (~required[:,None]) | (same & catcher)
+                forbidden=((stack_goal==0) | ((stack_goal==1)&(slot!=3)))[:,None]
+                feasible &= ~(forbidden & same & catcher)
+                feasible &= ~((back_goal==0)[:,None] & opposing & offensive)
+                required_back=(back_goal==1)&(back_slot==slot)
+                feasible &= (~required_back[:,None]) | (opposing & offensive)
             cumulative=np.cumsum(np.where(feasible,base[choices],0),axis=1)
             mass=cumulative[:,-1];alive &= mass>0
             draw=rng.random(n)*mass
             index=(cumulative<=draw[:,None]).sum(axis=1).clip(max=len(choices)-1)
             picks[:,slot]=choices[index];total+=salaries[picks[:,slot]]
-        valid=alive&(total>=floor)&(total<=cap)&classic_tournament_mask(picks,teams,positions,max_from_team=team_limit)
+        valid=alive&(total>=floor)&(total<=cap)&classic_tournament_mask(picks,teams,positions,max_from_team=team_limit,require_stack=learned_construction is None)
         if draftkings:
             viable=np.flatnonzero(valid)
             if len(viable):
@@ -92,7 +124,7 @@ def build_full_roster_field(pool, weights, slots, target, rng=None, progress=Non
                 keep=rng.random(len(viable)) < human/human.max()
                 selected=viable[keep]
                 rng.shuffle(selected)
-                selected=selected[:target-accepted]
+                selected=selected if learned_construction is not None else selected[:target-accepted]
             else:selected=viable
             chosen=picks[selected];cost=total[selected]
         elif learned_salary:
@@ -111,22 +143,36 @@ def build_full_roster_field(pool, weights, slots, target, rng=None, progress=Non
                     keep=rng.random(len(viable)) < mass/mass.max()
                     selected=viable[keep]
                     rng.shuffle(selected)
-                    selected=selected[:target-accepted]
+                    selected=selected if learned_construction is not None else selected[:target-accepted]
                 else:selected=np.array([],int)
             else:selected=viable
             chosen=picks[selected];cost=total[selected]
         else:
             probability=np.array([acceptance.get(int(s),.01 if s>=58000 else .002) for s in total])
             valid &= rng.random(n)<=probability
-            chosen=picks[valid][:target-accepted];cost=total[valid][:target-accepted]
+            chosen=picks[valid];cost=total[valid]
+            if learned_construction is None:
+                chosen=chosen[:target-accepted];cost=cost[:target-accepted]
+        if len(chosen) and learned_construction is not None:
+            labels=construction_labels(chosen,teams,positions,opponents)
+            selected=[]
+            for group in range(6):
+                rows=np.flatnonzero(labels==group);rng.shuffle(rows)
+                keep=rows[:construction_remaining[group]]
+                selected.extend(keep.tolist());construction_remaining[group]-=len(keep)
+            selected=np.asarray(selected,int);chosen=chosen[selected];cost=cost[selected]
         if len(chosen):
             data={slot:names[chosen[:,i]] for i,slot in enumerate(slots)}
             data.update(Salary=cost.astype(int),ProjectedPoints=np.round(means[chosen].sum(axis=1),2))
+            if learned_construction is not None:
+                data["Construction Group"]=construction_labels(chosen,teams,positions,opponents)
             chunks.append(pd.DataFrame(data));accepted+=len(chosen)
         if progress:progress(min(1,accepted/max(target,1)),f'Building {platform} opponent field: {accepted:,} / {target:,}')
     if accepted<target:raise ValueError(f'Built {accepted:,} of {target:,} {platform} opponents after {attempted:,} proposals; check player availability and salary feasibility')
     result=pd.concat(chunks,ignore_index=True) if chunks else pd.DataFrame(columns=list(slots)+['Salary','ProjectedPoints'])
-    result.attrs.update(proposals=attempted,target=target,engine='batched-full-roster-field-v6',platform=platform, salary_model='historical distribution within supported salary range' if learned_salary else 'baseline')
+    result.attrs.update(proposals=attempted,target=target,engine='batched-full-roster-field-v7',platform=platform, salary_model='historical distribution within supported salary range' if learned_salary else 'baseline')
+    if learned_construction is not None:
+        result.attrs['construction_distribution']=(learned_construction/learned_construction.sum()).tolist()
     return result
 
 
