@@ -2873,7 +2873,7 @@ def detect_uploaded_dfs_format(uploaded_file):
     return None
 
 
-with _contest_setup:
+with _shared_header:
     st.write("### Slate Setup")
     st.caption("Upload your DraftKings or FanDuel entries/slate CSV once. SIMMAH will choose the site and format automatically.")
     auto_slate_file = st.file_uploader(
@@ -4438,26 +4438,9 @@ def simulate_fd_play_by_play(players_df, rng, n=SIMULATION_COUNT, correlation_st
 
 
 if platform == "FanDuel":
-    with _contest_setup:
-        # One-upload FanDuel slate setup. FanDuel entry templates include both the
-        # user's contest rows and a player-reference section later in the same CSV.
-        st.write("### Slate Setup")
-        st.caption(
-            "Upload the FanDuel entries/slate CSV once. SIMMAH reads your contests, entries, "
-            "players, salaries, IDs, teams, and games from that same file."
-        )
-        if auto_slate_file is not None:
-            fd_slate_file = auto_slate_file
-            st.caption("Using the slate file uploaded above.")
-        else:
-            fd_slate_file = st.file_uploader(
-                "Upload FanDuel Slate / Entries CSV",
-                type=["csv"],
-                key="fd_slate_setup_file",
-                help="Use the FanDuel CSV that contains your contest entries and player reference table."
-            )
-        fd_file = fd_slate_file
-        fd_entry_file = fd_slate_file
+    fd_slate_file = auto_slate_file
+    fd_file = fd_slate_file
+    fd_entry_file = fd_slate_file
 
     with _contest_setup:
         st.write("### Contest Selector")

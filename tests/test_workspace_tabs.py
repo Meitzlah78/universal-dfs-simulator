@@ -15,7 +15,7 @@ class WorkspaceTabsTests(unittest.TestCase):
         calls=[n for n in ast.walk(self.tree) if isinstance(n,ast.Call) and ast.unparse(n.func)=='st.tabs']
         self.assertEqual(len(calls),1);self.assertEqual(ast.literal_eval(calls[0].args[0]),['Contests','Roster & Projections','Build','Lineups'])
     def test_main_sections_are_routed(self):
-        expected={'### Projection Sources':'_tab_roster','### Build Settings':'_tab_build','### Contest Selector':'_contest_setup','### Slate Setup':'_contest_setup','### Player Pool — Stats, Simulation, Exposure & Controls':'_tab_roster'}
+        expected={'### Projection Sources':'_tab_roster','### Build Settings':'_tab_build','### Contest Selector':'_contest_setup','### Slate Setup':'_shared_header','### Player Pool — Stats, Simulation, Exposure & Controls':'_tab_roster'}
         counts={label:0 for label in expected}
         for n in ast.walk(self.tree):
             if isinstance(n,ast.Call) and ast.unparse(n.func)=='st.write' and n.args and isinstance(n.args[0],ast.Constant) and n.args[0].value in expected:
