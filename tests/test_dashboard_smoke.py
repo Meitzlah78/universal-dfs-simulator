@@ -16,7 +16,7 @@ class DashboardSmokeTests(unittest.TestCase):
                 self.assertFalse(app.exception, '\n'.join(str(e.message) for e in app.exception))
                 self.assertEqual([tab.label for tab in app.tabs],['Contests','Roster & Projections','Build','Lineups'])
                 self.assertTrue(any('SIMMAH' in str(item.value) for item in app.markdown))
-                self.assertTrue(any(widget.label=='Format' for widget in app.selectbox))
+                self.assertFalse(any(widget.label=='Format' for widget in app.selectbox))
     def test_compact_editor_retains_hidden_data(self):
         app=AppTest.from_string('''
 import streamlit as st

@@ -2892,14 +2892,14 @@ with _shared_header:
                 st.rerun()
             st.success(f"Format detected automatically: {detected_format}")
         else:
-            st.warning("SIMMAH could not identify this entries file automatically. Choose the format below and the file will still be used.")
+            st.error("SIMMAH could not identify this file. Upload the original DraftKings or FanDuel contest entries CSV.")
+            st.stop()
 
-with _shared_header:
-    selected_format = st.selectbox(
-        "Format",
-        list(format_options.keys()),
-        key="dfs_format",
-    )
+if auto_slate_file is None:
+    with _shared_header:
+        st.info("Upload an entries/slate CSV to get started.")
+    st.stop()
+selected_format = detected_format
 
 # Historical projection accuracy report. This uses pre-game projection snapshots
 # matched to actual fantasy points; the volatility check below is not a projection backtest.
