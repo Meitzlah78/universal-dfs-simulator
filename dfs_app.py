@@ -7018,8 +7018,8 @@ else:
     # ============================================
 
     with _tab_build:
-        render_saved_market_calibration(platform, lineup_mode, players_df)
         if platform == "DraftKings" and lineup_mode == "Classic":
+            render_saved_market_calibration(platform, lineup_mode, players_df)
             st.write("### DraftKings Classic Lineups")
             st.caption(
                 "Classic roster: QB, 2 RB, 3 WR, TE, FLEX (RB/WR/TE), DST. "
@@ -7540,7 +7540,8 @@ else:
 # builds the opponent field, then scores the contest.
 
 with _tab_build:
-    render_saved_market_calibration(platform, lineup_mode, players_df)
+    if platform == "DraftKings" and lineup_mode == "Showdown":
+        render_saved_market_calibration(platform, lineup_mode, players_df)
     build_cols = [_build_controls.container() for _ in range(3)]
     with build_cols[0]:
         st.write("### Build Settings")
