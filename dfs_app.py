@@ -4654,8 +4654,22 @@ if platform == "FanDuel":
     st.caption(f"Simulated FanDuel opponents: up to {fd_opponent_target:,} (speed limit)")
 
     st.write("### Projection Sources")
-    fd_dff_projection_file = None
-    fd_draftedge_projection_file = None
+    with st.expander("Upload projections / restore saved pregame inputs", expanded=False):
+        st.caption("Uploads take priority over automatic projections. To restore saved point projections, upload the pregame player-input CSV below.")
+        _fd_saved_projection_file = st.file_uploader(
+            "Saved pregame player inputs CSV", type=["csv"],
+            key="fd_saved_projection_upload_" + lineup_mode.replace(" ", "_").lower())
+        _fd_projection_cols = st.columns(2)
+        with _fd_projection_cols[0]:
+            _fd_manual_dff = st.file_uploader("DFF projections CSV (optional)", type=["csv"],
+                key="fd_dff_projection_upload_" + lineup_mode.replace(" ", "_").lower())
+        with _fd_projection_cols[1]:
+            _fd_manual_draftedge = st.file_uploader("DraftEdge projections CSV (optional)", type=["csv"],
+                key="fd_draftedge_projection_upload_" + lineup_mode.replace(" ", "_").lower())
+        if _fd_saved_projection_file is not None:
+            st.caption("Saved point projections supplied to both sources to preserve the saved averages. Injury and weather checks remain current.")
+    fd_dff_projection_file = _fd_saved_projection_file if _fd_saved_projection_file is not None else _fd_manual_dff
+    fd_draftedge_projection_file = _fd_saved_projection_file if _fd_saved_projection_file is not None else _fd_manual_draftedge
     show_projection_refresh_status(
         [("DFF", fd_dff_projection_file), ("DraftEdge", fd_draftedge_projection_file)],
         "fd_" + lineup_mode.replace(" ", "_").lower()
@@ -6237,8 +6251,22 @@ else:
 
     # Optional uploaded projection files; automatic public-source refresh is handled
     # by apply_external_projection_sources when these are not supplied.
-    dff_projection_file = None
-    draftedge_projection_file = None
+    with st.expander("Upload projections / restore saved pregame inputs", expanded=False):
+        st.caption("Uploads take priority over automatic projections. To restore saved point projections, upload the pregame player-input CSV below.")
+        _dk_saved_projection_file = st.file_uploader(
+            "Saved pregame player inputs CSV", type=["csv"],
+            key="dk_saved_projection_upload_" + lineup_mode.replace(" ", "_").lower())
+        _dk_projection_cols = st.columns(2)
+        with _dk_projection_cols[0]:
+            _dk_manual_dff = st.file_uploader("DFF projections CSV (optional)", type=["csv"],
+                key="dk_dff_projection_upload_" + lineup_mode.replace(" ", "_").lower())
+        with _dk_projection_cols[1]:
+            _dk_manual_draftedge = st.file_uploader("DraftEdge projections CSV (optional)", type=["csv"],
+                key="dk_draftedge_projection_upload_" + lineup_mode.replace(" ", "_").lower())
+        if _dk_saved_projection_file is not None:
+            st.caption("Saved point projections supplied to both sources to preserve the saved averages. Injury and weather checks remain current.")
+    dff_projection_file = _dk_saved_projection_file if _dk_saved_projection_file is not None else _dk_manual_dff
+    draftedge_projection_file = _dk_saved_projection_file if _dk_saved_projection_file is not None else _dk_manual_draftedge
     show_projection_refresh_status(
         [("DFF", dff_projection_file), ("DraftEdge", draftedge_projection_file)],
         "dk_" + lineup_mode.replace(" ", "_").lower()
