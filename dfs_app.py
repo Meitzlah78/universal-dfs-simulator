@@ -4874,23 +4874,16 @@ if platform == "FanDuel":
     # Restore FanDuel's saved simulation summaries on every Streamlit rerun.
     fd_sim_key = "fd_player_sim_" + lineup_mode.replace(" ", "_").lower()
     player_sim = st.session_state.get(fd_sim_key, {})
-    if not isinstance(player_sim, dict):
+    _fd_measured_outcomes = st.session_state.get(
+        "fd_simulation_df_" + lineup_mode.replace(" ", "_").lower())
+    if (isinstance(player_sim, dict) and isinstance(_fd_measured_outcomes, pd.DataFrame)
+            and not _fd_measured_outcomes.empty):
+        player_sim = {name: summary for name, summary in player_sim.items()
+                      if name in _fd_measured_outcomes.columns}
+    else:
         player_sim = {}
-    for _, fd_row in fd_players.iterrows():
-        fd_name = str(fd_row["Name"])
-        if fd_name not in player_sim:
-            fd_projection = max(float(fd_row.get("Projection", 0.01) or 0.01), 0.01)
-            player_sim[fd_name] = {
-                "Mean": fd_projection,
-                "P10": fd_projection * 0.35,
-                "P25": fd_projection * 0.65,
-                "P50": fd_projection,
-                "P75": fd_projection * 1.25,
-                "P90": fd_projection * 1.65,
-                "P95": fd_projection * 1.8,
-                "P99": fd_projection * 2.3,
-                "StdDev": 0.0,
-            }
+    # Leave simulation columns pending until real outcomes exist. External
+    # projections remain in Projection; fixed multiples are not percentiles.
     # Remove stale saved builds as soon as an Out player is excluded.
     fd_allowed_names = set(fd_players["Name"].astype(str))
     for saved_key in list(st.session_state.get("fd_saved_builds", {}).keys()):

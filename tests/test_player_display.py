@@ -39,3 +39,23 @@ class ScoringInputReportTests(unittest.TestCase):
         self.assertEqual(report['Actual Simulation Mean'].tolist(),[2.,14.])
         self.assertEqual(report['Simulation Minus Projection'].tolist(),[-8.,-6.])
         self.assertEqual(report['Sim Pts'].tolist(),[2.,14.])
+
+class FanDuelPendingSummaryTest(unittest.TestCase):
+    def test_app_restores_only_players_with_measured_outcomes(self):
+        from pathlib import Path
+        import textwrap
+        from types import SimpleNamespace
+        source=Path('dfs_app.py').read_text()
+        start=source.index('    player_sim = st.session_state.get(fd_sim_key, {})',source.index('# Restore FanDuel'))
+        end=source.index('    # Remove stale saved builds',start)
+        block=textwrap.dedent(source[start:end])
+        for mode in ['Full Roster','Single Game']:
+            key=mode.replace(' ','_').lower()
+            summary={'A':{'Mean':12,'P95':20},'B':{'Mean':10,'P95':18}}
+            state={'fd_player_sim_'+key:summary}
+            ns={'pd':pd,'st':SimpleNamespace(session_state=state),'lineup_mode':mode,'fd_sim_key':'fd_player_sim_'+key}
+            exec(block,ns)
+            self.assertEqual(ns['player_sim'],{})
+            state['fd_simulation_df_'+key]=pd.DataFrame({'A':[10.,14.]})
+            exec(block,ns)
+            self.assertEqual(ns['player_sim'],{'A':{'Mean':12,'P95':20}})
