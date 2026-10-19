@@ -10,7 +10,7 @@ import pandas as pd
 VERSION='projection-event-input-fit-v1'
 
 
-def fit_projection_inputs(pool,roles,platform,scorer,pilot_n=1024,iterations=8):
+def fit_projection_inputs(pool,roles,platform,scorer,pilot_n=1024,iterations=8,progress=None):
     from simmah_nfl_engine import simulate_stat_lines
     rows=pool.to_dict('records')
     targets={str(r['Name']):max(0,float(r.get('Projection',0))) for r in rows}
@@ -20,7 +20,9 @@ def fit_projection_inputs(pool,roles,platform,scorer,pilot_n=1024,iterations=8):
     for iteration in range(iterations+1):
         # Common pilot seed reduces Monte Carlo noise between parameter updates.
         # This seed is independent of the caller's evaluation/construction RNG.
-        stats=simulate_stat_lines(pool,roles,np.random.default_rng(73019),pilot_n,projection_inputs=params,scoring_platform=platform)
+        stats=simulate_stat_lines(pool,roles,np.random.default_rng(73019),pilot_n,projection_inputs=params,scoring_platform=platform,
+            progress=(lambda fraction,text: progress((iteration+fraction)/(iterations+1),
+                f"Fitting projections: pass {iteration+1}/{iterations+1} — {text}")) if progress else None)
         means={name:float(np.mean(scorer(dict(line,is_defense=int(positions[name] in {'D','DST','DEF'})),platform))) for name,line in stats.items()}
         if first is None:first=means.copy()
         last=means
@@ -42,4 +44,5 @@ def fit_projection_inputs(pool,roles,platform,scorer,pilot_n=1024,iterations=8):
         'Pilot Mean':last[name],'Pilot Difference':last[name]-targets[name],
         'Passing Input':params[name]['pass_gain'],'Opportunity Input':params[name]['opportunity'],'Skill Gain Input':params[name]['skill_gain'],
         'Calibration Status':'Event inputs fitted' if positions[name] in {'QB','RB','WR','TE'} else 'Unfitted defense/kicker'} for name in targets])
+    if progress:progress(1.,"Projection fitting complete")
     return params,report

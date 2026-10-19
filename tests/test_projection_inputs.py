@@ -12,6 +12,16 @@ class ProjectionInputTests(unittest.TestCase):
         cls.pool,cls.roles=fixture()
         cls.score=staticmethod(app_functions()['score_nfl_stat_line'])
 
+    def test_progress_reports_fit_passes_without_changing_results(self):
+        events=[]
+        plain,plain_report=fit_projection_inputs(self.pool,self.roles,'FanDuel',self.score,pilot_n=32,iterations=1)
+        observed,observed_report=fit_projection_inputs(self.pool,self.roles,'FanDuel',self.score,pilot_n=32,iterations=1,
+            progress=lambda fraction,text:events.append((fraction,text)))
+        self.assertEqual(plain,observed);pd.testing.assert_frame_equal(plain_report,observed_report)
+        self.assertEqual(events[-1][0],1.)
+        self.assertTrue(any('pass 1/2' in text for _,text in events))
+        self.assertTrue(any('pass 2/2' in text for _,text in events))
+
     def test_quarterback_projection_changes_fresh_passing_production(self):
         pool=self.pool.copy()
         outputs=[]
