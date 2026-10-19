@@ -4413,10 +4413,10 @@ def apply_fd_correlated_simulations(sim_df, player_pool, strength=1.0, seed=2026
 
 
 @st.cache_data(ttl=86400, max_entries=8, show_spinner=False)
-def fit_projection_event_inputs_cached(pool, roles, platform, model_version, _progress=None):
+def fit_projection_event_inputs_cached(pool, roles, platform, model_version):
+    # Keep cached execution free of external Streamlit layout objects.
     from simmah_projection_inputs import fit_projection_inputs
-    return fit_projection_inputs(pool, roles, platform, score_nfl_stat_line,
-        progress=(lambda fraction,text: _progress.progress(.3*fraction,text=text)) if _progress is not None else None)
+    return fit_projection_inputs(pool, roles, platform, score_nfl_stat_line)
 
 
 def simulate_fd_play_by_play(players_df, rng, n=SIMULATION_COUNT, correlation_strength=1.0, platform="FanDuel"):
@@ -4486,9 +4486,9 @@ def simulate_fd_play_by_play(players_df, rng, n=SIMULATION_COUNT, correlation_st
         }
     from simmah_projection_inputs import VERSION as _fit_version
     _fit_pool = pool[["Name", "Team", "Opponent", "Position", "Projection"]].copy()
-    progress.progress(0, text="Fitting football opportunities and passing rates to slate projections...")
+    progress.progress(0, text="Fitting football opportunities and passing rates to slate projections (first fit may take several minutes)...")
     _projection_inputs, _projection_fit_report = fit_projection_event_inputs_cached(
-        _fit_pool, _fd_hist_roles, platform, ENGINE_VERSION + _fit_version, _progress=progress)
+        _fit_pool, _fd_hist_roles, platform, ENGINE_VERSION + _fit_version)
     stats = simulate_stat_lines(
         pool, _fd_hist_roles, rng, n, correlation_strength, weather_by_team=weather_by_team,
         projection_inputs=_projection_inputs, scoring_platform=platform,
