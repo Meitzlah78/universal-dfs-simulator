@@ -5889,42 +5889,7 @@ else:
     # PLAYER POOL
     # ================================
 
-    players_df = pd.DataFrame([
-        ["Dak Prescott", "QB", "DAL", 10400, 21.3],
-        ["CeeDee Lamb", "WR", "DAL", 11800, 19.9],
-        ["Javonte Williams", "RB", "DAL", 10800, 18.9],
-        ["Jalon Daniels", "QB", "TB", 8600, 15.8],
-        ["George Pickens", "WR", "DAL", 9400, 14.2],
-        ["Bucky Irving", "RB", "TB", 8400, 12.3],
-        ["Emeka Egbuka", "WR", "TB", 8200, 9.0],
-        ["Ryan Flournoy", "WR", "DAL", 3800, 8.3],
-        ["Jake Ferguson", "TE", "DAL", 7600, 8.0],
-        ["Chris Godwin Jr.", "WR", "TB", 7200, 7.8],
-        ["Cowboys", "DST", "DAL", 4800, 7.1],
-        ["Cade Otton", "TE", "TB", 4400, 7.1],
-        ["Kenny Gainwell", "RB", "TB", 4000, 6.6],
-        ["Ted Hurst III", "WR", "TB", 2800, 5.4],
-        ["Buccaneers", "DST", "TB", 3600, 4.4],
-        ["Tyler Goodson", "RB", "DAL", 2600, 4.1],
-        ["Tez Johnson", "WR", "TB", 2400, 3.5],
-        ["KaVontae Turpin", "WR", "DAL", 1200, 1.5],
-        ["Sean Tucker", "RB", "TB", 2000, 1.5],
-        ["Brevyn Spann-Ford", "TE", "DAL", 1600, 1.4],
-        ["Luke Schoonmaker", "TE", "DAL", 1400, 1.3],
-        ["Hunter Luepke", "RB", "DAL", 1000, 0.9],
-        ["Jonathan Mingo", "WR", "DAL", 1000, 0.9],
-        ["Bauer Sharp", "TE", "TB", 800, 0.4],
-        ["Kameron Johnson", "WR", "TB", 600, 0.4],
-        ["Payne Durham", "TE", "TB", 200, 0.2],
-        ["Brandon Aubrey", "K", "DAL", 5400, 8.0],
-        ["Chase McLaughlin", "K", "TB", 5000, 7.0],
-    ], columns=[
-        "Name",
-        "Position",
-        "Team",
-        "Salary",
-        "Projection"
-    ])
+    players_df = pd.DataFrame(columns=["Name", "Position", "Team", "Salary", "Projection"])
 
     # ================================
     # DRAFTKINGS SALARY FILE UPLOAD
@@ -5934,6 +5899,12 @@ else:
     dk_slate_file = auto_slate_file
     salary_file = dk_slate_file
     entry_file = dk_slate_file
+    if dk_slate_file is None:
+        with _tab_roster:
+            st.info("Upload your entries/slate CSV in Contests to load this slate's player pool.")
+        with _tab_lineups:
+            st.info("Your assigned lineups will appear here after you load a slate and run a build.")
+        st.stop()
 
     with _contest_setup:
         selected_contest_id = None
@@ -6404,7 +6375,8 @@ else:
                     players_df["ProjectionSource"] = "Internal Simulation"
 
             except Exception as exc:
-                st.error(f"Could not read that CSV: {exc}. The sample player pool is still being used.")
+                st.error(f"Could not read that CSV: {exc}. Upload a valid entries/slate CSV to continue.")
+                st.stop()
 
 
 
