@@ -21,6 +21,7 @@ SLOTS = {'QB','RB','WR','TE','FLEX','DST','D','DEF','CPT','CAPTAIN','MVP','UTIL'
 TOKEN = re.compile(r'\b(CAPTAIN|ANYFLEX|FLEX|CPT|MVP|QB|RB|WR|TE|DST|DEF|UTIL|D)\s*:?[ ]+(.+?)(?=\s+(?:CAPTAIN|ANYFLEX|FLEX|CPT|MVP|QB|RB|WR|TE|DST|DEF|UTIL|D)\s*:?[ ]+|$)')
 BINS = {
     'ownership_sum': np.arange(0, 951, 10),
+    'captain_popularity': np.arange(0, 102, 2),
     'ownership_product_log': np.arange(-100, 2, 2),
     'salary_left': np.r_[-1, np.arange(0, 10001, 250), 100000],
     'qb_pass_catcher_stack_count': np.arange(-.5, 8.5),
@@ -87,12 +88,19 @@ def features_from_lineups(lineups, metadata=None, salary_cap=50000, ownership=No
     if ownership is None:
         counts = Counter(name_key(name) for lineup in lineups for _,name in lineup)
         ownership = {key: 100*count/total for key,count in counts.items()}
+    # Captain concentration transfers across slates without persisting player
+    # identity. Derive it from the complete proposal/standings population.
+    captains=Counter(name_key(name) for lineup in lineups for slot,name in lineup if slot in {'CPT','MVP'})
+    captain_total=sum(captains.values())
     records=[]
     for lineup in lineups:
         names=[name_key(name) for _,name in lineup]
         own=np.array([ownership.get(name,0) for name in names],float)
         record={'ownership_sum':float(own.sum()),
                 'ownership_product_log':float(np.log(np.clip(own/100,.00001,1)).sum())}
+        captain=next((name_key(name) for slot,name in lineup if slot in {'CPT','MVP'}),None)
+        if captain is not None and captain_total:
+            record['captain_popularity']=100*captains[captain]/captain_total
         rows=[metadata.get(name,{}) for name in names]
         salaries=[row.get('Salary') for row in rows]
         if all(value is not None and pd.notna(value) for value in salaries):
@@ -254,7 +262,7 @@ def calibrate_field(field,pool,slots,profiles,target,rng):
     """
     if field.empty or not profiles or len(field)<=target:
         return field.head(target).copy(),{'applied':False,'reason':'No matching profile or insufficient proposal surplus'}
-    lineups=[list(zip(slots,row)) for row in field[slots].itertuples(index=False,name=None)]
+    lineups=[list(zip([slot_key(slot) for slot in slots],row)) for row in field[slots].itertuples(index=False,name=None)]
     meta={name_key(row['Name']):dict(row,Position=str(row.get('Position','')).upper().split('/')[0]) for row in pool.to_dict('records')}
     if 'Salary' in field:meta['__lineup_salaries__']=field['Salary'].to_numpy(float)
     features=features_from_lineups(lineups,meta,60000 if profiles[0]['format'].startswith('FD') else 50000)
