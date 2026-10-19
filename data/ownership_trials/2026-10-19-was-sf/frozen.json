@@ -1,0 +1,58 @@
+{
+  "scope": "Prospective FD Single Game ownership pilot, no measured accuracy yet; not used in live builds.",
+  "created_at": "2026-10-19T15:29:00.608398+00:00",
+  "kickoff": "2026-10-20T00:15:00+00:00",
+  "training_contest": "135464-281110099",
+  "training_entries": 95313,
+  "training_players": 47,
+  "prediction_players": 29,
+  "ridge": 5,
+  "smoothing": 0.0001,
+  "features": [
+    "intercept",
+    "log_salary_over_slate_median",
+    "salary_percentile",
+    "QB",
+    "RB",
+    "WR",
+    "TE",
+    "K",
+    "DST"
+  ],
+  "coefficients": {
+    "mvp": [
+      -7.279771613329587,
+      1.9995586253292352,
+      0.6190113383518415,
+      0.06560035812200508,
+      -0.06437921039092735,
+      0.05727200437736229,
+      -0.05368287310258511,
+      0.010064244046690542,
+      -0.014874523052549611
+    ],
+    "flex": [
+      -5.316140853734984,
+      2.27529353433975,
+      0.7880234254243867,
+      -0.52521723461539,
+      -0.02161239774225433,
+      -0.09552425931733927,
+      0.5335844693721624,
+      0.1262247463373096,
+      -0.017455324034491453
+    ]
+  },
+  "sources": {
+    "135464-281110099.csv": "6c162859392bdea80fffd7b4905bef3553668c64fbca21dbb13075d9a5cd46fd",
+    "rw-10116-players.json": "4e5d2cb78a614779b7937814f0156fa0828271cf3ba7f09b6fbc6928a4af5939"
+  },
+  "limitations": [
+    "Only one verified complete training contest.",
+    "Earlier FD standings are truncated and were rejected as a holdout.",
+    "Salary/position only: no verified historical pregame projections or news.",
+    "Candidate pool limited to 29 positive RotoWire players; unmatched actual players must be reported.",
+    "Marginal constraints do not establish feasible joint lineups or duplicate frequencies.",
+    "Actual points verify MVP ordering only and are excluded from predictors."
+  ]
+}

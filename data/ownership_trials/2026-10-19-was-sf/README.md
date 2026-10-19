@@ -1,0 +1,11 @@
+# Frozen FanDuel Single Game ownership pilot
+
+This is a prospective experiment, not a live ownership input. Fit once on 95,313 complete DAL–GB contest entries (135464-281110099), then freeze WAS–SF predictions before kickoff. Input features are relative salary, salary percentile, and position; names and actual fantasy scores are not predictors. Actual scores only verify the historical export's first-listed MVP schema. All field entries, including duplicated rosters, contribute to ownership frequencies.
+
+The earlier CHI–PHI standings file was truncated (EOF inside a quoted CSV row) and rejected as a holdout. Therefore no honest measured out-of-sample accuracy result exists yet. Historical pregame point projections were not verified, so the pilot must not claim to have learned projection value, injury news or a complete ownership formula.
+
+Two fixed arms are saved in frozen.csv: salary-squared MVP / salary-proportional FLEX, and ridge-fitted salary/position log ownership. Model strength and smoothing were fixed before tonight's ownership was known. Each arm sums MVP to 100%, FLEX to 500%, and caps combined player ownership at 100%. This does not establish feasible joint lineup or duplicate distributions.
+
+Prediction pool: the 29 positive players in the verified public RotoWire FD Single Game WAS–SF response. Historical fitting uses the complete same-contest salary metadata (47 players). Report the changed eligible pool as a limitation. When final tonight standings are supplied, verify MVP ordering again; compute actual MVP/FLEX frequencies from complete entries, retain duplicates, compare both frozen arms by mean absolute percentage-point error, report actual players outside the predicted pool, and do not refit before grading. One training game and one prospective game cannot justify all-platform deployment or ROI claims.
+
+Reproduction command (using original files) is in scripts/test_single_ownership_learning.py via --train and --predict-rw; prediction output refuses overwrite and checks kickoff. The alternate --test mode accepts a separate complete FanDuel contest for held-out evaluation. Original participant entry IDs and usernames are not persisted in these experiment files.
