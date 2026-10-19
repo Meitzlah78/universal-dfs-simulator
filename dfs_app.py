@@ -2355,6 +2355,15 @@ def full_roster_contest_parameters(contest, representative_count):
         tiers = tiers or [[1,1,200],[2,2,100],[3,3,50],[4,4,30],[5,5,25],[6,6,20],[7,7,15],[8,8,12],[9,10,10],[11,12,8],[13,15,6],[16,20,4],[21,25,3],[26,30,2],[31,40,1.5],[41,50,1],[51,75,0.75],[76,100,0.5],[101,150,0.4],[151,250,0.35],[251,500,0.3],[501,1000,0.25],[1001,2255,0.2],[2256,5000,0.15],[5001,10000,0.12],[10001,28750,0.1]]
         field_size = field_size or 95808
         contest = dict(contest, entry_fee=0.05 if contest.get("entry_fee") is None else contest["entry_fee"])
+    # Screenshot-verified schedule, bound to the entry template's exact contest ID.
+    if str(contest.get("id", "")) == "135541-281148543":
+        tiers = [(1,1,500),(2,2,250),(3,3,150),(4,4,100),(5,5,75),(6,6,50),
+            (7,7,40),(8,8,30),(9,10,25),(11,15,20),(16,20,15),(21,30,12),
+            (31,40,10),(41,50,8),(51,75,6),(76,100,5),(101,150,4),(151,210,3),
+            (211,400,2.5),(401,600,2),(601,1000,1.5),(1001,1500,1.25),
+            (1501,3000,1),(3001,6000,.75),(6001,10000,.6),(10001,28750,.5)]
+        field_size = 95808
+        contest = dict(contest, entry_fee=0.25)
     known_field = field_size > owned
     field_size = max(field_size, int(representative_count) + owned) if not known_field else field_size
     return {"field_size": field_size, "owned": owned, "tiers": tiers or [],
@@ -4522,6 +4531,13 @@ if platform == "FanDuel":
                     "prize_pool": (_fd_auto_details or {}).get("prize_pool"),
                     "prize_summary": (_fd_auto_details or {}).get("prize_summary"),
                 }
+                if _fd_contest_id == "135541-281148543":
+                    _fd_verified = full_roster_contest_parameters(st.session_state["selected_fd_contest"], 10000)
+                    st.session_state["selected_fd_contest"].update(
+                        field_size=_fd_verified["field_size"], payouts=_fd_verified["tiers"],
+                        entry_fee=_fd_verified["fee"], max_entries_per_user=150,
+                        prize_pool=20000, prize_summary="28,750 paid places; $500 first")
+                    st.caption("Verified Hail Mary payouts: $20,000 across 28,750 paid places. ROI models the full 95,808-entry capacity; the final filled field may differ.")
                 if _fd_contest_id == "135464-281110099":
                     st.caption("Confirmed Pooch Punt payout schedule: $4,000 across 28,750 paid places. ROI models the full 95,808-entry capacity; the final filled field may differ.")
                 fd_fee_text = f"${float(fd_fee):.2f}" if pd.notna(fd_fee) else "not listed"
