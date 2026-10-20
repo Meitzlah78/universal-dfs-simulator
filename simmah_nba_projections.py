@@ -88,3 +88,68 @@ def apply_projections(pool, automatic, uploaded=None):
     result['Projection Source'] = sources
     result['Eligible'] = result['Projection'].notna() & ~result['Injury Status'].isin(['Out','O','OUT'])
     return result
+
+
+def team_key(value):
+    value = str(value).upper().strip()
+    return {'NYK':'NY','SAS':'SA','GSW':'GS','NOP':'NO'}.get(value,value)
+
+
+def select_rotowire_slate(payload, day, pool):
+    expected = {(team_key(r.Team),team_key(r.Opponent)) for r in pool.itertuples()}
+    expected |= {(b,a) for a,b in expected}
+    matches = []
+    for slate in payload.get('slates',[]):
+        if slate.get('contestType') != 'Full Roster' or slate.get('startDateOnly') != day:
+            continue
+        games = [payload.get('games',{}).get(str(g)) for g in slate.get('games',[])]
+        if not games or any(not g or str(g.get('gameDate',''))[:10]!=day for g in games):
+            continue
+        pairs = {(team_key(g['homeTeamCode']),team_key(g['visitTeamCode'])) for g in games}
+        pairs |= {(b,a) for a,b in pairs}
+        if pairs == expected:
+            matches.append(slate)
+    if len(matches) != 1:
+        raise ValueError('No unique RotoWire NBA slate matches date, games and format')
+    return matches[0]
+
+
+def parse_rotowire(players, projections, day, pool):
+    if projections.get('access') is not True or projections.get('source') != 'RotoWire':
+        raise ValueError('RotoWire NBA projection access unavailable')
+    pts = {str(r['slateID']):positive(r.get('pts')) for r in projections.get('projections',[])}
+    allowed = {(team_key(r.Team),team_key(r.Opponent)) for r in pool.itertuples()}
+    values, details = {}, {}
+    for player in players:
+        team = team_key(player.get('team',{}).get('abbr',''))
+        opp = team_key(player.get('opponent',{}).get('team',''))
+        if str(player.get('game',{}).get('dateTime',''))[:10] != day or (team,opp) not in allowed:
+            raise ValueError('RotoWire NBA player date or matchup does not match uploaded slate')
+        key = ((player.get('firstName','')+' '+player.get('lastName','')).strip().casefold(),team)
+        value = pts.get(str(player.get('slateID')))
+        if value is not None:
+            values[key] = value
+        minutes = positive(player.get('minutes'))
+        if minutes is not None and minutes > 48:
+            minutes = None
+        details[key] = {'Projected Minutes':minutes, 'Minutes Source':'RotoWire' if minutes else 'Missing',
+            'RotoWire Injury':player.get('injuryStatus') or 'Active',
+            'Expected Starter':player.get('lineup',{}).get('slot'),
+            'Starter Confirmed':bool(player.get('lineup',{}).get('isConfirmed',False)),
+            'Game Total':positive(player.get('odds',{}).get('overUnder')),
+            'Team Implied Points':positive(player.get('odds',{}).get('impliedPts'))}
+    return values, details
+
+
+def download_rotowire(day, pool):
+    import json
+    base = 'https://www.rotowire.com/daily/nba/api/'
+    def get(endpoint):
+        with urlopen(base+endpoint,timeout=15) as response:
+            return json.load(response)
+    slate = select_rotowire_slate(get('slate-list.php?siteID=2'),day,pool)
+    sid = str(slate['slateID'])
+    players = get('players.php?slateID='+sid)
+    projections = get('projections.php?slateID='+sid+'&projSource=RotoWire')
+    values, details = parse_rotowire(players,projections,day,pool)
+    return values, details, sid

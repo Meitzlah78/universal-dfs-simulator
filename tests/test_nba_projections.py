@@ -19,3 +19,21 @@ class NBAProjectionTests(unittest.TestCase):
         self.assertEqual(result['Projection Source'].iloc[0],'Uploaded CSV')
     def test_cross_slate_upload_rejected(self):
         with self.assertRaises(ValueError):apply_projections(self.pool,{},pd.DataFrame({'Player ID':['9-9'],'Projection':[40]}))
+
+class RotoWireNBATests(unittest.TestCase):
+    def test_exact_slate_and_public_minutes(self):
+        from simmah_nba_projections import select_rotowire_slate, parse_rotowire
+        pool=pd.DataFrame([{'Team':'NY','Opponent':'PHI'}])
+        payload={'slates':[{'slateID':1,'contestType':'Full Roster','startDateOnly':'2026-10-20','games':[9]}],
+            'games':{'9':{'homeTeamCode':'NYK','visitTeamCode':'PHI','gameDate':'2026-10-20 19:00:00'}}}
+        self.assertEqual(select_rotowire_slate(payload,'2026-10-20',pool)['slateID'],1)
+        player={'slateID':7,'firstName':'Test','lastName':'Player','team':{'abbr':'NYK'},'opponent':{'team':'PHI'},
+            'game':{'dateTime':'2026-10-20 19:00:00'},'minutes':32,'stats':{'season':{'minutes':12}},'lineup':{'slot':'Yes','isConfirmed':False}}
+        proj={'access':True,'source':'RotoWire','projections':[{'slateID':7,'pts':'40'}]}
+        pts,details=parse_rotowire([player],proj,'2026-10-20',pool)
+        self.assertEqual(pts[('test player','NY')],40)
+        self.assertEqual(details[('test player','NY')]['Projected Minutes'],32)
+        self.assertFalse(details[('test player','NY')]['Starter Confirmed'])
+        with self.assertRaises(ValueError):parse_rotowire([player],proj,'2026-10-21',pool)
+        proj['access']=False
+        with self.assertRaises(ValueError):parse_rotowire([player],proj,'2026-10-20',pool)

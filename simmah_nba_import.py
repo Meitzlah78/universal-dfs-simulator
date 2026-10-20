@@ -63,6 +63,7 @@ def render_setup(st, uploaded_file, tabs, controls):
     with tabs[1]:
         if st.button('REFRESH NBA PROJECTIONS', key='nba_projection_refresh'):
             st.session_state.pop('nba_projection_cache', None)
+            st.session_state.pop('nba_rotowire_cache', None)
         projection_file = st.file_uploader('Optional NBA projections CSV', type=['csv'], key='nba_projection_upload',
             help='Player ID and Projection columns. Uploaded values override DFF, including zeros that exclude a player.')
     automatic = {}
@@ -79,9 +80,35 @@ def render_setup(st, uploaded_file, tabs, controls):
     except Exception as exc:
         with tabs[1]:
             st.warning(f'NBA automatic projections unavailable: {exc}')
+    rw_values, rw_details = {}, {}
+    try:
+        from simmah_nba_projections import download_rotowire
+        day = slate_date(uploaded_file.name)
+        identity = (day, tuple(sorted(zip(pool['Player ID'], pool['Team'], pool['Opponent']))))
+        cached = st.session_state.get('nba_rotowire_cache')
+        if cached and cached['identity'] == identity and time.time()-cached['time'] < 900:
+            rw_values, rw_details = cached['values'], cached['details']
+        else:
+            rw_values, rw_details, sid = download_rotowire(day, pool)
+            st.session_state['nba_rotowire_cache'] = {'identity':identity, 'time':time.time(),
+                'values':rw_values, 'details':rw_details, 'slate_id':sid}
+    except Exception as exc:
+        with tabs[1]:
+            st.warning(f'NBA minutes / RotoWire unavailable: {exc}')
+    keys = set(automatic) | set(rw_values)
+    combined = {key:sum(source[key] for source in (automatic,rw_values) if key in source)/sum(key in source for source in (automatic,rw_values)) for key in keys}
     try:
         uploaded = pd.read_csv(projection_file, dtype={'Player ID':str}) if projection_file is not None else None
-        pool = apply_projections(pool, automatic, uploaded)
+        pool = apply_projections(pool, combined, uploaded)
+        for idx, row in pool.iterrows():
+            key = (row["Name"].strip().casefold(), row["Team"].upper())
+            if pool.at[idx,"Projection Source"] == "DFF":
+                pool.at[idx,"Projection Source"] = " + ".join(label for label, source in (("DFF",automatic),("RotoWire",rw_values)) if key in source)
+            for col, value in rw_details.get(key, {}).items():
+                pool.at[idx,col] = value
+            if str(rw_details.get(key,{}).get("RotoWire Injury","")).upper() in {"OUT","O","IR","SUSPENDED"}:
+                pool.at[idx,"Injury Status"] = "Out"
+                pool.at[idx,"Eligible"] = False
     except ValueError as exc:
         with tabs[1]:
             st.error(str(exc))
@@ -97,7 +124,7 @@ def render_setup(st, uploaded_file, tabs, controls):
         st.caption('Roster: ' + ', '.join(SLOTS))
     with tabs[1]:
         st.subheader('NBA player pool')
-        st.caption(f"Positive projections: {pool['Projection'].notna().sum()} / {len(pool)} · Eligible after injuries: {pool['Eligible'].sum()}. Automatic DFF data is cached for up to 15 minutes; refresh runs on app activity.")
+        st.caption(f"Positive projections: {pool['Projection'].notna().sum()} / {len(pool)} · Eligible after injuries: {pool['Eligible'].sum()}. Automatic data is cached for up to 15 minutes; refresh runs on app activity.")
         st.caption('Historical FPPG is supplied by FanDuel. It is not a pregame projection. OUT players are ineligible; questionable players remain visible.')
         st.dataframe(pool, hide_index=True, use_container_width=True)
         st.write(f"{len(pool)} players · {(pool['Injury Status']=='Out').sum()} Out · {(pool['Injury Status']=='Questionable').sum()} Questionable")
