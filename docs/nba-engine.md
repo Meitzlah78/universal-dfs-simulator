@@ -73,3 +73,18 @@ shooting, 34.00% three-point shooting, and 79.28% free throws. These observation
 are not season-wide estimates or an out-of-sample validation. FTA/2 is an
 approximation to trips; team/personal turnovers and player-specific efficiencies
 remain unresolved. This fit cannot by itself enable NBA builds.
+
+### Expanded historical audit
+
+The offline audit of April 1–10, 2026 requested 70 completed games.
+One game (401810990) failed the official final-score check and was excluded.
+The remaining 69 games split chronologically into 59 fitting games and 10 held-out
+games beginning April 9. All 69 reconstructed score ledgers matched final totals;
+67 had complete rotation reconstruction. Incomplete rotations remain flagged.
+This is a source/reconstruction audit, not evidence of predictive accuracy.
+The fitted rates are experimental and are not installed as live build defaults.
+
+Reproduce with:
+```sh
+python scripts/nba_history_check.py --start 2026-04-01 --end 2026-04-10 --before 2026-10-20 --cache /tmp/simmah-nba-corpus --output /tmp/nba-corpus-audit.json --limit 70 --holdout 8
+```
