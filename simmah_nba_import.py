@@ -225,7 +225,9 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
                            'RotoWire Projected Own %', 'Projected Minutes', 'Minutes Source']
         column_order = [column for column in leading_columns if column in pool.columns]
         column_order += [column for column in pool.columns if column not in leading_columns]
-        st.dataframe(pool, hide_index=True, width="stretch", key="nba_player_pool_table",
+        from simmah_nba_player_display import display_pool
+        st.caption("✅ = confirmed starter; Q/D injury tags remain visible.")
+        st.dataframe(display_pool(pool), hide_index=True, width="stretch", key="nba_player_pool_table",
                      column_order=column_order,
                      column_config={'Name': st.column_config.TextColumn('Player', pinned=True)})
         workspace_download_button(st,'DOWNLOAD PLAYER POOL',

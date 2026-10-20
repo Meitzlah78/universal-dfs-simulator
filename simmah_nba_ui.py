@@ -27,7 +27,8 @@ def input_identity(pool,markets,contest,salary_min,correlation=0):
 
 def display_lineups(pool,frame):
     result=frame.copy()
-    names={str(r['Player ID']):str(r['Name'])+({'Questionable':' (Q)','Doubtful':' (D)'}.get(r['Injury Status'],'')) for _,r in pool.iterrows()}
+    from simmah_nba_player_display import player_labels
+    names=player_labels(pool)
     for c in rules_for(pool)['slots']:
         if c in result:result[c]=result[c].astype(str).map(names).fillna(result[c])
     return result
@@ -122,6 +123,8 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         return
     stale=saved['identity']!=identity
     built=saved['result'];saved_pool=saved['pool']
+    from simmah_nba_player_display import display_pool
+    labeled_pool=display_pool(saved_pool)
     if built['field'].get('ownership_fit_warning'):
         with tabs[2]:st.warning('Opponent field uses a scenario-derived estimate because external ownership could not be fitted. '+built['field']['ownership_fit_warning'])
         with tabs[3]:st.warning('ROI uses estimated opponent ownership; the external ownership fit failed.')
@@ -145,7 +148,7 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         with st.expander('NBA engine and ownership report'):
             st.write(saved['engine_reports'])
             st.caption(built['field']['ownership_source'])
-            report=pd.DataFrame({'Name':saved_pool['Name'],'Estimated Field Own %':built['field']['ownership_sampled']})
+            report=pd.DataFrame({'Name':labeled_pool['Name'],'Estimated Field Own %':built['field']['ownership_sampled']})
             if 'RotoWire Projected Own %' in saved_pool:
                 report['RotoWire Projected Own %']=pd.to_numeric(saved_pool['RotoWire Projected Own %'],errors='coerce')
                 report['Field minus RotoWire (pp)']=report['Estimated Field Own %']-report['RotoWire Projected Own %']
@@ -164,7 +167,7 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         exposure=portfolio[list(slots)].stack().value_counts().rename('Lineups')
         exposure=exposure.rename_axis('Player ID').reset_index()
         exposure['Exposure %']=100*exposure['Lineups']/len(portfolio)
-        exposure=exposure.merge(saved_pool[['Player ID','Name','Team','Injury Status']],on='Player ID',how='left')
+        exposure=exposure.merge(labeled_pool[['Player ID','Name','Team','Injury Status']],on='Player ID',how='left')
         st.subheader('Player exposures')
         st.dataframe(exposure[['Name','Team','Injury Status','Lineups','Exposure %']],hide_index=True,width='stretch',key='nba_exposure_table',
                      column_config={'Name':st.column_config.TextColumn('Player',pinned=True)})
