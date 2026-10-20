@@ -13,3 +13,11 @@ class NBAContestPresetTests(unittest.TestCase):
         c=saved_contest('135251-281018991','2026-10-20',.05)
         c['payout_tiers'][1]['first']=1
         with self.assertRaises(ValueError):payout_vector(c)
+
+class DraftKingsContestTests(unittest.TestCase):
+    def test_numeric_dk_id_loads_verified_payouts(self):
+        contest=saved_contest('196711762','2026-10-20',.25)
+        self.assertIsNotNone(contest)
+        self.assertEqual(contest['capacity'],7134)
+        self.assertAlmostEqual(payout_vector(contest).sum(),1500)
+        with self.assertRaises(ValueError):saved_contest('196711762','2026-10-20',.10)

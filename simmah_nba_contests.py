@@ -20,7 +20,7 @@ def payout_vector(contest):
 
 
 def saved_contest(contest_id,day,entry_fee):
-    if not re.fullmatch(r'\d+-\d+',str(contest_id)):return None
+    if not re.fullmatch(r'\d+(?:-\d+)?',str(contest_id)):return None
     path=Path(__file__).parent/'data'/'nba_contests'/(str(contest_id)+'.json')
     if not path.exists():return None
     contest=json.loads(path.read_text())
