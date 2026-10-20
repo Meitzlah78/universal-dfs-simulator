@@ -70,6 +70,25 @@ def download_dff(day, pool, platform='FanDuel'):
         return parse_dff(response.read().decode('utf-8'), day, pool)
 
 
+class EntriesInProjectionUpload(ValueError):
+    pass
+
+
+def read_projection_upload(data):
+    """Validate a projection table before pandas sees a multi-section entries CSV."""
+    import csv,io
+    rows=csv.reader(io.StringIO(data.decode('utf-8-sig')))
+    header=next(rows,[])
+    normalized=[cell.strip().casefold() for cell in header]
+    if normalized[:2] in (['entry_id','contest_id'],['entry id','contest name']):
+        raise EntriesInProjectionUpload('Entries/slate files belong in Slate Setup at the top. This file is not a projections CSV; automatic projections are still being used.')
+    if not {'Player ID','Projection'}<=set(header):
+        raise ValueError('NBA projection uploads require Player ID and Projection columns')
+    if any(row and len(row)!=len(header) for row in rows):
+        raise ValueError('Projection CSV rows have inconsistent columns; upload a Player ID / Projection table')
+    return pd.read_csv(io.BytesIO(data),dtype={'Player ID':str})
+
+
 def apply_projections(pool, automatic, uploaded=None):
     result = pool.copy()
     overrides = {}

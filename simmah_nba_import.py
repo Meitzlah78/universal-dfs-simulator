@@ -66,7 +66,7 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
     pool = slate['players']
     platform = slate.get('platform','FanDuel')
     day = slate.get('date') or __import__('simmah_nba_projections').slate_date(uploaded_file.name)
-    from simmah_nba_projections import slate_date, download_dff, apply_projections, player_key
+    from simmah_nba_projections import slate_date, download_dff, apply_projections, player_key, read_projection_upload, EntriesInProjectionUpload
     if st.session_state.pop('refresh_projections_requested',False):
         st.session_state.pop('nba_projection_cache',None)
         st.session_state.pop('nba_rotowire_cache',None)
@@ -112,8 +112,17 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
         acknowledge_lineup_refresh(st.session_state)
     keys = set(automatic) | set(rw_values)
     combined = {key:sum(source[key] for source in (automatic,rw_values) if key in source)/sum(key in source for source in (automatic,rw_values)) for key in keys}
+    uploaded = None
+    if projection_file is not None:
+        try:
+            uploaded = read_projection_upload(projection_file.getvalue())
+        except EntriesInProjectionUpload as exc:
+            with tabs[1]:st.warning(str(exc))
+            st.session_state.get('_slate_restored_uploads',{}).pop('nba_projection_upload_'+platform,None)
+        except ValueError as exc:
+            with tabs[1]:st.error(str(exc))
+            return
     try:
-        uploaded = pd.read_csv(projection_file, dtype={'Player ID':str}) if projection_file is not None else None
         pool = apply_projections(pool, combined, uploaded)
         for idx, row in pool.iterrows():
             key = player_key(row["Name"], row["Team"])

@@ -38,3 +38,15 @@ class RotoWireNBATests(unittest.TestCase):
         with self.assertRaises(ValueError):parse_rotowire([player],proj,'2026-10-21',pool)
         proj['access']=False
         with self.assertRaises(ValueError):parse_rotowire([player],proj,'2026-10-20',pool)
+
+class NBAProjectionUploadTests(unittest.TestCase):
+    def test_entries_files_never_reach_rectangular_projection_parser(self):
+        from simmah_nba_projections import read_projection_upload,EntriesInProjectionUpload
+        for header in ['entry_id,contest_id,contest_name,entry_fee,PG','Entry ID,Contest Name,Contest ID,Entry Fee,PG']:
+            ragged=(header+'\n1,2,3,4,5\n'+','.join(['salary']*32)).encode()
+            with self.assertRaises(EntriesInProjectionUpload):read_projection_upload(ragged)
+    def test_valid_projection_ids_and_zero_preserved(self):
+        from simmah_nba_projections import read_projection_upload
+        frame=read_projection_upload(b'Player ID,Projection\n001,0\n002,35.5\n')
+        self.assertEqual(frame['Player ID'].tolist(),['001','002']);self.assertEqual(frame.Projection.iloc[0],0)
+        with self.assertRaisesRegex(ValueError,'inconsistent columns'):read_projection_upload(b'Player ID,Projection\n1,20,extra\n')
