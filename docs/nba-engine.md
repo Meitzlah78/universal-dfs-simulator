@@ -481,3 +481,21 @@ portfolio entries. Three independent 10,000-scenario sets plus selection took
 41.54 seconds locally. Evaluation market residuals were all under 0.53 team
 points; no unresolved overtime ties remained. These checks validate mechanics
 and input alignment, not predictive accuracy or live-site acceptance.
+
+### NBA build-correlation control
+
+Both sites expose a 0–100 Build correlation slider alongside exposure diversity.
+Shared possession simulations already correlate player outcomes at every setting;
+0 preserves the previous candidate search with no extra correlation bonus.
+Higher settings add a bounded search preference for positive player pairs,
+measured only from construction scenarios for the same game. The bonus is the
+average positive correlation with players already chosen, scaled by scenario
+spread and capped at half that spread at 100. Correlations below 0.05 and
+cross-game sample correlations do not earn a bonus. No fantasy-score ledger is
+altered and no independence resampling is introduced.
+
+The control changes user candidate construction only. Opponent support/popularity
+and independent evaluation retain their original process. Changing it marks
+saved results stale until BUILD is pressed; it does not automatically rerun a
+simulation. Exposure diversity still reselects already-scored candidates.
+The extra selection preference is a heuristic, not a validated ROI improvement.

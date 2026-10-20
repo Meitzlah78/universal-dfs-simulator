@@ -10,7 +10,7 @@ from simmah_nba_rules import rules_for
 def run_pipeline(pool,outcome_factory,ownership,ownership_source,payouts,entry_fee,
                  portfolio_count,*,simulations=10000,candidate_target=5000,
                  field_support_target=10000,seed=83,diversity=50,salary_min=0,
-                 max_ownership_error=5,progress=None,ownership_mode="projected"):
+                 max_ownership_error=5,progress=None,ownership_mode="projected",correlation=0):
 
     """Generate three independent scenario sets and retain scored candidates.
 
@@ -30,7 +30,7 @@ def run_pipeline(pool,outcome_factory,ownership,ownership_source,payouts,entry_f
         return array.copy()
     notify('Simulating candidate scenarios')
     construction=draw(seed)
-    candidates=build_candidates(pool,construction,target=candidate_target,seed=seed+1,salary_min=salary_min)
+    candidates=build_candidates(pool,construction,target=candidate_target,seed=seed+1,salary_min=salary_min,correlation=correlation)
     if candidates['unique']<portfolio_count:raise ValueError('Insufficient unique NBA candidates for reserved entries')
     notify('Building independent opponent support')
     field_outcomes=draw(seed+1009)

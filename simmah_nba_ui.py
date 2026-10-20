@@ -14,12 +14,13 @@ from simmah_nba_rules import rules_for
 from simmah_portfolio import portfolio_roi_totals
 
 
-def input_identity(pool,markets,contest,salary_min):
+def input_identity(pool,markets,contest,salary_min,correlation=0):
     from simmah_nba_pregame import ROLE_COLUMNS
     columns=[c for c in ['Player ID','Position','Salary','Team','Opponent','Projection','Injury Status',
                          'Projected Minutes',*ROLE_COLUMNS,'RotoWire RST % (unverified)'] if c in pool]
     content={'pool':pool[columns].to_json(orient='split',double_precision=10),'markets':markets,
              'contest':contest,'salary_min':salary_min}
+    if correlation:content['build_correlation']=correlation
     return hashlib.sha256(json.dumps(content,sort_keys=True).encode()).hexdigest()
 
 
@@ -55,12 +56,14 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         st.caption(platform+' NBA · experimental')
         st.write(f'{count} portfolio entries')
         salary_min=st.number_input('Minimum salary',min_value=0,max_value=rules['salary_cap'],value=0,step=500,key='nba_min_salary' if platform=='FanDuel' else 'nba_min_salary_DraftKings')
+        correlation=st.slider('Build correlation',0,100,0,key='nba_build_correlation',
+            help='Extra preference for positively correlated player combinations measured from the shared game simulations. 0 = no extra bonus; 100 = strongest bonus. Game simulations remain correlated at every setting.')
         diversity=st.slider('Exposure diversity',0,100,50,key='nba_exposure_diversity')
         metric=st.selectbox('Rank lineups',['Top 1%','Expected ROI (%)','Expected Prize ($)'],key='nba_rank_metric')
         st.caption('10,000 scenarios per set · 5,000 candidates · up to 10,000 field-support rosters')
         clicked=st.button('BUILD NBA LINEUPS',disabled=bool(error),key='nba_build')
         if error:st.caption(error)
-    identity=input_identity(pool,markets,contest,salary_min)
+    identity=input_identity(pool,markets,contest,salary_min,correlation)
     saved=st.session_state.get('nba_build_result')
     if clicked:
         with tabs[2]:
@@ -72,7 +75,7 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
                 built=run_pipeline(pool,engine,raw.fillna(0).to_numpy(),
                     'RotoWire raw RST treated as relative popularity; unverified percentages',
                     payout_vector(contest),selected['entry_fee'],count,diversity=diversity,
-                    salary_min=salary_min,ownership_mode='relative popularity',progress=progress)
+                    salary_min=salary_min,correlation=correlation,ownership_mode='relative popularity',progress=progress)
                 reports=engine.last_report
                 if any(not g['calibration']['within_four_points'] or g['unresolved_tie_fraction']>0 for g in reports):
                     raise ValueError('NBA evaluation failed market calibration or left unresolved overtime; inspect engine validation before exporting')
@@ -97,7 +100,7 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         with tabs[3]:st.error(str(exc))
         return
     with tabs[2]:
-        if stale:st.info('Inputs or minimum salary changed. Previous results remain visible; rebuild before exporting.')
+        if stale:st.info('Inputs or build settings changed. Previous results remain visible; rebuild before exporting.')
         st.subheader('Candidate lineups')
         st.caption(f"{built['candidates']['unique']:,} unique candidates · {built['field']['entries']:,} modeled opponents · {built['field']['unique_rosters']:,} unique opponent rosters. Ownership and ROI are estimates.")
         candidate_rows=built['report'].copy()

@@ -23,3 +23,24 @@ class CandidateTests(unittest.TestCase):
         p,x=self.fixture();r=build_candidates(p,x,target=100,max_attempts=5)
         self.assertLessEqual(r['unique'],5);self.assertFalse(r['complete'])
         with self.assertRaises(ValueError):build_candidates(p,x[:,:5])
+
+class BuildCorrelationTests(unittest.TestCase):
+    def test_slider_favors_positive_pairs_without_changing_simulated_scores(self):
+        p=pd.DataFrame([{'Player ID':str(i),'Position':['PG','SG','SF','PF','C'][i%5],
+            'Salary':5000,'Team':['A','B','C','D'][i%4],'Opponent':['B','A','D','C'][i%4],
+            'Projection':30,'Injury Status':'Active'} for i in range(40)])
+        rng=np.random.default_rng(5);groups=np.arange(40)//10
+        outcomes=30+rng.normal(0,3,(2000,40))+rng.normal(0,5,(2000,4))[:,groups]
+        original=outcomes.copy();matrix=np.corrcoef(outcomes,rowvar=False)
+        for site in ['FanDuel','DraftKings']:
+            p.attrs['platform']=site;means=[]
+            for setting in [0,100]:
+                built=build_candidates(p,outcomes,target=300,seed=17,correlation=setting)
+                ids=built['indices'];pairs=np.triu_indices(ids.shape[1],1)
+                means.append(matrix[ids[:,:,None],ids[:,None,:]][:,pairs[0],pairs[1]].mean())
+                for row in ids:
+                    validate_lineup(p,p.iloc[row]['Player ID'].tolist(),salary_cap=50000 if site=='DraftKings' else 60000,max_from_team=8 if site=='DraftKings' else 4)
+            self.assertGreater(means[1],means[0])
+        np.testing.assert_array_equal(outcomes,original)
+        for setting in [-1,101,float('nan')]:
+            with self.assertRaises(ValueError):build_candidates(p,outcomes,target=10,correlation=setting)

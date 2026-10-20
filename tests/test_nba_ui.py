@@ -28,6 +28,9 @@ class NBAWorkspaceTests(unittest.TestCase):
         at.slider(key='nba_exposure_diversity').set_value(100).run(timeout=20)
         self.assertFalse(at.exception)
         self.assertEqual(at.session_state['test_build_calls'],1)
+        at.slider(key='nba_build_correlation').set_value(100).run(timeout=20)
+        self.assertEqual(at.session_state['test_build_calls'],1)
+        self.assertFalse(at.exception)
         at.number_input(key='nba_min_salary').set_value(500).run(timeout=20)
         self.assertFalse(at.exception)
         self.assertEqual(at.session_state['test_build_calls'],1)
@@ -44,6 +47,7 @@ class NBAWorkspaceTests(unittest.TestCase):
         at.run(timeout=20)
         self.assertFalse(at.exception)
         self.assertEqual(at.number_input(key='nba_min_salary_DraftKings').max,50000)
+        self.assertEqual(at.slider(key='nba_build_correlation').value,0)
         at.button(key='nba_build').click().run(timeout=20)
         self.assertFalse(at.exception)
         built=at.session_state['nba_build_result']['result']
