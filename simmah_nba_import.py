@@ -1,6 +1,7 @@
 """FanDuel NBA entry-template import; historical FPPG is never a projection."""
 import csv
 import io
+import time
 from decimal import Decimal
 import pandas as pd
 
@@ -113,6 +114,9 @@ def render_setup(st, uploaded_file, tabs, controls):
         with tabs[1]:
             st.error(str(exc))
         return
+    from simmah_nba_markets import extract_markets
+    markets = extract_markets(pool)
+    slate['markets'] = markets
     slate['players'] = pool
     st.session_state['nba_imported_slate'] = slate
     with tabs[0]:
@@ -122,6 +126,32 @@ def render_setup(st, uploaded_file, tabs, controls):
             st.caption(f"Contest {c['id']} · {c['owned_entries']} entries · ${c['entry_fee']:.2f} each")
         st.write('Games: ' + ' • '.join(sorted(pool['Game'].unique())))
         st.caption('Roster: ' + ', '.join(SLOTS))
+        st.subheader('NBA market lines')
+        from simmah_nba_markets import implied_scores
+        from simmah_nba_projections import team_key
+        pairs=sorted({tuple(sorted((team_key(r.Team),team_key(r.Opponent)))) for r in pool.itertuples()})
+        by_pair={m['teams']:m for m in markets}
+        with st.expander('Edit NBA totals and spreads'):
+            for pair in pairs:
+                a,b=pair
+                current=by_pair.get(pair,{})
+                key='nba_market_'+str(day if 'day' in locals() else uploaded_file.name)+'_'+a+'_'+b
+                if st.checkbox(f'Use manual lines: {a} vs {b}',key=key+'_manual'):
+                    total=st.number_input(f'{a} vs {b} total',min_value=101.,max_value=399.,value=float(current.get('total',230.)),step=.5,key=key+'_total')
+                    spread=st.number_input(f'{a} spread (negative = favored)',min_value=-99.,max_value=99.,value=float(current.get('team_0_spread',0.)),step=.5,key=key+'_spread')
+                    points=implied_scores(total,spread)
+                    by_pair[pair]={'teams':pair,'total':total,'team_0_spread':spread,'implied_points':points,'source':'Manual override'}
+        markets=list(by_pair.values())
+        slate['markets']=markets
+        st.session_state['nba_game_markets']=markets
+        for market in markets:
+            a, b = market['teams']
+            x, y = market['implied_points']
+            st.write(f"{a} vs {b} · Total {market['total']:g} · {a} {market['team_0_spread']:+g} · Implied {a} {x:g}, {b} {y:g}")
+            st.caption(market['source'] + (' · refreshed with NBA projections; cached up to 15 minutes' if market['source'] != 'Manual override' else ''))
+        if not markets:
+            st.info('No complete, consistent market lines are available for this NBA slate.')
+        st.caption('Market calibration is connected to the experimental NBA engine. Live NBA builds remain disabled during validation.')
     with tabs[1]:
         st.subheader('NBA player pool')
         st.caption(f"Positive projections: {pool['Projection'].notna().sum()} / {len(pool)} · Eligible after injuries: {pool['Eligible'].sum()}. Automatic data is cached for up to 15 minutes; refresh runs on app activity.")

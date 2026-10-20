@@ -119,3 +119,18 @@ per minute and at most 48 minutes per player. Missing reserve minutes are reject
 This is a feasibility schedule, not learned coaching or substitution timing.
 A synthetic 10,000 team-scenario run took 0.206 seconds locally. Integration tests
 feed these schedules into the shared forward engine. Live NBA builds remain disabled.
+
+### NBA market environment
+
+The contest tab extracts complete two-sided totals/implied scores from the
+existing RotoWire odds fields, rejecting conflicting or inconsistent values.
+Spreads are displayed relative to the named first team (negative means favored).
+Manual per-game totals and spreads override automatic values. The refresh button
+reloads the same RotoWire projection/odds cache, with its existing 15-minute TTL.
+The experimental simulate_market_game entry point fits team shooting event
+probabilities to implied scores using separate pilot/evaluation seeds. Player
+fantasy points are still computed from credited stats, not multiplied afterward.
+Calibration residuals are returned explicitly, including a four-point tolerance
+flag; market totals alone do not identify pace. Live NBA builds remain disabled.
+A fresh external odds request timed out during this change, so live feed and
+Streamlit rendering were not reverified; extraction/calibration tests passed.
