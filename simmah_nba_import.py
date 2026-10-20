@@ -65,7 +65,22 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
         return
     pool = slate['players']
     platform = slate.get('platform','FanDuel')
-    day = slate.get('date') or __import__('simmah_nba_projections').slate_date(uploaded_file.name)
+    from simmah_nba_slate_date import resolve_slate_date
+    try:
+        day = resolve_slate_date(slate,uploaded_file.name)
+    except (ValueError,KeyError,OSError) as exc:
+        with tabs[0]:st.error('NBA slate date could not be resolved: '+str(exc))
+        return
+    if day is None:
+        with tabs[0]:
+            st.info('This file has no dated game information or matching saved contest. Select its slate date to load projections.')
+            chosen = st.date_input('NBA slate date',value=None,key='nba_explicit_slate_date_'+platform)
+        if chosen is None:
+            with controls:st.caption('Choose the NBA slate date in Contests before building.')
+            return
+        day = chosen.isoformat()
+    slate['date'] = day
+    pool.attrs['slate_date'] = day
     from simmah_nba_projections import slate_date, download_dff, apply_projections, player_key, read_projection_upload, EntriesInProjectionUpload
     if st.session_state.pop('refresh_projections_requested',False):
         st.session_state.pop('nba_projection_cache',None)
