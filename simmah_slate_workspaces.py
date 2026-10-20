@@ -73,7 +73,12 @@ def snapshot(state, transient_keys=()):
         if str(key).startswith(('_slate_','$$','universal_slate_setup_file')) or private_key(key):continue
         if key in transient_keys or transient_key(key):continue
         if key in {'loaded_slates_browser','sticky_refresh_projections','refresh_projections_requested','projection_updates_found','injury_updates_found'}:continue
-        value=state[key]
+        try:value=state[key]
+        except KeyError:
+            # Streamlit can expose a stale widget mapping during cleanup.
+            # An unreadable value is absent, not a reason to lose the slate.
+            omitted.append(str(key))
+            continue
         if hasattr(value,'getvalue') and hasattr(value,'name'):continue
         try:values[key]=encode(value)
         except (TypeError,ValueError,RecursionError):omitted.append(str(key))

@@ -93,3 +93,15 @@ class HistoryUploaderRestoreTests(unittest.TestCase):
         self.assertNotIn('future_upload_key',restored)
         app.run()
         self.assertFalse(app.exception)
+
+class DisappearingWidgetTests(unittest.TestCase):
+    def test_snapshot_skips_widget_removed_during_streamlit_cleanup(self):
+        class State(dict):
+            def __iter__(self):return iter(['removed_widget','salary'])
+            def __getitem__(self,key):
+                if key=='removed_widget':raise KeyError(key)
+                return super().__getitem__(key)
+        state=State(salary=48000)
+        recovered={};restore(recovered,snapshot(state))
+        self.assertEqual(recovered['salary'],48000)
+        self.assertNotIn('removed_widget',recovered)
