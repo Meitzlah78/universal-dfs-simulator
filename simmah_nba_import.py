@@ -1,4 +1,4 @@
-from simmah_slate_workspaces import workspace_file_uploader
+from simmah_slate_workspaces import workspace_file_uploader, workspace_download_button
 """FanDuel NBA entry-template import; historical FPPG is never a projection."""
 import csv
 import io
@@ -227,6 +227,10 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
         st.dataframe(pool, hide_index=True, width="stretch", key="nba_player_pool_table",
                      column_order=column_order,
                      column_config={'Name': st.column_config.TextColumn('Player', pinned=True)})
+        workspace_download_button(st,'DOWNLOAD PLAYER POOL',
+            pool[column_order].to_csv(index=False).encode('utf-8-sig'),
+            'Simmah_NBA_'+platform+'_Player_Pool.csv','text/csv',
+            key='nba_player_pool_download',on_click='ignore')
         st.write(f"{len(pool)} players · {(pool['Injury Status']=='Out').sum()} Out · {(pool['Injury Status']=='Questionable').sum()} Questionable")
     from simmah_nba_ui import render_workspace
     render_workspace(st,slate,uploaded_file,tabs,controls,markets)

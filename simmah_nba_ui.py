@@ -39,6 +39,10 @@ def render_exports(st,upload,cid,pool,built,portfolio,platform,stale,location):
     workspace_download_button(st,'DOWNLOAD PORTFOLIO REPORT',display_lineups(pool,portfolio).to_csv(index=False).encode(),
         'Simmah_NBA_'+platform+'_Portfolio_Report.csv','text/csv',
         key='nba_portfolio_report_'+location,on_click='ignore')
+    workspace_download_button(st,'DOWNLOAD BUILD PLAYER POOL',pool.to_csv(index=False).encode('utf-8-sig'),
+        'Simmah_NBA_'+platform+'_Build_Player_Pool.csv','text/csv',
+        key='nba_build_player_pool_'+location,on_click='ignore',
+        help='Frozen player inputs used by this saved build, including RotoWire RST values. Use this file to compare with its opponent field.')
     data=b'';export_error=None
     if not stale:
         try:data=export_portfolio(upload.getvalue(),cid,pool,built)
