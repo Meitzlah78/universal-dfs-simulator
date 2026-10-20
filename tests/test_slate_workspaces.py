@@ -58,3 +58,24 @@ class MultipleLoadedSlateTests(unittest.TestCase):
         app.button(key='switch_FD.csv').click().run()
         self.assertFalse(app.exception)
         self.assertEqual(app.number_input(key='slate_salary').value,55000)
+
+class LegacySlateMigrationTests(unittest.TestCase):
+    def test_old_snapshot_removes_forbidden_button_and_uploader_values(self):
+        import base64,gzip,json
+        values={'nba_projection_upload_FanDuel_remove_restored':False,'nba_projection_upload_FanDuel':None,
+                'nba_build':True,'nba_min_salary':55000,'unrelated_action':True}
+        blob=base64.b64encode(gzip.compress(json.dumps({'schema':1,'values':values,'uploads':{},'transient_keys':['unrelated_action']}).encode())).decode()
+        state={};restore(state,blob)
+        self.assertEqual(state['nba_min_salary'],55000)
+        for key in values.keys()-{'nba_min_salary'}:self.assertNotIn(key,state)
+
+class RestoredUploadWidgetTests(unittest.TestCase):
+    def test_legacy_restore_can_render_and_remove_the_projection_file(self):
+        from pathlib import Path
+        from streamlit.testing.v1 import AppTest
+        app=AppTest.from_file(str(Path(__file__).with_name('slate_upload_restore_fixture.py'))).run()
+        self.assertFalse(app.exception)
+        self.assertTrue(any(x.value=='Restored' for x in app.markdown))
+        app.button(key='nba_projection_upload_FanDuel_remove_restored').click().run()
+        self.assertFalse(app.exception)
+        self.assertTrue(any(x.value=='Removed' for x in app.markdown))

@@ -57,25 +57,33 @@ def private_key(key):
     return any(word in lowered for word in ('secret','password','token','api_key','credential','authorization'))
 
 
+def transient_key(key):
+    key=str(key)
+    return (key.endswith('_remove_restored') or key.startswith('nba_projection_upload_')
+            or key in {'nba_build','nba_field_download','nba_entries_download',
+                       'nba_fast_late_swap','nba_late_swap_upload','nba_late_swap_download',
+                       'loaded_slates_browser','sticky_refresh_projections'})
+
+
 def snapshot(state, transient_keys=()):
     values={};omitted=[]
     for key in list(state):
         if str(key).startswith(('_slate_','$$','universal_slate_setup_file')) or private_key(key):continue
-        if key in transient_keys:continue
+        if key in transient_keys or transient_key(key):continue
         if key in {'loaded_slates_browser','sticky_refresh_projections','refresh_projections_requested','projection_updates_found','injury_updates_found'}:continue
         value=state[key]
         if hasattr(value,'getvalue') and hasattr(value,'name'):continue
         try:values[key]=encode(value)
         except (TypeError,ValueError,RecursionError):omitted.append(str(key))
     uploads={k:{'name':v.name,'data':base64.b64encode(v.getvalue()).decode()} for k,v in state.get('_slate_restored_uploads',{}).items() if hasattr(v,'getvalue')}
-    content=json.dumps({'schema':1,'values':values,'uploads':uploads,'omitted':omitted},separators=(',',':'),allow_nan=False).encode()
+    content=json.dumps({'schema':1,'values':values,'uploads':uploads,'omitted':omitted,'transient_keys':list(transient_keys)},separators=(',',':'),allow_nan=False).encode()
     return base64.b64encode(gzip.compress(content,compresslevel=1)).decode()
 
 
 def restore(state,content):
     payload=json.loads(gzip.decompress(base64.b64decode(content))) if content else {'values':{},'uploads':{}}
     if payload.get('schema',1)!=1:raise ValueError('Unknown slate backup version')
-    values={k:decode(v) for k,v in payload['values'].items() if not private_key(k)}
+    values={k:decode(v) for k,v in payload['values'].items() if not private_key(k) and not transient_key(k) and k not in payload.get('transient_keys',[])}
     for k in list(state):
         if not str(k).startswith(('_slate_','$$')):del state[k]
     state.update(values)
@@ -149,7 +157,7 @@ def capture(st):
     context=get_script_run_ctx()
     if context:
         for widget in context.session_state.get_widget_states():
-            if widget.WhichOneof('value') in {'trigger_value','string_trigger_value','chat_input_value','file_uploader_state_value'}:
+            if widget.WhichOneof('value') in {'trigger_value','string_trigger_value','json_trigger_value','chat_input_value','file_uploader_state_value'}:
                 transient.update(k for k in st.session_state if widget.id.endswith('-'+str(k)))
     return snapshot(st.session_state,transient)
 
