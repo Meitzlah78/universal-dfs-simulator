@@ -88,3 +88,12 @@ Reproduce with:
 ```sh
 python scripts/nba_history_check.py --start 2026-04-01 --end 2026-04-10 --before 2026-10-20 --cache /tmp/simmah-nba-corpus --output /tmp/nba-corpus-audit.json --limit 70 --holdout 8
 ```
+
+Player allocation rates now use historical FGA, AST, REB, STL and BLK per minute,
+shrunk toward pooled rates with a fixed 120-minute prior. ESPN player IDs retain
+identity across team changes. The audit's 59 training games yielded 434 players;
+215 held-out player-games included 211 with fitted player history.
+Conditional on actual minutes, player/pooled MAE was 2.325/2.634 FGA,
+1.429/1.610 AST, 1.722/2.055 REB, .714/.721 STL and .503/.532 BLK.
+These are allocation diagnostics, not fantasy-point or pregame-minute accuracy.
+The role model is offline and has not been connected to live NBA builds.

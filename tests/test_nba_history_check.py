@@ -3,6 +3,7 @@ import unittest
 from unittest.mock import patch
 from scripts import nba_history_check as audit
 import test_nba_fit
+import test_nba_roles
 
 
 class HistoryAuditTests(unittest.TestCase):
@@ -12,6 +13,7 @@ class HistoryAuditTests(unittest.TestCase):
                 raise ValueError('score mismatch')
             day = '2026-04-01' if int(eid) < 32 else '2026-04-02'
             g = test_nba_fit.NBAFitTests().game(day, eid)
+            g['boxscore']['players']=test_nba_roles.game()['boxscore']['players']
             g.update(home_score=100, away_score=100)
             return g
         with tempfile.TemporaryDirectory() as cache, \

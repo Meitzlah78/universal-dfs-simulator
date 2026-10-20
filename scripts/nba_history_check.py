@@ -11,6 +11,7 @@ from simmah_nba_history import completed_games,download_game
 from simmah_nba_possessions import reconstruct
 from simmah_nba_rotations import reconstruct_rotations
 from simmah_nba_fit import fit_baseline
+from simmah_nba_roles import fit_roles,evaluate_roles
 
 
 def run(start,end,before,cache,limit=40,holdout=8):
@@ -42,6 +43,8 @@ def run(start,end,before,cache,limit=40,holdout=8):
     training=[g for g in games if g['date']<boundary]
     testing=[g for g in games if g['date']>=boundary]
     model=fit_baseline(training,boundary)
+    role_model=fit_roles(training,boundary)
+    role_check=evaluate_roles(role_model,testing,before)
     audits=[]
     for g in games:
         poss=reconstruct(g);rotation=reconstruct_rotations(g)
@@ -54,6 +57,7 @@ def run(start,end,before,cache,limit=40,holdout=8):
     return {'requested_games':len(ids),'rejected_games':rejected,'training_games':len(training),'holdout_games':len(testing),
         'holdout_start':boundary,'target_before':before,'rates':asdict(model['rates']),
         'limitations':model['limitations'],'audits':audits,
+        'role_players':len(role_model['players']),'role_holdout':role_check,
         'status':'data and reconstruction audit; not a predictive accuracy backtest'}
 
 if __name__=='__main__':
