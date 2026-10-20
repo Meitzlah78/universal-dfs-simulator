@@ -28,12 +28,13 @@ class RotoWireNBATests(unittest.TestCase):
             'games':{'9':{'homeTeamCode':'NYK','visitTeamCode':'PHI','gameDate':'2026-10-20 19:00:00'}}}
         self.assertEqual(select_rotowire_slate(payload,'2026-10-20',pool)['slateID'],1)
         player={'slateID':7,'firstName':'Test','lastName':'Player','team':{'abbr':'NYK'},'opponent':{'team':'PHI'},
-            'game':{'dateTime':'2026-10-20 19:00:00'},'minutes':32,'stats':{'season':{'minutes':12}},'lineup':{'slot':'Yes','isConfirmed':False}}
+            'game':{'dateTime':'2026-10-20 19:00:00'},'minutes':32,'rostership':0,'stats':{'season':{'minutes':12}},'lineup':{'slot':'Yes','isConfirmed':False}}
         proj={'access':True,'source':'RotoWire','projections':[{'slateID':7,'pts':'40'}]}
         pts,details=parse_rotowire([player],proj,'2026-10-20',pool)
         self.assertEqual(pts[('test player','NY')],40)
         self.assertEqual(details[('test player','NY')]['Projected Minutes'],32)
         self.assertFalse(details[('test player','NY')]['Starter Confirmed'])
+        self.assertEqual(details[('test player','NY')]['RotoWire RST % (unverified)'],0)
         with self.assertRaises(ValueError):parse_rotowire([player],proj,'2026-10-21',pool)
         proj['access']=False
         with self.assertRaises(ValueError):parse_rotowire([player],proj,'2026-10-20',pool)

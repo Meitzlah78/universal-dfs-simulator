@@ -218,3 +218,23 @@ and reuses the shared exposure/overlap selector with Top 1% default. Changing
 exposure diversity reselects these saved candidates without rerunning the engine.
 Tests cover weighted duplicate ties, payouts, independent-seed guards and a
 20-entry selection with a 60% maximum exposure preference.
+
+### Ownership-shaped opponent field
+
+simmah_nba_field.build_field fits probabilities over a supplied finite legal
+roster support to complete ownership targets. Input percentages must be finite,
+between 0 and 100, and sum approximately to 900 for the nine-player format.
+The source label is mandatory. Flexible-slot permutations are deduplicated before
+fitting. L-BFGS fits marginal frequencies, then multinomial sampling produces
+integer duplicate-entry copies without materializing the whole field. Returned
+expected/sampled frequencies, maximum target error, optimizer status and unique
+roster counts make shortfalls visible. This is a marginal ownership model, not a
+learned joint distribution of real NBA entrant behavior.
+
+The public RotoWire NBA players endpoint for slate 29784 returned 67 rostership
+values totaling 1340.7 on this check, not 900. Consequently the raw RST column is
+shown with an unverified label and is not automatically supplied to field fitting.
+No normalization is used to silently reinterpret this discrepancy. Matching,
+semantics and source freshness still need verification before live use. The
+field module rejects incomplete or unsupported ownership targets. Tests verify
+50,000 sampled entries, duplicate compression, target-fit error and reproducibility.

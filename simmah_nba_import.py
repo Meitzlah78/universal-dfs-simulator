@@ -156,6 +156,9 @@ def render_setup(st, uploaded_file, tabs, controls):
         st.subheader('NBA player pool')
         st.caption(f"Positive projections: {pool['Projection'].notna().sum()} / {len(pool)} · Eligible after injuries: {pool['Eligible'].sum()}. Automatic data is cached for up to 15 minutes; refresh runs on app activity.")
         st.caption('Historical FPPG is supplied by FanDuel. It is not a pregame projection. OUT players are ineligible; questionable players remain visible.')
+        if 'RotoWire RST % (unverified)' in pool:
+            raw_own = pd.to_numeric(pool['RotoWire RST % (unverified)'], errors='coerce')
+            st.caption(f'RotoWire raw RST values: {raw_own.notna().sum()} matched; total {raw_own.sum():.1f}%. These are unverified inputs and are not used automatically for opponent ownership.')
         st.dataframe(pool, hide_index=True, use_container_width=True)
         st.write(f"{len(pool)} players · {(pool['Injury Status']=='Out').sum()} Out · {(pool['Injury Status']=='Questionable').sum()} Questionable")
     with tabs[2]:

@@ -132,7 +132,13 @@ def parse_rotowire(players, projections, day, pool):
         minutes = positive(player.get('minutes'))
         if minutes is not None and minutes > 48:
             minutes = None
-        details[key] = {'Projected Minutes':minutes, 'Minutes Source':'RotoWire' if minutes else 'Missing',
+        try:
+            rostership = float(player.get('rostership'))
+            if not math.isfinite(rostership) or not 0 <= rostership <= 100:
+                rostership = None
+        except (TypeError, ValueError):
+            rostership = None
+        details[key] = {'RotoWire RST % (unverified)':rostership, 'Projected Minutes':minutes, 'Minutes Source':'RotoWire' if minutes else 'Missing',
             'RotoWire Injury':player.get('injuryStatus') or 'Active',
             'Expected Starter':player.get('lineup',{}).get('slot'),
             'Starter Confirmed':bool(player.get('lineup',{}).get('isConfirmed',False)),
