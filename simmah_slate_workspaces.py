@@ -113,6 +113,10 @@ def slate_record(upload):
 
 
 def begin_workspaces(st):
+    if st.session_state.pop('_slate_clear_active',False):
+        restore(st.session_state,'')
+        st.session_state.pop('_slate_active',None)
+        st.session_state['_slate_upload_epoch']=st.session_state.get('_slate_upload_epoch',0)+1
     pending=st.session_state.pop('_slate_pending',None)
     records=st.session_state.setdefault('_slate_records',{})
     if pending:
@@ -207,14 +211,28 @@ def finish_workspaces(st,host):
         existing=records.get(incoming['id'],{})
         incoming={**incoming,'snapshot':existing.get('snapshot','')}
         records[incoming['id']]=incoming
+        st.session_state['_slate_reopen']=incoming['id']
         st.session_state['_slate_pending']=incoming
         st.rerun()
     component=components.declare_component('simmah_loaded_slates',path=str(Path(__file__).parent/'components/slate_workspaces'))
     with host:
         event=component(active=current['id'] if current else None,current=current,snapshot=blob,
-                        incoming=None,records=list(records.values()),generation=st.session_state['_slate_generation'],
+                        incoming=None,reopen=st.session_state.get('_slate_reopen'),records=list(records.values()),generation=st.session_state['_slate_generation'],
                         key='loaded_slates_browser',default=None)
         if event and event.get('error'):st.warning(event['error'])
+        if event and event.get('event')!=st.session_state.get('_slate_last_event') and event.get('closed'):
+            closed=str(event['closed'])
+            records.pop(closed,None)
+            st.session_state.pop('_slate_reopen',None)
+            st.session_state['_slate_last_event']=event['event']
+            if current and current['id']==closed:
+                selected=event.get('selected')
+                if selected and selected.get('id') in records:
+                    st.session_state['_slate_pending']=records[selected['id']]
+                else:
+                    st.session_state['_slate_clear_active']=True
+            st.rerun()
+
         if event and event.get('event')!=st.session_state.get('_slate_last_event') and event.get('selected'):
             for record in event.get('records',[]):
                 if isinstance(record,dict) and all(k in record for k in ('id','data','name','snapshot')):
