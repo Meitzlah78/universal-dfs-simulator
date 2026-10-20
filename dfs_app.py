@@ -2836,6 +2836,7 @@ format_options = {
     "DraftKings Showdown": ("DraftKings", "Showdown"),
     "FanDuel Full Roster": ("FanDuel", "Full Roster"),
     "FanDuel Single Game": ("FanDuel", "Single Game"),
+    "FanDuel NBA": ("FanDuel", "NBA"),
 }
 
 
@@ -2859,6 +2860,9 @@ def detect_uploaded_dfs_format(uploaded_file):
     # The first entry-table header is the most reliable place to identify roster type.
     header = [str(cell).strip().upper() for cell in rows[0]]
     header_set = set(header)
+
+    if tuple(header[4:13]) == ("PG", "SG", "SF", "PF", "C", "G/F", "F/C", "UTIL", "UTIL"):
+        return "FanDuel NBA"
 
     # FanDuel exports use MVP / AnyFLEX wording for single-game and commonly use
     # D rather than DST in full-roster templates.
@@ -2917,6 +2921,11 @@ if auto_slate_file is None:
         st.info("Upload an entries/slate CSV to get started.")
     st.stop()
 selected_format = detected_format
+
+if selected_format == "FanDuel NBA":
+    from simmah_nba_import import render_setup as render_nba_setup
+    render_nba_setup(st, auto_slate_file, (_tab_contests, _tab_roster, _tab_build, _tab_lineups), _build_controls)
+    st.stop()
 
 # Historical projection accuracy report. This uses pre-game projection snapshots
 # matched to actual fantasy points; the volatility check below is not a projection backtest.

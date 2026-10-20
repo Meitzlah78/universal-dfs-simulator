@@ -1,0 +1,81 @@
+"""FanDuel NBA entry-template import; historical FPPG is never a projection."""
+import csv
+import io
+from decimal import Decimal
+import pandas as pd
+
+SLOTS = ('PG', 'SG', 'SF', 'PF', 'C', 'G/F', 'F/C', 'UTIL', 'UTIL')
+
+
+def read_template(data):
+    rows = list(csv.reader(io.StringIO(data.decode('utf-8-sig'))))
+    if not rows or tuple(rows[0][4:13]) != SLOTS or rows[0][:2] != ['entry_id', 'contest_id']:
+        raise ValueError('Expected a FanDuel NBA nine-slot entries template')
+    entries = [r[:13] for r in rows[1:] if len(r) >= 13 and r[0].isdigit() and r[1]]
+    if not entries or len({r[0] for r in entries}) != len(entries):
+        raise ValueError('Entry IDs must be present and unique')
+    start = next((i for i, r in enumerate(rows) if 'Id' in r and 'Nickname' in r and 'Salary' in r), None)
+    if start is None:
+        raise ValueError('The player/salary table is missing')
+    header = rows[start]
+    def cell(row, name):
+        i = header.index(name)
+        return row[i].strip() if i < len(row) else ''
+    players = []
+    for row in rows[start+1:]:
+        pid = cell(row, 'Id')
+        if not pid:
+            continue
+        name = cell(row, 'Nickname')
+        salary = Decimal(cell(row, 'Salary'))
+        pos = cell(row, 'Position')
+        if not name or salary <= 0 or salary != int(salary) or not set(pos.split('/')) <= {'PG','SG','SF','PF','C'}:
+            raise ValueError('Invalid NBA player name, salary or position')
+        injury = cell(row, 'Injury Indicator').upper()
+        players.append({'Player ID':pid, 'Name':name, 'Position':pos, 'Salary':int(salary),
+            'Team':cell(row,'Team'), 'Opponent':cell(row,'Opponent'), 'Game':cell(row,'Game'),
+            'Injury Status':{'O':'Out','Q':'Questionable','D':'Doubtful'}.get(injury,injury or 'Active'),
+            'Injury Details':cell(row,'Injury Details'),
+            'Historical FPPG':float(cell(row,'FPPG') or 0), 'Projection':None})
+    pool = pd.DataFrame(players)
+    if pool.empty or pool['Player ID'].duplicated().any():
+        raise ValueError('Player IDs must be present and unique')
+    prefixes = {p.split('-')[0] for p in pool['Player ID']}
+    if any(r[1].split('-')[0] not in prefixes for r in entries):
+        raise ValueError('Entry contest and salary slate IDs do not match')
+    contests = []
+    for cid in dict.fromkeys(r[1] for r in entries):
+        owned = [r for r in entries if r[1] == cid]
+        if len({(r[2],r[3]) for r in owned}) != 1:
+            raise ValueError('Conflicting contest metadata')
+        contests.append({'id':cid, 'name':owned[0][2], 'entry_fee':float(Decimal(owned[0][3])), 'owned_entries':len(owned)})
+    return {'entries':entries, 'players':pool, 'contests':contests, 'slots':SLOTS}
+
+
+def render_setup(st, uploaded_file, tabs, controls):
+    try:
+        slate = read_template(uploaded_file.getvalue())
+    except (ValueError, ArithmeticError) as exc:
+        st.error(str(exc))
+        return
+    pool = slate['players']
+    st.session_state['nba_imported_slate'] = slate
+    with tabs[0]:
+        st.subheader('FanDuel NBA contests')
+        for c in slate['contests']:
+            st.write(c['name'])
+            st.caption(f"Contest {c['id']} · {c['owned_entries']} entries · ${c['entry_fee']:.2f} each")
+        st.write('Games: ' + ' • '.join(sorted(pool['Game'].unique())))
+        st.caption('Roster: ' + ', '.join(SLOTS))
+    with tabs[1]:
+        st.subheader('NBA player pool')
+        st.caption('Historical FPPG is supplied by FanDuel. It is not a pregame projection. OUT players are ineligible; questionable players remain visible.')
+        st.dataframe(pool, hide_index=True, use_container_width=True)
+        st.write(f"{len(pool)} players · {(pool['Injury Status']=='Out').sum()} Out · {(pool['Injury Status']=='Questionable').sum()} Questionable")
+    with tabs[2]:
+        st.info('NBA import is ready. NBA projections and simulation are still under development.')
+    with tabs[3]:
+        st.info('NBA lineups will appear here after the NBA builder is connected.')
+    with controls:
+        st.caption('FanDuel NBA')
+        st.button('BUILD NBA LINEUPS', disabled=True, key='nba_build_pending')
