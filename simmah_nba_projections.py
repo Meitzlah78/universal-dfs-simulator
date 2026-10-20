@@ -138,7 +138,19 @@ def parse_rotowire(players, projections, day, pool):
                 rostership = None
         except (TypeError, ValueError):
             rostership = None
-        details[key] = {'RotoWire RST % (unverified)':rostership, 'Projected Minutes':minutes, 'Minutes Source':'RotoWire' if minutes else 'Missing',
+        season = player.get('stats',{}).get('season',{})
+        role_details = {}
+        try:
+            historical_minutes = float(season.get('minutes'))
+            if not math.isfinite(historical_minutes) or historical_minutes <= 0:
+                raise ValueError('No historical minutes')
+            for role,stat in [('Shot','fga'),('Assist','ast'),('Rebound','reb'),('Steal','stl'),('Block','blk')]:
+                rate = float(season[stat])/historical_minutes
+                if not math.isfinite(rate) or rate < 0:raise ValueError('Invalid role rate')
+                role_details['Historical '+role+' Rate'] = rate
+        except (ValueError,TypeError,KeyError):
+            role_details = {}
+        details[key] = {**role_details, 'RotoWire RST % (unverified)':rostership, 'Projected Minutes':minutes, 'Minutes Source':'RotoWire' if minutes else 'Missing',
             'RotoWire Injury':player.get('injuryStatus') or 'Active',
             'Expected Starter':player.get('lineup',{}).get('slot'),
             'Starter Confirmed':bool(player.get('lineup',{}).get('isConfirmed',False)),

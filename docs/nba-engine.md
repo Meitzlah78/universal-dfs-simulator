@@ -256,3 +256,21 @@ path with synthetic outcomes/ownership and preserves all five original entry
 IDs. The production pregame outcome_factory adapter and verified ownership
 source remain prerequisites; this offline integration does not enable the live
 Streamlit NBA button or claim a validated full pregame backtest.
+
+### Pregame engine adapter
+
+simmah_nba_pregame.PregameEngine supplies the offline pipeline's outcome_factory
+contract. It requires complete provider-projected 240-minute team rotations,
+historical FGA/AST/REB/STL/BLK per-minute role weights, complete exact-match market
+lines, and an explicitly supplied historical event-rate baseline. It maps shared
+game outcomes back into original salary-pool order, with ineligible players zero.
+The RotoWire parser now retains historical role rates separately from projected
+minutes and fantasy projections. Missing rookie history is not treated as zero.
+
+The current slate's provider rotations total 240 per team, but Labaron Philon
+(PHI, 10 projected minutes) and Aday Mara (OKC, 3) have zero historical games.
+The strict adapter rejects these missing roles by name. Explicit, sourced rookie
+priors remain needed. Projected minutes are currently fixed scenario budgets;
+minute uncertainty, coaching and injury redistribution remain uncalibrated.
+Unresolved overtime is reported, and player means are not yet anchored to the
+external fantasy projections. This is an experimental adapter, not live readiness.
