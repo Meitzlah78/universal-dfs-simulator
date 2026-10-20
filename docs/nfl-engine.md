@@ -67,3 +67,14 @@ Run `python -m unittest discover -s tests -p test_weather.py -v` for weather tes
 ### FD Full Roster salary calibration
 Large slates (at least 16 represented teams) use anonymous salary counts from the completed 11-game FD contest 135023-280945024 (568,465 visible complete entries). The sampler corrects for proposal frequency within each batch using independent rejection of proposals. A proposal is accepted at most once; naturally repeated rosters across independent proposals remain allowed. This is conditioned on the existing supported $59,000–$60,000 range and salary bins actually present in that batch; it is not an exact whole-field replication. Smaller slates retain their baseline curve. No historical fantasy scores or player identities are used by this salary model.
 A seeded random 10,000-entry sample of the historical field contained 8,645 unique rosters, 1,840 entries in repeated-roster groups, and 128 copies of its most common roster. This is a validation reference, not an imposed duplication target. The current salary change does not calibrate ownership combinations or claim accurate ROI.
+
+### Completed FanDuel Single Game field, October 19, 2026
+
+The uploaded 135541-281148543 standings added an anonymous FD_SINGLE profile:
+88,087 complete six-player rosters, 10,440 unique MVP-aware rosters and 627 blank
+entries excluded from the 88,714-row export. First-listed MVP was verified against
+all complete roster scores and player FPTS. Only aggregate ownership, MVP
+popularity, ownership-product and salary-left histograms plus a deduplication
+digest are retained; raw rosters, names, entry IDs and results are not model
+features. The profile is scoped to NFL, low-stakes FanDuel Single Game, six slots,
+and one game. No NBA or full-roster profile receives it.
