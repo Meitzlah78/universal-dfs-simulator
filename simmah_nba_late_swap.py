@@ -1,3 +1,4 @@
+from simmah_slate_workspaces import workspace_download_button
 from simmah_slate_workspaces import workspace_file_uploader
 """Bounded NBA late swap: immutable entry slots, current projections, no resimulation."""
 import csv
@@ -165,7 +166,7 @@ def render_late_swap(st,pool,contest_id,salary_min,diversity):
                 def download_current():
                     try:
                         output=export_swaps(data,contest_id,pool,result)
-                        st.download_button('UPLOAD TO '+platform.upper()+' — LATE SWAP CSV',output,'Simmah_NBA_Late_Swap.csv','text/csv',key='nba_late_swap_download',on_click='ignore')
+                        workspace_download_button(st,'UPLOAD TO '+platform.upper()+' — LATE SWAP CSV',output,'Simmah_NBA_Late_Swap.csv','text/csv',key='nba_late_swap_download',on_click='ignore')
                         st.caption(f'Upload immediately, before the next tipoff. {platform} controls final lock status; scheduled times are used here.')
                     except ValueError as exc:st.error(f'{exc}. Run FAST LATE SWAP again.')
                 st.fragment(run_every=5)(download_current)()

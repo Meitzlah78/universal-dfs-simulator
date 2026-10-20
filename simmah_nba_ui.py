@@ -1,3 +1,4 @@
+from simmah_slate_workspaces import workspace_download_button
 """Experimental NBA workspace wiring; numerical work stays outside Streamlit."""
 import hashlib,json
 from pathlib import Path
@@ -35,14 +36,14 @@ def display_lineups(pool,frame):
 
 def render_exports(st,upload,cid,pool,built,portfolio,platform,stale,location):
     st.caption('Export the selected portfolio ('+str(len(portfolio))+' lineups), not the full candidate pool.')
-    st.download_button('DOWNLOAD PORTFOLIO REPORT',display_lineups(pool,portfolio).to_csv(index=False).encode(),
+    workspace_download_button(st,'DOWNLOAD PORTFOLIO REPORT',display_lineups(pool,portfolio).to_csv(index=False).encode(),
         'Simmah_NBA_'+platform+'_Portfolio_Report.csv','text/csv',
         key='nba_portfolio_report_'+location,on_click='ignore')
     data=b'';export_error=None
     if not stale:
         try:data=export_portfolio(upload.getvalue(),cid,pool,built)
         except (ValueError,KeyError,IndexError) as exc:export_error=str(exc)
-    st.download_button('UPLOAD TO '+platform.upper()+' — EDIT ENTRIES CSV',data,
+    workspace_download_button(st,'UPLOAD TO '+platform.upper()+' — EDIT ENTRIES CSV',data,
         'Simmah_NBA_'+platform+'_Edit_Entries.csv','text/csv',
         disabled=stale or bool(export_error),key='nba_entries_download' if location=='lineups' else 'nba_entries_download_build',on_click='ignore')
     if stale:st.caption('Inputs changed. Rebuild before downloading a site upload file.')
@@ -124,7 +125,7 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         candidate_rows=built['report'].copy()
         for j,slot in enumerate(slots):candidate_rows[slot]=saved_pool.iloc[built['candidates']['indices'][:,j]]['Player ID'].to_numpy()
         st.dataframe(display_lineups(saved_pool,candidate_rows).sort_values(metric,ascending=False),hide_index=True,width="stretch")
-        st.download_button('DOWNLOAD OPPONENT FIELD',pd.DataFrame(built['field']['indices'],columns=slots).apply(lambda c:c.map(saved_pool['Player ID'].to_dict())).assign(Copies=built['field']['copies']).to_csv(index=False).encode(),
+        workspace_download_button(st,'DOWNLOAD OPPONENT FIELD',pd.DataFrame(built['field']['indices'],columns=slots).apply(lambda c:c.map(saved_pool['Player ID'].to_dict())).assign(Copies=built['field']['copies']).to_csv(index=False).encode(),
             'Simmah_NBA_Opponent_Field.csv','text/csv',key='nba_field_download',on_click='ignore')
         render_exports(st,upload,cid,saved_pool,built,portfolio,platform,stale,'build')
         with st.expander('NBA engine and ownership report'):

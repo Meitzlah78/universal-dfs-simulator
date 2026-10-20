@@ -59,7 +59,7 @@ def private_key(key):
 
 def transient_key(key):
     key=str(key)
-    return (key.endswith('_remove_restored') or key.startswith('nba_projection_upload_')
+    return (key.endswith('_remove_restored') or key.startswith(('nba_projection_upload_','nba_minutes_snapshot_download','nba_entries_download','nba_portfolio_report_','nba_open_fanduel_'))
             or key in {'nba_build','nba_field_download','nba_entries_download',
                        'nba_fast_late_swap','nba_late_swap_upload','nba_late_swap_download',
                        'loaded_slates_browser','nba_underdog_x_feed','sticky_refresh_projections',
@@ -67,7 +67,7 @@ def transient_key(key):
 
 
 def snapshot(state, transient_keys=()):
-    transient_keys=set(transient_keys) | set(state.get('_slate_uploader_keys',()))
+    transient_keys=set(transient_keys) | set(state.get('_slate_uploader_keys',())) | set(state.get('_slate_action_keys',()))
     values={};omitted=[]
     for key in list(state):
         if str(key).startswith(('_slate_','$$','universal_slate_setup_file')) or private_key(key):continue
@@ -166,6 +166,18 @@ def workspace_file_uploader(st,label,*args,**kwargs):
         if st.button('Remove restored file',key=key+'_remove_restored'):
             saved.pop(key,None)
     return value if value is not None else saved.get(key)
+
+
+
+def workspace_download_button(st,*args,**kwargs):
+    """Never replay a saved download-button value; preserve the actual data separately."""
+    key=kwargs.get('key')
+    if key is not None:
+        st.session_state.setdefault('_slate_action_keys',set()).add(str(key))
+        from streamlit.runtime.state import get_session_state
+        if get_session_state().is_new_state_value(str(key)):
+            del st.session_state[str(key)]
+    return st.download_button(*args,**kwargs)
 
 
 def capture(st):

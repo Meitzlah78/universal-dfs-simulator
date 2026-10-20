@@ -1,3 +1,4 @@
+from simmah_slate_workspaces import workspace_download_button
 """Pregame minutes snapshots and explicit-ID grading, independent of live models."""
 from datetime import datetime, timezone
 from hashlib import sha256
@@ -61,5 +62,5 @@ def render_minutes_snapshots(st,pool,platform):
     with st.expander('Pregame minutes snapshots — validation'):
         st.caption('Automatically records available minutes before each game starts. Saved with this browser’s slate workspace; download an archive for a separate backup. No simulation parameters are changed.')
         st.caption(f'{len(history)} saved snapshots. Missing actual players will stay unmatched, not become zeros.')
-        st.download_button('DOWNLOAD MINUTES SNAPSHOTS',json.dumps(history,indent=2).encode(),
+        workspace_download_button(st,'DOWNLOAD MINUTES SNAPSHOTS',json.dumps(history,indent=2).encode(),
             'Simmah_NBA_Minutes_Snapshots.json','application/json',key='nba_minutes_snapshot_download',on_click='ignore')
