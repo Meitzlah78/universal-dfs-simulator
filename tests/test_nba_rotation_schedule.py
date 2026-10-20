@@ -30,3 +30,11 @@ class ScheduleTests(unittest.TestCase):
         result=simulate_game(rotations,np.ones((2,6,5)),rates,7)
         self.assertEqual(result['scores'].shape,(10,12))
         self.assertTrue(np.isfinite(result['scores']).all())
+
+    def test_overtime_schedule_preserves_25_player_minutes(self):
+        minutes=np.tile([5,5,4,4,3,2,2],(10,1))
+        r=build_rotation(minutes,9,period_minutes=5)
+        self.assertEqual(r.shape,(10,5,5))
+        for i in range(10):
+            np.testing.assert_array_equal(np.bincount(r[i].ravel(),minlength=7),minutes[i])
+        with self.assertRaises(ValueError):build_rotation(minutes,9,period_minutes=0)

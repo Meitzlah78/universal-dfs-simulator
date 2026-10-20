@@ -18,6 +18,8 @@ class PregameTests(unittest.TestCase):
         self.assertEqual(a.shape,(30,10));self.assertTrue(np.isfinite(a).all())
         np.testing.assert_array_equal(a,b)
         self.assertEqual(engine.last_report[0]['calibration']['targets'],[100,110])
+        self.assertEqual(engine.last_report[0]['max_overtimes_supplied'],4)
+        self.assertEqual(engine.last_report[0]['unresolved_tie_fraction'],0)
     def test_incomplete_rotations_roles_or_markets_rejected(self):
         p,m,r=self.fixture();p.loc[0,'Projected Minutes']=40
         with self.assertRaises(ValueError):PregameEngine(p,m,r)

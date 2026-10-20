@@ -8,7 +8,9 @@ ROLE_COLUMNS=['Historical '+r+' Rate' for r in ('Shot','Assist','Rebound','Steal
 
 
 class PregameEngine:
-    def __init__(self,pool,markets,rates):
+    def __init__(self,pool,markets,rates,max_overtimes=4):
+        if not isinstance(max_overtimes,int) or not 1<=max_overtimes<=10:raise ValueError("Explicit bounded overtime count required")
+        self.max_overtimes=max_overtimes
         self.pool=pool.reset_index(drop=True).copy();self.rates=rates
         rates.validate()
         if self.pool['Player ID'].duplicated().any():raise ValueError('Duplicate player IDs')
@@ -48,16 +50,19 @@ class PregameEngine:
         if not isinstance(n,int) or n<1:raise ValueError('Positive simulation count required')
         output=np.zeros((n,len(self.pool)),np.float32);reports=[]
         for game_index,(market,groups) in enumerate(self.games):
-            size=max(len(g[0]) for g in groups);profiles=np.zeros((2,size,5));rotations=[]
+            size=max(len(g[0]) for g in groups);profiles=np.zeros((2,size,5));rotations=[];overtime=[]
             for team,(ids,minutes,roles) in enumerate(groups):
                 padded=np.zeros(size);padded[:len(ids)]=minutes
                 profiles[team,:len(ids)]=roles
+                overtime.append(np.stack([build_rotation(np.tile(padded*5/48,(n,1)),seed+game_index*97+team+10000+ot*11,team*size,period_minutes=5) for ot in range(self.max_overtimes)],axis=1))
                 rotations.append(build_rotation(np.tile(padded,(n,1)),seed+game_index*97+team,team*size))
             result=simulate_market_game(np.stack(rotations,axis=1),profiles,[self.rates]*2,
-                                         market['implied_points'],seed+game_index*97+3)
+                                         market['implied_points'],seed+game_index*97+3,overtime_rotations=np.stack(overtime,axis=1))
             for team,(ids,_,_) in enumerate(groups):
                 output[:,ids]=result['scores'][:,team*size:team*size+len(ids)]
             reports.append({'teams':market['teams'],'calibration':result['market_calibration'],
+                            'overtime_fraction':float((result['overtime_periods']>0).mean()),
+                            'max_overtimes_supplied':self.max_overtimes,
                             'unresolved_tie_fraction':float(result['requires_overtime'].mean())})
         self.last_report=reports
         return output

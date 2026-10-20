@@ -293,3 +293,21 @@ SA 117.302 vs 117. Regulation ties remained 2.8% and 2.5% respectively.
 This validates input plumbing and market targeting on the actual salary pool;
 it does not establish player mean calibration or live-build readiness. Overtime,
 external player projection anchoring and ownership verification remain pending.
+
+### Bounded overtime in the pregame adapter
+
+Rotation scheduling now supports explicit period lengths, including five-minute
+OT schedules with 25 player-minutes and five distinct players per minute. The
+pregame adapter supplies four OT periods per scenario, using proportional provider
+minute shares as an explicit experimental rotation assumption. This is not a
+learned clutch/coaching model. Market calibration and evaluation both include
+the supplied overtime, preserving all stat-based player scoring. Ties beyond the
+bound remain unresolved in reports; no forced winner or invented points are used.
+
+A repeated 1,000-scenario check on the actual 83-player uploaded slate needed OT
+in 2.8% (NY/PHI) and 2.1% (OKC/SA) of scenarios; none remained unresolved.
+Evaluation team means were 117.969/113.882 and 114.808/117.920, within 0.92
+points of their market targets. scripts/nba_provider_check.py reproduces the
+input-to-engine check from cached provider player/projection JSON and the upload.
+The prior regulation-only tie figures above describe the earlier implementation.
+External player-mean anchoring and verified ownership still block live builds.
