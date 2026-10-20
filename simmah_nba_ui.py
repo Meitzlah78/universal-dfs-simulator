@@ -32,6 +32,24 @@ def display_lineups(pool,frame):
     return result
 
 
+
+def render_exports(st,upload,cid,pool,built,portfolio,platform,stale,location):
+    st.caption('Export the selected portfolio ('+str(len(portfolio))+' lineups), not the full candidate pool.')
+    st.download_button('DOWNLOAD PORTFOLIO REPORT',display_lineups(pool,portfolio).to_csv(index=False).encode(),
+        'Simmah_NBA_'+platform+'_Portfolio_Report.csv','text/csv',
+        key='nba_portfolio_report_'+location,on_click='ignore')
+    data=b'';export_error=None
+    if not stale:
+        try:data=export_portfolio(upload.getvalue(),cid,pool,built)
+        except (ValueError,KeyError,IndexError) as exc:export_error=str(exc)
+    st.download_button('UPLOAD TO '+platform.upper()+' — EDIT ENTRIES CSV',data,
+        'Simmah_NBA_'+platform+'_Edit_Entries.csv','text/csv',
+        disabled=stale or bool(export_error),key='nba_entries_download' if location=='lineups' else 'nba_entries_download_build',on_click='ignore')
+    if stale:st.caption('Inputs changed. Rebuild before downloading a site upload file.')
+    if export_error:st.error('Entries export unavailable: '+export_error)
+    if platform=='FanDuel':st.link_button('OPEN FANDUEL / EDIT ENTRIES','https://www.fanduel.com/upcoming',key='nba_open_fanduel_'+location)
+
+
 def render_workspace(st,slate,upload,tabs,controls,markets):
     pool=slate['players'];rules=rules_for(pool);platform=rules['platform'];slots=rules['slots'];contests={c['id']:c for c in slate['contests']}
     with tabs[0]:
@@ -108,6 +126,7 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         st.dataframe(display_lineups(saved_pool,candidate_rows).sort_values(metric,ascending=False),hide_index=True,width="stretch")
         st.download_button('DOWNLOAD OPPONENT FIELD',pd.DataFrame(built['field']['indices'],columns=slots).apply(lambda c:c.map(saved_pool['Player ID'].to_dict())).assign(Copies=built['field']['copies']).to_csv(index=False).encode(),
             'Simmah_NBA_Opponent_Field.csv','text/csv',key='nba_field_download',on_click='ignore')
+        render_exports(st,upload,cid,saved_pool,built,portfolio,platform,stale,'build')
         with st.expander('NBA engine and ownership report'):
             st.write(saved['engine_reports'])
             st.caption(built['field']['ownership_source'])
@@ -123,6 +142,7 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         st.caption('Experimental model estimates; totals sum marginal lineup estimates against the modeled field.')
         st.subheader('My lineups')
         st.dataframe(display_lineups(saved_pool,portfolio),hide_index=True,width="stretch")
+        render_exports(st,upload,cid,saved_pool,built,portfolio,platform,stale,'lineups')
         exposure=portfolio[list(slots)].stack().value_counts().rename('Lineups')
         exposure=exposure.rename_axis('Player ID').reset_index()
         exposure['Exposure %']=100*exposure['Lineups']/len(portfolio)
@@ -130,5 +150,3 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         st.subheader('Player exposures')
         st.dataframe(exposure[['Name','Team','Injury Status','Lineups','Exposure %']],hide_index=True,width='stretch',key='nba_exposure_table',
                      column_config={'Name':st.column_config.TextColumn('Player',pinned=True)})
-        data=b'' if stale else export_portfolio(upload.getvalue(),cid,pool,built)
-        st.download_button('UPLOAD TO '+platform.upper()+' — EDIT ENTRIES CSV',data,'Simmah_NBA_'+platform+'_Edit_Entries.csv','text/csv',disabled=stale,key='nba_entries_download',on_click='ignore')
