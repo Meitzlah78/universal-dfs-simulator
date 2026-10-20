@@ -105,7 +105,8 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
             st.write(saved['engine_reports'])
             st.caption(built['field']['ownership_source'])
             report=pd.DataFrame({'Name':saved_pool['Name'],'Estimated Field Own %':built['field']['ownership_sampled']})
-            st.dataframe(report,hide_index=True,width="stretch")
+            st.dataframe(report,hide_index=True,width="stretch",
+                         column_config={'Name':st.column_config.TextColumn('Player',pinned=True)})
     with tabs[3]:
         st.subheader('Portfolio ROI — estimated')
         totals=portfolio_roi_totals(portfolio)
@@ -120,6 +121,7 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         exposure['Exposure %']=100*exposure['Lineups']/len(portfolio)
         exposure=exposure.merge(saved_pool[['Player ID','Name','Team','Injury Status']],on='Player ID',how='left')
         st.subheader('Player exposures')
-        st.dataframe(exposure[['Name','Team','Injury Status','Lineups','Exposure %']],hide_index=True,width='stretch')
+        st.dataframe(exposure[['Name','Team','Injury Status','Lineups','Exposure %']],hide_index=True,width='stretch',
+                     column_config={'Name':st.column_config.TextColumn('Player',pinned=True)})
         data=b'' if stale else export_portfolio(upload.getvalue(),cid,pool,built)
         st.download_button('UPLOAD TO FANDUEL — EDIT ENTRIES CSV',data,'Simmah_NBA_FanDuel_Edit_Entries.csv','text/csv',disabled=stale,key='nba_entries_download',on_click='ignore')

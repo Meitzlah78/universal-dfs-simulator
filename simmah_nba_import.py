@@ -182,7 +182,9 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
         if 'RotoWire RST % (unverified)' in pool:
             raw_own = pd.to_numeric(pool['RotoWire RST % (unverified)'], errors='coerce')
             st.caption(f'RotoWire raw RST values: {raw_own.notna().sum()} matched; total {raw_own.sum():.1f}%. These are unverified percentages. The experimental field uses them only as relative popularity weights.')
-        st.dataframe(pool, hide_index=True, use_container_width=True)
+        st.dataframe(pool, hide_index=True, width="stretch",
+                     column_order=['Name'] + [column for column in pool.columns if column != 'Name'],
+                     column_config={'Name': st.column_config.TextColumn('Player', pinned=True)})
         st.write(f"{len(pool)} players · {(pool['Injury Status']=='Out').sum()} Out · {(pool['Injury Status']=='Questionable').sum()} Questionable")
     from simmah_nba_ui import render_workspace
     render_workspace(st,slate,uploaded_file,tabs,controls,markets)
