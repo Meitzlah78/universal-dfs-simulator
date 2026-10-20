@@ -37,3 +37,24 @@ class SlateWidgetRestoreTests(unittest.TestCase):
         app.button(key='test_restore').click().run()
         self.assertFalse(app.exception)
         self.assertEqual(app.number_input(key='test_salary').value,45000)
+
+class MultipleLoadedSlateTests(unittest.TestCase):
+    def test_load_fd_after_dk_keeps_both_and_restores_each_setting(self):
+        from pathlib import Path
+        from streamlit.testing.v1 import AppTest
+        app=AppTest.from_file(str(Path(__file__).with_name('slate_switch_fixture.py'))).run()
+        app.button(key='load_DK').click().run()
+        self.assertFalse(app.exception)
+        app.number_input(key='slate_salary').set_value(45000).run()
+        app.button(key='load_FD').click().run()
+        self.assertFalse(app.exception)
+        self.assertEqual(len(app.session_state['_slate_records']),2)
+        self.assertEqual(app.session_state['_slate_active']['name'],'FD.csv')
+        self.assertEqual(app.number_input(key='slate_salary').value,0)
+        app.number_input(key='slate_salary').set_value(55000).run()
+        app.button(key='switch_DK.csv').click().run()
+        self.assertFalse(app.exception)
+        self.assertEqual(app.number_input(key='slate_salary').value,45000)
+        app.button(key='switch_FD.csv').click().run()
+        self.assertFalse(app.exception)
+        self.assertEqual(app.number_input(key='slate_salary').value,55000)

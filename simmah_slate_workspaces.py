@@ -99,10 +99,13 @@ def slate_record(upload):
 
 def begin_workspaces(st):
     pending=st.session_state.pop('_slate_pending',None)
+    records=st.session_state.setdefault('_slate_records',{})
     if pending:
+        pending=records.get(pending['id'],pending)
         try:
             restore(st.session_state,pending.get('snapshot',''))
             st.session_state['_slate_active']=pending
+            records[pending['id']]=pending
         except (ValueError,TypeError,KeyError,OSError) as exc:st.warning('Saved slate could not restore: '+str(exc))
     st.session_state.setdefault('_slate_generation',uuid.uuid4().hex)
     return st.container()
@@ -139,9 +142,7 @@ def workspace_file_uploader(st,label,*args,**kwargs):
     return value if value is not None else saved.get(key)
 
 
-def finish_workspaces(st,host):
-    import streamlit.components.v1 as components
-    current=st.session_state.get('_slate_active')
+def capture(st):
     # Button triggers and uploader widget internals must never be replayed.
     from streamlit.runtime.scriptrunner import get_script_run_ctx
     transient=set()
@@ -150,17 +151,38 @@ def finish_workspaces(st,host):
         for widget in context.session_state.get_widget_states():
             if widget.WhichOneof('value') in {'trigger_value','string_trigger_value','chat_input_value','file_uploader_state_value'}:
                 transient.update(k for k in st.session_state if widget.id.endswith('-'+str(k)))
-    blob=snapshot(st.session_state,transient) if current else ''
+    return snapshot(st.session_state,transient)
+
+
+def finish_workspaces(st,host):
+    import streamlit.components.v1 as components
+    current=st.session_state.get('_slate_active')
+    blob=capture(st) if current else ''
     if current and st.session_state.get('dfs_format'):current['title']=st.session_state['dfs_format']+' · '+current['name'].replace('.csv','')
+    records=st.session_state.setdefault('_slate_records',{})
+    if current:
+        current={**current,'snapshot':blob}
+        records[current['id']]=current
+        st.session_state['_slate_active']=current
+    incoming=st.session_state.pop('_slate_incoming',None)
+    if incoming:
+        existing=records.get(incoming['id'],{})
+        incoming={**incoming,'snapshot':existing.get('snapshot','')}
+        records[incoming['id']]=incoming
+        st.session_state['_slate_pending']=incoming
+        st.rerun()
     component=components.declare_component('simmah_loaded_slates',path=str(Path(__file__).parent/'components/slate_workspaces'))
     with host:
         event=component(active=current['id'] if current else None,current=current,snapshot=blob,
-                        incoming=st.session_state.pop('_slate_incoming',None),generation=st.session_state['_slate_generation'],
+                        incoming=None,records=list(records.values()),generation=st.session_state['_slate_generation'],
                         key='loaded_slates_browser',default=None)
         if event and event.get('error'):st.warning(event['error'])
         if event and event.get('event')!=st.session_state.get('_slate_last_event') and event.get('selected'):
+            for record in event.get('records',[]):
+                if isinstance(record,dict) and all(k in record for k in ('id','data','name','snapshot')):
+                    records.setdefault(record['id'],record)
             st.session_state['_slate_last_event']=event['event']
-            st.session_state['_slate_pending']=event['selected']
+            st.session_state['_slate_pending']=records.get(event['selected']['id'],event['selected'])
             st.rerun()
 
 
