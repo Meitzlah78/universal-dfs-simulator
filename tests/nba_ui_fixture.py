@@ -44,6 +44,7 @@ pool['Expected Starter']=np.where(np.arange(len(pool))<20,'Yes','No')
 pool['Starter Confirmed']=(pool['Team']=='A') & st.session_state.get('test_applied_confirmation',False)
 def fake_status(sid,day,pairs):
     return {'players':{(r['Name'].casefold(),r['Team']):{
+        'Game Start':'2026-10-20 19:00:00' if r['Team'] in {'A','B'} else '2026-10-20 21:30:00',
         'Expected Starter':'Yes' if i<20 else 'No',
         'Starter Confirmed':r['Team']=='A' and st.session_state.get('test_source_confirmed',False)} for i,r in pool.iterrows()},'checked_at':time.time()}
 lineup_module.download_lineup_status=fake_status

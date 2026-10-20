@@ -15,7 +15,7 @@ def parse_lineup_status(players,day,pairs):
         key=((p.get('firstName','')+' '+p.get('lastName','')).strip().casefold(),team)
         if not key[0] or key in result:raise ValueError('Duplicate or missing NBA lineup player')
         lineup=p.get('lineup') or {}
-        result[key]={'Expected Starter':lineup.get('slot'),
+        result[key]={'Game Start':p.get('game',{}).get('dateTime'),'Expected Starter':lineup.get('slot'),
                      'Starter Confirmed':explicit_true(lineup.get('isConfirmed',False))}
     if not result:raise ValueError('No NBA lineup records returned')
     return result
@@ -45,6 +45,7 @@ def render_live_strip(st,pool,markets,slate_id,day,fallback_time=None):
                 detail=values.get((row['Name'].strip().casefold(),team_key(row['Team'])),{})
                 view.at[i,'Expected Starter']=detail.get('Expected Starter')
                 view.at[i,'Starter Confirmed']=detail.get('Starter Confirmed',False)
+                view.at[i,'Game Start']=detail.get('Game Start',row.get('Game Start'))
         except (ValueError,OSError,KeyError,TypeError):
             if checked is None or time.time()-checked>120:
                 view['Expected Starter']=None;view['Starter Confirmed']=False

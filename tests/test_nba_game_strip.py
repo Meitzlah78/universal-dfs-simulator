@@ -45,3 +45,13 @@ class GameStripTests(unittest.TestCase):
         self.assertFalse(observe_lineup_change(state,'slate2',expected))
         changed=(('NY','Confirmed',('a','b','c','d','replacement')),)
         self.assertTrue(observe_lineup_change(state,'slate2',changed))
+
+    def test_start_times_are_eastern_and_missing_is_not_guessed(self):
+        from simmah_nba_game_strip import start_time_label
+        self.assertEqual(start_time_label(['2026-10-20 19:00:00']),'7:00 PM ET')
+        self.assertEqual(start_time_label(['2026-10-21T01:30:00Z']),'9:30 PM ET')
+        self.assertEqual(start_time_label(['2026-01-20T00:00:00Z']),'7:00 PM ET')
+        self.assertEqual(start_time_label(['bad',None]),'Time TBD')
+        self.assertEqual(start_time_label(['2026-10-20 19:00:00','2026-10-20 20:00:00']),'Time TBD')
+        p=self.pool();p['Game Start']='2026-10-20 19:00:00'
+        self.assertEqual(game_records(p,[])[0]['start_time'],'7:00 PM ET')

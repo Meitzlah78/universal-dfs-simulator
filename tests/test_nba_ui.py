@@ -10,6 +10,8 @@ class NBAWorkspaceTests(unittest.TestCase):
         self.assertFalse(at.exception)
         html=' '.join(x.value for x in at.markdown)
         self.assertIn('simmah-game-strip',html)
+        self.assertIn('7:00 PM ET',html)
+        self.assertIn('9:30 PM ET',html)
         self.assertIn('○ Expected',html)
         at.button(key='test_source_change').click().run(timeout=20)
         self.assertTrue(at.session_state['nba_lineup_updates_found'])

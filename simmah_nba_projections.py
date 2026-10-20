@@ -151,7 +151,7 @@ def parse_rotowire(players, projections, day, pool):
         except (ValueError,TypeError,KeyError):
             role_details = {}
         lineup = player.get('lineup') or {}
-        details[key] = {**role_details, 'RotoWire RST % (unverified)':rostership, 'Projected Minutes':minutes, 'Minutes Source':'RotoWire' if minutes else 'Missing',
+        details[key] = {**role_details, 'Game Start':player.get('game',{}).get('dateTime'), 'RotoWire RST % (unverified)':rostership, 'Projected Minutes':minutes, 'Minutes Source':'RotoWire' if minutes else 'Missing',
             'RotoWire Injury':player.get('injuryStatus') or 'Active',
             'Expected Starter':lineup.get('slot'),
             'Starter Confirmed':str(lineup.get('isConfirmed',False)).strip().casefold() in {'true','yes','1'},
