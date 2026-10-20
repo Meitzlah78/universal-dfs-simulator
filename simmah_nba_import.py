@@ -53,7 +53,7 @@ def read_template(data):
     return {'entries':entries, 'players':pool, 'contests':contests, 'slots':SLOTS}
 
 
-def render_setup(st, uploaded_file, tabs, controls):
+def render_setup(st, uploaded_file, tabs, controls, game_header=None):
     try:
         slate = read_template(uploaded_file.getvalue())
     except (ValueError, ArithmeticError) as exc:
@@ -61,10 +61,15 @@ def render_setup(st, uploaded_file, tabs, controls):
         return
     pool = slate['players']
     from simmah_nba_projections import slate_date, download_dff, apply_projections
+    if st.session_state.pop('refresh_projections_requested',False):
+        st.session_state.pop('nba_projection_cache',None)
+        st.session_state.pop('nba_rotowire_cache',None)
+        from simmah_nba_lineups import download_lineup_status,acknowledge_lineup_refresh
+        st.cache_data(ttl=60,show_spinner=False,max_entries=8)(download_lineup_status).clear()
+        st.session_state['nba_lineup_refresh_requested']=True
+        st.session_state['projection_updates_found']=False
+        st.session_state['injury_updates_found']=False
     with tabs[1]:
-        if st.button('REFRESH NBA PROJECTIONS', key='nba_projection_refresh'):
-            st.session_state.pop('nba_projection_cache', None)
-            st.session_state.pop('nba_rotowire_cache', None)
         projection_file = st.file_uploader('Optional NBA projections CSV', type=['csv'], key='nba_projection_upload',
             help='Player ID and Projection columns. Uploaded values override DFF, including zeros that exclude a player.')
     automatic = {}
@@ -96,6 +101,9 @@ def render_setup(st, uploaded_file, tabs, controls):
     except Exception as exc:
         with tabs[1]:
             st.warning(f'NBA minutes / RotoWire unavailable: {exc}')
+    if rw_details and st.session_state.pop('nba_lineup_refresh_requested',False):
+        from simmah_nba_lineups import acknowledge_lineup_refresh
+        acknowledge_lineup_refresh(st.session_state)
     keys = set(automatic) | set(rw_values)
     combined = {key:sum(source[key] for source in (automatic,rw_values) if key in source)/sum(key in source for source in (automatic,rw_values)) for key in keys}
     try:
@@ -160,20 +168,21 @@ def render_setup(st, uploaded_file, tabs, controls):
             st.caption(market['source'] + (' · refreshed with NBA projections; cached up to 15 minutes' if market['source'] != 'Manual override' else ''))
         if not markets:
             st.info('No complete, consistent market lines are available for this NBA slate.')
-        st.caption('Market calibration is connected to the experimental NBA engine. Live NBA builds remain disabled during validation.')
+        st.caption('Market lines calibrate the experimental NBA simulation scoring environment.')
+    if game_header is not None:
+        from simmah_nba_lineups import render_live_strip
+        source_cache=st.session_state.get('nba_rotowire_cache',{})
+        with game_header:
+            render_live_strip(st,pool,markets,source_cache.get('slate_id') if rw_details else None,
+                              slate_date(uploaded_file.name),source_cache.get('time') if rw_details else None)
     with tabs[1]:
         st.subheader('NBA player pool')
         st.caption(f"Positive projections: {pool['Projection'].notna().sum()} / {len(pool)} · Eligible after injuries: {pool['Eligible'].sum()}. Automatic data is cached for up to 15 minutes; refresh runs on app activity.")
         st.caption('Historical FPPG is supplied by FanDuel. It is not a pregame projection. OUT players are ineligible; questionable players remain visible.')
         if 'RotoWire RST % (unverified)' in pool:
             raw_own = pd.to_numeric(pool['RotoWire RST % (unverified)'], errors='coerce')
-            st.caption(f'RotoWire raw RST values: {raw_own.notna().sum()} matched; total {raw_own.sum():.1f}%. These are unverified inputs and are not used automatically for opponent ownership.')
+            st.caption(f'RotoWire raw RST values: {raw_own.notna().sum()} matched; total {raw_own.sum():.1f}%. These are unverified percentages. The experimental field uses them only as relative popularity weights.')
         st.dataframe(pool, hide_index=True, use_container_width=True)
         st.write(f"{len(pool)} players · {(pool['Injury Status']=='Out').sum()} Out · {(pool['Injury Status']=='Questionable').sum()} Questionable")
-    with tabs[2]:
-        st.info('NBA import is ready. NBA projections and simulation are still under development.')
-    with tabs[3]:
-        st.info('NBA lineups will appear here after the NBA builder is connected.')
-    with controls:
-        st.caption('FanDuel NBA')
-        st.button('BUILD NBA LINEUPS', disabled=True, key='nba_build_pending')
+    from simmah_nba_ui import render_workspace
+    render_workspace(st,slate,uploaded_file,tabs,controls,markets)

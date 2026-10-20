@@ -1,0 +1,90 @@
+"""Lightweight NBA starting-five status refresh, independent of point projections."""
+import json
+from urllib.request import urlopen
+from simmah_nba_projections import team_key
+from simmah_nba_game_strip import explicit_true
+
+
+def parse_lineup_status(players,day,pairs):
+    expected={tuple(p) for p in pairs};result={}
+    for p in players:
+        team=team_key(p.get('team',{}).get('abbr',''))
+        opponent=team_key(p.get('opponent',{}).get('team',''))
+        if str(p.get('game',{}).get('dateTime',''))[:10]!=day or (team,opponent) not in expected:
+            raise ValueError('NBA lineup source date or matchup differs from uploaded slate')
+        key=((p.get('firstName','')+' '+p.get('lastName','')).strip().casefold(),team)
+        if not key[0] or key in result:raise ValueError('Duplicate or missing NBA lineup player')
+        lineup=p.get('lineup') or {}
+        result[key]={'Expected Starter':lineup.get('slot'),
+                     'Starter Confirmed':explicit_true(lineup.get('isConfirmed',False))}
+    if not result:raise ValueError('No NBA lineup records returned')
+    return result
+
+
+def download_lineup_status(slate_id,day,pairs):
+    if not str(slate_id).isdigit():raise ValueError('Numeric RotoWire slate ID required')
+    with urlopen('https://www.rotowire.com/daily/nba/api/players.php?slateID='+str(slate_id),timeout=8) as response:
+        players=json.load(response)
+    import time
+    return {'players':parse_lineup_status(players,day,pairs),'checked_at':time.time()}
+
+
+def render_live_strip(st,pool,markets,slate_id,day,fallback_time=None):
+    import time
+    from simmah_nba_game_strip import render_game_strip
+    cached=st.cache_data(ttl=60,show_spinner=False,max_entries=8)(download_lineup_status)
+    pairs=tuple(sorted({(team_key(r.Team),team_key(r.Opponent)) for r in pool.itertuples()}))
+    @st.fragment(run_every='60s')
+    def draw():
+        view=pool.copy();checked=fallback_time;source_ok=False
+        try:
+            if slate_id is None:raise ValueError('No matching RotoWire slate')
+            response=cached(str(slate_id),day,pairs)
+            values=response['players'];checked=response['checked_at'];source_ok=True
+            for i,row in view.iterrows():
+                detail=values.get((row['Name'].strip().casefold(),team_key(row['Team'])),{})
+                view.at[i,'Expected Starter']=detail.get('Expected Starter')
+                view.at[i,'Starter Confirmed']=detail.get('Starter Confirmed',False)
+        except (ValueError,OSError,KeyError,TypeError):
+            if checked is None or time.time()-checked>120:
+                view['Expected Starter']=None;view['Starter Confirmed']=False
+        scope=(day,pairs)
+        if source_ok:
+            observe_lineup_change(st.session_state,scope,lineup_snapshot(view),lineup_snapshot(pool))
+        pending=bool(st.session_state.get('nba_lineup_updates_found'))
+        st.markdown(refresh_button_style(pending),unsafe_allow_html=True)
+        if pending:st.caption('Starting lineup changed. Use the red REFRESH button to apply the update.')
+        render_game_strip(st,view,markets,checked)
+        st.caption('Starting-lineup indicators check every 60 seconds while this page is connected. Projection refresh updates the full player pool.')
+    draw()
+
+
+def lineup_snapshot(pool):
+    from simmah_nba_game_strip import team_lineup
+    teams=sorted(set(pool['Team'].map(team_key)))
+    return tuple((team,detail['status'],tuple(sorted(n.strip().casefold() for n in detail['starters'])))
+                 for team in teams for detail in [team_lineup(pool,team)])
+
+
+def observe_lineup_change(state,scope,snapshot,applied_snapshot=None):
+    record=state.get('nba_lineup_monitor')
+    if not record or record['scope']!=scope:
+        record={'scope':scope,'applied':snapshot if applied_snapshot is None else applied_snapshot,'pending':False}
+    record['latest']=snapshot
+    record['pending']=record['pending'] or snapshot!=record['applied']
+    state['nba_lineup_monitor']=record
+    state['nba_lineup_updates_found']=record['pending']
+    return record['pending']
+
+
+def acknowledge_lineup_refresh(state):
+    state.pop('nba_lineup_monitor',None)
+    state['nba_lineup_updates_found']=False
+
+
+def refresh_button_style(pending):
+    background='#d62828' if pending else '#0b2034'
+    border='#d62828' if pending else '#24516b'
+    return ('<style>.st-key-sticky_projection_bar button {'
+            f'background-color:{background} !important;border-color:{border} !important;color:#ffffff !important;'
+            '}</style>')

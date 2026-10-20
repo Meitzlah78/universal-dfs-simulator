@@ -30,6 +30,7 @@ st.session_state["active_slate_identity"] = ""
 
 # Shared header stays above the three format-independent workspaces.
 _shared_header = st.container()
+_slate_games_header = st.container()
 _workspace_main, _workspace_rail = st.columns([4.3, 1.25], gap="medium")
 with _workspace_main:
     _tab_contests, _tab_roster, _tab_build, _tab_lineups = st.tabs(["Contests", "Roster & Projections", "Build", "Lineups"])
@@ -2924,7 +2925,7 @@ selected_format = detected_format
 
 if selected_format == "FanDuel NBA":
     from simmah_nba_import import render_setup as render_nba_setup
-    render_nba_setup(st, auto_slate_file, (_tab_contests, _tab_roster, _tab_build, _tab_lineups), _build_controls)
+    render_nba_setup(st, auto_slate_file, (_tab_contests, _tab_roster, _tab_build, _tab_lineups), _build_controls, game_header=_slate_games_header)
     st.stop()
 
 # Historical projection accuracy report. This uses pre-game projection snapshots

@@ -361,3 +361,33 @@ ownership or calibrated ROI. Live UI integration remains pending.
 The user-supplied contest preset is retained under data/nba_contests. Its loader
 checks contest ID, slate date and fee, contiguous descending paid tiers, capacity
 and prize-pool total. No unrelated or historical contest gets the preset by name.
+
+### NBA workspace and lineup monitor
+
+The experimental NBA build route is now connected to the supported uploaded
+FanDuel contest preset. The right panel builds the tested pipeline, saved
+candidates appear in Build, and Lineups shows the selected portfolio, estimated
+ROI, exposures and the FanDuel edit-entries download. Diversity/ranking reselect
+saved candidates. Changed numerical inputs or minimum salary preserve the prior
+results visibly while disabling stale exports. Confirmation labels alone are not
+numerical model inputs and do not force a rebuild.
+
+A responsive game strip above the tabs shows market-implied scores and separate
+team lineup badges. Confirmed requires exactly five source-identified starters
+with explicit true confirmation flags and no OUT starter; five unconfirmed
+starters are Expected. Missing or partial data is not displayed as confirmed.
+The lightweight RotoWire NBA player/lineup feed is checked in a 60-second
+Streamlit fragment, independently of projection/engine execution, and links to
+RotoWire's NBA starting-lineups page. Team status and starting-five identity are
+compared against the applied snapshot for the current slate. The existing sticky
+refresh button turns red on a status or starter change and remains red until a
+successful refresh applies fresh RotoWire data. An unavailable source does not
+produce a false change or retain a stale green confirmation indefinitely.
+
+The supported NBA preset now permits experimental builds, superseding earlier
+notes that the button was disabled. Ownership remains an explicitly estimated
+relative-popularity model, minutes are fixed provider budgets, and ROI remains
+unvalidated. Streamlit AppTest covers game badges, confirmation change/red alert,
+refresh acknowledgment, build, exposure re-selection without engine reruns,
+entry-file preparation and stale-export blocking. It does not establish
+Streamlit Cloud's live network availability or downstream FanDuel acceptance.

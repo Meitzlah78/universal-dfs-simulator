@@ -150,10 +150,11 @@ def parse_rotowire(players, projections, day, pool):
                 role_details['Historical '+role+' Rate'] = rate
         except (ValueError,TypeError,KeyError):
             role_details = {}
+        lineup = player.get('lineup') or {}
         details[key] = {**role_details, 'RotoWire RST % (unverified)':rostership, 'Projected Minutes':minutes, 'Minutes Source':'RotoWire' if minutes else 'Missing',
             'RotoWire Injury':player.get('injuryStatus') or 'Active',
-            'Expected Starter':player.get('lineup',{}).get('slot'),
-            'Starter Confirmed':bool(player.get('lineup',{}).get('isConfirmed',False)),
+            'Expected Starter':lineup.get('slot'),
+            'Starter Confirmed':str(lineup.get('isConfirmed',False)).strip().casefold() in {'true','yes','1'},
             'Game Total':positive(player.get('odds',{}).get('overUnder')),
             'Team Implied Points':positive(player.get('odds',{}).get('impliedPts'))}
     return values, details
