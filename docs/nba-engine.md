@@ -274,3 +274,22 @@ priors remain needed. Projected minutes are currently fixed scenario budgets;
 minute uncertainty, coaching and injury redistribution remain uncalibrated.
 Unresolved overtime is reported, and player means are not yet anchored to the
 external fantasy projections. This is an experimental adapter, not live readiness.
+
+### Explicit rookie role priors
+
+simmah_nba_role_priors fits G/F/C per-minute role rates from the frozen 59-game
+historical training partition (cutoff April 9, 2026). Sample minutes: G 14,595,
+F 9,986, C 3,856. Multigroup observations are split proportionally. Both event
+rates and position priors are retained in data/nba_models with source game IDs,
+cutoff, counts and experimental status. Future-dated models are rejected.
+Only eligible players with positive external projections and projected minutes
+receive missing role rates; projections are never created or overwritten.
+The player pool labels estimated Role Rate Source explicitly.
+
+The actual uploaded 83-player slate ran 1,000 scenarios using cached public
+RotoWire inputs plus explicit rookie priors for Philon and Mara. Team means were
+NY 117.853 vs target 118.5; PHI 114.184 vs 114; OKC 115.497 vs 115.5;
+SA 117.302 vs 117. Regulation ties remained 2.8% and 2.5% respectively.
+This validates input plumbing and market targeting on the actual salary pool;
+it does not establish player mean calibration or live-build readiness. Overtime,
+external player projection anchoring and ownership verification remain pending.

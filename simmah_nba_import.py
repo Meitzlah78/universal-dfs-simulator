@@ -115,6 +115,15 @@ def render_setup(st, uploaded_file, tabs, controls):
             st.error(str(exc))
         return
     from simmah_nba_markets import extract_markets
+    try:
+        import json
+        from pathlib import Path
+        from simmah_nba_role_priors import apply_position_priors
+        model_path=Path(__file__).parent/'data'/'nba_models'/'position-roles-before-2026-04-09.json'
+        pool=apply_position_priors(pool,json.loads(model_path.read_text()),slate_date(uploaded_file.name))
+    except (ValueError, OSError) as exc:
+        with tabs[1]:
+            st.warning(f'NBA historical role priors unavailable: {exc}')
     markets = extract_markets(pool)
     slate['markets'] = markets
     slate['players'] = pool
