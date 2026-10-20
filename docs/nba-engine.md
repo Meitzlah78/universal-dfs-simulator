@@ -34,7 +34,7 @@ had only four identifiable starters and remains unresolved.
 
 ## Experimental forward events
 
-`simmah_nba_engine.py` now simulates regulation using explicit five-player
+`simmah_nba_engine.py` now simulates quarters and optional overtime using explicit five-player
 rotations and caller-supplied event rates. Made field goals generate scoring and
 optional non-self assists. Misses create rebound opportunities and possible
 blocks. Turnovers create possible steals. Offensive rebounds retain possession.
@@ -44,9 +44,15 @@ NumPy batches scenarios while the event loop advances shared game clocks.
 A synthetic 10,000-game regulation benchmark took 1.673 seconds locally. This
 uses equal role weights and illustrative rates, not trained NBA parameters. It
 excludes model fitting, rotation generation, overtime and contest evaluation.
-Regulation ties are explicitly marked `requires_overtime`; they are not final
-game outcomes. Per-player shooting efficiency, quarter-end logic, fouls and
-coaching decisions need further development.
+Regulation ties require explicit overtime rotations. Ties remaining after the
+supplied overtime periods are marked `requires_overtime`; they are not final
+game outcomes. Period-crossing actions are discarded at the boundary. Individual
+shooting efficiency, fouls and coaching decisions need further development.
+
+NBA roster validation and an offline entry export helper now preserve the
+nine-slot header and original entry/player IDs. The helper requires an explicit
+confirmed team limit; the current contest limit has not yet been verified.
+These helpers remain disconnected from the live BUILD/export interface.
 
 ## Not ready for builds
 

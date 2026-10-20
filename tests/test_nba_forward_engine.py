@@ -26,3 +26,15 @@ class NBAForwardTests(unittest.TestCase):
     def test_bad_rotations_rejected(self):
         rot,w,rates=self.fixture(1);rot[0,0,0,0]=1
         with self.assertRaises(ValueError):simulate_game(rot,w,rates,1)
+
+    def test_explicit_overtime_and_unresolved_tie(self):
+        rot,w,rates=self.fixture(5)
+        # Every action is a turnover: force ties to test bounded overtime without
+        # forcing a winner or adding invented fantasy points.
+        zero=[EventRates(1,0,0,0,0,0,0,0,0,0,13)]*2
+        overtime=np.broadcast_to(np.arange(10).reshape(1,2,1,1,5),(5,2,2,5,5)).copy()
+        result=simulate_game(rot,w,zero,7,overtime_rotations=overtime)
+        self.assertTrue((result['overtime_periods']==2).all())
+        self.assertTrue(result['requires_overtime'].all())
+        np.testing.assert_allclose(result['elapsed_seconds'],3480)
+        self.assertTrue((result['team_points']==0).all())
