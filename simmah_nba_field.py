@@ -47,3 +47,40 @@ def build_field(lineups,ownership,entries,seed=83,source=None,max_iterations=100
             'optimizer_converged':bool(fit.success),'optimizer_message':str(fit.message),
             'entries':entries,'unique_rosters':int(selected.sum()),'ownership_source':source,
             'status':'experimental marginal ownership fit on supplied legal support; inspect residuals'}
+
+
+def sample_popularity_field(lineups,popularity,entries,seed=83,source=None,strength=.5):
+    """Estimate a field from relative popularity scores, not ownership targets.
+
+    A lineup's log weight is strength times summed log player popularity.
+    Legal-support conditioning produces coherent roster frequencies totaling
+    900%. This does not validate the original scores or claim external projected
+    ownership; callers must display the estimate label and source assumption.
+    """
+    ids=np.asarray(lineups);raw=np.asarray(popularity,float)
+    if ids.ndim!=2 or ids.shape[1]!=9 or not len(ids) or ids.dtype.kind not in 'iu':
+        raise ValueError('Nine-player integer legal support required')
+    if raw.ndim!=1 or not np.isfinite(raw).all() or (raw<0).any() or not (raw>0).any():
+        raise ValueError('Finite nonnegative relative popularity scores required')
+    if (ids<0).any() or (ids>=len(raw)).any() or (np.diff(np.sort(ids,axis=1),axis=1)==0).any():
+        raise ValueError('Invalid opponent roster indices')
+    if not isinstance(entries,int) or entries<1 or not source or not np.isfinite(strength) or not 0<=strength<=2:
+        raise ValueError('Explicit source, field size and bounded popularity strength required')
+    _,unique=np.unique(np.sort(ids,axis=1),axis=0,return_index=True)
+    ids=ids[np.sort(unique)]
+    # A documented 0.1 floor preserves possible low-popularity combinations.
+    logits=strength*np.log(np.maximum(raw,.1))[ids].sum(axis=1)
+    probability=np.exp(logits-logsumexp(logits))
+    incidence=np.zeros((len(ids),len(raw)))
+    incidence[np.arange(len(ids))[:,None],ids]=1
+    copies=np.random.default_rng(seed).multinomial(entries,probability)
+    keep=copies>0
+    return {'indices':ids[keep],'copies':copies[keep],
+            'ownership_expected':100*(probability@incidence),
+            'ownership_sampled':100*(copies@incidence)/entries,
+            'ownership_source':'Estimated field; relative popularity assumption: '+source,
+            'entries':entries,'unique_rosters':int(keep.sum()),
+            'effective_support':float(1/(probability@probability)),
+            'largest_roster_probability':float(probability.max()),
+            'popularity_strength':strength,
+            'status':'estimated ownership from legal support; not verified projected ownership'}

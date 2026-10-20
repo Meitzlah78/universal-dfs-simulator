@@ -21,3 +21,15 @@ class NBAFieldTests(unittest.TestCase):
         target=np.r_[np.full(20,44.5),10]
         with self.assertRaises(ValueError):build_field(ids,target,100,source='test')
         with self.assertRaises(ValueError):build_field(ids,np.full(20,45),100)
+
+    def test_relative_popularity_is_labeled_estimate_not_normalized_ownership(self):
+        from simmah_nba_field import sample_popularity_field
+        ids=self.support();raw=np.linspace(1,90,20)
+        self.assertNotAlmostEqual(raw.sum(),900)
+        r=sample_popularity_field(ids,raw,10000,source='synthetic relative scores')
+        self.assertEqual(r['copies'].sum(),10000)
+        self.assertAlmostEqual(r['ownership_expected'].sum(),900)
+        self.assertAlmostEqual(r['ownership_sampled'].sum(),900)
+        self.assertIn('Estimated',r['ownership_source'])
+        self.assertNotIn('ownership_target',r)
+        self.assertTrue(0<r['largest_roster_probability']<=1)

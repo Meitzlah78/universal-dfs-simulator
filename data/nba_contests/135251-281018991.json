@@ -1,0 +1,127 @@
+{
+  "id": "135251-281018991",
+  "name": "$15K Tue NBA Piggy Bank Shot (Guaranteed Overlay!)",
+  "date": "2026-10-20",
+  "capacity": 259740,
+  "entry_fee": 0.05,
+  "prize_pool": 15000,
+  "max_entries": 150,
+  "payout_tiers": [
+    {
+      "first": 1,
+      "last": 1,
+      "prize": 500
+    },
+    {
+      "first": 2,
+      "last": 2,
+      "prize": 250
+    },
+    {
+      "first": 3,
+      "last": 3,
+      "prize": 150
+    },
+    {
+      "first": 4,
+      "last": 4,
+      "prize": 125
+    },
+    {
+      "first": 5,
+      "last": 5,
+      "prize": 100
+    },
+    {
+      "first": 6,
+      "last": 6,
+      "prize": 75
+    },
+    {
+      "first": 7,
+      "last": 8,
+      "prize": 50
+    },
+    {
+      "first": 9,
+      "last": 10,
+      "prize": 30
+    },
+    {
+      "first": 11,
+      "last": 12,
+      "prize": 20
+    },
+    {
+      "first": 13,
+      "last": 15,
+      "prize": 15
+    },
+    {
+      "first": 16,
+      "last": 20,
+      "prize": 10
+    },
+    {
+      "first": 21,
+      "last": 30,
+      "prize": 7.5
+    },
+    {
+      "first": 31,
+      "last": 50,
+      "prize": 5
+    },
+    {
+      "first": 51,
+      "last": 100,
+      "prize": 3
+    },
+    {
+      "first": 101,
+      "last": 200,
+      "prize": 2
+    },
+    {
+      "first": 201,
+      "last": 350,
+      "prize": 1
+    },
+    {
+      "first": 351,
+      "last": 550,
+      "prize": 0.75
+    },
+    {
+      "first": 551,
+      "last": 1000,
+      "prize": 0.5
+    },
+    {
+      "first": 1001,
+      "last": 2000,
+      "prize": 0.3
+    },
+    {
+      "first": 2001,
+      "last": 5000,
+      "prize": 0.2
+    },
+    {
+      "first": 5001,
+      "last": 15000,
+      "prize": 0.15
+    },
+    {
+      "first": 15001,
+      "last": 42750,
+      "prize": 0.12
+    },
+    {
+      "first": 42751,
+      "last": 110000,
+      "prize": 0.1
+    }
+  ],
+  "source": "User-supplied contest and payout screenshot, October 20 2026"
+}

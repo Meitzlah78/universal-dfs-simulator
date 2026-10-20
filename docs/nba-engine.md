@@ -337,3 +337,27 @@ independent 10,000-scenario run reused only the fitted parameters and took 4.932
 seconds, with player mean MAE .162 and .167 (max .475 and .360).
 These quantify target alignment, not predictive accuracy or tournament edge.
 Projected minutes remain fixed, and verified ownership is still unavailable.
+
+### Explicit relative-popularity estimate mode
+
+The RotoWire discrepancy persists after matching the uploaded eligible pool: all
+43 positive-projection, positive-minute players sum to 1340.7%; excluded players
+contribute zero. This is not explained by OUT or duplicate source rows.
+sample_popularity_field therefore offers a separate, explicitly estimated mode:
+a legal roster's log weight is .5 times summed log raw popularity scores, with a
+0.1 floor. This treats raw RST only as relative popularity under an assumption,
+not as verified percentages or proportionally normalized ownership. Expected and
+sampled legal-field marginals total 900%; effective support and largest roster
+probability are reported. The pipeline's projected-target mode stays distinct.
+
+An actual-upload pipeline run used 10,000 scenarios for each independent set,
+5,000 candidates, up to 10,000 independent field-support rosters, the supplied
+259,740-capacity contest and its $15,000 payout schedule, and selected 20 entries.
+Runtime was 41.319 seconds locally. The 259,739 modeled opponents compressed to
+8,165 unique sampled rosters with integer copies; estimated ownership summed to
+900%. This is a successful integration run, not evidence of realistic opponent
+ownership or calibrated ROI. Live UI integration remains pending.
+
+The user-supplied contest preset is retained under data/nba_contests. Its loader
+checks contest ID, slate date and fee, contiguous descending paid tiers, capacity
+and prize-pool total. No unrelated or historical contest gets the preset by name.
