@@ -97,3 +97,16 @@ Conditional on actual minutes, player/pooled MAE was 2.325/2.634 FGA,
 1.429/1.610 AST, 1.722/2.055 REB, .714/.721 STL and .503/.532 BLK.
 These are allocation diagnostics, not fantasy-point or pregame-minute accuracy.
 The role model is offline and has not been connected to live NBA builds.
+
+### Minutes baseline check
+
+A frozen chronological baseline used each player's last three regulation games
+from the same 59-game training set. On 152 covered held-out player-games, minutes
+MAE was 5.743, RMSE 7.239 and bias -0.629 minutes. The full-training mean baseline
+had MAE 5.783. Another 63 player-games lacked three historical observations.
+Overtime is excluded from this regulation-only diagnostic. Holdout results never
+update the fitting history. This conditions on participation and cannot measure
+DNP risk, pregame injury information, or redistribution after scratches.
+Consequently recent averages do not replace RotoWire's pregame projected minutes.
+Historical uncertainty calibration still requires a larger sample and a separate
+validation set before any tuned uncertainty model enters live builds.
