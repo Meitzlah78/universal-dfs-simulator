@@ -55,7 +55,7 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
     with controls:
         st.caption(platform+' NBA · experimental')
         st.write(f'{count} portfolio entries')
-        salary_min=st.number_input('Minimum salary',min_value=0,max_value=rules['salary_cap'],value=0,step=500,key='nba_min_salary' if platform=='FanDuel' else 'nba_min_salary_DraftKings')
+        salary_min=st.number_input('Minimum salary',min_value=0,max_value=rules['salary_cap'],value=58000 if platform=='FanDuel' else 48000,step=500,key='nba_min_salary' if platform=='FanDuel' else 'nba_min_salary_DraftKings')
         correlation=st.slider('Build correlation',0,100,0,key='nba_build_correlation',
             help='Extra preference for positively correlated player combinations measured from the shared game simulations. 0 = no extra bonus; 100 = strongest bonus. Game simulations remain correlated at every setting.')
         diversity=st.slider('Exposure diversity',0,100,50,key='nba_exposure_diversity')
