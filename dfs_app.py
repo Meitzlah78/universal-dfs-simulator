@@ -18,6 +18,8 @@ st.set_page_config(
     layout="wide"
 )
 
+from simmah_slate_workspaces import begin_workspaces, finish_workspaces, select_upload, workspace_file_uploader, workspace_stop, workspace_rerun
+_loaded_slate_tabs = begin_workspaces(st)
 from simmah_injury_display import injury_frame, injury_player_pool
 from simmah_single_stacks import render_controls as render_single_stack_controls, selected_validator as single_stack_validator
 from simmah_build_state import uploaded_slate_signature, signature_matches_upload
@@ -101,14 +103,14 @@ st.session_state["field_history_store"] = _history_store
 with _contest_history:
     with st.expander("Contest History / Field Learning", expanded=False):
         st.caption("Completed standings train anonymous construction profiles used by matching opponent fields. Import all entries, not just winning lineups.")
-        _hist_files = st.file_uploader("Completed contest standings (CSV or ZIP)", type=["csv", "zip"], accept_multiple_files=True, key="contest_history_uploads_v2")
+        _hist_files = workspace_file_uploader(st,"Completed contest standings (CSV or ZIP)", type=["csv", "zip"], accept_multiple_files=True, key="contest_history_uploads_v2")
         _hc1, _hc2, _hc3 = st.columns(3)
         _hist_platform = _hc1.selectbox("Platform", ["Auto", "DraftKings", "FanDuel"], key="history_platform_v2")
         _hist_mode = _hc2.selectbox("Mode", ["Auto", "Classic / Full Roster", "Showdown / Single Game"], key="history_mode_v2")
         _hist_fee_known = _hc3.checkbox("Entry fee is known", value=False)
         _hist_fee = _hc3.number_input("Historical entry fee ($)", min_value=0., value=.10, step=.10) if _hist_fee_known else None
         _hist_max = st.number_input("Historical max entries per user (0 = unknown)", min_value=0, value=0, step=1)
-        _hist_metadata_file = st.file_uploader("Optional player metadata from THAT contest (Name, Team, Position, Salary, Opponent)", type=["csv"], key="history_metadata_v2")
+        _hist_metadata_file = workspace_file_uploader(st,"Optional player metadata from THAT contest (Name, Team, Position, Salary, Opponent)", type=["csv"], key="history_metadata_v2")
         st.caption("Without historical player metadata, only ownership-concentration features can be learned. Today's salaries/teams are never substituted.")
         if _hist_files and st.button("LEARN FROM CONTESTS", key="learn_contest_history_v2", use_container_width=True):
             import hashlib
@@ -125,7 +127,7 @@ with _contest_history:
                     _metadata = {name_key(row["Name"]): row for row in _metadata_frame.to_dict("records")}
                 except Exception as _exc:
                     st.error(f"Historical metadata could not load: {_exc}")
-                    st.stop()
+                    workspace_stop(st, _loaded_slate_tabs)
             _new_profiles = []
             _known = {profile["id"]: profile for profile in _history_store["contests"]}
             for _file in _hist_files:
@@ -147,7 +149,7 @@ with _contest_history:
             else:
                 st.info("No new valid contest profiles were added.")
         import json as _history_json
-        _restore = st.file_uploader("Restore a Simmah field-history backup", type=["json"], key="history_restore_v2")
+        _restore = workspace_file_uploader(st,"Restore a Simmah field-history backup", type=["json"], key="history_restore_v2")
         if _restore is not None and st.button("RESTORE FIELD HISTORY"):
             try:
                 _history_store = merge_stores(_history_store, _history_json.loads(_restore.getvalue()))
@@ -174,7 +176,7 @@ with _shared_header.container(key="sticky_projection_bar"):
         if st.button("REFRESH PROJECTIONS + INJURY NEWS", key="sticky_refresh_projections", use_container_width=True):
             # Defer cache clearing until after the cached functions have been defined.
             st.session_state["refresh_projections_requested"] = True
-            st.rerun()
+            workspace_rerun(st, _loaded_slate_tabs)
 
 
 # Shared ranking choices across every supported format.
@@ -1020,7 +1022,7 @@ def apply_injury_statuses(frame, key_prefix):
     result = result[result["Injury Status"].str.casefold() != "out"].reset_index(drop=True)
     if result.empty:
         st.error("All players are marked Out. Check the injury feed and player file before continuing.")
-        st.stop()
+        workspace_stop(st, _loaded_slate_tabs)
     return result
 
 
@@ -1028,7 +1030,7 @@ def exclude_zero_projection_players(frame, slate_label):
     """Remove players with missing, invalid, or zero projections before lineup building."""
     if "Projection" not in frame.columns:
         st.error(f"{slate_label}: projection column is missing, so players cannot be safely ranked.")
-        st.stop()
+        workspace_stop(st, _loaded_slate_tabs)
     result = frame.copy()
     result["Projection"] = pd.to_numeric(result["Projection"], errors="coerce")
     excluded = result[
@@ -1050,7 +1052,7 @@ def exclude_zero_projection_players(frame, slate_label):
     ].reset_index(drop=True)
     if result.empty:
         st.error(f"{slate_label}: no players have projections above zero. Check your projection sources.")
-        st.stop()
+        workspace_stop(st, _loaded_slate_tabs)
     return result
 
 
@@ -1074,7 +1076,7 @@ def resolve_quarterback_roles_for_build(frame, format_label):
                 selected[team] = choice
         if unresolved:
             st.info("Select the starting QB for " + ", ".join(unresolved) + " to continue. No game results are used to choose a starter.")
-            st.stop()
+            workspace_stop(st, _loaded_slate_tabs)
     resolved = resolve_quarterbacks(frame, selected)
     position = resolved["Position"].astype(str).str.upper().str.strip()
     signature = tuple(sorted(resolved.loc[position.eq("QB"), ["Team", "Name"]].astype(str).itertuples(index=False, name=None)))
@@ -2838,6 +2840,7 @@ format_options = {
     "FanDuel Full Roster": ("FanDuel", "Full Roster"),
     "FanDuel Single Game": ("FanDuel", "Single Game"),
     "FanDuel NBA": ("FanDuel", "NBA"),
+    "DraftKings NBA": ("DraftKings", "NBA"),
 }
 
 
@@ -2861,6 +2864,9 @@ def detect_uploaded_dfs_format(uploaded_file):
     # The first entry-table header is the most reliable place to identify roster type.
     header = [str(cell).strip().upper() for cell in rows[0]]
     header_set = set(header)
+
+    if tuple(header[4:12]) == ("PG", "SG", "SF", "PF", "C", "G", "F", "UTIL"):
+        return "DraftKings NBA"
 
     if tuple(header[4:13]) == ("PG", "SG", "SF", "PF", "C", "G/F", "F/C", "UTIL", "UTIL"):
         return "FanDuel NBA"
@@ -2902,31 +2908,34 @@ with _shared_header:
     auto_slate_file = st.file_uploader(
         "Upload Entries / Slate CSV",
         type=["csv"],
-        key="universal_slate_setup_file",
+        key="universal_slate_setup_file_"+st.session_state.get("_slate_active",{}).get("id","new"),
     )
 
+    auto_slate_file = select_upload(st, auto_slate_file)
+    if st.session_state.get('_slate_incoming'):
+        workspace_stop(st, _loaded_slate_tabs)
     if auto_slate_file is not None:
         detected_format = detect_uploaded_dfs_format(auto_slate_file)
         if detected_format:
             if st.session_state.get("dfs_format") != detected_format:
                 st.session_state["dfs_format"] = detected_format
                 st.session_state["auto_detected_dfs_format"] = detected_format
-                st.rerun()
+                workspace_rerun(st, _loaded_slate_tabs)
             st.success(f"Format detected automatically: {detected_format}")
         else:
             st.error("SIMMAH could not identify this file. Upload the original DraftKings or FanDuel contest entries CSV.")
-            st.stop()
+            workspace_stop(st, _loaded_slate_tabs)
 
 if auto_slate_file is None:
     with _shared_header:
         st.info("Upload an entries/slate CSV to get started.")
-    st.stop()
+    workspace_stop(st, _loaded_slate_tabs)
 selected_format = detected_format
 
-if selected_format == "FanDuel NBA":
+if selected_format in {"FanDuel NBA", "DraftKings NBA"}:
     from simmah_nba_import import render_setup as render_nba_setup
     render_nba_setup(st, auto_slate_file, (_tab_contests, _tab_roster, _tab_build, _tab_lineups), _build_controls, game_header=_slate_games_header)
-    st.stop()
+    workspace_stop(st, _loaded_slate_tabs)
 
 # Historical projection accuracy report. This uses pre-game projection snapshots
 # matched to actual fantasy points; the volatility check below is not a projection backtest.
@@ -2947,7 +2956,7 @@ with _tab_roster:
             mime="text/csv",
             key="projection_accuracy_template_download",
         )
-        accuracy_file = st.file_uploader(
+        accuracy_file = workspace_file_uploader(st,
             "Upload historical projection results CSV",
             type=["csv"],
             key="projection_accuracy_history_upload",
@@ -4617,15 +4626,15 @@ if platform == "FanDuel":
         st.write("### Projection Sources")
         with st.expander("Upload projections / restore saved pregame inputs", expanded=False):
             st.caption("Uploads take priority over automatic projections. To restore saved point projections, upload the pregame player-input CSV below.")
-            _fd_saved_projection_file = st.file_uploader(
+            _fd_saved_projection_file = workspace_file_uploader(st,
                 "Saved pregame player inputs CSV", type=["csv"],
                 key="fd_saved_projection_upload_" + lineup_mode.replace(" ", "_").lower())
             _fd_projection_cols = st.columns(2)
             with _fd_projection_cols[0]:
-                _fd_manual_dff = st.file_uploader("DFF projections CSV (optional)", type=["csv"],
+                _fd_manual_dff = workspace_file_uploader(st,"DFF projections CSV (optional)", type=["csv"],
                     key="fd_dff_projection_upload_" + lineup_mode.replace(" ", "_").lower())
             with _fd_projection_cols[1]:
-                _fd_manual_draftedge = st.file_uploader("DraftEdge projections CSV (optional)", type=["csv"],
+                _fd_manual_draftedge = workspace_file_uploader(st,"DraftEdge projections CSV (optional)", type=["csv"],
                     key="fd_draftedge_projection_upload_" + lineup_mode.replace(" ", "_").lower())
             if _fd_saved_projection_file is not None:
                 st.caption("Saved point projections supplied to both sources to preserve the saved averages. Injury and weather checks remain current.")
@@ -4638,7 +4647,7 @@ if platform == "FanDuel":
 
         if fd_file is None:
             st.info("Upload your FanDuel slate/entries CSV to load the slate and build lineups.")
-            st.stop()
+            workspace_stop(st, _loaded_slate_tabs)
 
         try:
             # FanDuel exports may include preamble rows or inconsistent rows before
@@ -4709,7 +4718,7 @@ if platform == "FanDuel":
 
             if missing_cols:
                 st.error("Missing required columns: " + ", ".join(missing_cols))
-                st.stop()
+                workspace_stop(st, _loaded_slate_tabs)
 
             fd_players = pd.DataFrame()
             fd_players["Name"] = fd_raw[fd_name_col].astype(str).str.strip()
@@ -4755,11 +4764,11 @@ if platform == "FanDuel":
 
             if fd_players.empty:
                 st.error("No usable players were found in that CSV.")
-                st.stop()
+                workspace_stop(st, _loaded_slate_tabs)
 
         except Exception as exc:
             st.error(f"Could not read that FanDuel CSV: {exc}")
-            st.stop()
+            workspace_stop(st, _loaded_slate_tabs)
 
         fd_projection_platform = "FanDuel Single Game" if lineup_mode == "Single Game" else "FanDuel Full Roster"
         fd_players = apply_external_projection_sources(
@@ -5122,7 +5131,7 @@ if platform == "FanDuel":
                     _fd_new_manual[_fd_name] = _fd_status
             if _fd_new_manual != _fd_manual_injuries:
                 st.session_state[_fd_manual_injury_key] = _fd_new_manual
-                st.rerun()
+                workspace_rerun(st, _loaded_slate_tabs)
             fd_players["Injury Status"] = fd_players.apply(
                 lambda row: _fd_new_manual.get(str(row.get("Name", "")), row.get("Injury Status", "Active")), axis=1
             )
@@ -5331,7 +5340,7 @@ if platform == "FanDuel":
                     fd_workflow_status.info("Step 3 of 4: Building the simulated opponent field...")
             except Exception as exc:
                 st.error(f"FanDuel candidate build stopped: {exc}")
-                st.stop()
+                workspace_stop(st, _loaded_slate_tabs)
 
         if fd_contest_clicked:
             fd_pool = fd_players.copy()
@@ -5587,7 +5596,7 @@ if platform == "FanDuel":
                     # The Player Pool and export were rendered before this SIM click.
                     # Rerun once so they are rebuilt from the fd_player_sim_* values
                     # saved above instead of the pre-SIM projection placeholders.
-                    st.rerun()
+                    workspace_rerun(st, _loaded_slate_tabs)
                 else:
                     fd_workflow_status.error("FanDuel SIM stopped before Step 4 produced a contest comparison.")
 
@@ -5597,7 +5606,7 @@ if platform == "FanDuel":
             fd_results = fd_results.loc[fd_results[fd_slots].isin(_fd_eligible_now).all(axis=1)].copy()
             if fd_results.empty:
                 st.warning("No saved candidates remain eligible after player-pool changes. Run Build to generate new candidates.")
-                st.stop()
+                workspace_stop(st, _loaded_slate_tabs)
             fd_results = remove_out_players_from_lineups(fd_results, fd_slots, "FanDuel")
             st.session_state[fd_build_key] = fd_results
             st.divider()
@@ -5621,7 +5630,7 @@ if platform == "FanDuel":
             if not isinstance(fd_rank_source, pd.DataFrame) or fd_rank_source.empty:
                 fd_rank_source = add_field_ranking_metrics(fd_results, fd_results["ProjectedPoints"].to_numpy(dtype=float))
             # Persistent FanDuel Full Roster sanity check and opponent lineup viewer.
-            # Read from session state so these remain visible after SIM triggers st.rerun().
+            # Read from session state so these remain visible after SIM triggers workspace_rerun(st, _loaded_slate_tabs).
             if lineup_mode in {"Full Roster", "Single Game"}:
                 _fd_field_key = "fd_contest_field_" + lineup_mode.replace(" ", "_").lower()
                 _fd_persist_field = st.session_state.get(_fd_field_key)
@@ -5708,7 +5717,7 @@ if platform == "FanDuel":
                         controls=fd_player_display.set_index("Name").to_dict("index"), diversity=portfolio_diversity)
                 except ValueError as exc:
                     st.error(str(exc))
-                    st.stop()
+                    workspace_stop(st, _loaded_slate_tabs)
                 if _fd_diverse_portfolio.attrs.get("effective_auto_cap_pct", 100) > (100 - .4 * portfolio_diversity):
                     st.warning(f"The candidate pool cannot fill all assigned entries at the preferred exposure cap. Automatic cap increased to {_fd_diverse_portfolio.attrs['effective_auto_cap_pct']}%; your manual exposure limits remain enforced.")
                 fd_all_ranked = put_portfolio_first(fd_all_ranked, _fd_diverse_portfolio, fd_slots)
@@ -5797,7 +5806,7 @@ if platform == "FanDuel":
                 fd_display_columns.append("Salary")
             # FanDuel contest comparison already calculates these metrics. Keep them
             # visible in the post-SIM portfolio table so the completed contest run is
-            # not reduced back to only projection/score/salary after st.rerun().
+            # not reduced back to only projection/score/salary after workspace_rerun(st, _loaded_slate_tabs).
             for metric_col in [
                 "ContestScore", "WinRate", "Top1", "Top5", "Top10", "CashRate",
                 "AvgPercentile", "Entry Fee ($)", "Expected Prize ($)",
@@ -5875,7 +5884,7 @@ if platform == "FanDuel":
         _fd_scoring_download_slot.download_button("DOWNLOAD PLAYER SCORING INPUTS", _fd_scoring_report.to_csv(index=False).encode("utf-8"),
             "FanDuel_" + lineup_mode.replace(" ", "_") + "_Player_Scoring_Inputs.csv", "text/csv",
             key="fd_player_scoring_inputs_" + lineup_mode.replace(" ", "_").lower(), on_click="ignore")
-        st.stop()
+        workspace_stop(st, _loaded_slate_tabs)
 
 else:
 
@@ -5898,7 +5907,7 @@ else:
             st.info("Upload your entries/slate CSV in Contests to load this slate's player pool.")
         with _tab_lineups:
             st.info("Your assigned lineups will appear here after you load a slate and run a build.")
-        st.stop()
+        workspace_stop(st, _loaded_slate_tabs)
 
     with _contest_setup:
         selected_contest_id = None
@@ -5920,7 +5929,7 @@ else:
                 parsed_rows = list(csv.reader(io.StringIO(raw_entry_text)))
                 if not parsed_rows:
                     st.error("The uploaded DraftKings contest entry CSV is empty.")
-                    st.stop()
+                    workspace_stop(st, _loaded_slate_tabs)
 
                 raw_header = [str(col).strip() for col in parsed_rows[0]]
                 header_lookup = {str(col).strip().casefold(): i for i, col in enumerate(raw_header)}
@@ -5930,7 +5939,7 @@ else:
                         "This CSV does not appear to be a DraftKings My Contests entry file. "
                         "Please upload the original contest entry CSV, not the salary CSV."
                     )
-                    st.stop()
+                    workspace_stop(st, _loaded_slate_tabs)
 
                 # Keep the roster headers from the uploaded entry file. DraftKings
                 # Classic and Showdown use different roster layouts, and duplicate slot
@@ -5943,7 +5952,7 @@ else:
                 ]
                 if not roster_headers:
                     st.error("Could not find player-slot columns in this DraftKings entry CSV.")
-                    st.stop()
+                    workspace_stop(st, _loaded_slate_tabs)
 
                 # Validate the uploaded contest-entry template against the selected format.
                 normalized_slots = [str(slot).strip().upper() for slot in roster_headers]
@@ -5953,13 +5962,13 @@ else:
                         "This is not a DraftKings Showdown entry file: its roster columns do not include CPT. "
                         "Select DraftKings Classic or upload the correct Showdown entries file."
                     )
-                    st.stop()
+                    workspace_stop(st, _loaded_slate_tabs)
                 if lineup_mode == "Classic" and entry_is_showdown:
                     st.error(
                         "This is a DraftKings Showdown entry file (CPT/FLEX), but DraftKings Classic is selected. "
                         "Select DraftKings Showdown or upload the correct Classic entries file."
                     )
-                    st.stop()
+                    workspace_stop(st, _loaded_slate_tabs)
 
                 parsed_entries = []
                 repaired_count = 0
@@ -6001,7 +6010,7 @@ else:
                         "No valid contest entry rows were found. Please upload the original "
                         "DraftKings My Contests CSV."
                     )
-                    st.stop()
+                    workspace_stop(st, _loaded_slate_tabs)
 
                 standard_header = metadata_headers + roster_headers
                 entry_df = pd.DataFrame(parsed_entries, columns=standard_header)
@@ -6196,15 +6205,15 @@ else:
         # by apply_external_projection_sources when these are not supplied.
         with st.expander("Upload projections / restore saved pregame inputs", expanded=False):
             st.caption("Uploads take priority over automatic projections. To restore saved point projections, upload the pregame player-input CSV below.")
-            _dk_saved_projection_file = st.file_uploader(
+            _dk_saved_projection_file = workspace_file_uploader(st,
                 "Saved pregame player inputs CSV", type=["csv"],
                 key="dk_saved_projection_upload_" + lineup_mode.replace(" ", "_").lower())
             _dk_projection_cols = st.columns(2)
             with _dk_projection_cols[0]:
-                _dk_manual_dff = st.file_uploader("DFF projections CSV (optional)", type=["csv"],
+                _dk_manual_dff = workspace_file_uploader(st,"DFF projections CSV (optional)", type=["csv"],
                     key="dk_dff_projection_upload_" + lineup_mode.replace(" ", "_").lower())
             with _dk_projection_cols[1]:
-                _dk_manual_draftedge = st.file_uploader("DraftEdge projections CSV (optional)", type=["csv"],
+                _dk_manual_draftedge = workspace_file_uploader(st,"DraftEdge projections CSV (optional)", type=["csv"],
                     key="dk_draftedge_projection_upload_" + lineup_mode.replace(" ", "_").lower())
             if _dk_saved_projection_file is not None:
                 st.caption("Saved point projections supplied to both sources to preserve the saved averages. Injury and weather checks remain current.")
@@ -6370,7 +6379,7 @@ else:
 
             except Exception as exc:
                 st.error(f"Could not read that CSV: {exc}. Upload a valid entries/slate CSV to continue.")
-                st.stop()
+                workspace_stop(st, _loaded_slate_tabs)
 
 
 
@@ -6509,7 +6518,7 @@ else:
                 ].copy()
             if eligible_players.empty:
                 st.error("No eligible players remain. Change at least one player from Out to Active or Questionable.")
-                st.stop()
+                workspace_stop(st, _loaded_slate_tabs)
             # Simulate stat lines first, then calculate fantasy points with site scoring.
             rng = np.random.default_rng()
             if workflow_status is not None:
@@ -7200,7 +7209,7 @@ else:
                         f"SIM stopped during player simulations or ranking setup: {type(exc).__name__}: {exc}"
                     )
                     st.exception(exc)
-                    st.stop()
+                    workspace_stop(st, _loaded_slate_tabs)
 
             build_clicked = _classic_build_button
 
@@ -7217,7 +7226,7 @@ else:
                     st.session_state["classic_pool_signature"] = slate_signature
                 except Exception as exc:
                     st.error(f"DraftKings Classic candidate build stopped: {exc}")
-                    st.stop()
+                    workspace_stop(st, _loaded_slate_tabs)
 
             if _classic_contest_button and platform == "DraftKings" and lineup_mode == "Classic":
                 # Keep the Classic workflow compact, matching the single-button Showdown layout.
@@ -7442,7 +7451,7 @@ else:
                         _classic_assignment_count, classic_rank_metric, controls=control_map, diversity=portfolio_diversity)
                 except ValueError as exc:
                     st.error(str(exc))
-                    st.stop()
+                    workspace_stop(st, _loaded_slate_tabs)
                 if classic_export_portfolio.attrs.get("effective_auto_cap_pct", 100) > (100 - .4 * portfolio_diversity):
                     st.warning(f"The candidate pool cannot fill all assigned entries at the preferred exposure cap. Automatic cap increased to {classic_export_portfolio.attrs['effective_auto_cap_pct']}%; your manual exposure limits remain enforced.")
                 with _tab_lineups:
@@ -7565,8 +7574,8 @@ else:
 
             # Re-render the player table, which appears before the SIM button.
             if classic_run_all:
-                st.rerun()
-            st.stop()
+                workspace_rerun(st, _loaded_slate_tabs)
+            workspace_stop(st, _loaded_slate_tabs)
 
 
 # ============================================
@@ -7675,7 +7684,7 @@ with _tab_build:
                 f"SIM stopped during player simulations or ranking setup: {type(exc).__name__}: {exc}"
             )
             st.exception(exc)
-            st.stop()
+            workspace_stop(st, _loaded_slate_tabs)
 
     # The eligible player pool was prepared before the SIM handler above.
     # Keep the last successful candidate pool across Streamlit reruns.
@@ -7703,7 +7712,7 @@ with _tab_build:
                 f"Step 2 failed while ranking players or building candidate lineups: {type(exc).__name__}: {exc}"
             )
             st.exception(exc)
-            st.stop()
+            workspace_stop(st, _loaded_slate_tabs)
 
 
         st.session_state["candidates_df"] = candidates_df
@@ -7728,7 +7737,7 @@ with _tab_build:
         except Exception as exc:
             workflow_status.error(f"Step 3 failed while building opponent lineups: {type(exc).__name__}: {exc}")
             st.exception(exc)
-            st.stop()
+            workspace_stop(st, _loaded_slate_tabs)
         field_progress.progress(1.0, text=f"Step 3 of 4 complete: {len(contest_field_sample_df):,} unique sample opponent lineups created")
         if len(contest_field_sample_df) < dk_opponent_target:
             st.warning(f"Only {len(contest_field_sample_df):,} distinct legal opponents are available under the current pool and salary limits; requested {dk_opponent_target:,}. No duplicate sample rows were added.")
@@ -7736,7 +7745,7 @@ with _tab_build:
             workflow_status.error(
                 "Step 3 could not create any valid opponent lineups. Check the salary cap and eligible player pool."
             )
-            st.stop()
+            workspace_stop(st, _loaded_slate_tabs)
 
         selected_contest = st.session_state.get("selected_dk_contest") or {}
         try:
@@ -8069,7 +8078,7 @@ with _tab_build:
                 st.caption("Source: " + str(_dk_details_display.get("source", "DraftKings endpoint")))
                 st.caption("Last fetched: " + str(_dk_details_display.get("fetched_at", "unknown time")))
 
-            payout_file = st.file_uploader(
+            payout_file = workspace_file_uploader(st,
                 "Upload contest payout table CSV",
                 type=["csv"],
                 key="contest_payout_table_upload",
@@ -8347,14 +8356,14 @@ with _tab_build:
                 "Check that enough players have projections, and review any locks, fades, "
                 "exposure limits, and salary constraints. Then click SIM again."
             )
-            st.stop()
+            workspace_stop(st, _loaded_slate_tabs)
 
         if contest_field_df.empty:
             st.error(
                 "No simulated opponent lineups were created, so contest scoring cannot run. "
                 "Check the selected contest and player pool, then click SIM again."
             )
-            st.stop()
+            workspace_stop(st, _loaded_slate_tabs)
 
         if platform == "DraftKings" and lineup_mode == "Classic":
             lineup_cols = ["QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "FLEX", "DST"]
@@ -9007,7 +9016,7 @@ with _tab_build:
                     diversity=portfolio_diversity)
             except ValueError as exc:
                 st.error(str(exc))
-                st.stop()
+                workspace_stop(st, _loaded_slate_tabs)
             portfolio_df["Locked"] = False
             if portfolio_df.attrs.get("effective_auto_cap_pct",100) > (100-.4*portfolio_diversity):
                 st.warning(f"Automatic exposure cap increased to {portfolio_df.attrs['effective_auto_cap_pct']}% to fill entries. Manual limits remain enforced.")
@@ -9439,7 +9448,7 @@ with _tab_build:
     # Player Pool appears above the SIM handler, so refresh it after a completed
     # Showdown simulation/build to show the newly generated player attributes.
     if build_clicked:
-        st.rerun()
+        workspace_rerun(st, _loaded_slate_tabs)
 
 
     # ============================================
@@ -9451,7 +9460,7 @@ with _tab_build:
                 "Upload the completed contest standings CSV. The app compares actual scores, ownership, "
                 "CPT/MVP ownership, duplicates, and your finishes with the automatically saved pregame snapshot."
             )
-            completed_contest_file = st.file_uploader(
+            completed_contest_file = workspace_file_uploader(st,
                 "Upload completed contest CSV",
                 type=["csv"],
                 key="completed_contest_learning_upload",
@@ -9648,7 +9657,7 @@ with _tab_build:
             # Import previously downloaded history when the user chooses to load it.
             roi_upload_col, roi_load_col = st.columns([3, 1])
             with roi_upload_col:
-                roi_history_file = st.file_uploader(
+                roi_history_file = workspace_file_uploader(st,
                     "Load saved ROI history CSV",
                     type=["csv"],
                     key="roi_history_file_upload",
@@ -9668,7 +9677,7 @@ with _tab_build:
                                 loaded_history[column] = ""
                             st.session_state["roi_history"] = loaded_history[ROI_COLUMNS].copy()
                             st.success(f"Loaded {len(loaded_history)} contest records.")
-                            st.rerun()
+                            workspace_rerun(st, _loaded_slate_tabs)
                         except Exception as exc:
                             st.error(f"Could not load that history file: {exc}")
 
@@ -9764,3 +9773,5 @@ with _tab_build:
 
 
 
+
+finish_workspaces(st, _loaded_slate_tabs)

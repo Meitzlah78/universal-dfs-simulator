@@ -10,6 +10,7 @@ from simmah_nba_engine import EventRates
 from simmah_nba_pipeline import run_pipeline,export_portfolio
 from simmah_nba_contest import select_entries
 from simmah_nba_rosters import SLOT_COLUMNS
+from simmah_nba_rules import rules_for
 from simmah_portfolio import portfolio_roi_totals
 
 
@@ -25,24 +26,24 @@ def input_identity(pool,markets,contest,salary_min):
 def display_lineups(pool,frame):
     result=frame.copy()
     names={str(r['Player ID']):str(r['Name'])+({'Questionable':' (Q)','Doubtful':' (D)'}.get(r['Injury Status'],'')) for _,r in pool.iterrows()}
-    for c in SLOT_COLUMNS:
+    for c in rules_for(pool)['slots']:
         if c in result:result[c]=result[c].astype(str).map(names).fillna(result[c])
     return result
 
 
 def render_workspace(st,slate,upload,tabs,controls,markets):
-    pool=slate['players'];contests={c['id']:c for c in slate['contests']}
+    pool=slate['players'];rules=rules_for(pool);platform=rules['platform'];slots=rules['slots'];contests={c['id']:c for c in slate['contests']}
     with tabs[0]:
         cid=st.selectbox('NBA contest',list(contests),format_func=lambda x:contests[x]['name'],key='nba_selected_contest')
     selected=contests[cid];count=selected['owned_entries'];error=None;contest=None;engine=None
     try:
-        day=slate_date(upload.name)
+        day=slate.get('date') or pool.attrs.get('slate_date') or slate_date(upload.name)
         contest=saved_contest(cid,day,selected['entry_fee'])
         if contest is None:raise ValueError('This NBA contest needs its capacity and payout schedule before builds can run.')
         rates_path=Path(__file__).parent/'data'/'nba_models'/'event-rates-before-2026-04-09.json'
         model=json.loads(rates_path.read_text())
         if model['before']>day:raise ValueError('Historical event baseline follows the selected slate date')
-        engine=PregameEngine(pool,markets,EventRates(**model['rates']))
+        engine=PregameEngine(pool,markets,EventRates(**model['rates']),platform=platform)
         raw=pd.to_numeric(pool.get('RotoWire RST % (unverified)',pd.Series(np.nan,index=pool.index)),errors='coerce')
         if raw[pool['Eligible']].isna().any():raise ValueError('Relative popularity inputs are missing for eligible NBA players')
     except (ValueError,KeyError,OSError) as exc:error=str(exc)
@@ -51,9 +52,9 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
             st.caption(f"{contest['capacity']:,} contest places · ${contest['prize_pool']:,.0f} prizes · {count} reserved entries · payouts supplied from your contest")
         st.caption('NBA opponent ownership is estimated from legal lineups using raw RotoWire RST as relative popularity. It is not verified projected ownership.')
     with controls:
-        st.caption('FanDuel NBA · experimental')
+        st.caption(platform+' NBA · experimental')
         st.write(f'{count} portfolio entries')
-        salary_min=st.number_input('Minimum salary',min_value=0,max_value=60000,value=0,step=500,key='nba_min_salary')
+        salary_min=st.number_input('Minimum salary',min_value=0,max_value=rules['salary_cap'],value=0,step=500,key='nba_min_salary' if platform=='FanDuel' else 'nba_min_salary_DraftKings')
         diversity=st.slider('Exposure diversity',0,100,50,key='nba_exposure_diversity')
         metric=st.selectbox('Rank lineups',['Top 1%','Expected ROI (%)','Expected Prize ($)'],key='nba_rank_metric')
         st.caption('10,000 scenarios per set · 5,000 candidates · up to 10,000 field-support rosters')
@@ -100,9 +101,9 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         st.subheader('Candidate lineups')
         st.caption(f"{built['candidates']['unique']:,} unique candidates · {built['field']['entries']:,} modeled opponents · {built['field']['unique_rosters']:,} unique opponent rosters. Ownership and ROI are estimates.")
         candidate_rows=built['report'].copy()
-        for j,slot in enumerate(SLOT_COLUMNS):candidate_rows[slot]=saved_pool.iloc[built['candidates']['indices'][:,j]]['Player ID'].to_numpy()
+        for j,slot in enumerate(slots):candidate_rows[slot]=saved_pool.iloc[built['candidates']['indices'][:,j]]['Player ID'].to_numpy()
         st.dataframe(display_lineups(saved_pool,candidate_rows).sort_values(metric,ascending=False),hide_index=True,width="stretch")
-        st.download_button('DOWNLOAD OPPONENT FIELD',pd.DataFrame(built['field']['indices'],columns=SLOT_COLUMNS).apply(lambda c:c.map(saved_pool['Player ID'].to_dict())).assign(Copies=built['field']['copies']).to_csv(index=False).encode(),
+        st.download_button('DOWNLOAD OPPONENT FIELD',pd.DataFrame(built['field']['indices'],columns=slots).apply(lambda c:c.map(saved_pool['Player ID'].to_dict())).assign(Copies=built['field']['copies']).to_csv(index=False).encode(),
             'Simmah_NBA_Opponent_Field.csv','text/csv',key='nba_field_download',on_click='ignore')
         with st.expander('NBA engine and ownership report'):
             st.write(saved['engine_reports'])
@@ -119,7 +120,7 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         st.caption('Experimental model estimates; totals sum marginal lineup estimates against the modeled field.')
         st.subheader('My lineups')
         st.dataframe(display_lineups(saved_pool,portfolio),hide_index=True,width="stretch")
-        exposure=portfolio[list(SLOT_COLUMNS)].stack().value_counts().rename('Lineups')
+        exposure=portfolio[list(slots)].stack().value_counts().rename('Lineups')
         exposure=exposure.rename_axis('Player ID').reset_index()
         exposure['Exposure %']=100*exposure['Lineups']/len(portfolio)
         exposure=exposure.merge(saved_pool[['Player ID','Name','Team','Injury Status']],on='Player ID',how='left')
@@ -127,4 +128,4 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         st.dataframe(exposure[['Name','Team','Injury Status','Lineups','Exposure %']],hide_index=True,width='stretch',key='nba_exposure_table',
                      column_config={'Name':st.column_config.TextColumn('Player',pinned=True)})
         data=b'' if stale else export_portfolio(upload.getvalue(),cid,pool,built)
-        st.download_button('UPLOAD TO FANDUEL — EDIT ENTRIES CSV',data,'Simmah_NBA_FanDuel_Edit_Entries.csv','text/csv',disabled=stale,key='nba_entries_download',on_click='ignore')
+        st.download_button('UPLOAD TO '+platform.upper()+' — EDIT ENTRIES CSV',data,'Simmah_NBA_'+platform+'_Edit_Entries.csv','text/csv',disabled=stale,key='nba_entries_download',on_click='ignore')

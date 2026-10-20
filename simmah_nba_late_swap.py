@@ -1,3 +1,4 @@
+from simmah_slate_workspaces import workspace_file_uploader
 """Bounded NBA late swap: immutable entry slots, current projections, no resimulation."""
 import csv
 import io
@@ -7,6 +8,7 @@ import pandas as pd
 from scipy.optimize import Bounds, LinearConstraint, milp
 from simmah_nba_import import read_template
 from simmah_nba_rosters import ELIGIBILITY, SLOT_COLUMNS, validate_lineup
+from simmah_nba_rules import rules_for
 
 
 def locked_players(pool, now=None):
@@ -34,11 +36,12 @@ def locked_players(pool, now=None):
 
 def entry_rows(template, contest_id, pool):
     slate = read_template(template)
-    if set(slate['players']['Player ID']) != set(pool['Player ID']):
+    if rules_for(slate['players'])['platform']!=rules_for(pool)['platform'] or set(slate['players']['Player ID']) != set(pool['Player ID']):
         raise ValueError('Late-swap entries must match the current NBA salary slate')
     entries = [r for r in slate['entries'] if r[1] == str(contest_id)]
+    size=len(rules_for(pool)['slots'])
     known = set(pool['Player ID'])
-    if not entries or any(len(set(r[4:13])) != 9 or not set(r[4:13]) <= known for r in entries):
+    if not entries or any(len(set(r[4:4+size])) != size or not set(r[4:4+size]) <= known for r in entries):
         raise ValueError('Upload current filled entries from FanDuel, with nine valid player IDs per entry')
     return entries
 
@@ -52,23 +55,29 @@ def swap_entries(template, contest_id, pool, *, now=None, salary_min=0, diversit
     pool = pool.reset_index(drop=True)
     entries = entry_rows(template, contest_id, pool)
     locked = locked_players(pool, now)
+    rules=rules_for(pool);size=len(rules['slots'])
     n = len(pool); lookup = {p:i for i,p in enumerate(pool['Player ID'])}
     proj = pd.to_numeric(pool['Projection'],errors='coerce').to_numpy(float)
     active = np.isfinite(proj) & (proj > 0) & ~pool['Injury Status'].str.upper().isin(['OUT','O','IR','SUSPENDED']).to_numpy()
-    eligible = np.array([[bool(set(str(p).split('/')) & allowed) for p in pool['Position']] for allowed in ELIGIBILITY])
+    eligible = np.array([[bool(set(str(p).split('/')) & allowed) for p in pool['Position']] for allowed in rules['eligibility']])
     salary = pool['Salary'].to_numpy(float)
     teams = pool['Team'].unique()
     # Nine slot equalities, player uniqueness, salary, and max-four team rules.
-    matrix = [np.repeat(np.eye(9), n, axis=1), np.tile(np.eye(n),(1,9)), np.tile(salary,9)[None,:]]
-    matrix += [np.tile((pool['Team']==team).to_numpy(float),9)[None,:] for team in teams]
+    matrix = [np.repeat(np.eye(size), n, axis=1), np.tile(np.eye(n),(1,size)), np.tile(salary,size)[None,:]]
+    matrix += [np.tile((pool['Team']==team).to_numpy(float),size)[None,:] for team in teams]
+    if rules['min_games']>1:
+        games=pool.apply(lambda r:tuple(sorted((r['Team'],r['Opponent']))),axis=1)
+        matrix += [np.tile(games.map(lambda x:x==game).to_numpy(float),size)[None,:] for game in games.unique()]
     a = np.vstack(matrix)
-    lower = np.r_[np.ones(9), np.zeros(n), salary_min, np.zeros(len(teams))]
-    upper = np.r_[np.ones(9), np.ones(n), 60000, np.full(len(teams),4)]
+    lower = np.r_[np.ones(size), np.zeros(n), salary_min, np.zeros(len(teams))]
+    upper = np.r_[np.ones(size), np.ones(n), rules['salary_cap'], np.full(len(teams),rules['max_from_team'])]
+    if rules['min_games']>1:
+        lower=np.r_[lower,np.zeros(games.nunique())];upper=np.r_[upper,np.full(games.nunique(),size-1)]
     constraints = [LinearConstraint(a,lower,upper)]
     used = np.zeros(n); output=[]; diagnostics=[]; deadline=time.monotonic()+seconds
     for entry in entries:
-        original = np.array([lookup[p] for p in entry[4:13]])
-        lo=np.zeros((9,n)); hi=(eligible & active[None,:] & ~locked[None,:]).astype(float)
+        original = np.array([lookup[p] for p in entry[4:4+size]])
+        lo=np.zeros((size,n)); hi=(eligible & active[None,:] & ~locked[None,:]).astype(float)
         frozen=locked[original]
         for slot in np.flatnonzero(frozen):
             hi[slot]=0; hi[slot,original[slot]]=1; lo[slot,original[slot]]=1
@@ -76,10 +85,10 @@ def swap_entries(template, contest_id, pool, *, now=None, salary_min=0, diversit
         chosen=original; status='Kept original — search budget exhausted'
         if remaining>0:
             utility=np.nan_to_num(proj,nan=0,posinf=0,neginf=0)-used*float(diversity)/100*2
-            result=milp(-np.tile(utility,9),integrality=np.ones(9*n),bounds=Bounds(lo.ravel(),hi.ravel()),
+            result=milp(-np.tile(utility,size),integrality=np.ones(size*n),bounds=Bounds(lo.ravel(),hi.ravel()),
                         constraints=constraints,options={'time_limit':min(.5,remaining),'mip_rel_gap':.005})
             if result.x is not None:
-                candidate=result.x.reshape(9,n).argmax(axis=1)
+                candidate=result.x.reshape(size,n).argmax(axis=1)
                 try:
                     validate_swap(pool, original, candidate, locked, salary_min)
                     chosen=candidate; status='Updated' if not np.array_equal(chosen,original) else 'Unchanged'
@@ -88,7 +97,7 @@ def swap_entries(template, contest_id, pool, *, now=None, salary_min=0, diversit
             else: status='Kept original — no valid replacement found'
         # Prevent introducing duplicate roster sets while respecting exact frozen slots.
         cut=np.zeros(n);cut[chosen]=1
-        constraints.append(LinearConstraint(np.tile(cut,9)[None,:],-np.inf,8))
+        constraints.append(LinearConstraint(np.tile(cut,size)[None,:],-np.inf,size-1))
         used[chosen]+=1
         output.append([pool.iloc[i]['Player ID'] for i in chosen])
         diagnostics.append({'Entry ID':entry[0],'Status':status,'Locked slots':int(frozen.sum()),
@@ -104,32 +113,35 @@ def validate_swap(pool, original, candidate, locked, salary_min=0):
     # Started players may now be OUT or have no remaining projection.
     check=pool.copy()
     check.loc[locked,'Injury Status']='Active'; check.loc[locked,'Projection']=1.
-    validate_lineup(check,check.iloc[candidate]['Player ID'].tolist(),salary_cap=60000,max_from_team=4,salary_min=salary_min)
+    rules=rules_for(pool)
+    validate_lineup(check,check.iloc[candidate]['Player ID'].tolist(),salary_cap=rules['salary_cap'],max_from_team=rules['max_from_team'],salary_min=salary_min)
 
 
 def export_swaps(template, contest_id, pool, result, *, now=None):
     entries=entry_rows(template,contest_id,pool)
+    rules=rules_for(pool);size=len(rules['slots']);cid_col=2 if rules['platform']=='DraftKings' else 1
     if entries != result['original_entries'] or len(entries)!=len(result['lineups']):
         raise ValueError('Entries changed; run late swap again')
     locked=locked_players(pool,now)
     lookup={p:i for i,p in enumerate(pool['Player ID'])}
     for entry,lineup in zip(entries,result['lineups']):
-        original=np.array([lookup[p] for p in entry[4:13]])
+        original=np.array([lookup[p] for p in entry[4:4+size]])
         candidate=np.array([lookup[p] for p in lineup])
         # Unchanged entries are always preserved, even if already invalid.
         if not np.array_equal(original,candidate):validate_swap(pool,original,candidate,locked)
     rows=list(csv.reader(io.StringIO(template.decode('utf-8-sig'))))
     replacements={entry[0]:lineup for entry,lineup in zip(entries,result['lineups'])}
     for row in rows[1:]:
-        if len(row)>=13 and row[1]==str(contest_id) and row[0] in replacements:row[4:13]=replacements[row[0]]
+        if len(row)>=4+size and row[cid_col]==str(contest_id) and row[0] in replacements:row[4:4+size]=replacements[row[0]]
     output=io.StringIO(newline='');csv.writer(output,lineterminator='\r\n').writerows(rows)
     return output.getvalue().encode()
 
 
 def render_late_swap(st,pool,contest_id,salary_min,diversity):
+    rules=rules_for(pool);platform=rules['platform']
     with st.expander('NBA LATE SWAP — fast',expanded=False):
-        st.caption('For contests that allow late swap. Upload your latest filled FanDuel entries. Started games stay frozen in their exact slots. Open slots use current projections and exposure diversity; no full simulation or live ROI calculation. Search is bounded to 10 seconds; unresolved entries stay unchanged.')
-        upload=st.file_uploader('Current FanDuel NBA entries',type=['csv'],key='nba_late_swap_upload')
+        st.caption(f'For contests that allow late swap. Upload your latest filled {platform} entries. Started games stay frozen in their exact slots. Open slots use current projections and exposure diversity; no full simulation or live ROI calculation. Search is bounded to 10 seconds; unresolved entries stay unchanged.')
+        upload=workspace_file_uploader(st,'Current '+platform+' NBA entries',type=['csv'],key='nba_late_swap_upload')
         if upload is None:return
         try:
             data=upload.getvalue();entry_rows(data,contest_id,pool)
@@ -147,14 +159,14 @@ def render_late_swap(st,pool,contest_id,salary_min,diversity):
                 result=saved[1]
                 st.caption(f'Completed in {saved[2]:.2f} seconds. Review unchanged entries before uploading.')
                 st.dataframe(result['report'],hide_index=True,width='stretch')
-                frame=pd.DataFrame(result['lineups'],columns=SLOT_COLUMNS)
+                frame=pd.DataFrame(result['lineups'],columns=rules['slots'])
                 from simmah_nba_ui import display_lineups
                 st.dataframe(display_lineups(pool,frame),hide_index=True,width='stretch')
                 def download_current():
                     try:
                         output=export_swaps(data,contest_id,pool,result)
-                        st.download_button('UPLOAD TO FANDUEL — LATE SWAP CSV',output,'Simmah_NBA_Late_Swap.csv','text/csv',key='nba_late_swap_download',on_click='ignore')
-                        st.caption('Upload immediately, before the next tipoff. FanDuel controls final lock status; scheduled times are used here.')
+                        st.download_button('UPLOAD TO '+platform.upper()+' — LATE SWAP CSV',output,'Simmah_NBA_Late_Swap.csv','text/csv',key='nba_late_swap_download',on_click='ignore')
+                        st.caption(f'Upload immediately, before the next tipoff. {platform} controls final lock status; scheduled times are used here.')
                     except ValueError as exc:st.error(f'{exc}. Run FAST LATE SWAP again.')
                 st.fragment(run_every=5)(download_current)()
         except (ValueError,KeyError) as exc:st.error(str(exc))

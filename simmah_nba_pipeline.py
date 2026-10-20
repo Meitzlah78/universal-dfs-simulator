@@ -4,6 +4,7 @@ from simmah_nba_candidates import build_candidates
 from simmah_nba_field import build_field,sample_popularity_field
 from simmah_nba_contest import evaluate_candidates,select_entries
 from simmah_nba_rosters import export_entries,SLOT_COLUMNS
+from simmah_nba_rules import rules_for
 
 
 def run_pipeline(pool,outcome_factory,ownership,ownership_source,payouts,entry_fee,
@@ -46,7 +47,7 @@ def run_pipeline(pool,outcome_factory,ownership,ownership_source,payouts,entry_f
     if np.array_equal(evaluation,construction) or np.array_equal(evaluation,field_outcomes):
         raise ValueError('Evaluation scenarios repeat construction or opponent scenarios')
     report=evaluate_candidates(evaluation,candidates['indices'],field['indices'],payouts,entry_fee,
-        construction_seed=seed,evaluation_seed=seed+2017,field_copies=field['copies'])
+        construction_seed=seed,evaluation_seed=seed+2017,field_copies=field['copies'],score_ticks=rules_for(pool)['score_ticks'])
     notify('Selecting portfolio')
     portfolio=select_entries(pool,candidates['indices'],report,portfolio_count,diversity=diversity)
     return {'candidates':candidates,'field':field,'report':report,'portfolio':portfolio,
@@ -55,5 +56,5 @@ def run_pipeline(pool,outcome_factory,ownership,ownership_source,payouts,entry_f
 
 
 def export_portfolio(template,contest_id,pool,result):
-    lineups=result['portfolio'][list(SLOT_COLUMNS)].astype(str).to_numpy().tolist()
-    return export_entries(template,lineups,contest_id,pool,salary_cap=60000,max_from_team=4)
+    lineups=result['portfolio'][list(rules_for(pool)['slots'])].astype(str).to_numpy().tolist()
+    return export_entries(template,lineups,contest_id,pool,salary_cap=rules_for(pool)['salary_cap'],max_from_team=rules_for(pool)['max_from_team'])

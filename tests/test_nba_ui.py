@@ -34,3 +34,22 @@ class NBAWorkspaceTests(unittest.TestCase):
         exports=[x for x in at.get('download_button') if x.proto.id.endswith('-nba_entries_download')]
         self.assertEqual(len(exports),1)
         self.assertTrue(exports[0].proto.disabled)
+
+    def test_draftkings_uses_same_workspace_with_eight_slots(self):
+        import sys
+        from streamlit.testing.v1 import AppTest
+        sys.path.insert(0,str(Path(__file__).parent))
+        at=AppTest.from_file(str(Path(__file__).with_name('nba_ui_fixture.py')))
+        at.session_state['fixture_platform']='DraftKings'
+        at.run(timeout=20)
+        self.assertFalse(at.exception)
+        self.assertEqual(at.number_input(key='nba_min_salary_DraftKings').max,50000)
+        at.button(key='nba_build').click().run(timeout=20)
+        self.assertFalse(at.exception)
+        built=at.session_state['nba_build_result']['result']
+        self.assertEqual(built['candidates']['indices'].shape[1],8)
+        self.assertEqual(len(built['portfolio']),3)
+        at.slider(key='nba_exposure_diversity').set_value(100).run(timeout=20)
+        self.assertFalse(at.exception)
+        self.assertEqual(at.session_state['test_build_calls'],1)
+        self.assertTrue(any('UPLOAD TO DRAFTKINGS' in button.proto.label for button in at.get('download_button')))

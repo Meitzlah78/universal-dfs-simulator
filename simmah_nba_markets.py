@@ -36,7 +36,7 @@ def extract_markets(pool):
     return output
 
 
-def simulate_market_game(rotations,profiles,rates,targets,seed,pilot_n=1024,iterations=4,overtime_rotations=None):
+def simulate_market_game(rotations,profiles,rates,targets,seed,pilot_n=1024,iterations=4,overtime_rotations=None,platform='FanDuel'):
     """Adjust shooting event probabilities, never multiply fantasy-score output.
 
     Markets specify the expected scoring environment; they are not guaranteed
@@ -49,8 +49,8 @@ def simulate_market_game(rotations,profiles,rates,targets,seed,pilot_n=1024,iter
     if pilot_n<1 or iterations<1:raise ValueError('Positive calibration budget required')
     fitted=list(rates);pilot=np.asarray(rotations)[:pilot_n];baseline=None
     def run(rotation,models,run_seed):
-        if overtime_rotations is None:return simulate_game(rotation,profiles,models,run_seed)
-        return simulate_game(rotation,profiles,models,run_seed,overtime_rotations=np.asarray(overtime_rotations)[:len(rotation)])
+        if overtime_rotations is None:return simulate_game(rotation,profiles,models,run_seed,platform=platform)
+        return simulate_game(rotation,profiles,models,run_seed,overtime_rotations=np.asarray(overtime_rotations)[:len(rotation)],platform=platform)
     for _ in range(iterations):
         result=run(pilot,fitted,seed+104729)
         means=result['team_points'].mean(axis=0)

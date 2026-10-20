@@ -10,8 +10,9 @@ ROLE_COLUMNS=['Historical '+r+' Rate' for r in ('Shot','Assist','Rebound','Steal
 
 
 class PregameEngine:
-    def __init__(self,pool,markets,rates,max_overtimes=4):
+    def __init__(self,pool,markets,rates,max_overtimes=4,platform='FanDuel'):
         if not isinstance(max_overtimes,int) or not 1<=max_overtimes<=10:raise ValueError("Explicit bounded overtime count required")
+        self.platform=platform
         self.max_overtimes=max_overtimes
         self.pool=pool.reset_index(drop=True).copy();self.rates=rates
         rates.validate()
@@ -69,16 +70,16 @@ class PregameEngine:
             if game_index not in self.prepared:
                 pilot=min(n,1024);fit_seed=71333+game_index*97
                 baseline=simulate_market_game(rotation[:pilot],profiles,[self.rates]*2,
-                    market['implied_points'],fit_seed,overtime_rotations=ot[:pilot])
+                    market['implied_points'],fit_seed,overtime_rotations=ot[:pilot],platform=self.platform)
                 fitted_profiles,fitted_rates,anchor=fit_player_means(rotation[:pilot],profiles,
-                    baseline['calibrated_rates'],targets,fit_seed+17,overtime_rotations=ot[:pilot])
+                    baseline['calibrated_rates'],targets,fit_seed+17,overtime_rotations=ot[:pilot],platform=self.platform)
                 final=simulate_market_game(rotation[:pilot],fitted_profiles,fitted_rates,
-                    market['implied_points'],fit_seed+31,overtime_rotations=ot[:pilot])
+                    market['implied_points'],fit_seed+31,overtime_rotations=ot[:pilot],platform=self.platform)
                 self.prepared[game_index]=(fitted_profiles,final['calibrated_rates'],anchor,
                     baseline['market_calibration']['baseline_pilot_means'])
             fitted_profiles,fitted_rates,anchor,initial=self.prepared[game_index]
             result=simulate_game(rotation,fitted_profiles,fitted_rates,seed+game_index*97+3,
-                                 overtime_rotations=ot)
+                                 overtime_rotations=ot,platform=self.platform)
             for team,(ids,_,_) in enumerate(groups):
                 output[:,ids]=result['scores'][:,team*size:team*size+len(ids)]
             means=result['team_points'].mean(axis=0);target=np.asarray(market['implied_points'])

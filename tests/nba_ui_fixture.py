@@ -22,6 +22,12 @@ for _,p in pool.iterrows():rows.append([p['Player ID'],p['Name'],'5000',p['Posit
 f=io.StringIO();csv.writer(f).writerows(rows)
 upload=SimpleNamespace(name='FanDuel-NBA-2026-10-20-135251-entries.csv',getvalue=lambda:f.getvalue().encode())
 slate={'players':pool,'contests':[{'id':'135251-281018991','name':'Synthetic test','entry_fee':.05,'owned_entries':5}]}
+if st.session_state.get('fixture_platform')=='DraftKings':
+    from test_nba_draftkings import template
+    pool['Player ID']=[str(1000+i) for i in range(len(pool))]
+    pool.attrs['platform']='DraftKings'
+    upload=SimpleNamespace(name='DKEntries.csv',getvalue=template)
+    slate={'players':pool,'date':'2026-10-20','contests':[{'id':'196711762','name':'Synthetic DK test','entry_fee':.25,'owned_entries':3}]}
 markets=[{'teams':('A','B'),'implied_points':(110,110)},{'teams':('C','D'),'implied_points':(110,110)}]
 
 def fake_run(pool,engine,ownership,source,payouts,fee,count,**kwargs):

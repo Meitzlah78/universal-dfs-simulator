@@ -13,9 +13,9 @@ def build_field(lineups,ownership,entries,seed=83,source=None,max_iterations=100
     Integer copies represent actual duplicate entries without expanding memory.
     """
     ids=np.asarray(lineups);target=np.asarray(ownership,float)
-    if ids.ndim!=2 or ids.shape[1]!=9 or not len(ids) or ids.dtype.kind not in 'iu':
+    if ids.ndim!=2 or ids.shape[1] not in {8,9} or not len(ids) or ids.dtype.kind not in 'iu':
         raise ValueError('Nonempty nine-player integer field support required')
-    if target.ndim!=1 or not np.isfinite(target).all() or (target<0).any() or (target>100).any() or abs(target.sum()-900)>.5:
+    if target.ndim!=1 or not np.isfinite(target).all() or (target<0).any() or (target>100).any() or abs(target.sum()-ids.shape[1]*100)>.5:
         raise ValueError('Complete NBA ownership percentages must sum to 900')
     if (ids<0).any() or (ids>=len(target)).any() or (np.diff(np.sort(ids,axis=1),axis=1)==0).any():
         raise ValueError('Invalid or repeated player in opponent lineup')
@@ -58,7 +58,7 @@ def sample_popularity_field(lineups,popularity,entries,seed=83,source=None,stren
     ownership; callers must display the estimate label and source assumption.
     """
     ids=np.asarray(lineups);raw=np.asarray(popularity,float)
-    if ids.ndim!=2 or ids.shape[1]!=9 or not len(ids) or ids.dtype.kind not in 'iu':
+    if ids.ndim!=2 or ids.shape[1] not in {8,9} or not len(ids) or ids.dtype.kind not in 'iu':
         raise ValueError('Nine-player integer legal support required')
     if raw.ndim!=1 or not np.isfinite(raw).all() or (raw<0).any() or not (raw>0).any():
         raise ValueError('Finite nonnegative relative popularity scores required')

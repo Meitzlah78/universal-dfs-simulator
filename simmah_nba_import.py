@@ -1,3 +1,4 @@
+from simmah_slate_workspaces import workspace_file_uploader
 """FanDuel NBA entry-template import; historical FPPG is never a projection."""
 import csv
 import io
@@ -9,6 +10,9 @@ SLOTS = ('PG', 'SG', 'SF', 'PF', 'C', 'G/F', 'F/C', 'UTIL', 'UTIL')
 
 
 def read_template(data):
+    if data.decode('utf-8-sig').startswith('Entry ID,Contest Name,Contest ID,Entry Fee,PG,SG,SF,PF,C,G,F,UTIL'):
+        from simmah_nba_dk_import import read_draftkings
+        return read_draftkings(data)
     rows = list(csv.reader(io.StringIO(data.decode('utf-8-sig'))))
     if not rows or tuple(rows[0][4:13]) != SLOTS or rows[0][:2] != ['entry_id', 'contest_id']:
         raise ValueError('Expected a FanDuel NBA nine-slot entries template')
@@ -60,7 +64,9 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
         st.error(str(exc))
         return
     pool = slate['players']
-    from simmah_nba_projections import slate_date, download_dff, apply_projections
+    platform = slate.get('platform','FanDuel')
+    day = slate.get('date') or __import__('simmah_nba_projections').slate_date(uploaded_file.name)
+    from simmah_nba_projections import slate_date, download_dff, apply_projections, player_key
     if st.session_state.pop('refresh_projections_requested',False):
         st.session_state.pop('nba_projection_cache',None)
         st.session_state.pop('nba_rotowire_cache',None)
@@ -70,18 +76,18 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
         st.session_state['projection_updates_found']=False
         st.session_state['injury_updates_found']=False
     with tabs[1]:
-        projection_file = st.file_uploader('Optional NBA projections CSV', type=['csv'], key='nba_projection_upload',
+        projection_file = workspace_file_uploader(st,'Optional NBA projections CSV', type=['csv'], key='nba_projection_upload_'+platform,
             help='Player ID and Projection columns. Uploaded values override DFF, including zeros that exclude a player.')
     automatic = {}
     try:
-        day = slate_date(uploaded_file.name)
-        identity = (day, tuple(sorted(zip(pool['Player ID'], pool['Team'], pool['Opponent']))))
+        day = slate.get('date') or slate_date(uploaded_file.name)
+        identity = (platform, day, tuple(sorted(zip(pool['Player ID'], pool['Team'], pool['Opponent']))))
         cached = st.session_state.get('nba_projection_cache')
         import time
         if cached and cached['identity'] == identity and time.time()-cached['time'] < 900:
             automatic = cached['values']
         else:
-            automatic = download_dff(day, pool)
+            automatic = download_dff(day, pool) if platform == 'FanDuel' else download_dff(day, pool, platform=platform)
             st.session_state['nba_projection_cache'] = {'identity':identity, 'time':time.time(), 'values':automatic}
     except Exception as exc:
         with tabs[1]:
@@ -89,13 +95,13 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
     rw_values, rw_details = {}, {}
     try:
         from simmah_nba_projections import download_rotowire
-        day = slate_date(uploaded_file.name)
-        identity = (day, tuple(sorted(zip(pool['Player ID'], pool['Team'], pool['Opponent']))))
+        day = slate.get('date') or slate_date(uploaded_file.name)
+        identity = (platform, day, tuple(sorted(zip(pool['Player ID'], pool['Team'], pool['Opponent']))))
         cached = st.session_state.get('nba_rotowire_cache')
         if cached and cached['identity'] == identity and time.time()-cached['time'] < 900:
             rw_values, rw_details = cached['values'], cached['details']
         else:
-            rw_values, rw_details, sid = download_rotowire(day, pool)
+            rw_values, rw_details, sid = download_rotowire(day, pool) if platform == 'FanDuel' else download_rotowire(day, pool, platform=platform)
             st.session_state['nba_rotowire_cache'] = {'identity':identity, 'time':time.time(),
                 'values':rw_values, 'details':rw_details, 'slate_id':sid}
     except Exception as exc:
@@ -110,11 +116,14 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
         uploaded = pd.read_csv(projection_file, dtype={'Player ID':str}) if projection_file is not None else None
         pool = apply_projections(pool, combined, uploaded)
         for idx, row in pool.iterrows():
-            key = (row["Name"].strip().casefold(), row["Team"].upper())
+            key = player_key(row["Name"], row["Team"])
             if pool.at[idx,"Projection Source"] == "DFF":
                 pool.at[idx,"Projection Source"] = " + ".join(label for label, source in (("DFF",automatic),("RotoWire",rw_values)) if key in source)
             for col, value in rw_details.get(key, {}).items():
                 pool.at[idx,col] = value
+            injury=str(rw_details.get(key,{}).get("RotoWire Injury","")).upper()
+            if injury in {'Q','QUES','QUESTIONABLE'}:pool.at[idx,'Injury Status']='Questionable'
+            elif injury in {'D','DOUBT','DOUBTFUL'}:pool.at[idx,'Injury Status']='Doubtful'
             if str(rw_details.get(key,{}).get("RotoWire Injury","")).upper() in {"OUT","O","IR","SUSPENDED"}:
                 pool.at[idx,"Injury Status"] = "Out"
                 pool.at[idx,"Eligible"] = False
@@ -128,7 +137,7 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
         from pathlib import Path
         from simmah_nba_role_priors import apply_position_priors
         model_path=Path(__file__).parent/'data'/'nba_models'/'position-roles-before-2026-04-09.json'
-        pool=apply_position_priors(pool,json.loads(model_path.read_text()),slate_date(uploaded_file.name))
+        pool=apply_position_priors(pool,json.loads(model_path.read_text()),day)
     except (ValueError, OSError) as exc:
         with tabs[1]:
             st.warning(f'NBA historical role priors unavailable: {exc}')
@@ -137,12 +146,12 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
     slate['players'] = pool
     st.session_state['nba_imported_slate'] = slate
     with tabs[0]:
-        st.subheader('FanDuel NBA contests')
+        st.subheader(platform+' NBA contests')
         for c in slate['contests']:
             st.write(c['name'])
             st.caption(f"Contest {c['id']} · {c['owned_entries']} entries · ${c['entry_fee']:.2f} each")
         st.write('Games: ' + ' • '.join(sorted(pool['Game'].unique())))
-        st.caption('Roster: ' + ', '.join(SLOTS))
+        st.caption('Roster: ' + ', '.join(slate['slots']))
         st.subheader('NBA market lines')
         from simmah_nba_markets import implied_scores
         from simmah_nba_projections import team_key
@@ -174,7 +183,7 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
         source_cache=st.session_state.get('nba_rotowire_cache',{})
         with game_header:
             render_live_strip(st,pool,markets,source_cache.get('slate_id') if rw_details else None,
-                              slate_date(uploaded_file.name),source_cache.get('time') if rw_details else None)
+                              day,source_cache.get('time') if rw_details else None)
     with tabs[1]:
         st.subheader('NBA player pool')
         st.caption(f"Positive projections: {pool['Projection'].notna().sum()} / {len(pool)} · Eligible after injuries: {pool['Eligible'].sum()}. Automatic data is cached for up to 15 minutes; refresh runs on app activity.")

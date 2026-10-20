@@ -24,7 +24,7 @@ class WorkspaceTabsTests(unittest.TestCase):
     def test_original_entry_widget_keys_remain_unique(self):
         keys=['universal_slate_setup_file','fd_selected_contest']
         for key in keys:
-            count=sum(isinstance(n,ast.keyword) and n.arg=='key' and isinstance(n.value,ast.Constant) and n.value.value==key for n in ast.walk(self.tree))
+            count=sum(isinstance(n,ast.keyword) and n.arg=='key' and ((isinstance(n.value,ast.Constant) and n.value.value==key) or (key=='universal_slate_setup_file' and isinstance(n.value,ast.BinOp) and isinstance(n.value.left,ast.Constant) and n.value.left.value=='universal_slate_setup_file_')) for n in ast.walk(self.tree))
             self.assertEqual(count,1,key)
 
 if __name__=='__main__':unittest.main()

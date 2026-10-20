@@ -1,7 +1,7 @@
 """Lightweight NBA starting-five status refresh, independent of point projections."""
 import json
 from urllib.request import urlopen
-from simmah_nba_projections import team_key
+from simmah_nba_projections import team_key, player_key
 from simmah_nba_game_strip import explicit_true
 
 
@@ -12,7 +12,7 @@ def parse_lineup_status(players,day,pairs):
         opponent=team_key(p.get('opponent',{}).get('team',''))
         if str(p.get('game',{}).get('dateTime',''))[:10]!=day or (team,opponent) not in expected:
             raise ValueError('NBA lineup source date or matchup differs from uploaded slate')
-        key=((p.get('firstName','')+' '+p.get('lastName','')).strip().casefold(),team)
+        key=player_key(p.get('firstName','')+' '+p.get('lastName',''),team)
         if not key[0] or key in result:raise ValueError('Duplicate or missing NBA lineup player')
         lineup=p.get('lineup') or {}
         result[key]={'Game Start':p.get('game',{}).get('dateTime'),'Expected Starter':lineup.get('slot'),
@@ -42,7 +42,7 @@ def render_live_strip(st,pool,markets,slate_id,day,fallback_time=None):
             response=cached(str(slate_id),day,pairs)
             values=response['players'];checked=response['checked_at'];source_ok=True
             for i,row in view.iterrows():
-                detail=values.get((row['Name'].strip().casefold(),team_key(row['Team'])),{})
+                detail=values.get(player_key(row['Name'],row['Team']),{})
                 view.at[i,'Expected Starter']=detail.get('Expected Starter')
                 view.at[i,'Starter Confirmed']=detail.get('Starter Confirmed',False)
                 view.at[i,'Game Start']=detail.get('Game Start',row.get('Game Start'))

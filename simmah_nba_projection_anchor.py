@@ -4,7 +4,7 @@ import numpy as np
 from simmah_nba_engine import simulate_game
 
 
-def fit_player_means(rotations,profiles,rates,targets,seed,overtime_rotations=None,iterations=5):
+def fit_player_means(rotations,profiles,rates,targets,seed,overtime_rotations=None,iterations=5,platform='FanDuel'):
     """Fit allocation weights and bounded team assist rates, never scale scores.
 
     Team point probabilities remain fixed from market calibration. Assist rates
@@ -20,7 +20,7 @@ def fit_player_means(rotations,profiles,rates,targets,seed,overtime_rotations=No
     size=weights.shape[1];active=desired>0
     if not active.any():raise ValueError('Positive external player projections required')
     def run(run_seed):
-        return simulate_game(rotations,weights,models,run_seed,overtime_rotations=overtime_rotations)
+        return simulate_game(rotations,weights,models,run_seed,overtime_rotations=overtime_rotations,platform=platform)
     initial=None
     for _ in range(iterations):
         result=run(seed)

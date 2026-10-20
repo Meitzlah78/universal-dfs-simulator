@@ -6,7 +6,7 @@ rotations; ties beyond the supplied overtime periods remain marked unresolved.
 """
 from dataclasses import dataclass
 import numpy as np
-from simmah_nba_scoring import score_fanduel
+from simmah_nba_scoring import score_nba
 
 STAT_NAMES=('FGM','3PM','FTM','REB','AST','STL','BLK','TO')
 
@@ -32,7 +32,7 @@ class EventRates:
             raise ValueError('Turnover and free throw probabilities exceed one')
 
 
-def simulate_game(rotations, profiles, rates, seed, overtime_rotations=None):
+def simulate_game(rotations, profiles, rates, seed, overtime_rotations=None, platform='FanDuel'):
     """Simulate regulation from a fixed, explicit rotation per scenario.
 
     rotations: integer (scenarios, 2 teams, 48 minutes, 5 players), global player
@@ -171,7 +171,7 @@ def simulate_game(rotations, profiles, rates, seed, overtime_rotations=None):
             period_clock[can_extend]=300
             side[can_extend]=rng.integers(0,2,int(can_extend.sum()))
     fgm,threes,ftm,reb,ast,stl,blk,to=np.moveaxis(stats,2,0)
-    scores=score_fanduel(fgm=fgm,threes=threes,ftm=ftm,rebounds=reb,assists=ast,steals=stl,blocks=blk,turnovers=to)
+    scores=score_nba(platform,fgm=fgm,threes=threes,ftm=ftm,rebounds=reb,assists=ast,steals=stl,blocks=blk,turnovers=to)
     return {'scores':scores.astype(np.float32),'stats':stats,'team_points':team_points,
         'requires_overtime':team_points[:,0]==team_points[:,1], 'overtime_periods':overtime_count, 'elapsed_seconds':elapsed, 'counters':counters,
         'engine':'experimental-nba-possession-v2-explicit-overtime'}

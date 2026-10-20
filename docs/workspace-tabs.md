@@ -21,3 +21,34 @@ The October 19 reference image guides the navy/teal theme, SIMMAH wordmark, comp
 `simmah_ui.py` supplies presentation only; `.streamlit/config.toml` sets the native dark theme so dataframe cells match the surrounding interface. Editable tables default to a concise column set with a Show all player columns switch. Hiding display columns does not remove those fields from the editor's returned dataframe or downstream calculations.
 
 Real Streamlit AppTest smoke checks render all four format shells with external requests disabled, and confirm hidden editor columns are retained. These checks validate rendering and data preservation, not browser screenshot equivalence or a live slate build. The former fixed refresh strip is now in normal header flow, avoiding overlap with navigation on smaller screens.
+
+## Loaded-slate tabs and reboot restoration
+
+A horizontally scrolling row above the app holds one tab per loaded salary
+slate, independent of sport. It separates the entries, contest settings,
+projections, player controls and completed lineup results of each upload.
+Salary IDs and the roster header form the slate identity, so an updated entries
+file for the same slate updates that tab instead of creating another one.
+
+The component stores snapshots in IndexedDB in the current browser, under the
+app's origin. This survives Streamlit session loss, browser refresh and server
+reboots without publishing entry IDs or portfolios to the repository or a shared
+server database. It does not transfer to a different browser/device and clearing
+site data removes the saved work. Storage failures are displayed explicitly.
+Slates remain available until browser storage is cleared; they do not expire
+before a potentially delayed game finishes.
+
+Snapshots use versioned, compressed JSON with explicitly typed arrays and
+DataFrames; no pickle or executable deserialization is used. Credential-like
+keys, button triggers and uploader internals are excluded. Original optional
+upload bytes are stored separately and restored through the uploader wrapper.
+Large individual calculation caches over 16 MiB are omitted; saved lineups and
+ordinary settings remain available, but large raw-score caches may require
+rebuilding after reboot. The interface states this limitation.
+
+At startup restoration runs before widgets are instantiated. Controlled stops
+and reruns flush the active snapshot before yielding. Browser updates serialize
+IDB writes, and the component reports selections with unique event IDs to avoid
+replaying a previous tab switch. Tests cover typed round trips, entry-file
+preservation, non-replayed button actions, stable slate identity, browser save,
+server-reboot restoration and switching between NBA and NFL records.

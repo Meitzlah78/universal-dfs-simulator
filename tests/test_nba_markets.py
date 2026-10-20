@@ -33,7 +33,7 @@ class MarketTests(unittest.TestCase):
         rates=[EventRates(.12,.1,.4,.53,.36,.78,.6,.25,.6,.1,13)]*2
         # A deterministic event-engine stand-in isolates the calibration contract:
         # new market inputs must refit rates rather than reuse another market.
-        def engine(rot,profiles,rates,seed):
+        def engine(rot,profiles,rates,seed,platform='FanDuel'):
             means=np.array([r.make_two*200 for r in rates])
             return {'team_points':np.tile(means,(len(rot),1))}
         with patch('simmah_nba_markets.simulate_game',side_effect=engine):

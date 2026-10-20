@@ -25,6 +25,14 @@ class ProjectionTable(HTMLParser):
             self.rows.append(row)
 
 
+def player_key(name, team):
+    # Site feeds omit generational suffixes inconsistently (e.g. Philon Jr.).
+    import unicodedata
+    name=''.join(c for c in unicodedata.normalize('NFKD',str(name)) if not unicodedata.combining(c))
+    name=re.sub(r'\s+(?:jr\.?|sr\.?|ii|iii|iv)$','',name.strip(),flags=re.I)
+    return (' '.join(name.casefold().split()),team_key(team))
+
+
 def positive(value):
     try:
         value = float(value)
@@ -45,7 +53,7 @@ def parse_dff(html, day, pool):
         value = positive(row.get('data-ppg_proj'))
         if value is None:
             continue
-        key = (row.get('data-name','').strip().casefold(), team)
+        key = player_key(row.get('data-name',''), team)
         if key in values and values[key] != value:
             raise ValueError('Conflicting NBA projections for the same player')
         values[key] = value
@@ -54,9 +62,10 @@ def parse_dff(html, day, pool):
     return values
 
 
-def download_dff(day, pool):
+def download_dff(day, pool, platform='FanDuel'):
     day = date.fromisoformat(day).isoformat()
-    url = f'https://www.dailyfantasyfuel.com/nba/projections/fanduel/{day}/'
+    path='fanduel/' if platform=='FanDuel' else ''
+    url = f'https://www.dailyfantasyfuel.com/nba/projections/{path}{day}/'
     with urlopen(Request(url, headers={'User-Agent':'Mozilla/5.0'}), timeout=15) as response:
         return parse_dff(response.read().decode('utf-8'), day, pool)
 
@@ -80,7 +89,7 @@ def apply_projections(pool, automatic, uploaded=None):
         if pid in overrides:
             value, source = positive(overrides[pid]), 'Uploaded CSV'
         else:
-            value = automatic.get((player['Name'].strip().casefold(), player['Team'].upper()))
+            value = automatic.get(player_key(player['Name'], player['Team']))
             value, source = positive(value), 'DFF'
         projections.append(value)
         sources.append(source if value is not None or pid in overrides else 'Missing')
@@ -95,12 +104,12 @@ def team_key(value):
     return {'NYK':'NY','SAS':'SA','GSW':'GS','NOP':'NO'}.get(value,value)
 
 
-def select_rotowire_slate(payload, day, pool):
+def select_rotowire_slate(payload, day, pool, platform='FanDuel'):
     expected = {(team_key(r.Team),team_key(r.Opponent)) for r in pool.itertuples()}
     expected |= {(b,a) for a,b in expected}
     matches = []
     for slate in payload.get('slates',[]):
-        if slate.get('contestType') != 'Full Roster' or slate.get('startDateOnly') != day:
+        if slate.get('contestType') != ('Classic' if platform=='DraftKings' else 'Full Roster') or slate.get('startDateOnly') != day:
             continue
         games = [payload.get('games',{}).get(str(g)) for g in slate.get('games',[])]
         if not games or any(not g or str(g.get('gameDate',''))[:10]!=day for g in games):
@@ -125,7 +134,7 @@ def parse_rotowire(players, projections, day, pool):
         opp = team_key(player.get('opponent',{}).get('team',''))
         if str(player.get('game',{}).get('dateTime',''))[:10] != day or (team,opp) not in allowed:
             raise ValueError('RotoWire NBA player date or matchup does not match uploaded slate')
-        key = ((player.get('firstName','')+' '+player.get('lastName','')).strip().casefold(),team)
+        key = player_key(player.get('firstName','')+' '+player.get('lastName',''),team)
         value = pts.get(str(player.get('slateID')))
         if value is not None:
             values[key] = value
@@ -160,13 +169,13 @@ def parse_rotowire(players, projections, day, pool):
     return values, details
 
 
-def download_rotowire(day, pool):
+def download_rotowire(day, pool, platform='FanDuel'):
     import json
     base = 'https://www.rotowire.com/daily/nba/api/'
     def get(endpoint):
         with urlopen(base+endpoint,timeout=15) as response:
             return json.load(response)
-    slate = select_rotowire_slate(get('slate-list.php?siteID=2'),day,pool)
+    slate = select_rotowire_slate(get('slate-list.php?siteID='+('1' if platform=='DraftKings' else '2')),day,pool,platform=platform)
     sid = str(slate['slateID'])
     players = get('players.php?slateID='+sid)
     projections = get('projections.php?slateID='+sid+'&projSource=RotoWire')

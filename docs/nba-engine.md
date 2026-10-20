@@ -449,3 +449,35 @@ replacement, exact-tipoff clocks, invalid/missing clocks, new locked-player
 rejection, timeout preservation and CSV entry/reference-cell preservation. A
 small synthetic 20-entry case completed in 0.187 seconds locally; this is not a
 production latency guarantee.
+
+### DraftKings NBA Classic
+
+The shared NBA workspace now detects DraftKings eight-slot entries from their
+header (PG, SG, SF, PF, C, G, F, UTIL). The embedded salary table supplies original
+numeric IDs and Eastern game start times; the slate date comes from Game Info,
+so DKEntries.csv does not need renaming. Team aliases and generational suffixes
+are normalized for provider matching; uploaded IDs remain unchanged.
+
+DraftKings has separate DFF/RotoWire feeds and cache identities. RotoWire's
+Classic slate must exactly match the uploaded date and games. DK scoring is
+applied to the shared simulated stat ledger, including made-three, double-double
+and triple-double bonuses. Market calibration still targets actual basketball
+points. Player projection anchoring uses the selected site's fantasy scoring.
+Eight-player roster legality uses the $50,000 cap, G/F eligibility, and players
+from at least two games. Field frequencies total 800%; ties use quarter-point
+ticks rather than FanDuel's tenth-point ticks. Both formats retain independent
+construction, opponent-support and evaluation scenarios.
+
+The exact user-supplied 2026-10-20 Quarter Jukebox contest (196711762) is saved:
+7,134 places, $0.25 fee, $1,500 payouts, 1,706 paid places. Its full supplied
+ladder reconciles to $1,500. Unknown contests still require verified metadata;
+no payout curve is invented. Export replaces selected entry roster cells only.
+Fast late swap shares the same frozen-slot checks with the correct site rules.
+
+Verification on the supplied DK file: 84 salary players, 43 eligible positive
+projections, complete 240-minute rotations after resolving Philon Jr.'s provider
+suffix mismatch, 5,000 candidates, 7,133 opponent entries and 20 exported
+portfolio entries. Three independent 10,000-scenario sets plus selection took
+41.54 seconds locally. Evaluation market residuals were all under 0.53 team
+points; no unresolved overtime ties remained. These checks validate mechanics
+and input alignment, not predictive accuracy or live-site acceptance.
