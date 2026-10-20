@@ -36,3 +36,26 @@ cannot by themselves establish a prospective minutes-model backtest.
 No live projections, simulation parameters or models were updated. Raw download
 access succeeded without a Kaggle credential in this run. Future availability
 and source revisions must be checked; rerun and compare hashes before reuse.
+
+## Duration investigation follow-up
+
+Inspected the publisher's code at commit
+`5f36bdbe3aec53a7f70a2f36d8fc27a0278dd63c`.
+`src/lamba_function.py::parse_duration` discards seconds in both `MM:SS` and ISO
+`PT...M...S` inputs. Its staging SQL and published schema also include integer
+minute columns. The isolated function was executed on examples: `34:59` and
+`PT34M59.00S` both become 34.0; `0:45` becomes 0.0. See
+`duration-investigation.json` for the pinned source and results.
+
+This proves a precision-loss mechanism in that source revision, not which
+revision generated every CSV row. The downloaded file has mixed precision.
+Discarded seconds cannot be recovered by proportional normalization.
+
+An alternative source probe succeeded: ESPN's final Sacramento–Memphis game on
+2023-01-01 (event 401468702) has 508 play events. The existing strict substitution
+reconstructor recovered complete five-player stints without lineup issues;
+both teams total 240 minutes, retaining sub-minute player values. Results are in
+`espn-rotation-probe.json`. This is one successful reconstruction, not broad
+coverage validation or a minutes prediction backtest. ESPN IDs are separate
+from NBA/DFS IDs and still require explicit crosswalks. No source data was
+silently repaired and no live models changed.
