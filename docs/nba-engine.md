@@ -198,3 +198,23 @@ A synthetic 40-player fixture generated 5,000 unique legal candidates from 39,42
 attempts in 0.212 seconds locally; this is not a live slate or end-to-end benchmark.
 Legality, reproducibility, zero/OUT exclusions and bounded shortfalls are tested.
 The live NBA route remains disabled pending integration and validation.
+
+### NBA contest and portfolio boundary
+
+simmah_nba_contest.evaluate_candidates grades candidates on independent supplied
+outcomes in bounded batches. It requires an exact payout vector for every contest
+position and positive integer opponent multiplicities. Scores use integer tenths
+to preserve FanDuel ties. Prize pools across occupied tied ranks are divided by
+the total tied entries, including duplicate opponents. Win, Top 1%, cash and ROI
+metrics are produced. A distinct evaluation seed is mandatory; callers remain
+responsible for actually generating independent outcomes rather than relabeling
+an array. No field-size scaling is inferred silently.
+
+This is marginal single-lineup evaluation against the supplied field. Other user
+entries are not jointly inserted and the output is not a joint portfolio ROI
+simulation. Opponent ownership modeling and a complete live NBA build route are
+still pending. select_entries maps candidate indices back to original player IDs
+and reuses the shared exposure/overlap selector with Top 1% default. Changing
+exposure diversity reselects these saved candidates without rerunning the engine.
+Tests cover weighted duplicate ties, payouts, independent-seed guards and a
+20-entry selection with a 60% maximum exposure preference.
