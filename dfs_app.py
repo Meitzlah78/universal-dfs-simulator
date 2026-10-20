@@ -5138,16 +5138,6 @@ if platform == "FanDuel":
             fd_players = fd_players[~fd_players["Injury Status"].astype(str).str.casefold().eq("out")].copy()
         fd_player_display = _fd_edited_pool.copy() if isinstance(_fd_edited_pool, pd.DataFrame) else fd_player_display
         _fd_scoring_download_slot = st.empty()
-        with st.expander("Copy Player Info to ChatGPT"):
-            st.caption("Click inside the text box, press Ctrl+A, then Ctrl+C. Paste the copied text into ChatGPT.")
-            fd_copy_text = fd_player_display.to_csv(index=False, sep="\t", na_rep="")
-            st.text_area(
-                "Player data (copy this text)",
-                value=fd_copy_text,
-                height=300,
-                key="fd_chatgpt_player_export",
-                label_visibility="collapsed"
-            )
 
 
 
@@ -6427,22 +6417,6 @@ else:
         if st.session_state.get("nfl_pbp_history_status"):
             st.caption("Play-by-play history: " + st.session_state["nfl_pbp_history_status"])
 
-        volatility_check = st.session_state.get("historical_volatility_check")
-        if isinstance(volatility_check, pd.DataFrame) and not volatility_check.empty:
-            with st.expander("Historical Volatility Check (rough diagnostic)", expanded=False):
-                st.caption(
-                    "Compares recent weekly fantasy-score variation by position with the simulator's current target. "
-                    "It is a useful warning signal, not a true percentile backtest: archived pregame projections are unavailable, "
-                    "and historical scoring may differ from the selected site's scoring rules. Treat small samples cautiously."
-                )
-                st.dataframe(injury_frame(st, volatility_check), use_container_width=True, hide_index=True)
-                st.download_button(
-                    "Download Historical Volatility Check",
-                    data=volatility_check.to_csv(index=False).encode("utf-8"),
-                    file_name="historical_volatility_check.csv",
-                    mime="text/csv",
-                    key="download_historical_volatility_check",
-                )
 
         opponent_source = uploaded_df if "uploaded_df" in locals() else None
         opponent_map = build_opponent_map(opponent_source, all_dk_players_df["Team"])
@@ -6952,20 +6926,6 @@ else:
                 key="projection_snapshot_download",
             )
 
-        # Copy/paste-ready player pool export for sharing analysis in ChatGPT.
-        with st.expander("Copy Player Info to ChatGPT"):
-            st.caption("Copy the text below and paste it into ChatGPT. It includes player details, simulation stats, and Captain/Flex exposure when available.")
-            # Export every column currently shown in the Player Pool, including any
-            # additional projection/simulation/exposure fields added later.
-            copy_df = player_display.copy()
-            copy_text = copy_df.to_csv(index=False, sep="\t", na_rep="")
-            st.text_area(
-                "Player data (copy this text)",
-                value=copy_text,
-                height=350,
-                key="dk_chatgpt_player_export_" + platform + "_" + lineup_mode,
-                label_visibility="collapsed"
-            )
 
         # Keep the Lock/Fade selections from the Player Pool editor and preserve
         # the existing exposure controls internally at their saved/default values.
