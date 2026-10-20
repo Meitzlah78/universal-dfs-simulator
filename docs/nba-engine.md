@@ -134,3 +134,18 @@ Calibration residuals are returned explicitly, including a four-point tolerance
 flag; market totals alone do not identify pace. Live NBA builds remain disabled.
 A fresh external odds request timed out during this change, so live feed and
 Streamlit rendering were not reverified; extraction/calibration tests passed.
+
+Market calibration stress check (synthetic five-player rotations, 10,000 games,
+fixed seed 37; wall time includes four 1,024-game pilot passes):
+
+| Team targets | Evaluation means | Seconds |
+| --- | --- | --- |
+| 95 / 100 | 95.009 / 100.024 | 3.026 |
+| 115 / 115 | 115.792 / 115.475 | 3.157 |
+| 125 / 130 | 124.952 / 129.963 | 3.282 |
+| 130 / 100 | 130.117 / 100.091 | 3.104 |
+
+This checks numerical targeting on synthetic inputs, not player prediction,
+real-world spread coverage, or the accuracy of the market itself. Separate
+contract tests ensure changed targets trigger changed event-rate calibration and
+conflicting source rows cannot produce an automatic market.

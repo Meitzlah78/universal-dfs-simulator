@@ -26,3 +26,23 @@ class MarketTests(unittest.TestCase):
     def test_bad_market_rejected(self):
         with self.assertRaises(ValueError):implied_scores(float('nan'),2)
         with self.assertRaises(ValueError):simulate_market_game(None,None,None,[0,100],1)
+
+    def test_line_change_changes_scoring_environment(self):
+        from unittest.mock import patch
+        rotation=np.zeros((20,2,48,5),dtype=int)
+        rates=[EventRates(.12,.1,.4,.53,.36,.78,.6,.25,.6,.1,13)]*2
+        # A deterministic event-engine stand-in isolates the calibration contract:
+        # new market inputs must refit rates rather than reuse another market.
+        def engine(rot,profiles,rates,seed):
+            means=np.array([r.make_two*200 for r in rates])
+            return {'team_points':np.tile(means,(len(rot),1))}
+        with patch('simmah_nba_markets.simulate_game',side_effect=engine):
+            a=simulate_market_game(rotation,None,rates,[90,100],3)
+            b=simulate_market_game(rotation,None,rates,[120,130],3)
+        np.testing.assert_allclose(a['market_calibration']['evaluation_means'],[90,100])
+        np.testing.assert_allclose(b['market_calibration']['evaluation_means'],[120,130])
+
+    def test_conflicting_rows_do_not_create_a_market(self):
+        p=pd.DataFrame({'Team':['NY','NY','PHI'],'Opponent':['PHI','PHI','NY'],
+                        'Game Total':[230,231,230],'Team Implied Points':[120,120,110]})
+        self.assertEqual(extract_markets(p),[])
