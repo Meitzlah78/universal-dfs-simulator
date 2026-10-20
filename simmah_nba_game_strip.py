@@ -77,6 +77,7 @@ def render_game_strip(st,pool,markets,updated_at=None):
                          f'<span title="{escape(tooltip,quote=True)}" style="color:{colors[status]}">{symbols[status]} {status}</span></div>')
         cards.append('<div class="simmah-game-card"><div class="simmah-game-title">'+escape(game['label'])+'<span>'+escape(game['start_time'])+'</span></div>'+''.join(teams)+'</div>')
     st.markdown('''<style>
+.st-key-simmah_pinned_games{position:sticky;top:3.75rem;z-index:100;background:var(--background-color,#0e1117);padding:4px 0;border-bottom:1px solid #293e52;box-shadow:0 4px 12px #0003;min-width:0}
 .simmah-game-strip{display:flex;flex-wrap:nowrap;gap:7px;overflow-x:auto;overflow-y:hidden;max-width:100%;padding:7px 7px 9px;margin:2px 0 7px;border:1px solid #293e52;border-radius:8px;scroll-snap-type:x proximity;scrollbar-width:thin;scrollbar-color:#50728f #102337;-webkit-overflow-scrolling:touch}
 .simmah-game-card{flex:0 0 205px;box-sizing:border-box;scroll-snap-align:start;padding:6px 9px;border:1px solid #45515f;border-radius:6px;background:rgba(100,115,135,.08)}
 .simmah-game-title{display:flex;justify-content:space-between;gap:8px;font-size:.65rem;opacity:.75;margin-bottom:3px;white-space:nowrap}

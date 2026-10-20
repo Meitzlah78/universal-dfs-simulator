@@ -32,7 +32,7 @@ st.session_state["active_slate_identity"] = ""
 
 # Shared header stays above the three format-independent workspaces.
 _shared_header = st.container()
-_slate_games_header = st.container()
+_slate_games_header = st.container(key="simmah_pinned_games")
 _workspace_main, _workspace_rail = st.columns([4.3, 1.25], gap="medium")
 with _workspace_main:
     _tab_contests, _tab_roster, _tab_build, _tab_lineups = st.tabs(["Contests", "Roster & Projections", "Build", "Lineups"])
