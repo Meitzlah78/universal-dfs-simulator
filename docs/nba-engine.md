@@ -576,3 +576,25 @@ leakage guards. They are not a real historical predictive backtest. Exact-roster
 matching is deliberately restrictive and does not solve injury replacements,
 foul-trouble, coaching or score-dependent blowout substitutions. Those require
 more historical collection and separate validation before production use.
+
+### Reconciliation before backtesting
+
+Use `scripts/nba_reconcile_minutes.py --pregame frozen.csv --actuals final.csv
+--output-dir audit` after explicitly mapping both inputs to official NBA game
+and player IDs. One selected pregame observation per game/player is required;
+repeated forecasts must be selected by a declared cutoff before grading.
+
+Pregame columns: `Game ID`, `NBA Player ID`, `Team`, `GameStart`, `CapturedAt`,
+`Projected Minutes`. Actual columns: `Game ID`, `NBA Player ID`, `Team`,
+`Actual Minutes`, `Status`, `Final`, `Overtimes`. Status is `played`, `dnp` or
+`unresolved`; Final must be a verified boolean. Times require explicit timezone offsets. Inputs must precede tipoff.
+
+The outer join preserves players missing from either side without manufacturing
+forecasts or standard deviations. Only an explicit verified DNP can convert blank
+actual minutes to zero. Regulation and overtime full-game errors are reported
+separately; no proportional scaling pretends to recover regulation minutes.
+Team actual ledgers are audited against 240 + 25 per overtime (one-minute
+rounding tolerance). Incomplete ledgers are flagged, not silently normalized.
+The CLI outputs reconciliation CSV plus JSON coverage, MAE/bias and ledger
+checks. It does not download Kaggle, infer ID mappings, change model parameters,
+or establish that the uncertainty challenger outperforms the baseline.
