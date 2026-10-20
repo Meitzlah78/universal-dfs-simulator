@@ -182,8 +182,13 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
         if 'RotoWire RST % (unverified)' in pool:
             raw_own = pd.to_numeric(pool['RotoWire RST % (unverified)'], errors='coerce')
             st.caption(f'RotoWire raw RST values: {raw_own.notna().sum()} matched; total {raw_own.sum():.1f}%. These are unverified percentages. The experimental field uses them only as relative popularity weights.')
+        leading_columns = ['Name', 'Starter Confirmed', 'Injury Status', 'Position', 'Team',
+                           'Opponent', 'Salary', 'Projection', 'Projection Source',
+                           'RotoWire RST % (unverified)', 'Projected Minutes', 'Minutes Source']
+        column_order = [column for column in leading_columns if column in pool.columns]
+        column_order += [column for column in pool.columns if column not in leading_columns]
         st.dataframe(pool, hide_index=True, width="stretch", key="nba_player_pool_table",
-                     column_order=['Name'] + [column for column in pool.columns if column != 'Name'],
+                     column_order=column_order,
                      column_config={'Name': st.column_config.TextColumn('Player', pinned=True)})
         st.write(f"{len(pool)} players · {(pool['Injury Status']=='Out').sum()} Out · {(pool['Injury Status']=='Questionable').sum()} Questionable")
     from simmah_nba_ui import render_workspace
