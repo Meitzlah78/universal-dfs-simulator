@@ -532,3 +532,25 @@ Posts remain read-only news, not automatically inferred lineup/injury updates.
 Without the secret, the existing on-demand official embed remains available.
 Live credentials must be verified from the deployed panel; local mock checks do
 not establish account access or available API credits.
+
+### Pregame minutes validation archive
+
+Both NBA roster pages record observed provider minute inputs for games that have
+not yet started. `nba_minutes_snapshots` is saved by the existing browser slate
+workspace, with a JSON download for independent backup. Unchanged inputs are
+not recorded repeatedly. Each snapshot identifies site, observation time, player
+IDs, game starts, minutes source and injury/starting status when available.
+These are observations when the page runs, not a continuously running collector
+or a claim that the provider updated at that exact time. No post-tip snapshots
+are manufactured, and future late games may still be recorded after early tips.
+
+The offline `grade_minutes` function requires explicit site-ID mapping and
+verified final actual minutes. Missing players remain unmatched; a zero counts
+only when supplied explicitly in actuals. It reports MAE, bias and zero/missing
+counts. NBA actual minutes include overtime, so this is not a regulation-only
+rotation backtest. No uncertainty factors or live simulations are changed.
+
+Historical source probe on 2026-10-20: NBA CDN box score and play-by-play URLs
+returned HTTP 403 from the development host. Historical source connectivity is
+not verified by the snapshot feature. The existing historical corpus remains
+unchanged until further collection and validation.
