@@ -119,6 +119,10 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         return
     stale=saved['identity']!=identity
     built=saved['result'];saved_pool=saved['pool']
+    if built['field'].get('ownership_fit_warning'):
+        with tabs[2]:st.warning('Opponent field uses a scenario-derived estimate because external ownership could not be fitted. '+built['field']['ownership_fit_warning'])
+        with tabs[3]:st.warning('ROI uses estimated opponent ownership; the external ownership fit failed.')
+
     try:
         portfolio=select_entries(saved_pool,built['candidates']['indices'],built['report'],len(built['portfolio']),diversity=diversity,metric=metric)
         built['portfolio']=portfolio

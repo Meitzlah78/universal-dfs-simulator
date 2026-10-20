@@ -32,6 +32,7 @@ def evaluate_candidates(outcomes,candidates,field,payouts,entry_fee,*,constructi
         raise ValueError('Exact nonincreasing payout vector must cover the whole contest')
     if not np.isfinite(entry_fee) or entry_fee<=0:raise ValueError('Positive entry fee required')
     prefix=np.r_[0.,np.cumsum(prize)]
+    cash_places=int(np.count_nonzero(prize>0))
     totals=np.zeros((len(c),5));simulations=0
     cb=score_batches(outcomes,c,batch_size);fb=score_batches(outcomes,f,batch_size)
     for (start,cs),(other,fs) in zip(cb,fb):
@@ -47,7 +48,7 @@ def evaluate_candidates(outcomes,candidates,field,payouts,entry_fee,*,constructi
             def top(k):return np.clip(k-above,0,ties)/ties
             totals[:,0]+=winnings;totals[:,1]+=top(1)
             totals[:,2]+=top(max(1,int(np.ceil(count*.01))))
-            totals[:,3]+=top(int((prize>0).sum()));totals[:,4]+=cs[j]/score_ticks
+            totals[:,3]+=top(cash_places);totals[:,4]+=cs[j]/score_ticks
         simulations+=len(cs)
     if not simulations:raise ValueError('Nonempty evaluation simulations required')
     totals/=simulations

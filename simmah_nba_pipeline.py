@@ -36,12 +36,23 @@ def run_pipeline(pool,outcome_factory,ownership,ownership_source,payouts,entry_f
     field_outcomes=draw(seed+1009)
     if np.array_equal(construction,field_outcomes):raise ValueError('Opponent scenarios repeat construction scenarios')
     support=build_candidates(pool,field_outcomes,target=field_support_target,seed=seed+1010)
+    fallback_reason=None
     if ownership_mode=='projected':
-        field=build_field(support['indices'],ownership,len(payouts)-1,seed+1011,ownership_source)
+        try:
+            field=build_field(support['indices'],ownership,len(payouts)-1,seed+1011,ownership_source)
+            residual=field['max_expected_error_pct']
+            if residual>max_ownership_error:
+                fallback_reason=f"Projected ownership fit missed by {residual:.2f} percentage points (limit {max_ownership_error:g})."
+        except ValueError as exc:
+            if str(exc)!='Ownership targets include players absent from legal field support':raise
+            fallback_reason=str(exc)
+        if fallback_reason:
+            field=sample_popularity_field(support['indices'],np.ones(len(pool)),len(payouts)-1,
+                seed+1011,'Scenario-derived estimate; external ownership not used. '+fallback_reason)
+            field['ownership_fit_warning']=fallback_reason
+            field['ownership_target']=np.asarray(ownership,float).copy()
     else:
         field=sample_popularity_field(support['indices'],ownership,len(payouts)-1,seed+1011,ownership_source)
-    if ownership_mode=='projected' and field['max_expected_error_pct']>max_ownership_error:
-        raise ValueError(f"NBA field ownership mismatch {field['max_expected_error_pct']:.2f} percentage points exceeds tolerance")
     notify('Scoring independent evaluation scenarios')
     evaluation=draw(seed+2017)
     if np.array_equal(evaluation,construction) or np.array_equal(evaluation,field_outcomes):
