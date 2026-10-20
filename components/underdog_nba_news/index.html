@@ -1,0 +1,25 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+body{margin:0;font:14px system-ui;color:#dce8f4;background:transparent}details{border:1px solid #29475e;border-radius:8px;padding:11px}summary{cursor:pointer;font-weight:600}a{color:#75baff}.note{font-size:12px;color:#a9bbcb;line-height:1.5}#feed{margin-top:8px;min-height:36px}button{background:#153449;color:#eee;border:1px solid #42617a;border-radius:5px;padding:5px 10px;cursor:pointer}#status{font-size:12px;color:#c9d6e1}
+</style></head><body><details id="news"><summary>Underdog NBA — X news &amp; starting lineups</summary>
+<p class="note">Posts from @UnderdogNBA. This feed does not automatically change Simmah’s player statuses or confirmed starters.</p>
+<a href="https://x.com/UnderdogNBA" target="_blank" rel="noopener noreferrer">Open @UnderdogNBA on X</a>
+<button id="reload" type="button">Reload feed</button>
+<div id="feed"></div><p id="status" role="status"></p>
+</details><script>
+const send=(type,extra={})=>window.parent.postMessage({isStreamlitMessage:true,type,...extra},'*');
+const details=document.getElementById('news'),feed=document.getElementById('feed'),status=document.getElementById('status');
+let loaded=false,timer;
+const resize=()=>send('streamlit:setFrameHeight',{height:details.open?620:50});
+function loadFeed(){
+ loaded=true;clearTimeout(timer);feed.replaceChildren();
+ const link=document.createElement('a');link.className='twitter-timeline';link.href='https://twitter.com/UnderdogNBA';link.textContent='Posts by @UnderdogNBA';link.dataset.theme='dark';link.dataset.height='420';link.dataset.dnt='true';feed.append(link);
+ status.textContent='Loading X feed…';
+ if(window.twttr?.widgets){window.twttr.widgets.load(feed)}
+ else if(!document.getElementById('x-widgets')){const script=document.createElement('script');script.id='x-widgets';script.async=true;script.src='https://platform.twitter.com/widgets.js';script.charset='utf-8';script.onerror=()=>{status.textContent='X could not load here. Use the direct link above.'};document.head.append(script)}
+ timer=setTimeout(()=>{status.textContent=feed.querySelector('iframe')?'':'X has not displayed the timeline. Use the direct link above for the latest posts.'},12000);
+}
+details.addEventListener('toggle',()=>{resize();if(details.open&&!loaded)loadFeed()});
+document.getElementById('reload').onclick=loadFeed;
+window.addEventListener('message',event=>{if(event.data.type==='streamlit:render')resize()});
+send('streamlit:componentReady',{apiVersion:1});resize();
+</script></body></html>

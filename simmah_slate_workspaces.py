@@ -62,7 +62,7 @@ def transient_key(key):
     return (key.endswith('_remove_restored') or key.startswith('nba_projection_upload_')
             or key in {'nba_build','nba_field_download','nba_entries_download',
                        'nba_fast_late_swap','nba_late_swap_upload','nba_late_swap_download',
-                       'loaded_slates_browser','sticky_refresh_projections'})
+                       'loaded_slates_browser','nba_underdog_x_feed','sticky_refresh_projections'})
 
 
 def snapshot(state, transient_keys=()):

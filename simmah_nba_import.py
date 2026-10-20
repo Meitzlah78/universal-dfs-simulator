@@ -194,6 +194,8 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
             render_live_strip(st,pool,markets,source_cache.get('slate_id') if rw_details else None,
                               day,source_cache.get('time') if rw_details else None)
     with tabs[1]:
+        from simmah_nba_news import render_underdog_news
+        render_underdog_news(st)
         st.subheader('NBA player pool')
         st.caption(f"Positive projections: {pool['Projection'].notna().sum()} / {len(pool)} · Eligible after injuries: {pool['Eligible'].sum()}. Automatic data is cached for up to 15 minutes; refresh runs on app activity.")
         st.caption('Historical FPPG is supplied by FanDuel. It is not a pregame projection. OUT players are ineligible; questionable players remain visible.')

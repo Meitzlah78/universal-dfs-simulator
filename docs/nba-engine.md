@@ -499,3 +499,18 @@ and independent evaluation retain their original process. Changing it marks
 saved results stale until BUILD is pressed; it does not automatically rerun a
 simulation. Exposure diversity still reselects already-scored candidates.
 The extra selection preference is a heuristic, not a validated ROI improvement.
+
+### Underdog NBA news display
+
+Both NBA roster pages include a collapsed @UnderdogNBA X timeline using X's
+official website widget. Its external script is loaded only when opened, keeping
+closed-panel projection/build work free of extra X requests. A direct profile
+link remains available, along with a reload action and a visible fallback when
+X does not display the feed. The embed's availability and post ordering are
+controlled by X; no promise of a complete or real-time API feed is made.
+
+The posts are for reading, not parsed as lineup/injury records. Existing
+RotoWire confirmation polling and projection refresh remain the machine-readable
+inputs; viewing an X post never silently changes a player's projection or lock.
+No X API token, account credentials, or server-side scraping is used.
+Official embedding reference: https://help.x.com/en/using-x/embed-x-feed
