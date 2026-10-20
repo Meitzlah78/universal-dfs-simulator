@@ -54,6 +54,9 @@ def render_exports(st,upload,cid,pool,built,portfolio,platform,stale,location):
     if stale:st.caption('Inputs changed. Rebuild before downloading a site upload file.')
     if export_error:st.error('Entries export unavailable: '+export_error)
     if platform=='FanDuel':st.link_button('OPEN FANDUEL / EDIT ENTRIES','https://www.fanduel.com/upcoming',key='nba_open_fanduel_'+location)
+    elif platform=='DraftKings':
+        st.link_button('OPEN DRAFTKINGS / UPLOAD CSV','https://www.draftkings.com/lineup',key='nba_open_draftkings_'+location)
+        st.caption('On DraftKings, choose Edit Entries and upload the exported entries CSV.')
 
 
 def render_workspace(st,slate,upload,tabs,controls,markets):
