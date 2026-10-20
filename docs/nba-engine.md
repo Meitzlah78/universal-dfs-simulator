@@ -180,3 +180,21 @@ as a target. This small conditional comparison supports the calibration path;
 it does not validate live player projections, injury handling, ROI or accuracy
 across future slates. Re-run the conditional script with --markets pointing to
 the retained JSON to reproduce the market-conditioned calculation.
+
+### Batched candidate construction
+
+simmah_nba_candidates.build_candidates accepts shared slate outcomes aligned to
+original pool rows, preserves the uploaded nine-slot order, and returns indices
+into that same pool. Positive projections, injury exclusion, salary limits, nine
+distinct players, at least three teams and at most four players per team apply.
+Candidates follow individual joint slate outcomes with modest search noise;
+portfolio exposure diversity is a separate downstream decision. Search is bounded,
+uses canonical roster sets to reject duplicates across flexible-slot assignments,
+and reports shortfalls without duplicate padding. This is heuristic search, not
+proof that all feasible or optimal lineups were found. Independent evaluation
+outcomes remain required to avoid construction/evaluation reuse.
+
+A synthetic 40-player fixture generated 5,000 unique legal candidates from 39,424
+attempts in 0.212 seconds locally; this is not a live slate or end-to-end benchmark.
+Legality, reproducibility, zero/OUT exclusions and bounded shortfalls are tested.
+The live NBA route remains disabled pending integration and validation.
