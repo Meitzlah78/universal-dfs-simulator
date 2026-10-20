@@ -421,3 +421,31 @@ A 20-entry synthetic local benchmark took 0.17 seconds; hosting and slate size
 affect runtime. Tests cover exact tipoff, missing/conflicting clocks, locked
 OUT players, open OUT replacement, cross-slate rejection, timeout preservation,
 newly locked export rejection and preservation of other contests/reference data.
+
+### Fast NBA late swap
+
+The Lineups tab includes a separate fast late-swap panel, available without a
+saved pregame simulation or known payout preset. Upload the latest filled
+FanDuel entries CSV. The selected contest is updated by entry ID; other contests
+and reference-table cells remain intact. Scheduled game times are grouped by
+team, with missing/conflicting clocks blocking the operation. At tipoff, existing
+players are frozen in their exact slots, including players subsequently marked
+OUT or without projections; no started player can be newly added.
+
+The SciPy/HiGHS assignment optimizer updates only unlocked slots against refreshed
+external projections, with a sequential exposure penalty controlled by diversity.
+It respects the $60,000 cap, minimum salary, positions, unique players and team
+limits. This is projection-based emergency optimization, not a fresh contest
+simulation or live ROI calculation. New duplicate roster sets are excluded;
+existing entries remain unchanged if no replacement is found within the search
+budget (0.5 seconds per entry, 10 seconds total search). The report identifies
+unchanged entries. Validation is repeated for export; a lightweight 10-second
+fragment rechecks locks while connected. Downloaded files must still be uploaded
+before the next tipoff; FanDuel is authoritative about actual lock eligibility.
+Contests must permit late swap. Current app support is FanDuel nine-slot NBA.
+
+Verification: 76 NBA tests passed, including started OUT preservation, open OUT
+replacement, exact-tipoff clocks, invalid/missing clocks, new locked-player
+rejection, timeout preservation and CSV entry/reference-cell preservation. A
+small synthetic 20-entry case completed in 0.187 seconds locally; this is not a
+production latency guarantee.

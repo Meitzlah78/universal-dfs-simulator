@@ -19,6 +19,7 @@ def locked_players(pool, now=None):
         for value in players.get('Game Start', pd.Series(dtype=str)).dropna().unique():
             try:
                 if isinstance(value,str) and ':' not in value: continue
+                if isinstance(value,str) and ':' not in value: continue
                 stamp = pd.Timestamp(value)
                 if pd.isna(stamp): continue
                 if stamp.tzinfo is None: stamp = stamp.tz_localize('America/New_York')
@@ -63,8 +64,8 @@ def swap_entries(template, contest_id, pool, *, now=None, salary_min=0, diversit
     a = np.vstack(matrix)
     lower = np.r_[np.ones(9), np.zeros(n), salary_min, np.zeros(len(teams))]
     upper = np.r_[np.ones(9), np.ones(n), 60000, np.full(len(teams),4)]
-    constraints = LinearConstraint(a,lower,upper)
-    used = np.zeros(n); output=[]; diagnostics=[]; previous=[]; deadline=time.monotonic()+seconds
+    constraints = [LinearConstraint(a,lower,upper)]
+    used = np.zeros(n); output=[]; diagnostics=[]; deadline=time.monotonic()+seconds
     for entry in entries:
         original = np.array([lookup[p] for p in entry[4:13]])
         lo=np.zeros((9,n)); hi=(eligible & active[None,:] & ~locked[None,:]).astype(float)
@@ -75,12 +76,8 @@ def swap_entries(template, contest_id, pool, *, now=None, salary_min=0, diversit
         chosen=original; status='Kept original — search budget exhausted'
         if remaining>0:
             utility=np.nan_to_num(proj,nan=0,posinf=0,neginf=0)-used*float(diversity)/100*2
-            rules=[constraints]
-            if previous:
-                exclusions=np.array([np.tile(np.isin(np.arange(n),row).astype(float),9) for row in previous])
-                rules.append(LinearConstraint(exclusions,0,8))
             result=milp(-np.tile(utility,9),integrality=np.ones(9*n),bounds=Bounds(lo.ravel(),hi.ravel()),
-                        constraints=rules,options={'time_limit':min(.5,remaining),'mip_rel_gap':.005})
+                        constraints=constraints,options={'time_limit':min(.5,remaining),'mip_rel_gap':.005})
             if result.x is not None:
                 candidate=result.x.reshape(9,n).argmax(axis=1)
                 try:
@@ -89,7 +86,9 @@ def swap_entries(template, contest_id, pool, *, now=None, salary_min=0, diversit
                 except ValueError:
                     status='Kept original — no valid replacement found'
             else: status='Kept original — no valid replacement found'
-        previous.append(chosen.copy())
+        # Prevent introducing duplicate roster sets while respecting exact frozen slots.
+        cut=np.zeros(n);cut[chosen]=1
+        constraints.append(LinearConstraint(np.tile(cut,9)[None,:],-np.inf,8))
         used[chosen]+=1
         output.append([pool.iloc[i]['Player ID'] for i in chosen])
         diagnostics.append({'Entry ID':entry[0],'Status':status,'Locked slots':int(frozen.sum()),
