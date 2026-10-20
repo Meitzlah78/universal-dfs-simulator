@@ -62,6 +62,7 @@ def simulate_market_game(rotations,profiles,rates,targets,seed,pilot_n=1024,iter
                               make_three=float(np.clip(fitted[t].make_three*factor,.1,.75)))
     result=run(rotations,fitted,seed)
     means=result['team_points'].mean(axis=0)
+    result['calibrated_rates']=tuple(fitted)
     result['market_calibration']={'targets':targets.tolist(),'baseline_pilot_means':baseline,
          'evaluation_means':means.tolist(),'residual':(means-targets).tolist(),
          'within_four_points':bool((abs(means-targets)<=4).all()),

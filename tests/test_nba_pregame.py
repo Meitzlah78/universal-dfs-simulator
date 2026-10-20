@@ -14,7 +14,8 @@ class PregameTests(unittest.TestCase):
         return p,markets,rates
     def test_provider_inputs_reach_shared_engine(self):
         p,m,r=self.fixture();engine=PregameEngine(p,m,r)
-        a=engine(30,7);b=engine(30,7)
+        a=engine(30,7);prepared=engine.prepared[0];b=engine(30,7)
+        self.assertIs(engine.prepared[0],prepared)
         self.assertEqual(a.shape,(30,10));self.assertTrue(np.isfinite(a).all())
         np.testing.assert_array_equal(a,b)
         self.assertEqual(engine.last_report[0]['calibration']['targets'],[100,110])

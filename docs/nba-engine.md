@@ -311,3 +311,29 @@ points of their market targets. scripts/nba_provider_check.py reproduces the
 input-to-engine check from cached provider player/projection JSON and the upload.
 The prior regulation-only tie figures above describe the earlier implementation.
 External player-mean anchoring and verified ownership still block live builds.
+
+### External player-mean anchoring
+
+simmah_nba_projection_anchor fits role allocation weights to positive external
+fantasy-point projections using a fixed pilot seed and a separate diagnostic seed.
+It adjusts bounded team assist probabilities (.05–.95) to align aggregate fantasy
+scoring budgets. This is an explicit modeling assumption, not an externally
+projected assist count. Final fantasy points always derive from credited events;
+no score multiplication or point offsets are applied. Market shooting calibration
+runs again after player fitting, and both player and team residuals are reported.
+Arbitrary inconsistent target vectors are not guaranteed attainable.
+
+PregameEngine caches the fitted profiles and event rates for its immutable input
+snapshot, reusing them across independent construction, field and evaluation
+seeds. Recreate the engine when projections, rotations or markets change. The
+cache does not reuse simulated outcomes. scripts/nba_provider_check.prepare_inputs
+now makes the cached-provider input path reusable for diagnostic scripts.
+
+Actual uploaded 83-player slate, 10,000 scenarios, 1,024-scenario fitting pilots:
+NY/PHI player mean MAE .154, max .504; OKC/SA MAE .137, max .382.
+Team scoring residuals were +.076/+.022 and -.447/-.031 points; no unresolved ties.
+The first two-game run including fitting took 14.822 seconds locally. A second
+independent 10,000-scenario run reused only the fitted parameters and took 4.932
+seconds, with player mean MAE .162 and .167 (max .475 and .360).
+These quantify target alignment, not predictive accuracy or tournament edge.
+Projected minutes remain fixed, and verified ownership is still unavailable.
