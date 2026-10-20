@@ -32,10 +32,25 @@ participation before a first substitution. Unresolved initial lineups invalidate
 the corresponding team-period. In the first test game, one overtime team-period
 had only four identifiable starters and remains unresolved.
 
+## Experimental forward events
+
+`simmah_nba_engine.py` now simulates regulation using explicit five-player
+rotations and caller-supplied event rates. Made field goals generate scoring and
+optional non-self assists. Misses create rebound opportunities and possible
+blocks. Turnovers create possible steals. Offensive rebounds retain possession.
+Free throw trips distinguish final missed attempts from earlier dead-ball misses.
+NumPy batches scenarios while the event loop advances shared game clocks.
+
+A synthetic 10,000-game regulation benchmark took 1.673 seconds locally. This
+uses equal role weights and illustrative rates, not trained NBA parameters. It
+excludes model fitting, rotation generation, overtime and contest evaluation.
+Regulation ties are explicitly marked `requires_overtime`; they are not final
+game outcomes. Per-player shooting efficiency, quarter-end logic, fouls and
+coaching decisions need further development.
+
 ## Not ready for builds
 
-No forward NBA possession simulator, fitted event rates, calibrated rotation or
-injury probabilities, NBA opponent model, portfolio evaluation or entry export is
-connected yet. The NBA BUILD button remains disabled. Next work must validate
+The forward core, fitted event rates, calibrated rotation or injury probabilities,
+NBA opponent model, portfolio evaluation and entry export are not connected yet. The NBA BUILD button remains disabled. Next work must validate
 rotations and possession reconstruction broadly, fit historical rates without
 lookahead, then implement and test shared forward events and legal lineups.
