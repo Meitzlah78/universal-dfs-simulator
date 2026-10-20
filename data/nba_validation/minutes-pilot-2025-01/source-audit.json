@@ -1,0 +1,4634 @@
+{
+  "source": "ESPN scoreboard and summary API",
+  "dates": [
+    "2025-01-01",
+    "2025-01-02",
+    "2025-01-03",
+    "2025-01-04",
+    "2025-01-05",
+    "2025-01-06",
+    "2025-01-07",
+    "2025-01-08",
+    "2025-01-09",
+    "2025-01-10",
+    "2025-01-11",
+    "2025-01-12",
+    "2025-01-13",
+    "2025-01-14",
+    "2025-01-15",
+    "2025-01-16",
+    "2025-01-17",
+    "2025-01-18",
+    "2025-01-19",
+    "2025-01-20",
+    "2025-01-21"
+  ],
+  "schedule_results": [
+    {
+      "day": "2025-01-01",
+      "games": 8,
+      "error": null
+    },
+    {
+      "day": "2025-01-02",
+      "games": 6,
+      "error": null
+    },
+    {
+      "day": "2025-01-03",
+      "games": 9,
+      "error": null
+    },
+    {
+      "day": "2025-01-04",
+      "games": 9,
+      "error": null
+    },
+    {
+      "day": "2025-01-05",
+      "games": 6,
+      "error": null
+    },
+    {
+      "day": "2025-01-06",
+      "games": 9,
+      "error": null
+    },
+    {
+      "day": "2025-01-07",
+      "games": 7,
+      "error": null
+    },
+    {
+      "day": "2025-01-08",
+      "games": 8,
+      "error": null
+    },
+    {
+      "day": "2025-01-09",
+      "games": 7,
+      "error": null
+    },
+    {
+      "day": "2025-01-10",
+      "games": 7,
+      "error": null
+    },
+    {
+      "day": "2025-01-11",
+      "games": 4,
+      "error": null
+    },
+    {
+      "day": "2025-01-12",
+      "games": 9,
+      "error": null
+    },
+    {
+      "day": "2025-01-13",
+      "games": 6,
+      "error": null
+    },
+    {
+      "day": "2025-01-14",
+      "games": 7,
+      "error": null
+    },
+    {
+      "day": "2025-01-15",
+      "games": 11,
+      "error": null
+    },
+    {
+      "day": "2025-01-16",
+      "games": 5,
+      "error": null
+    },
+    {
+      "day": "2025-01-17",
+      "games": 9,
+      "error": null
+    },
+    {
+      "day": "2025-01-18",
+      "games": 6,
+      "error": null
+    },
+    {
+      "day": "2025-01-19",
+      "games": 7,
+      "error": null
+    },
+    {
+      "day": "2025-01-20",
+      "games": 8,
+      "error": null
+    },
+    {
+      "day": "2025-01-21",
+      "games": 5,
+      "error": null
+    }
+  ],
+  "discovered_games": 153,
+  "downloaded_and_parsed": 153,
+  "accepted_games": 151,
+  "rejected_games": 2,
+  "accepted_teams": 30,
+  "accepted_overtime_games": 5,
+  "by_year": {
+    "2023": {
+      "available": 0,
+      "accepted": 0
+    },
+    "2024": {
+      "available": 0,
+      "accepted": 0
+    },
+    "2025": {
+      "available": 153,
+      "accepted": 151
+    },
+    "2026": {
+      "available": 0,
+      "accepted": 0
+    }
+  },
+  "issue_counts": {
+    "initial_lineup_unresolved": 2
+  },
+  "games": [
+    {
+      "event_id": "401705021",
+      "date": "2025-01-01",
+      "teams": {
+        "19": "Orlando Magic",
+        "8": "Detroit Pistons"
+      },
+      "source_sha256": "542b8bee11ccfe54505df2ee1134b7a57a10497bffef04471098de3061259763",
+      "max_box_minutes_deviation": 11.933333333333334,
+      "events": 464,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": false,
+      "team_minutes": {
+        "19": 180.0,
+        "8": 239.99999999999997
+      },
+      "team_budget_checks": {
+        "19": false,
+        "8": true
+      },
+      "accepted": false,
+      "issues": [
+        {
+          "team": "19",
+          "period": 4,
+          "reason": "initial_lineup_unresolved",
+          "players_found": 4
+        }
+      ]
+    },
+    {
+      "event_id": "401705022",
+      "date": "2025-01-01",
+      "teams": {
+        "4": "Chicago Bulls",
+        "27": "Washington Wizards"
+      },
+      "source_sha256": "9bed2487a82f4d461b7142384688e53b3dc9ab3907cd427c4b5dfce70812cc5a",
+      "max_box_minutes_deviation": 0.4833333333333343,
+      "events": 471,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "4": 240.0,
+        "27": 240.0
+      },
+      "team_budget_checks": {
+        "4": true,
+        "27": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705023",
+      "date": "2025-01-01",
+      "teams": {
+        "3": "New Orleans Pelicans",
+        "14": "Miami Heat"
+      },
+      "source_sha256": "21145d13cb0ba2d700c15bf7304ad7d89672fed73797af3898fb463ced3110b6",
+      "max_box_minutes_deviation": 0.5,
+      "events": 414,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "3": 240.0,
+        "14": 240.0
+      },
+      "team_budget_checks": {
+        "3": true,
+        "14": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705024",
+      "date": "2025-01-01",
+      "teams": {
+        "26": "Utah Jazz",
+        "18": "New York Knicks"
+      },
+      "source_sha256": "6aadd3deeb6d611037a034d07bfe1d5b7d516b3c795746d628cb777ceb10037f",
+      "max_box_minutes_deviation": 0.4833333333333272,
+      "events": 448,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "26": 240.0,
+        "18": 240.0
+      },
+      "team_budget_checks": {
+        "26": true,
+        "18": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705025",
+      "date": "2025-01-01",
+      "teams": {
+        "17": "Brooklyn Nets",
+        "28": "Toronto Raptors"
+      },
+      "source_sha256": "56ab0f6f9dab55af60c251b175fef27ad851ca414fbdf17410b45bc22bd3d27a",
+      "max_box_minutes_deviation": 0.5000000000000036,
+      "events": 455,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "17": 240.0,
+        "28": 239.99999999999997
+      },
+      "team_budget_checks": {
+        "17": true,
+        "28": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705026",
+      "date": "2025-01-01",
+      "teams": {
+        "6": "Dallas Mavericks",
+        "10": "Houston Rockets"
+      },
+      "source_sha256": "fcf71bb7bf89c60a0afde83d207b93c4c524c9127cf32a0a1bec3ba06e4739bf",
+      "max_box_minutes_deviation": 0.41666666666666785,
+      "events": 453,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "6": 240.0,
+        "10": 239.99999999999997
+      },
+      "team_budget_checks": {
+        "6": true,
+        "10": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705027",
+      "date": "2025-01-01",
+      "teams": {
+        "1": "Atlanta Hawks",
+        "7": "Denver Nuggets"
+      },
+      "source_sha256": "9489350fe84aebef7804724ee4ebcb0c7fe1e5fcf2d48964cf97078bc2fab62c",
+      "max_box_minutes_deviation": 0.4833333333333343,
+      "events": 467,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "1": 240.0,
+        "7": 240.0
+      },
+      "team_budget_checks": {
+        "1": true,
+        "7": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705028",
+      "date": "2025-01-01",
+      "teams": {
+        "20": "Philadelphia 76ers",
+        "23": "Sacramento Kings"
+      },
+      "source_sha256": "9b80a260f46fcde1fdb22a98f82332fd5cc9a6a99701d07c7cb00996f36aeb70",
+      "max_box_minutes_deviation": 0.4833333333333272,
+      "events": 451,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "20": 240.00000000000003,
+        "23": 240.00000000000003
+      },
+      "team_budget_checks": {
+        "20": true,
+        "23": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705029",
+      "date": "2025-01-02",
+      "teams": {
+        "11": "Indiana Pacers",
+        "14": "Miami Heat"
+      },
+      "source_sha256": "378419d56df9023e8bfdd3924b5be548045e0e99313b34fc9a580dfe0e6f1d9a",
+      "max_box_minutes_deviation": 0.48333333333333073,
+      "events": 418,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "11": 240.0,
+        "14": 240.0
+      },
+      "team_budget_checks": {
+        "11": true,
+        "14": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705030",
+      "date": "2025-01-02",
+      "teams": {
+        "2": "Boston Celtics",
+        "16": "Minnesota Timberwolves"
+      },
+      "source_sha256": "68cd69a69616d7e7ce9aa9f1c0d6eb28f077bb58bd98416a29fb2232c56577e8",
+      "max_box_minutes_deviation": 0.5,
+      "events": 397,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "2": 240.0,
+        "16": 240.0
+      },
+      "team_budget_checks": {
+        "2": true,
+        "16": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705031",
+      "date": "2025-01-02",
+      "teams": {
+        "17": "Brooklyn Nets",
+        "15": "Milwaukee Bucks"
+      },
+      "source_sha256": "7f7ccec58e0f225567587565537c68972d5fecaf11a2633e8b523fb8177d749d",
+      "max_box_minutes_deviation": 0.48666666666666814,
+      "events": 499,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "17": 240.0,
+        "15": 240.0
+      },
+      "team_budget_checks": {
+        "17": true,
+        "15": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705032",
+      "date": "2025-01-02",
+      "teams": {
+        "12": "LA Clippers",
+        "25": "Oklahoma City Thunder"
+      },
+      "source_sha256": "06c0d31ea86a0b6fc83f50d65e07dbbb035c5e2b7d2416846c943795997234cd",
+      "max_box_minutes_deviation": 0.48333333333333073,
+      "events": 439,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "12": 239.99999999999997,
+        "25": 239.99999999999997
+      },
+      "team_budget_checks": {
+        "12": true,
+        "25": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705033",
+      "date": "2025-01-02",
+      "teams": {
+        "20": "Philadelphia 76ers",
+        "9": "Golden State Warriors"
+      },
+      "source_sha256": "5da59ec33d37cf8c4961e87305333246e86daf74aad3f7b2b0063370702458cc",
+      "max_box_minutes_deviation": 0.501666666666666,
+      "events": 436,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "20": 240.00000000000003,
+        "9": 240.0
+      },
+      "team_budget_checks": {
+        "20": true,
+        "9": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705034",
+      "date": "2025-01-02",
+      "teams": {
+        "22": "Portland Trail Blazers",
+        "13": "Los Angeles Lakers"
+      },
+      "source_sha256": "d6238f7c2561c33e4dea5a83b09b3a8578403931e522b895ac10f745bfaf75e0",
+      "max_box_minutes_deviation": 0.5,
+      "events": 441,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "22": 240.0,
+        "13": 240.0
+      },
+      "team_budget_checks": {
+        "22": true,
+        "13": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705035",
+      "date": "2025-01-03",
+      "teams": {
+        "30": "Charlotte Hornets",
+        "8": "Detroit Pistons"
+      },
+      "source_sha256": "f13aeb3a86b1ea80ea2411698b97b23c87b7c48f4c660c71f5adbbdeecb8951b",
+      "max_box_minutes_deviation": 0.44999999999999574,
+      "events": 506,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "30": 240.0,
+        "8": 240.00000000000003
+      },
+      "team_budget_checks": {
+        "30": true,
+        "8": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705036",
+      "date": "2025-01-03",
+      "teams": {
+        "19": "Orlando Magic",
+        "28": "Toronto Raptors"
+      },
+      "source_sha256": "aec41931676128929af10bb0b7a453693f19722e69935ed05192204e0f8f0985",
+      "max_box_minutes_deviation": 0.5,
+      "events": 397,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "19": 240.0,
+        "28": 240.00000000000003
+      },
+      "team_budget_checks": {
+        "19": true,
+        "28": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705037",
+      "date": "2025-01-03",
+      "teams": {
+        "2": "Boston Celtics",
+        "10": "Houston Rockets"
+      },
+      "source_sha256": "84bef8bb65c64de60687de40584510bfa7ee9c4add25fd2d2a646af3832e7257",
+      "max_box_minutes_deviation": 0.48499999999999943,
+      "events": 433,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "2": 240.0,
+        "10": 240.0
+      },
+      "team_budget_checks": {
+        "2": true,
+        "10": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705038",
+      "date": "2025-01-03",
+      "teams": {
+        "27": "Washington Wizards",
+        "3": "New Orleans Pelicans"
+      },
+      "source_sha256": "5d4868af5702e914fd5aacb9458a9ad87582cdb2732ad186d5dde2f4bf059aa6",
+      "max_box_minutes_deviation": 0.4833333333333414,
+      "events": 488,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "27": 240.00000000000003,
+        "3": 240.0
+      },
+      "team_budget_checks": {
+        "27": true,
+        "3": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705039",
+      "date": "2025-01-03",
+      "teams": {
+        "18": "New York Knicks",
+        "25": "Oklahoma City Thunder"
+      },
+      "source_sha256": "b30f24d4b38d75424e70816779ef175dd21a5a5b15df132c02f6152ed3480a9a",
+      "max_box_minutes_deviation": 0.5,
+      "events": 437,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "18": 240.0,
+        "25": 240.0
+      },
+      "team_budget_checks": {
+        "18": true,
+        "25": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705040",
+      "date": "2025-01-03",
+      "teams": {
+        "5": "Cleveland Cavaliers",
+        "6": "Dallas Mavericks"
+      },
+      "source_sha256": "68f8c9b2388e20a8ef2354b9a324fa72d4d1f32a6f7db6500833eed74873ba52",
+      "max_box_minutes_deviation": 0.5,
+      "events": 505,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "5": 240.0,
+        "6": 240.0
+      },
+      "team_budget_checks": {
+        "5": true,
+        "6": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705041",
+      "date": "2025-01-03",
+      "teams": {
+        "24": "San Antonio Spurs",
+        "7": "Denver Nuggets"
+      },
+      "source_sha256": "99b67c66b7248d6b5ea6a652047ceeef578e460fe8edec4ee02d44ac53e77182",
+      "max_box_minutes_deviation": 0.4833333333333343,
+      "events": 466,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "24": 240.0,
+        "7": 240.00000000000003
+      },
+      "team_budget_checks": {
+        "24": true,
+        "7": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705042",
+      "date": "2025-01-03",
+      "teams": {
+        "29": "Memphis Grizzlies",
+        "23": "Sacramento Kings"
+      },
+      "source_sha256": "771e065f1bf042a52c5bb46d203488f255b56af073907869b0b2cbeab9b72e22",
+      "max_box_minutes_deviation": 0.4199999999999946,
+      "events": 513,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "29": 240.0,
+        "23": 240.00000000000003
+      },
+      "team_budget_checks": {
+        "29": true,
+        "23": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705043",
+      "date": "2025-01-03",
+      "teams": {
+        "1": "Atlanta Hawks",
+        "13": "Los Angeles Lakers"
+      },
+      "source_sha256": "3ac4aaae7be6e53eab1a8c8f90c6fc8191533d9db233bf97b633792b0fb693d5",
+      "max_box_minutes_deviation": 0.4833333333333343,
+      "events": 500,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "1": 240.0,
+        "13": 240.0
+      },
+      "team_budget_checks": {
+        "1": true,
+        "13": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705044",
+      "date": "2025-01-04",
+      "teams": {
+        "20": "Philadelphia 76ers",
+        "17": "Brooklyn Nets"
+      },
+      "source_sha256": "f471c7f70b639db7e9fa3a7a1a397c23d03a9fe8ce9517ca3f7a3885f8c87656",
+      "max_box_minutes_deviation": 0.45000000000000284,
+      "events": 462,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "20": 239.99999999999997,
+        "17": 240.0
+      },
+      "team_budget_checks": {
+        "20": true,
+        "17": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705045",
+      "date": "2025-01-04",
+      "teams": {
+        "16": "Minnesota Timberwolves",
+        "8": "Detroit Pistons"
+      },
+      "source_sha256": "cebe9fd55886772169e1fae6e0f4cbfe4fb8b313e69227738efb869a5d872237",
+      "max_box_minutes_deviation": 0.4833333333333343,
+      "events": 471,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "16": 240.0,
+        "8": 240.0
+      },
+      "team_budget_checks": {
+        "16": true,
+        "8": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705046",
+      "date": "2025-01-04",
+      "teams": {
+        "21": "Phoenix Suns",
+        "11": "Indiana Pacers"
+      },
+      "source_sha256": "ce793bf95d3c701e29e4727f35dd0c5bf072a3252bae10532764f7cd25891de5",
+      "max_box_minutes_deviation": 0.5,
+      "events": 441,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "21": 240.0,
+        "11": 240.0
+      },
+      "team_budget_checks": {
+        "21": true,
+        "11": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705047",
+      "date": "2025-01-04",
+      "teams": {
+        "26": "Utah Jazz",
+        "14": "Miami Heat"
+      },
+      "source_sha256": "7e7ee52baf474f8ebbc4a5980028eec9e191be6dc29b47e3e1c2e8b5f734c232",
+      "max_box_minutes_deviation": 0.4833333333333343,
+      "events": 455,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "26": 240.0,
+        "14": 240.0
+      },
+      "team_budget_checks": {
+        "26": true,
+        "14": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705048",
+      "date": "2025-01-04",
+      "teams": {
+        "18": "New York Knicks",
+        "4": "Chicago Bulls"
+      },
+      "source_sha256": "625c3e54e58e7f612dfb074885924eb7c559c267042a5cbe81d51e43ff792f28",
+      "max_box_minutes_deviation": 0.5,
+      "events": 463,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "18": 240.00000000000003,
+        "4": 240.0
+      },
+      "team_budget_checks": {
+        "18": true,
+        "4": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705049",
+      "date": "2025-01-04",
+      "teams": {
+        "22": "Portland Trail Blazers",
+        "15": "Milwaukee Bucks"
+      },
+      "source_sha256": "777865a21b11a390af79c3ca0a07505ae7bda7e001cccba4cdf7a2de6051f4bd",
+      "max_box_minutes_deviation": 0.4666666666666668,
+      "events": 423,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "22": 240.0,
+        "15": 240.0
+      },
+      "team_budget_checks": {
+        "22": true,
+        "15": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705050",
+      "date": "2025-01-04",
+      "teams": {
+        "7": "Denver Nuggets",
+        "24": "San Antonio Spurs"
+      },
+      "source_sha256": "4c9d1611e8264590c4fccf0e05e69ac0a6edbf19525197f81faf35c16ec85250",
+      "max_box_minutes_deviation": 0.4833333333333343,
+      "events": 529,
+      "periods": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "overtimes": 1,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "7": 265.0,
+        "24": 265.0
+      },
+      "team_budget_checks": {
+        "7": true,
+        "24": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705051",
+      "date": "2025-01-04",
+      "teams": {
+        "29": "Memphis Grizzlies",
+        "9": "Golden State Warriors"
+      },
+      "source_sha256": "5abe8cbd0ac02e1e8667b3401669d71be30842a94cc12064df0f750697230999",
+      "max_box_minutes_deviation": 0.46666666666666856,
+      "events": 456,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "29": 240.0,
+        "9": 240.00000000000003
+      },
+      "team_budget_checks": {
+        "29": true,
+        "9": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705052",
+      "date": "2025-01-04",
+      "teams": {
+        "1": "Atlanta Hawks",
+        "12": "LA Clippers"
+      },
+      "source_sha256": "9443d3f890796a05252f8947511f1fd5306dd2f00848f9a8e0345d9992e18192",
+      "max_box_minutes_deviation": 0.4833333333333343,
+      "events": 457,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "1": 240.0,
+        "12": 240.0
+      },
+      "team_budget_checks": {
+        "1": true,
+        "12": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705053",
+      "date": "2025-01-05",
+      "teams": {
+        "2": "Boston Celtics",
+        "25": "Oklahoma City Thunder"
+      },
+      "source_sha256": "4ac909fc8f230cadb4f5eaa28ca9a53470b0c59df3a36a8cdf2f372feb71f937",
+      "max_box_minutes_deviation": 0.4683333333333337,
+      "events": 452,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "2": 240.00000000000003,
+        "25": 240.0
+      },
+      "team_budget_checks": {
+        "2": true,
+        "25": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705054",
+      "date": "2025-01-05",
+      "teams": {
+        "30": "Charlotte Hornets",
+        "5": "Cleveland Cavaliers"
+      },
+      "source_sha256": "c420af894a4ef08a7969b0dbd81611431d77a7a8e1c5dc1b537b5dd612705f56",
+      "max_box_minutes_deviation": 0.4833333333333343,
+      "events": 479,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "30": 240.0,
+        "5": 240.0
+      },
+      "team_budget_checks": {
+        "30": true,
+        "5": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705055",
+      "date": "2025-01-05",
+      "teams": {
+        "3": "New Orleans Pelicans",
+        "27": "Washington Wizards"
+      },
+      "source_sha256": "db8d22f917206fe9d0fdca9d4321be50d8f395c420c5f56ac17f205dac810fcd",
+      "max_box_minutes_deviation": 0.46666666666666146,
+      "events": 448,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "3": 240.0,
+        "27": 240.0
+      },
+      "team_budget_checks": {
+        "3": true,
+        "27": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705056",
+      "date": "2025-01-05",
+      "teams": {
+        "26": "Utah Jazz",
+        "19": "Orlando Magic"
+      },
+      "source_sha256": "bdc894e854215661eaf4ea6fb34ef2a7064a6fb8f5d90c6cd0e3ff26b99b91d7",
+      "max_box_minutes_deviation": 0.4833333333333343,
+      "events": 457,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "26": 240.0,
+        "19": 240.0
+      },
+      "team_budget_checks": {
+        "26": true,
+        "19": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705057",
+      "date": "2025-01-05",
+      "teams": {
+        "13": "Los Angeles Lakers",
+        "10": "Houston Rockets"
+      },
+      "source_sha256": "228909a5eec8c6058aefd06fef6684c0dc2b14bfe637070808171fae4eb9032e",
+      "max_box_minutes_deviation": 0.46666666666666856,
+      "events": 469,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "13": 240.0,
+        "10": 240.0
+      },
+      "team_budget_checks": {
+        "13": true,
+        "10": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705058",
+      "date": "2025-01-05",
+      "teams": {
+        "23": "Sacramento Kings",
+        "9": "Golden State Warriors"
+      },
+      "source_sha256": "ada16ab083884c4b8b865900254773a7513cf25b797a61b7012ba98279b81032",
+      "max_box_minutes_deviation": 0.4683333333333337,
+      "events": 457,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "23": 240.0,
+        "9": 240.0
+      },
+      "team_budget_checks": {
+        "23": true,
+        "9": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705059",
+      "date": "2025-01-06",
+      "teams": {
+        "22": "Portland Trail Blazers",
+        "8": "Detroit Pistons"
+      },
+      "source_sha256": "ec1e4971dce0e541cac168a2b7ac098df78b48c5da889d0e5e780786513b5b44",
+      "max_box_minutes_deviation": 0.4833333333333343,
+      "events": 445,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "22": 240.0,
+        "8": 240.00000000000003
+      },
+      "team_budget_checks": {
+        "22": true,
+        "8": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705060",
+      "date": "2025-01-06",
+      "teams": {
+        "21": "Phoenix Suns",
+        "20": "Philadelphia 76ers"
+      },
+      "source_sha256": "a09adf1d4f024f0ad93caafe028dcd63c9f8d286b052af2c50ffc20e51ed75ee",
+      "max_box_minutes_deviation": 0.4833333333333334,
+      "events": 451,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "21": 240.0,
+        "20": 240.0
+      },
+      "team_budget_checks": {
+        "21": true,
+        "20": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705061",
+      "date": "2025-01-06",
+      "teams": {
+        "11": "Indiana Pacers",
+        "17": "Brooklyn Nets"
+      },
+      "source_sha256": "d5ba96a3ad2a42eccc59b00b057b81a46b17d2cf5306379f85e189c614cc6e45",
+      "max_box_minutes_deviation": 0.4350000000000023,
+      "events": 452,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "11": 240.0,
+        "17": 239.99999999999997
+      },
+      "team_budget_checks": {
+        "11": true,
+        "17": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705062",
+      "date": "2025-01-06",
+      "teams": {
+        "19": "Orlando Magic",
+        "18": "New York Knicks"
+      },
+      "source_sha256": "2781bc38f5e97775b1685665a1307eade2fe2abdeb83b184ed67ce0daa2a1231",
+      "max_box_minutes_deviation": 0.466666666666665,
+      "events": 418,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "19": 240.00000000000003,
+        "18": 240.0
+      },
+      "team_budget_checks": {
+        "19": true,
+        "18": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705063",
+      "date": "2025-01-06",
+      "teams": {
+        "15": "Milwaukee Bucks",
+        "28": "Toronto Raptors"
+      },
+      "source_sha256": "9aa11d0f033f5b65ab57ca074a116faed885868969bd7d78cbbe1113a56145ff",
+      "max_box_minutes_deviation": 0.4166666666666643,
+      "events": 448,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "15": 240.0,
+        "28": 240.0
+      },
+      "team_budget_checks": {
+        "15": true,
+        "28": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705064",
+      "date": "2025-01-06",
+      "teams": {
+        "24": "San Antonio Spurs",
+        "4": "Chicago Bulls"
+      },
+      "source_sha256": "1f62ed253281477d3bb12516d878bbafae030dfdf1dc532b6d0fa9ed63c2c371",
+      "max_box_minutes_deviation": 0.4833333333333343,
+      "events": 477,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "24": 240.0,
+        "4": 240.0
+      },
+      "team_budget_checks": {
+        "24": true,
+        "4": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705065",
+      "date": "2025-01-06",
+      "teams": {
+        "6": "Dallas Mavericks",
+        "29": "Memphis Grizzlies"
+      },
+      "source_sha256": "acea796d3fc1b2172e461c4860205bdc3649653e6e29fb75befa5f8573b293b6",
+      "max_box_minutes_deviation": 0.5,
+      "events": 527,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "6": 240.0,
+        "29": 240.0
+      },
+      "team_budget_checks": {
+        "6": true,
+        "29": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705066",
+      "date": "2025-01-06",
+      "teams": {
+        "12": "LA Clippers",
+        "16": "Minnesota Timberwolves"
+      },
+      "source_sha256": "d2d62d9a86d41f32c8374d363b10bed9bde51e617b122a8125b1306e48cfac85",
+      "max_box_minutes_deviation": 0.4833333333333334,
+      "events": 485,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "12": 240.0,
+        "16": 240.0
+      },
+      "team_budget_checks": {
+        "12": true,
+        "16": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705067",
+      "date": "2025-01-06",
+      "teams": {
+        "14": "Miami Heat",
+        "23": "Sacramento Kings"
+      },
+      "source_sha256": "2bf215e3cd4388279c6d9c1a561d6bc666982fb0b41642573811aaa1952a83f5",
+      "max_box_minutes_deviation": 5.416666666666671,
+      "events": 556,
+      "periods": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "overtimes": 2,
+      "reconstruction_complete": false,
+      "team_minutes": {
+        "14": 265.0,
+        "23": 290.0
+      },
+      "team_budget_checks": {
+        "14": false,
+        "23": true
+      },
+      "accepted": false,
+      "issues": [
+        {
+          "team": "14",
+          "period": 5,
+          "reason": "initial_lineup_unresolved",
+          "players_found": 4
+        }
+      ]
+    },
+    {
+      "event_id": "401705068",
+      "date": "2025-01-07",
+      "teams": {
+        "21": "Phoenix Suns",
+        "30": "Charlotte Hornets"
+      },
+      "source_sha256": "8e0fc713f87ff0a50c634dcc74fc4e7c306359ce41d70a71ac9790e49a131e10",
+      "max_box_minutes_deviation": 0.45000000000000284,
+      "events": 502,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "21": 240.0,
+        "30": 239.99999999999997
+      },
+      "team_budget_checks": {
+        "21": true,
+        "30": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705069",
+      "date": "2025-01-07",
+      "teams": {
+        "10": "Houston Rockets",
+        "27": "Washington Wizards"
+      },
+      "source_sha256": "ec14895e0fad67977568a729f45444af3ffa73684efa8bf6539eb83217844169",
+      "max_box_minutes_deviation": 0.41666666666666785,
+      "events": 466,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "10": 240.0,
+        "27": 240.00000000000003
+      },
+      "team_budget_checks": {
+        "10": true,
+        "27": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705070",
+      "date": "2025-01-07",
+      "teams": {
+        "13": "Los Angeles Lakers",
+        "6": "Dallas Mavericks"
+      },
+      "source_sha256": "6142ff856d56813d76b9e5f28b1507d1596b61f29177df06f45ce51457689a54",
+      "max_box_minutes_deviation": 0.4666666666666721,
+      "events": 422,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "13": 240.0,
+        "6": 240.0
+      },
+      "team_budget_checks": {
+        "13": true,
+        "6": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705071",
+      "date": "2025-01-07",
+      "teams": {
+        "16": "Minnesota Timberwolves",
+        "3": "New Orleans Pelicans"
+      },
+      "source_sha256": "de8df5ad6876b1da312ad711637db1610dbb9090ba083b8601fd873c54296481",
+      "max_box_minutes_deviation": 0.5,
+      "events": 505,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "16": 240.0,
+        "3": 240.0
+      },
+      "team_budget_checks": {
+        "16": true,
+        "3": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705072",
+      "date": "2025-01-07",
+      "teams": {
+        "1": "Atlanta Hawks",
+        "26": "Utah Jazz"
+      },
+      "source_sha256": "bc4713443ba26a41f58ecd0db85a6bc9d6780b24583252dd788fc3d539f0872d",
+      "max_box_minutes_deviation": 0.43333333333333357,
+      "events": 496,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "1": 240.0,
+        "26": 240.0
+      },
+      "team_budget_checks": {
+        "1": true,
+        "26": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705073",
+      "date": "2025-01-07",
+      "teams": {
+        "2": "Boston Celtics",
+        "7": "Denver Nuggets"
+      },
+      "source_sha256": "8082506ee8e577642b632bdfe31b120250215223eb8f40687f2144fbb067b0ae",
+      "max_box_minutes_deviation": 0.49833333333333485,
+      "events": 435,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "2": 240.0,
+        "7": 240.0
+      },
+      "team_budget_checks": {
+        "2": true,
+        "7": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705074",
+      "date": "2025-01-07",
+      "teams": {
+        "14": "Miami Heat",
+        "9": "Golden State Warriors"
+      },
+      "source_sha256": "52f5fb2652c5a9d6a21e0d7cd61d2af44aa9bf9c80467b051fbabb2c2fbca81e",
+      "max_box_minutes_deviation": 0.4833333333333343,
+      "events": 448,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "14": 240.0,
+        "9": 240.0
+      },
+      "team_budget_checks": {
+        "14": true,
+        "9": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705075",
+      "date": "2025-01-08",
+      "teams": {
+        "25": "Oklahoma City Thunder",
+        "5": "Cleveland Cavaliers"
+      },
+      "source_sha256": "af856357b2caf1dbefb43ddfae08df61108d85c15625ada2b86b6e4a3769ab90",
+      "max_box_minutes_deviation": 0.4333333333333371,
+      "events": 469,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "25": 240.0,
+        "5": 240.0
+      },
+      "team_budget_checks": {
+        "25": true,
+        "5": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705076",
+      "date": "2025-01-08",
+      "teams": {
+        "4": "Chicago Bulls",
+        "11": "Indiana Pacers"
+      },
+      "source_sha256": "b7a95c72a966e21e233298106533f70c02857e9839934a014644f44949ea2cf3",
+      "max_box_minutes_deviation": 0.48500000000000004,
+      "events": 497,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "4": 240.0,
+        "11": 240.0
+      },
+      "team_budget_checks": {
+        "4": true,
+        "11": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705078",
+      "date": "2025-01-08",
+      "teams": {
+        "27": "Washington Wizards",
+        "20": "Philadelphia 76ers"
+      },
+      "source_sha256": "c65f002e361e4d7d868b628c35d7f685ce4247fece13f12ec2a3e336d9b08ff5",
+      "max_box_minutes_deviation": 0.4833333333333325,
+      "events": 452,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "27": 240.0,
+        "20": 240.0
+      },
+      "team_budget_checks": {
+        "27": true,
+        "20": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705077",
+      "date": "2025-01-08",
+      "teams": {
+        "28": "Toronto Raptors",
+        "18": "New York Knicks"
+      },
+      "source_sha256": "b42bd8c1bb7c68d6e56b1f3716dc6dea24f86fa2d222f1d5ad218d283a18e48f",
+      "max_box_minutes_deviation": 0.4500000000000002,
+      "events": 442,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "28": 240.00000000000003,
+        "18": 239.99999999999997
+      },
+      "team_budget_checks": {
+        "28": true,
+        "18": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705079",
+      "date": "2025-01-08",
+      "teams": {
+        "8": "Detroit Pistons",
+        "17": "Brooklyn Nets"
+      },
+      "source_sha256": "b9b23488dd007a70880f5bf8f9814cbbbe8a86943874ad21b4ae1cffa0791b47",
+      "max_box_minutes_deviation": 0.5,
+      "events": 444,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "8": 240.0,
+        "17": 240.0
+      },
+      "team_budget_checks": {
+        "8": true,
+        "17": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705080",
+      "date": "2025-01-08",
+      "teams": {
+        "22": "Portland Trail Blazers",
+        "3": "New Orleans Pelicans"
+      },
+      "source_sha256": "c3a51f41a3fbf7bc4d5b5e758391737a0f2a670352155f5650495f66e8d2ef8e",
+      "max_box_minutes_deviation": 0.3500000000000014,
+      "events": 435,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "22": 240.0,
+        "3": 240.0
+      },
+      "team_budget_checks": {
+        "22": true,
+        "3": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705081",
+      "date": "2025-01-08",
+      "teams": {
+        "12": "LA Clippers",
+        "7": "Denver Nuggets"
+      },
+      "source_sha256": "fb5ad1cecc1430dd6d6d671bfc946e2583a9c784c743e58b07e8142c5c4c058c",
+      "max_box_minutes_deviation": 0.45000000000000107,
+      "events": 456,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "12": 240.0,
+        "7": 240.0
+      },
+      "team_budget_checks": {
+        "12": true,
+        "7": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705082",
+      "date": "2025-01-08",
+      "teams": {
+        "24": "San Antonio Spurs",
+        "15": "Milwaukee Bucks"
+      },
+      "source_sha256": "6cff2b8c5821da4fbb0c3296731f958911e389b8383fd2794a0a12fbdc5b0ab2",
+      "max_box_minutes_deviation": 0.4499999999999993,
+      "events": 470,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "24": 240.0,
+        "15": 240.0
+      },
+      "team_budget_checks": {
+        "24": true,
+        "15": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705083",
+      "date": "2025-01-09",
+      "teams": {
+        "28": "Toronto Raptors",
+        "5": "Cleveland Cavaliers"
+      },
+      "source_sha256": "22dbbb6959855a6be9bc5923e7f112199c537a4638c5813cc1a4b8e76601132d",
+      "max_box_minutes_deviation": 0.49999999999999645,
+      "events": 439,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "28": 240.0,
+        "5": 240.0
+      },
+      "team_budget_checks": {
+        "28": true,
+        "5": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705084",
+      "date": "2025-01-09",
+      "teams": {
+        "9": "Golden State Warriors",
+        "8": "Detroit Pistons"
+      },
+      "source_sha256": "3951491804a319ee84dd27e9258f62a1558e57fa6f0269e28008c7dce48a9084",
+      "max_box_minutes_deviation": 0.9466666666666654,
+      "events": 474,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "9": 240.0,
+        "8": 240.0
+      },
+      "team_budget_checks": {
+        "9": true,
+        "8": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705085",
+      "date": "2025-01-09",
+      "teams": {
+        "16": "Minnesota Timberwolves",
+        "19": "Orlando Magic"
+      },
+      "source_sha256": "ff18439f55fdb8bffb97fbeeca256ca92a0ffd98bdae842a7bf7b3d6c6724ae3",
+      "max_box_minutes_deviation": 0.46666666666666856,
+      "events": 487,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "16": 240.0,
+        "19": 240.0
+      },
+      "team_budget_checks": {
+        "16": true,
+        "19": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705087",
+      "date": "2025-01-09",
+      "teams": {
+        "22": "Portland Trail Blazers",
+        "6": "Dallas Mavericks"
+      },
+      "source_sha256": "31a8c1d16599282db1a420e673588f1f0f930ab510ff64126ca4dc7625f5d502",
+      "max_box_minutes_deviation": 0.46666666666666856,
+      "events": 491,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "22": 240.0,
+        "6": 240.0
+      },
+      "team_budget_checks": {
+        "22": true,
+        "6": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705086",
+      "date": "2025-01-09",
+      "teams": {
+        "10": "Houston Rockets",
+        "29": "Memphis Grizzlies"
+      },
+      "source_sha256": "87b0ed50ea5e3fd752ad4f17a81bb8ad958777880604aa655383c42e18907353",
+      "max_box_minutes_deviation": 0.49833333333334195,
+      "events": 574,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "10": 239.99999999999997,
+        "29": 240.0
+      },
+      "team_budget_checks": {
+        "10": true,
+        "29": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705088",
+      "date": "2025-01-09",
+      "teams": {
+        "1": "Atlanta Hawks",
+        "21": "Phoenix Suns"
+      },
+      "source_sha256": "a3238a392578f20aa631f7cadbe520dd810a999096ac6a5104710f109fcfc451",
+      "max_box_minutes_deviation": 0.4499999999999993,
+      "events": 439,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "1": 240.00000000000003,
+        "21": 240.0
+      },
+      "team_budget_checks": {
+        "1": true,
+        "21": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705089",
+      "date": "2025-01-09",
+      "teams": {
+        "14": "Miami Heat",
+        "26": "Utah Jazz"
+      },
+      "source_sha256": "c659e20025d61e0996b8dc5c110968cb03961b772f067acfe9022ce1cad03573",
+      "max_box_minutes_deviation": 0.4833333333333343,
+      "events": 450,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "14": 240.0,
+        "26": 239.99999999999997
+      },
+      "team_budget_checks": {
+        "14": true,
+        "26": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705091",
+      "date": "2025-01-10",
+      "teams": {
+        "9": "Golden State Warriors",
+        "11": "Indiana Pacers"
+      },
+      "source_sha256": "cb51ba7aaba98a652b59fececcb4c02b0e685321f15285287fe804d5f42e5835",
+      "max_box_minutes_deviation": 0.46666666666666856,
+      "events": 448,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "9": 240.0,
+        "11": 240.0
+      },
+      "team_budget_checks": {
+        "9": true,
+        "11": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705092",
+      "date": "2025-01-10",
+      "teams": {
+        "15": "Milwaukee Bucks",
+        "19": "Orlando Magic"
+      },
+      "source_sha256": "587ea86cecc2fba1c240b51ca1d7d717cd9e6c503a79f7e810ca0767c3826047",
+      "max_box_minutes_deviation": 0.46833333333333016,
+      "events": 471,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "15": 240.0,
+        "19": 240.00000000000003
+      },
+      "team_budget_checks": {
+        "15": true,
+        "19": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705093",
+      "date": "2025-01-10",
+      "teams": {
+        "3": "New Orleans Pelicans",
+        "20": "Philadelphia 76ers"
+      },
+      "source_sha256": "5a78442d35131b70b0165ffc032408f11815afed163e38a069544ff33abcb9e3",
+      "max_box_minutes_deviation": 0.5,
+      "events": 471,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "3": 240.0,
+        "20": 240.0
+      },
+      "team_budget_checks": {
+        "3": true,
+        "20": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705094",
+      "date": "2025-01-10",
+      "teams": {
+        "23": "Sacramento Kings",
+        "2": "Boston Celtics"
+      },
+      "source_sha256": "cc660c7d6116b8b9f08c7490daf0d2e846bc664f88526e23c0fbf573e097010c",
+      "max_box_minutes_deviation": 0.44999999999999574,
+      "events": 463,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "23": 239.99999999999997,
+        "2": 240.0
+      },
+      "team_budget_checks": {
+        "23": true,
+        "2": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705095",
+      "date": "2025-01-10",
+      "teams": {
+        "25": "Oklahoma City Thunder",
+        "18": "New York Knicks"
+      },
+      "source_sha256": "ef222c267f0a77e61b8e1e935f97822d137e304f0d304e04fa31b440e7ec5cec",
+      "max_box_minutes_deviation": 0.48166666666666913,
+      "events": 455,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "25": 240.0,
+        "18": 240.0
+      },
+      "team_budget_checks": {
+        "25": true,
+        "18": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705096",
+      "date": "2025-01-10",
+      "teams": {
+        "27": "Washington Wizards",
+        "4": "Chicago Bulls"
+      },
+      "source_sha256": "f939c055a0bc7135f16b2e481144b726b22c838e01ea108df55dd86ddca0ff91",
+      "max_box_minutes_deviation": 0.4833333333333343,
+      "events": 462,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "27": 240.0,
+        "4": 240.0
+      },
+      "team_budget_checks": {
+        "27": true,
+        "4": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705097",
+      "date": "2025-01-10",
+      "teams": {
+        "17": "Brooklyn Nets",
+        "7": "Denver Nuggets"
+      },
+      "source_sha256": "07f5c406eaf5fb3b05dd4c10ddc3feac69c918ce5df5cbb4145a56c6b7926a0d",
+      "max_box_minutes_deviation": 0.4816666666666656,
+      "events": 499,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "17": 240.0,
+        "7": 240.00000000000003
+      },
+      "team_budget_checks": {
+        "17": true,
+        "7": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705099",
+      "date": "2025-01-11",
+      "teams": {
+        "26": "Utah Jazz",
+        "21": "Phoenix Suns"
+      },
+      "source_sha256": "a8628ffc8675f5632940d8e1fc5d55bd56821df6c38e78fa1ad4f6aace3ae861",
+      "max_box_minutes_deviation": 0.5,
+      "events": 463,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "26": 240.0,
+        "21": 240.0
+      },
+      "team_budget_checks": {
+        "26": true,
+        "21": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705100",
+      "date": "2025-01-11",
+      "teams": {
+        "28": "Toronto Raptors",
+        "8": "Detroit Pistons"
+      },
+      "source_sha256": "6a878cc613cb4acd00b0d13c1cc318662d08980230b00ae42b59344d2f7bbd84",
+      "max_box_minutes_deviation": 0.4833333333333325,
+      "events": 486,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "28": 240.0,
+        "8": 240.0
+      },
+      "team_budget_checks": {
+        "28": true,
+        "8": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705101",
+      "date": "2025-01-11",
+      "teams": {
+        "29": "Memphis Grizzlies",
+        "16": "Minnesota Timberwolves"
+      },
+      "source_sha256": "cfbe8c96d5e37467b9eb77939bea30cfb4cb6983dc7a266da8abf607b5628e0f",
+      "max_box_minutes_deviation": 0.4166666666666714,
+      "events": 495,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "29": 240.0,
+        "16": 240.0
+      },
+      "team_budget_checks": {
+        "29": true,
+        "16": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705102",
+      "date": "2025-01-11",
+      "teams": {
+        "14": "Miami Heat",
+        "22": "Portland Trail Blazers"
+      },
+      "source_sha256": "26c372708538a4752a0c3f4de3ce01cfc006e4eea893d2917f6f8fdab8b0ad2e",
+      "max_box_minutes_deviation": 0.4666666666666668,
+      "events": 476,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "14": 240.0,
+        "22": 240.0
+      },
+      "team_budget_checks": {
+        "14": true,
+        "22": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705105",
+      "date": "2025-01-12",
+      "teams": {
+        "15": "Milwaukee Bucks",
+        "18": "New York Knicks"
+      },
+      "source_sha256": "c22e7bba123b619e778629911b5fc55e47e8d67730dd48077b57d6af89c8e350",
+      "max_box_minutes_deviation": 0.46666666666667567,
+      "events": 455,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "15": 239.99999999999997,
+        "18": 239.99999999999997
+      },
+      "team_budget_checks": {
+        "15": true,
+        "18": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705106",
+      "date": "2025-01-12",
+      "teams": {
+        "7": "Denver Nuggets",
+        "6": "Dallas Mavericks"
+      },
+      "source_sha256": "9dfbbdd73539f8198ebc3fc9894c25d74e91b03c8abc240d3b3315ffde6889b7",
+      "max_box_minutes_deviation": 0.5016666666666687,
+      "events": 484,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "7": 240.0,
+        "6": 240.0
+      },
+      "team_budget_checks": {
+        "7": true,
+        "6": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705107",
+      "date": "2025-01-12",
+      "teams": {
+        "23": "Sacramento Kings",
+        "4": "Chicago Bulls"
+      },
+      "source_sha256": "63b6567e4e07a636ec328fc2c8fad5fde1e1bc4c9e3dfa577af6a0b8ba707eb2",
+      "max_box_minutes_deviation": 0.5,
+      "events": 462,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "23": 240.0,
+        "4": 240.0
+      },
+      "team_budget_checks": {
+        "23": true,
+        "4": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705108",
+      "date": "2025-01-12",
+      "teams": {
+        "3": "New Orleans Pelicans",
+        "2": "Boston Celtics"
+      },
+      "source_sha256": "7d4676f7a6a2e22fd012d0782375bacd51d865b709c21df10280aeb6febe9f65",
+      "max_box_minutes_deviation": 0.4999999999999929,
+      "events": 486,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "3": 240.0,
+        "2": 240.0
+      },
+      "team_budget_checks": {
+        "3": true,
+        "2": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705109",
+      "date": "2025-01-12",
+      "teams": {
+        "11": "Indiana Pacers",
+        "5": "Cleveland Cavaliers"
+      },
+      "source_sha256": "42cd3e86eb24dd9a7b8c05514086df88611264396f1260dc57f71bcebf2904a8",
+      "max_box_minutes_deviation": 0.5,
+      "events": 472,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "11": 240.0,
+        "5": 240.0
+      },
+      "team_budget_checks": {
+        "11": true,
+        "5": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705110",
+      "date": "2025-01-12",
+      "teams": {
+        "20": "Philadelphia 76ers",
+        "19": "Orlando Magic"
+      },
+      "source_sha256": "f44ab82dd7ad6b55b7c174675c94fd92dc0178f990b5d4f237b1e0c69173b32c",
+      "max_box_minutes_deviation": 0.44999999999999574,
+      "events": 446,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "20": 239.99999999999997,
+        "19": 239.99999999999997
+      },
+      "team_budget_checks": {
+        "20": true,
+        "19": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705111",
+      "date": "2025-01-12",
+      "teams": {
+        "25": "Oklahoma City Thunder",
+        "27": "Washington Wizards"
+      },
+      "source_sha256": "3d535c8bdd2045e45ba61b0bdd68404168b9de025af67e72afded73a2f67c20a",
+      "max_box_minutes_deviation": 0.46666666666666856,
+      "events": 508,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "25": 240.0,
+        "27": 240.00000000000003
+      },
+      "team_budget_checks": {
+        "25": true,
+        "27": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705112",
+      "date": "2025-01-12",
+      "teams": {
+        "17": "Brooklyn Nets",
+        "26": "Utah Jazz"
+      },
+      "source_sha256": "c8e7645076fa6a26a16da75bd986032ef76c9e44d3609cc8551bcfd1cf31fc1b",
+      "max_box_minutes_deviation": 0.4333333333333371,
+      "events": 523,
+      "periods": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "overtimes": 1,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "17": 265.0,
+        "26": 265.0
+      },
+      "team_budget_checks": {
+        "17": true,
+        "26": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705113",
+      "date": "2025-01-12",
+      "teams": {
+        "30": "Charlotte Hornets",
+        "21": "Phoenix Suns"
+      },
+      "source_sha256": "f2fe0602e3438520adb5d3589e14cb6b2f05ede39755d7fad6d5aad5fde708e4",
+      "max_box_minutes_deviation": 0.4833333333333343,
+      "events": 476,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "30": 240.00000000000003,
+        "21": 240.00000000000003
+      },
+      "team_budget_checks": {
+        "30": true,
+        "21": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705114",
+      "date": "2025-01-13",
+      "teams": {
+        "16": "Minnesota Timberwolves",
+        "27": "Washington Wizards"
+      },
+      "source_sha256": "0d87561c232e3a3648a325fc22bc0ca9fbe04f4a83329c3bd6a4f32e83daf502",
+      "max_box_minutes_deviation": 0.4833333333333414,
+      "events": 466,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "16": 240.0,
+        "27": 240.00000000000003
+      },
+      "team_budget_checks": {
+        "16": true,
+        "27": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705115",
+      "date": "2025-01-13",
+      "teams": {
+        "8": "Detroit Pistons",
+        "18": "New York Knicks"
+      },
+      "source_sha256": "b6ec0e8cdbd6a81d4baaa6d6ea5a100847267cc9b9022255b3e7a6e72e0bf954",
+      "max_box_minutes_deviation": 0.4999999999999982,
+      "events": 461,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "8": 240.00000000000003,
+        "18": 240.0
+      },
+      "team_budget_checks": {
+        "8": true,
+        "18": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705116",
+      "date": "2025-01-13",
+      "teams": {
+        "9": "Golden State Warriors",
+        "28": "Toronto Raptors"
+      },
+      "source_sha256": "18b7be576ebd3667d839bc7fb603a12c3451be2fa1f9e7fe211aa58d53db3873",
+      "max_box_minutes_deviation": 0.4499999999999993,
+      "events": 474,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "9": 240.0,
+        "28": 240.0
+      },
+      "team_budget_checks": {
+        "9": true,
+        "28": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705117",
+      "date": "2025-01-13",
+      "teams": {
+        "29": "Memphis Grizzlies",
+        "10": "Houston Rockets"
+      },
+      "source_sha256": "0aa92e8be492ad8510887ba053b95d662a64e70d5b738368c666aedb24667d17",
+      "max_box_minutes_deviation": 0.4833333333333343,
+      "events": 498,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "29": 239.99999999999997,
+        "10": 240.0
+      },
+      "team_budget_checks": {
+        "29": true,
+        "10": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705118",
+      "date": "2025-01-13",
+      "teams": {
+        "24": "San Antonio Spurs",
+        "13": "Los Angeles Lakers"
+      },
+      "source_sha256": "32085f2af2718946b635b90d8c14364f654e261ea61d83e1ebc71d1a5675d97a",
+      "max_box_minutes_deviation": 0.4833333333333272,
+      "events": 458,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "24": 239.99999999999997,
+        "13": 240.0
+      },
+      "team_budget_checks": {
+        "24": true,
+        "13": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705119",
+      "date": "2025-01-13",
+      "teams": {
+        "14": "Miami Heat",
+        "12": "LA Clippers"
+      },
+      "source_sha256": "a5a6b25ab57c6b2dd672340363db64c0807b94d7dea9ed5f8f5b86201bab160f",
+      "max_box_minutes_deviation": 0.4166666666666643,
+      "events": 426,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "14": 240.0,
+        "12": 240.0
+      },
+      "team_budget_checks": {
+        "14": true,
+        "12": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705120",
+      "date": "2025-01-14",
+      "teams": {
+        "5": "Cleveland Cavaliers",
+        "11": "Indiana Pacers"
+      },
+      "source_sha256": "c28fb3c1c310f8947dbcf352a3e301eca42ac8e5ea377fb5c0210d0d2f23a6ef",
+      "max_box_minutes_deviation": 0.4833333333333334,
+      "events": 493,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "5": 239.99999999999997,
+        "11": 239.99999999999997
+      },
+      "team_budget_checks": {
+        "5": true,
+        "11": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705121",
+      "date": "2025-01-14",
+      "teams": {
+        "25": "Oklahoma City Thunder",
+        "20": "Philadelphia 76ers"
+      },
+      "source_sha256": "efec6823920ce6a40afb27ea7af44f063d7b6437d5d5b29a24a4e57759d0e316",
+      "max_box_minutes_deviation": 0.5,
+      "events": 452,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "25": 239.99999999999997,
+        "20": 240.0
+      },
+      "team_budget_checks": {
+        "25": true,
+        "20": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705122",
+      "date": "2025-01-14",
+      "teams": {
+        "21": "Phoenix Suns",
+        "1": "Atlanta Hawks"
+      },
+      "source_sha256": "08094380bf529b039671f82e0eb6ee7547c047a39352e2d814cbbb4dea47865b",
+      "max_box_minutes_deviation": 0.43333333333333357,
+      "events": 487,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "21": 240.0,
+        "1": 240.0
+      },
+      "team_budget_checks": {
+        "21": true,
+        "1": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705123",
+      "date": "2025-01-14",
+      "teams": {
+        "3": "New Orleans Pelicans",
+        "4": "Chicago Bulls"
+      },
+      "source_sha256": "5f8510a3e273ec3b5819b3cd113e2323650cb6983c4af6b791c6a1b7a5587709",
+      "max_box_minutes_deviation": 0.48333333333333073,
+      "events": 491,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "3": 240.0,
+        "4": 240.0
+      },
+      "team_budget_checks": {
+        "3": true,
+        "4": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705124",
+      "date": "2025-01-14",
+      "teams": {
+        "23": "Sacramento Kings",
+        "15": "Milwaukee Bucks"
+      },
+      "source_sha256": "2bdf5d085d23c2b33549c8e44b8e33715cff8a53838a374cced85850107240be",
+      "max_box_minutes_deviation": 0.4833333333333343,
+      "events": 471,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "23": 240.0,
+        "15": 239.99999999999997
+      },
+      "team_budget_checks": {
+        "23": true,
+        "15": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705125",
+      "date": "2025-01-14",
+      "teams": {
+        "7": "Denver Nuggets",
+        "6": "Dallas Mavericks"
+      },
+      "source_sha256": "ffa59eabfe01cad7f4df666e3baf83655680995ac5f3d048a56d4f3e2a06948d",
+      "max_box_minutes_deviation": 0.46666666666666634,
+      "events": 457,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "7": 239.99999999999997,
+        "6": 240.0
+      },
+      "team_budget_checks": {
+        "7": true,
+        "6": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705126",
+      "date": "2025-01-14",
+      "teams": {
+        "17": "Brooklyn Nets",
+        "22": "Portland Trail Blazers"
+      },
+      "source_sha256": "eeffa6cc440493d5312576877aa74babe6cf27b9d2e445599435337aa2768007",
+      "max_box_minutes_deviation": 0.5,
+      "events": 468,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "17": 240.0,
+        "22": 240.00000000000003
+      },
+      "team_budget_checks": {
+        "17": true,
+        "22": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705127",
+      "date": "2025-01-15",
+      "teams": {
+        "18": "New York Knicks",
+        "20": "Philadelphia 76ers"
+      },
+      "source_sha256": "a4da4dcca1955b55ddd52b10d9436e54c75e940204f8a3cfce777d2c899dd2f1",
+      "max_box_minutes_deviation": 0.5,
+      "events": 441,
+      "periods": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "overtimes": 1,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "18": 265.0,
+        "20": 265.0
+      },
+      "team_budget_checks": {
+        "18": true,
+        "20": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705128",
+      "date": "2025-01-15",
+      "teams": {
+        "2": "Boston Celtics",
+        "28": "Toronto Raptors"
+      },
+      "source_sha256": "7c78c561d2850886a01c12d8339f55ef200d5909ac0030caf5db5ff024512362",
+      "max_box_minutes_deviation": 0.4833333333333343,
+      "events": 457,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "2": 240.00000000000003,
+        "28": 239.99999999999997
+      },
+      "team_budget_checks": {
+        "2": true,
+        "28": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705129",
+      "date": "2025-01-15",
+      "teams": {
+        "1": "Atlanta Hawks",
+        "4": "Chicago Bulls"
+      },
+      "source_sha256": "3694d3d7cacef78ab3039451f18ccd09d0095f952aa3553144931f7ef3c8a696",
+      "max_box_minutes_deviation": 0.5000000000000071,
+      "events": 477,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "1": 240.0,
+        "4": 240.0
+      },
+      "team_budget_checks": {
+        "1": true,
+        "4": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705130",
+      "date": "2025-01-15",
+      "teams": {
+        "19": "Orlando Magic",
+        "15": "Milwaukee Bucks"
+      },
+      "source_sha256": "d66db9876edf015927967a751aec0b2d4860dc9ee48d503889a693a9b35e6143",
+      "max_box_minutes_deviation": 0.5,
+      "events": 475,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "19": 240.0,
+        "15": 240.0
+      },
+      "team_budget_checks": {
+        "19": true,
+        "15": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705132",
+      "date": "2025-01-15",
+      "teams": {
+        "6": "Dallas Mavericks",
+        "3": "New Orleans Pelicans"
+      },
+      "source_sha256": "e693ef19832b124007b7f123ad9abfdc9f52856446903469d57c45982df6f490",
+      "max_box_minutes_deviation": 0.5,
+      "events": 500,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "6": 240.00000000000003,
+        "3": 240.0
+      },
+      "team_budget_checks": {
+        "6": true,
+        "3": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705133",
+      "date": "2025-01-15",
+      "teams": {
+        "29": "Memphis Grizzlies",
+        "24": "San Antonio Spurs"
+      },
+      "source_sha256": "8afd5f76ddcb270e8d01459be0738abca4e86fa11cd9e958c435db61e6bd6053",
+      "max_box_minutes_deviation": 0.5,
+      "events": 494,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "29": 240.00000000000003,
+        "24": 240.0
+      },
+      "team_budget_checks": {
+        "29": true,
+        "24": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705134",
+      "date": "2025-01-15",
+      "teams": {
+        "10": "Houston Rockets",
+        "7": "Denver Nuggets"
+      },
+      "source_sha256": "71cca273d9120089331a0643e0fe1ecb6cc1f274a83dc5494a67224cc8809f3d",
+      "max_box_minutes_deviation": 0.5,
+      "events": 427,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "10": 240.0,
+        "7": 240.0
+      },
+      "team_budget_checks": {
+        "10": true,
+        "7": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705135",
+      "date": "2025-01-15",
+      "teams": {
+        "30": "Charlotte Hornets",
+        "26": "Utah Jazz"
+      },
+      "source_sha256": "0fccb4fd897b64a52d79011a10563c646df854554e45f90fc3cf544d86478a7d",
+      "max_box_minutes_deviation": 0.5,
+      "events": 466,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "30": 240.0,
+        "26": 240.0
+      },
+      "team_budget_checks": {
+        "30": true,
+        "26": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705131",
+      "date": "2025-01-15",
+      "teams": {
+        "9": "Golden State Warriors",
+        "16": "Minnesota Timberwolves"
+      },
+      "source_sha256": "4d8ce84a55fe3557567f6c946d6312c3f34a7a8a32ebe507b58123d3fed2bfe3",
+      "max_box_minutes_deviation": 0.4833333333333343,
+      "events": 480,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "9": 240.00000000000003,
+        "16": 240.0
+      },
+      "team_budget_checks": {
+        "9": true,
+        "16": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705136",
+      "date": "2025-01-15",
+      "teams": {
+        "14": "Miami Heat",
+        "13": "Los Angeles Lakers"
+      },
+      "source_sha256": "d275ceeb80fab3b554a067638ce86d6fb2cdf6fa26ed58784344126814f5d467",
+      "max_box_minutes_deviation": 0.49999999999999645,
+      "events": 397,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "14": 240.0,
+        "13": 240.00000000000003
+      },
+      "team_budget_checks": {
+        "14": true,
+        "13": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705137",
+      "date": "2025-01-15",
+      "teams": {
+        "17": "Brooklyn Nets",
+        "12": "LA Clippers"
+      },
+      "source_sha256": "1454947528e762210530571f9daca8330d60a228d4aaac0d649a49e4bf1d9d81",
+      "max_box_minutes_deviation": 0.4666666666666668,
+      "events": 466,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "17": 240.0,
+        "12": 240.0
+      },
+      "team_budget_checks": {
+        "17": true,
+        "12": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705138",
+      "date": "2025-01-16",
+      "teams": {
+        "11": "Indiana Pacers",
+        "8": "Detroit Pistons"
+      },
+      "source_sha256": "dd71f8cb2117582d254564c36c1101e3c59aa043c5a59f9b94ec1bfd293dd58a",
+      "max_box_minutes_deviation": 0.48333333333333073,
+      "events": 482,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "11": 240.0,
+        "8": 240.00000000000003
+      },
+      "team_budget_checks": {
+        "11": true,
+        "8": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705139",
+      "date": "2025-01-16",
+      "teams": {
+        "21": "Phoenix Suns",
+        "27": "Washington Wizards"
+      },
+      "source_sha256": "d9c44e8b88482540cf41377dcabdb8e5a6ce73808738b017aca7d10144b0841a",
+      "max_box_minutes_deviation": 0.4850000000000012,
+      "events": 498,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "21": 240.0,
+        "27": 239.99999999999997
+      },
+      "team_budget_checks": {
+        "21": true,
+        "27": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705140",
+      "date": "2025-01-16",
+      "teams": {
+        "5": "Cleveland Cavaliers",
+        "25": "Oklahoma City Thunder"
+      },
+      "source_sha256": "4d42a9ce13c5bbf1f535ca170d21d532868ef7c4110bd4e413c38f8b4cc82fb9",
+      "max_box_minutes_deviation": 0.5,
+      "events": 465,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "5": 240.0,
+        "25": 240.0
+      },
+      "team_budget_checks": {
+        "5": true,
+        "25": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705141",
+      "date": "2025-01-16",
+      "teams": {
+        "12": "LA Clippers",
+        "22": "Portland Trail Blazers"
+      },
+      "source_sha256": "9e723e8669c0622de6284a99248f4af8a90ebaebe9136d4ec1a5d47ddb6607bb",
+      "max_box_minutes_deviation": 0.46666666666666856,
+      "events": 442,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "12": 240.0,
+        "22": 240.0
+      },
+      "team_budget_checks": {
+        "12": true,
+        "22": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705142",
+      "date": "2025-01-16",
+      "teams": {
+        "10": "Houston Rockets",
+        "23": "Sacramento Kings"
+      },
+      "source_sha256": "1f6bdcb28d42b9b6397af21cbcd60b1a05bd97f8c999a327e3e33a7cd2c9766a",
+      "max_box_minutes_deviation": 0.4833333333333343,
+      "events": 469,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "10": 240.0,
+        "23": 239.99999999999997
+      },
+      "team_budget_checks": {
+        "10": true,
+        "23": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705143",
+      "date": "2025-01-17",
+      "teams": {
+        "19": "Orlando Magic",
+        "2": "Boston Celtics"
+      },
+      "source_sha256": "ea65c8611707077e20da9ab552f9c3ad04311ce315cbc362fad7d270e7c20a62",
+      "max_box_minutes_deviation": 0.4166666666666714,
+      "events": 452,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "19": 240.0,
+        "2": 240.0
+      },
+      "team_budget_checks": {
+        "19": true,
+        "2": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705144",
+      "date": "2025-01-17",
+      "teams": {
+        "16": "Minnesota Timberwolves",
+        "18": "New York Knicks"
+      },
+      "source_sha256": "7bd30696ac6c3446d1bd157fa4dff8cc83de8bb27047baaafef110bc67f3840f",
+      "max_box_minutes_deviation": 0.5000000000000018,
+      "events": 423,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "16": 240.0,
+        "18": 239.99999999999997
+      },
+      "team_budget_checks": {
+        "16": true,
+        "18": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705145",
+      "date": "2025-01-17",
+      "teams": {
+        "7": "Denver Nuggets",
+        "14": "Miami Heat"
+      },
+      "source_sha256": "15427f3b9735db6d426ba086e856df192c7a629061b7dc9a7d322f16d8c87cb5",
+      "max_box_minutes_deviation": 0.48333333333333073,
+      "events": 412,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "7": 239.99999999999997,
+        "14": 239.99999999999997
+      },
+      "team_budget_checks": {
+        "7": true,
+        "14": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705146",
+      "date": "2025-01-17",
+      "teams": {
+        "28": "Toronto Raptors",
+        "15": "Milwaukee Bucks"
+      },
+      "source_sha256": "d2eb72b7000de880e9015c57f0d1fbe6901b9d31efe3e2c1a9b64b28549e2158",
+      "max_box_minutes_deviation": 0.4833333333333343,
+      "events": 503,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "28": 239.99999999999997,
+        "15": 240.0
+      },
+      "team_budget_checks": {
+        "28": true,
+        "15": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705147",
+      "date": "2025-01-17",
+      "teams": {
+        "26": "Utah Jazz",
+        "3": "New Orleans Pelicans"
+      },
+      "source_sha256": "c4a8b6b5e05935e74b39049f804d2b5ca7440d4514c00110c05ff12208a7e21c",
+      "max_box_minutes_deviation": 0.48333333333333073,
+      "events": 516,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "26": 240.0,
+        "3": 240.0
+      },
+      "team_budget_checks": {
+        "26": true,
+        "3": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705150",
+      "date": "2025-01-17",
+      "teams": {
+        "30": "Charlotte Hornets",
+        "4": "Chicago Bulls"
+      },
+      "source_sha256": "2386c93898cbe5f154facc5d86d1cda06b9f31b199a8e25ebc2382541b652947",
+      "max_box_minutes_deviation": 0.43333333333333357,
+      "events": 469,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "30": 240.00000000000003,
+        "4": 240.0
+      },
+      "team_budget_checks": {
+        "30": true,
+        "4": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705149",
+      "date": "2025-01-17",
+      "teams": {
+        "25": "Oklahoma City Thunder",
+        "6": "Dallas Mavericks"
+      },
+      "source_sha256": "847d3e010e9b513dcedc81fa2929b89c4917909c2036400623f07ca06f7860b8",
+      "max_box_minutes_deviation": 0.4166666666666643,
+      "events": 475,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "25": 240.0,
+        "6": 240.0
+      },
+      "team_budget_checks": {
+        "25": true,
+        "6": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705148",
+      "date": "2025-01-17",
+      "teams": {
+        "29": "Memphis Grizzlies",
+        "24": "San Antonio Spurs"
+      },
+      "source_sha256": "f1095f66b237f10ca2edcfb2b4a314aaf0b781108751b5f04035064ba24806f3",
+      "max_box_minutes_deviation": 0.4983333333333313,
+      "events": 459,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "29": 240.0,
+        "24": 240.0
+      },
+      "team_budget_checks": {
+        "29": true,
+        "24": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705151",
+      "date": "2025-01-17",
+      "teams": {
+        "17": "Brooklyn Nets",
+        "13": "Los Angeles Lakers"
+      },
+      "source_sha256": "edd99a8895bb26632ca517a95e65dadc9cee8c0aeb71dc6f181e9c0c8ba9a98f",
+      "max_box_minutes_deviation": 0.49999999999999645,
+      "events": 423,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "17": 240.0,
+        "13": 239.99999999999997
+      },
+      "team_budget_checks": {
+        "17": true,
+        "13": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705152",
+      "date": "2025-01-18",
+      "teams": {
+        "21": "Phoenix Suns",
+        "8": "Detroit Pistons"
+      },
+      "source_sha256": "876714fc84adba943e4e80a8a871d4717ae98ae903cb2770f92d0951993bd697",
+      "max_box_minutes_deviation": 0.5016666666666669,
+      "events": 536,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "21": 239.99999999999997,
+        "8": 240.0
+      },
+      "team_budget_checks": {
+        "21": true,
+        "8": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705153",
+      "date": "2025-01-18",
+      "teams": {
+        "1": "Atlanta Hawks",
+        "2": "Boston Celtics"
+      },
+      "source_sha256": "03e87d2e015cd73a091ac05710c1da53ea9eb5098f1a2d766e7cbcda5ebbd94d",
+      "max_box_minutes_deviation": 0.4666666666666668,
+      "events": 552,
+      "periods": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "overtimes": 1,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "1": 265.0,
+        "2": 265.0
+      },
+      "team_budget_checks": {
+        "1": true,
+        "2": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705154",
+      "date": "2025-01-18",
+      "teams": {
+        "20": "Philadelphia 76ers",
+        "11": "Indiana Pacers"
+      },
+      "source_sha256": "b6164e84f486d31f4b0621cccb1902223364cbd502ad68d1b48bd34ff64bd319",
+      "max_box_minutes_deviation": 0.5,
+      "events": 468,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "20": 240.0,
+        "11": 240.0
+      },
+      "team_budget_checks": {
+        "20": true,
+        "11": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705155",
+      "date": "2025-01-18",
+      "teams": {
+        "27": "Washington Wizards",
+        "9": "Golden State Warriors"
+      },
+      "source_sha256": "d3918c78bbdb623df52795aeff4e6c0263b4a871ec4833ba8ac579ed26a907b7",
+      "max_box_minutes_deviation": 0.4833333333333343,
+      "events": 505,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "27": 240.0,
+        "9": 240.0
+      },
+      "team_budget_checks": {
+        "27": true,
+        "9": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705156",
+      "date": "2025-01-18",
+      "teams": {
+        "5": "Cleveland Cavaliers",
+        "16": "Minnesota Timberwolves"
+      },
+      "source_sha256": "4ab8582b3ba26c6d30bf9a10a9ef35e31664207a0add51f928351c47e304fb92",
+      "max_box_minutes_deviation": 0.466666666666665,
+      "events": 459,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "5": 239.99999999999997,
+        "16": 240.0
+      },
+      "team_budget_checks": {
+        "5": true,
+        "16": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705157",
+      "date": "2025-01-18",
+      "teams": {
+        "10": "Houston Rockets",
+        "22": "Portland Trail Blazers"
+      },
+      "source_sha256": "ae9378100adea8b22cf6ce07a4bae3014574600c25367e7e4a1e20c8e55e1def",
+      "max_box_minutes_deviation": 0.49999999999999645,
+      "events": 509,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "10": 240.0,
+        "22": 240.0
+      },
+      "team_budget_checks": {
+        "10": true,
+        "22": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705158",
+      "date": "2025-01-19",
+      "teams": {
+        "24": "San Antonio Spurs",
+        "14": "Miami Heat"
+      },
+      "source_sha256": "2d478542885ae26ff0df029b97f74ced704207e91047b6bb0b16b2bf6bf88866",
+      "max_box_minutes_deviation": 0.4833333333333325,
+      "events": 424,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "24": 240.0,
+        "14": 240.0
+      },
+      "team_budget_checks": {
+        "24": true,
+        "14": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705159",
+      "date": "2025-01-19",
+      "teams": {
+        "7": "Denver Nuggets",
+        "19": "Orlando Magic"
+      },
+      "source_sha256": "de2d2f7cd268051b25f6e24c0d0237d9b1935f728f284d934f4497c6b329bcea",
+      "max_box_minutes_deviation": 0.5000000000000036,
+      "events": 470,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "7": 240.0,
+        "19": 240.0
+      },
+      "team_budget_checks": {
+        "7": true,
+        "19": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705160",
+      "date": "2025-01-19",
+      "teams": {
+        "20": "Philadelphia 76ers",
+        "15": "Milwaukee Bucks"
+      },
+      "source_sha256": "728ebdf266857301666cf0ec1428e59b9bc120149e9cd9d808b24921f1a28cce",
+      "max_box_minutes_deviation": 0.5,
+      "events": 455,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "20": 239.99999999999997,
+        "15": 240.0
+      },
+      "team_budget_checks": {
+        "20": true,
+        "15": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705161",
+      "date": "2025-01-19",
+      "teams": {
+        "17": "Brooklyn Nets",
+        "25": "Oklahoma City Thunder"
+      },
+      "source_sha256": "069c17efc46de1ebbd30ff7a099b2b89f521e7e2afd46f62bff8810f7cb1d5f2",
+      "max_box_minutes_deviation": 0.4316666666666684,
+      "events": 439,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "17": 240.0,
+        "25": 240.00000000000003
+      },
+      "team_budget_checks": {
+        "17": true,
+        "25": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705162",
+      "date": "2025-01-19",
+      "teams": {
+        "13": "Los Angeles Lakers",
+        "12": "LA Clippers"
+      },
+      "source_sha256": "95d2be208c6d7498f0188a775f9786e82ee51d948f67e53cb2c2526072da26e4",
+      "max_box_minutes_deviation": 0.5000000000000018,
+      "events": 416,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "13": 240.0,
+        "12": 240.0
+      },
+      "team_budget_checks": {
+        "13": true,
+        "12": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705163",
+      "date": "2025-01-19",
+      "teams": {
+        "4": "Chicago Bulls",
+        "22": "Portland Trail Blazers"
+      },
+      "source_sha256": "ca4cb7cab538ebc3b1e88f1f02cfea96341f1ae73e61fcf17f133635d83f68a6",
+      "max_box_minutes_deviation": 0.48333333333333073,
+      "events": 469,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "4": 240.0,
+        "22": 240.00000000000003
+      },
+      "team_budget_checks": {
+        "4": true,
+        "22": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705164",
+      "date": "2025-01-19",
+      "teams": {
+        "27": "Washington Wizards",
+        "23": "Sacramento Kings"
+      },
+      "source_sha256": "921ac9ad6e0982868894a42e9448cffb574da996589553179c7844b8fc30a16d",
+      "max_box_minutes_deviation": 0.4833333333333343,
+      "events": 506,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "27": 240.00000000000003,
+        "23": 240.0
+      },
+      "team_budget_checks": {
+        "27": true,
+        "23": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705165",
+      "date": "2025-01-20",
+      "teams": {
+        "6": "Dallas Mavericks",
+        "30": "Charlotte Hornets"
+      },
+      "source_sha256": "dc5061a025f18f9679556ea4572ae7997fcffd1ca600dad6b4aa3813dbe7b6c2",
+      "max_box_minutes_deviation": 0.4833333333333343,
+      "events": 503,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "6": 239.99999999999997,
+        "30": 240.0
+      },
+      "team_budget_checks": {
+        "6": true,
+        "30": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705166",
+      "date": "2025-01-20",
+      "teams": {
+        "8": "Detroit Pistons",
+        "10": "Houston Rockets"
+      },
+      "source_sha256": "e16390b795441ea57701a887bdfa2b32e1ee9af6e2072d304b0f09b00dd65aed",
+      "max_box_minutes_deviation": 0.5,
+      "events": 470,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "8": 240.0,
+        "10": 240.00000000000003
+      },
+      "team_budget_checks": {
+        "8": true,
+        "10": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705167",
+      "date": "2025-01-20",
+      "teams": {
+        "16": "Minnesota Timberwolves",
+        "29": "Memphis Grizzlies"
+      },
+      "source_sha256": "c014148287f51a5670203e3272e34f63ef10ecec532eaab2cb3b841660a6be89",
+      "max_box_minutes_deviation": 0.4833333333333325,
+      "events": 534,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "16": 239.99999999999997,
+        "29": 240.0
+      },
+      "team_budget_checks": {
+        "16": true,
+        "29": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705168",
+      "date": "2025-01-20",
+      "teams": {
+        "1": "Atlanta Hawks",
+        "18": "New York Knicks"
+      },
+      "source_sha256": "bbd3829f3ccd18d7570bb9dfe74e14f444a5ef509b23f6b0690d5d16e5134bd9",
+      "max_box_minutes_deviation": 0.4650000000000034,
+      "events": 494,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "1": 239.99999999999997,
+        "18": 240.0
+      },
+      "team_budget_checks": {
+        "1": true,
+        "18": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705169",
+      "date": "2025-01-20",
+      "teams": {
+        "21": "Phoenix Suns",
+        "5": "Cleveland Cavaliers"
+      },
+      "source_sha256": "7a3770b8926ab2b6efa97bc69525e55cc14cd03b3072f925cc00398047122dc8",
+      "max_box_minutes_deviation": 0.4833333333333343,
+      "events": 460,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "21": 240.0,
+        "5": 240.0
+      },
+      "team_budget_checks": {
+        "21": true,
+        "5": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705170",
+      "date": "2025-01-20",
+      "teams": {
+        "2": "Boston Celtics",
+        "9": "Golden State Warriors"
+      },
+      "source_sha256": "b62c13c5d5435c01781c1d1b9f59f1435fd4dfcfd3a4829eff7ff37cbe78d47f",
+      "max_box_minutes_deviation": 0.466666666666665,
+      "events": 430,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "2": 240.0,
+        "9": 240.0
+      },
+      "team_budget_checks": {
+        "2": true,
+        "9": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705171",
+      "date": "2025-01-20",
+      "teams": {
+        "26": "Utah Jazz",
+        "3": "New Orleans Pelicans"
+      },
+      "source_sha256": "c243407729a57ebc327d626aec2d20ea84cf9208253202f4cba576ffbfef9624",
+      "max_box_minutes_deviation": 0.40166666666667084,
+      "events": 537,
+      "periods": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "overtimes": 1,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "26": 265.0,
+        "3": 264.99999999999994
+      },
+      "team_budget_checks": {
+        "26": true,
+        "3": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705177",
+      "date": "2025-01-20",
+      "teams": {
+        "4": "Chicago Bulls",
+        "12": "LA Clippers"
+      },
+      "source_sha256": "cceaa5c0f45af083b5bec2a9db062efb6f227ea6a8a0d88ee6185c2e2460ec95",
+      "max_box_minutes_deviation": 0.4833333333333343,
+      "events": 481,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "4": 240.0,
+        "12": 240.0
+      },
+      "team_budget_checks": {
+        "4": true,
+        "12": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705172",
+      "date": "2025-01-21",
+      "teams": {
+        "18": "New York Knicks",
+        "17": "Brooklyn Nets"
+      },
+      "source_sha256": "77165828ad0ba8adc84e3730bda0bc04447c860091b33d7c9a0de1471337d4b7",
+      "max_box_minutes_deviation": 0.485000000000003,
+      "events": 475,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "18": 240.00000000000003,
+        "17": 239.99999999999997
+      },
+      "team_budget_checks": {
+        "18": true,
+        "17": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705173",
+      "date": "2025-01-21",
+      "teams": {
+        "22": "Portland Trail Blazers",
+        "14": "Miami Heat"
+      },
+      "source_sha256": "68575c91822443a61537edb3fd8a2a4ce064cb9ab47c841cdcd7eb58e97340ae",
+      "max_box_minutes_deviation": 0.5,
+      "events": 425,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "22": 239.99999999999997,
+        "14": 240.0
+      },
+      "team_budget_checks": {
+        "22": true,
+        "14": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705174",
+      "date": "2025-01-21",
+      "teams": {
+        "19": "Orlando Magic",
+        "28": "Toronto Raptors"
+      },
+      "source_sha256": "c65db49bbbab271d068454c7ede5e3a8d2b1f5b089d0d01b110b5ea761d26450",
+      "max_box_minutes_deviation": 0.466666666666665,
+      "events": 460,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "19": 240.00000000000003,
+        "28": 240.0
+      },
+      "team_budget_checks": {
+        "19": true,
+        "28": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705175",
+      "date": "2025-01-21",
+      "teams": {
+        "20": "Philadelphia 76ers",
+        "7": "Denver Nuggets"
+      },
+      "source_sha256": "b54a01bd7a47b3eca0edc684871d9fba913e5bad01c69f4b340970359a98a675",
+      "max_box_minutes_deviation": 0.4833333333333343,
+      "events": 425,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "20": 240.0,
+        "7": 240.0
+      },
+      "team_budget_checks": {
+        "20": true,
+        "7": true
+      },
+      "accepted": true,
+      "issues": []
+    },
+    {
+      "event_id": "401705176",
+      "date": "2025-01-21",
+      "teams": {
+        "27": "Washington Wizards",
+        "13": "Los Angeles Lakers"
+      },
+      "source_sha256": "dc3de2db1b5a13c504902bf025e81baae6ce9dfb730f8f9a5ebebed44f41bb6e",
+      "max_box_minutes_deviation": 0.46666666666666856,
+      "events": 463,
+      "periods": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "overtimes": 0,
+      "reconstruction_complete": true,
+      "team_minutes": {
+        "27": 240.0,
+        "13": 240.0
+      },
+      "team_budget_checks": {
+        "27": true,
+        "13": true
+      },
+      "accepted": true,
+      "issues": []
+    }
+  ],
+  "limitations": [
+    "Contiguous January 1\u201321, 2025 sample; rejected games excluded and coverage reported.",
+    "Same-source final-score and rotation-ledger checks, not independent verification of every player minute.",
+    "ESPN player IDs still need an explicit NBA/DFS mapping.",
+    "Historical actuals alone do not supply archived pregame minutes or injury news.",
+    "No live model updates or predictive accuracy claims."
+  ],
+  "accepted_minutes_export": {
+    "file": "accepted-player-minutes.csv",
+    "rows": 3963,
+    "sha256": "a02b13143d4b286a5414b3ffd56a794e26aca3a8ed3e3680324994385dba7107",
+    "unresolved_zero_rows": 4,
+    "id_namespace": "ESPN, not NBA or DFS"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "boundary": "2025-01-08",
+  "history_games": 5,
+  "minimum_prior_team_games": 3,
+  "matched_player_games": 2528,
+  "evaluated_team_games": 197,
+  "mae": 5.867702949179721,
+  "coverage_80": 0.5644778481012658,
+  "mean_interval_width": 10.501952267919304,
+  "empirical_crps": 4.396186444047296,
+  "point_forecast_crps": 5.867702949179721,
+  "brier_30_plus": 0.11059445323488044,
+  "point_forecast_brier_30_plus": 0.16416139240506328,
+  "verified_dnp_player_games": 429,
+  "played_player_mae": 5.765170517678657,
+  "verified_dnp_mae": 6.369370953190754,
+  "coverage_issues": {
+    "forecast player missing from current box roster; not assigned zero": 400,
+    "player absent from prior team history": 58,
+    "insufficient prior accepted team games": 1
+  },
+  "limitations": [
+    "Historical allocation baseline using only previous accepted team games; not the live provider-anchored uncertainty challenger.",
+    "No archived pregame injuries, trades, availability, starting-lineup or RotoWire minutes inputs.",
+    "Current box roster used only for evaluation matching; coverage failures reported, never filled as DNP.",
+    "Small contiguous holdout; no hyperparameters tuned on these results; no predictive edge or ROI claim."
+  ],
+  "source_games": 153,
+  "accepted_games": 151
+}

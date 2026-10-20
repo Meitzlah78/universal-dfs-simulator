@@ -10,12 +10,22 @@ import pandas as pd
 def freeze_minutes(pool, platform, now=None):
     now=pd.Timestamp(now or datetime.now(timezone.utc))
     if now.tzinfo is None:raise ValueError('Timezone-aware snapshot time required')
-    if 'GameStart' not in pool:return None
-    starts=pd.to_datetime(pool['GameStart'],utc=True,errors='coerce')
+    column='Game Start' if 'Game Start' in pool else 'GameStart'
+    if column not in pool:return None
+    def kickoff(value):
+        try:
+            if isinstance(value,str) and ':' not in value:return pd.NaT
+            stamp=pd.Timestamp(value)
+            if pd.isna(stamp):return pd.NaT
+            if stamp.tzinfo is None:stamp=stamp.tz_localize('America/New_York')
+            return stamp.tz_convert('UTC')
+        except (ValueError,TypeError):return pd.NaT
+    starts=pd.to_datetime(pool[column].map(kickoff),utc=True)
     minutes=pd.to_numeric(pool.get('Projected Minutes',pd.Series(np.nan,index=pool.index)),errors='coerce')
     keep=starts.notna() & (starts>now) & minutes.notna() & np.isfinite(minutes) & minutes.between(0,48)
     columns=[c for c in ['Player ID','Name','Team','Opponent','Injury Status','Starter Confirmed',
-        'Projected Minutes','Minutes Source','Projection','Projection Source'] if c in pool]
+        'Projected Minutes','Minutes Source','Projection','Projection Source',
+        'RotoWire Projected Own %','RotoWire RST % (unverified)'] if c in pool]
     frame=pool.loc[keep,columns].copy()
     if frame.empty:return None
     frame['GameStart']=starts[keep].map(lambda x:x.isoformat())

@@ -1,0 +1,16 @@
+[
+  {
+    "file": "accepted-player-minutes.csv.gz",
+    "uncompressed_sha256": "a02b13143d4b286a5414b3ffd56a794e26aca3a8ed3e3680324994385dba7107",
+    "compressed_sha256": "1f35f1ed09a854470329380008741bc6de2f35f188ba88a4f6e53f6e3515a990",
+    "uncompressed_bytes": 557538,
+    "compressed_bytes": 82190
+  },
+  {
+    "file": "predictions-and-actuals.csv.gz",
+    "uncompressed_sha256": "a2c594f387b82f96c16641610dff75b6aa76033a8f803449853f94b76fc16656",
+    "compressed_sha256": "fdb09fba6bf73400a8d1468da81504a3e9199008a7ae8132a4c29aab0fc99cb4",
+    "uncompressed_bytes": 431221,
+    "compressed_bytes": 114254
+  }
+]
