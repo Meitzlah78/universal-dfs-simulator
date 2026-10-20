@@ -59,6 +59,34 @@ def render_setup(st, uploaded_file, tabs, controls):
         st.error(str(exc))
         return
     pool = slate['players']
+    from simmah_nba_projections import slate_date, download_dff, apply_projections
+    with tabs[1]:
+        if st.button('REFRESH NBA PROJECTIONS', key='nba_projection_refresh'):
+            st.session_state.pop('nba_projection_cache', None)
+        projection_file = st.file_uploader('Optional NBA projections CSV', type=['csv'], key='nba_projection_upload',
+            help='Player ID and Projection columns. Uploaded values override DFF, including zeros that exclude a player.')
+    automatic = {}
+    try:
+        day = slate_date(uploaded_file.name)
+        identity = (day, tuple(sorted(zip(pool['Player ID'], pool['Team'], pool['Opponent']))))
+        cached = st.session_state.get('nba_projection_cache')
+        import time
+        if cached and cached['identity'] == identity and time.time()-cached['time'] < 900:
+            automatic = cached['values']
+        else:
+            automatic = download_dff(day, pool)
+            st.session_state['nba_projection_cache'] = {'identity':identity, 'time':time.time(), 'values':automatic}
+    except Exception as exc:
+        with tabs[1]:
+            st.warning(f'NBA automatic projections unavailable: {exc}')
+    try:
+        uploaded = pd.read_csv(projection_file, dtype={'Player ID':str}) if projection_file is not None else None
+        pool = apply_projections(pool, automatic, uploaded)
+    except ValueError as exc:
+        with tabs[1]:
+            st.error(str(exc))
+        return
+    slate['players'] = pool
     st.session_state['nba_imported_slate'] = slate
     with tabs[0]:
         st.subheader('FanDuel NBA contests')
@@ -69,6 +97,7 @@ def render_setup(st, uploaded_file, tabs, controls):
         st.caption('Roster: ' + ', '.join(SLOTS))
     with tabs[1]:
         st.subheader('NBA player pool')
+        st.caption(f"Positive projections: {pool['Projection'].notna().sum()} / {len(pool)} · Eligible after injuries: {pool['Eligible'].sum()}. Automatic DFF data is cached for up to 15 minutes; refresh runs on app activity.")
         st.caption('Historical FPPG is supplied by FanDuel. It is not a pregame projection. OUT players are ineligible; questionable players remain visible.')
         st.dataframe(pool, hide_index=True, use_container_width=True)
         st.write(f"{len(pool)} players · {(pool['Injury Status']=='Out').sum()} Out · {(pool['Injury Status']=='Questionable').sum()} Questionable")
