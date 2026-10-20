@@ -238,3 +238,21 @@ No normalization is used to silently reinterpret this discrepancy. Matching,
 semantics and source freshness still need verification before live use. The
 field module rejects incomplete or unsupported ownership targets. Tests verify
 50,000 sampled entries, duplicate compression, target-fit error and reproducibility.
+
+### Offline orchestration
+
+simmah_nba_pipeline.run_pipeline now connects candidate simulation/search,
+independent opponent support/search, ownership fitting, independent contest
+scoring and saved-candidate portfolio selection. Defaults retain 10,000 scenarios
+per set, 5,000 candidates and up to 10,000 distinct field-support rosters. Three
+separate seeds and exact-array reuse checks guard against accidental scenario
+reuse. Ownership mismatch above the explicit tolerance stops the run. Integer
+field copies cover the supplied payout vector's whole contest, without a guessed
+field-size multiplier. Progress hooks expose the pipeline stages.
+
+export_portfolio validates and inserts original player IDs into reserved entry
+rows using the existing NBA export guard. An integration test covers the full
+path with synthetic outcomes/ownership and preserves all five original entry
+IDs. The production pregame outcome_factory adapter and verified ownership
+source remain prerequisites; this offline integration does not enable the live
+Streamlit NBA button or claim a validated full pregame backtest.
