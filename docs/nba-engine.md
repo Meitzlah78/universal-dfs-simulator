@@ -391,3 +391,33 @@ unvalidated. Streamlit AppTest covers game badges, confirmation change/red alert
 refresh acknowledgment, build, exposure re-selection without engine reruns,
 entry-file preparation and stale-export blocking. It does not establish
 Streamlit Cloud's live network availability or downstream FanDuel acceptance.
+
+
+### Fast NBA late swap
+
+The Lineups tab now accepts a fresh filled FanDuel NBA entries CSV in the
+NBA LATE SWAP expander, independently of the full-build preflight or saved
+contest ROI. Refresh projections first, upload current entries, run FAST LATE
+SWAP, review changes, then download and promptly upload the edit-entries CSV.
+Only the selected contest is changed. Entry IDs and reference cells are preserved.
+
+A bounded SciPy/HiGHS assignment optimizer uses current external projections,
+a soft exposure penalty, positional eligibility, the $60,000 cap, selected
+minimum salary and maximum four per team. It does not rerun simulations or claim
+live ROI. Already-started players remain in their exact uploaded slots, even
+when OUT or lacking a projection. Newly added players must have positive
+projections, be active, and have a future start. Team start times are inherited
+from consistent RotoWire player records; absent/conflicting clocks block swaps.
+Naive source times mean Eastern. Scheduled tipoff is a conservative lock, not
+a live FanDuel lock feed; use only for contests permitting late swap.
+
+Search allows up to 0.5 seconds per entry within a 10-second overall solver
+budget. Failed or remaining entries stay unchanged and are reported. New
+solutions exclude previously selected player sets; unchanged originals can
+still duplicate. The export is revalidated against current time every five
+seconds while connected; files already downloaded cannot be revoked, so upload
+before the next tipoff. No actual FanDuel upload acceptance has been tested.
+A 20-entry synthetic local benchmark took 0.17 seconds; hosting and slate size
+affect runtime. Tests cover exact tipoff, missing/conflicting clocks, locked
+OUT players, open OUT replacement, cross-slate rejection, timeout preservation,
+newly locked export rejection and preservation of other contests/reference data.
