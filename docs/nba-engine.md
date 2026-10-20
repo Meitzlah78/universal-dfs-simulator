@@ -50,8 +50,10 @@ game outcomes. Period-crossing actions are discarded at the boundary. Individual
 shooting efficiency, fouls and coaching decisions need further development.
 
 NBA roster validation and an offline entry export helper now preserve the
-nine-slot header and original entry/player IDs. The helper requires an explicit
-confirmed team limit; the current contest limit has not yet been verified.
+nine-slot header and original entry/player IDs. The helper requires an explicit team limit. FanDuel rules at
+https://www.fanduel.com/rules (Lineup Restrictions, checked October 20, 2026)
+require at least three teams and no more than four players per team for most
+multi-game contests. The NBA validator now also enforces the three-team minimum.
 These helpers remain disconnected from the live BUILD/export interface.
 
 ## Not ready for builds
@@ -60,3 +62,14 @@ The forward core, fitted event rates, calibrated rotation or injury probabilitie
 NBA opponent model, portfolio evaluation and entry export are not connected yet. The NBA BUILD button remains disabled. Next work must validate
 rotations and possession reconstruction broadly, fit historical rates without
 lookahead, then implement and test shared forward events and legal lineups.
+
+## Preliminary historical fit
+
+`simmah_nba_fit.fit_baseline` estimates pooled event rates from pre-slate team box
+scores, with unique-game and date guards. Its default minimum is 30 games. An
+explicit exploratory override on six October 21-22, 2025 games produced 14.24%
+turnovers per modeled action, 41.98% three-point attempt share, 57.56% two-point
+shooting, 34.00% three-point shooting, and 79.28% free throws. These observations
+are not season-wide estimates or an out-of-sample validation. FTA/2 is an
+approximation to trips; team/personal turnovers and player-specific efficiencies
+remain unresolved. This fit cannot by itself enable NBA builds.

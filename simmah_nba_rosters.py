@@ -33,7 +33,7 @@ def validate_lineup(pool, player_ids, *, salary_cap, max_from_team, salary_min=0
     salary=sum(r['Salary'] for r in chosen)
     if not salary_min<=salary<=salary_cap:raise ValueError('NBA lineup salary is outside limits')
     teams=Counter(r['Team'] for r in chosen)
-    if len(teams)<2 or max(teams.values())>max_from_team:
+    if len(teams)<3 or max(teams.values())>max_from_team:
         raise ValueError('NBA lineup violates the confirmed team limit')
     return salary
 
