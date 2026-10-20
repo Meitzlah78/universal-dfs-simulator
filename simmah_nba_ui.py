@@ -18,9 +18,9 @@ from simmah_portfolio import portfolio_roi_totals
 def input_identity(pool,markets,contest,salary_min,correlation=0):
     from simmah_nba_pregame import ROLE_COLUMNS
     columns=[c for c in ['Player ID','Position','Salary','Team','Opponent','Projection','Injury Status',
-                         'Projected Minutes',*ROLE_COLUMNS,'RotoWire RST % (unverified)'] if c in pool]
+                         'Projected Minutes',*ROLE_COLUMNS,'RotoWire Projected Own %'] if c in pool]
     content={'pool':pool[columns].to_json(orient='split',double_precision=10),'markets':markets,
-             'contest':contest,'salary_min':salary_min}
+             'contest':contest,'salary_min':salary_min,'field_model_version':2}
     if correlation:content['build_correlation']=correlation
     return hashlib.sha256(json.dumps(content,sort_keys=True).encode()).hexdigest()
 
@@ -60,6 +60,8 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
     with tabs[0]:
         cid=st.selectbox('NBA contest',list(contests),format_func=lambda x:contests[x]['name'],key='nba_selected_contest')
     selected=contests[cid];count=selected['owned_entries'];error=None;contest=None;engine=None
+    from simmah_nba_ownership import field_ownership_inputs
+    ownership=field_ownership_inputs(pool)
     try:
         day=slate.get('date') or pool.attrs.get('slate_date') or slate_date(upload.name)
         contest=saved_contest(cid,day,selected['entry_fee'])
@@ -68,13 +70,13 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         model=json.loads(rates_path.read_text())
         if model['before']>day:raise ValueError('Historical event baseline follows the selected slate date')
         engine=PregameEngine(pool,markets,EventRates(**model['rates']),platform=platform)
-        raw=pd.to_numeric(pool.get('RotoWire RST % (unverified)',pd.Series(np.nan,index=pool.index)),errors='coerce')
-        if raw[pool['Eligible']].isna().any():raise ValueError('Relative popularity inputs are missing for eligible NBA players')
+
     except (ValueError,KeyError,OSError) as exc:error=str(exc)
     with tabs[0]:
         if contest:
             st.caption(f"{contest['capacity']:,} contest places · ${contest['prize_pool']:,.0f} prizes · {count} reserved entries · payouts supplied from your contest")
-        st.caption('NBA opponent ownership is estimated from legal lineups using raw RotoWire RST as relative popularity. It is not verified projected ownership.')
+        st.caption(ownership['source'])
+        if ownership['mode']!='projected':st.warning(ownership['status'])
     with controls:
         st.caption(platform+' NBA · experimental')
         st.write(f'{count} portfolio entries')
@@ -95,10 +97,10 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
                     'Scoring independent evaluation scenarios':.65,'Selecting portfolio':.95}
             def progress(text):message.write(text);bar.progress(stages.get(text,0))
             try:
-                built=run_pipeline(pool,engine,raw.fillna(0).to_numpy(),
-                    'RotoWire raw RST treated as relative popularity; unverified percentages',
+                built=run_pipeline(pool,engine,ownership['weights'],
+                    ownership['source'],
                     payout_vector(contest),selected['entry_fee'],count,diversity=diversity,
-                    salary_min=salary_min,correlation=correlation,ownership_mode='relative popularity',progress=progress)
+                    salary_min=salary_min,correlation=correlation,ownership_mode=ownership['mode'],progress=progress)
                 reports=engine.last_report
                 if any(not g['calibration']['within_four_points'] or g['unresolved_tie_fraction']>0 for g in reports):
                     raise ValueError('NBA evaluation failed market calibration or left unresolved overtime; inspect engine validation before exporting')
@@ -136,6 +138,9 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
             st.write(saved['engine_reports'])
             st.caption(built['field']['ownership_source'])
             report=pd.DataFrame({'Name':saved_pool['Name'],'Estimated Field Own %':built['field']['ownership_sampled']})
+            if 'RotoWire Projected Own %' in saved_pool:
+                report['RotoWire Projected Own %']=pd.to_numeric(saved_pool['RotoWire Projected Own %'],errors='coerce')
+                report['Field minus RotoWire (pp)']=report['Estimated Field Own %']-report['RotoWire Projected Own %']
             st.dataframe(report,hide_index=True,width="stretch",key="nba_ownership_table",
                          column_config={'Name':st.column_config.TextColumn('Player',pinned=True)})
     with tabs[3]:

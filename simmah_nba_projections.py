@@ -142,7 +142,7 @@ def select_rotowire_slate(payload, day, pool, platform='FanDuel'):
     return matches[0]
 
 
-def parse_rotowire(players, projections, day, pool):
+def parse_rotowire(players, projections, day, pool, ownership=None):
     if projections.get('access') is not True or projections.get('source') != 'RotoWire':
         raise ValueError('RotoWire NBA projection access unavailable')
     pts = {str(r['slateID']):positive(r.get('pts')) for r in projections.get('projections',[])}
@@ -185,6 +185,18 @@ def parse_rotowire(players, projections, day, pool):
             'Starter Confirmed':str(lineup.get('isConfirmed',False)).strip().casefold() in {'true','yes','1'},
             'Game Total':positive(player.get('odds',{}).get('overUnder')),
             'Team Implied Points':positive(player.get('odds',{}).get('impliedPts'))}
+    own={}
+    if isinstance(ownership,dict) and ownership.get('access') is True and ownership.get('source')=='RotoWire':
+        try:
+            for row in ownership['rostership']:
+                pid=str(row['slateID']);value=float(row['rst'])
+                if pid in own or not math.isfinite(value) or not 0<=value<=100:raise ValueError('Invalid ownership rows')
+                own[pid]=value
+        except (KeyError,TypeError,ValueError):own={}
+    for player in players:
+        key=player_key(player.get('firstName','')+' '+player.get('lastName',''),team_key(player.get('team',{}).get('abbr','')))
+        if key in details:
+            details[key]['RotoWire Projected Own %']=own.get(str(player.get('slateID')))
     return values, details
 
 
@@ -198,5 +210,7 @@ def download_rotowire(day, pool, platform='FanDuel'):
     sid = str(slate['slateID'])
     players = get('players.php?slateID='+sid)
     projections = get('projections.php?slateID='+sid+'&projSource=RotoWire')
-    values, details = parse_rotowire(players,projections,day,pool)
+    try:ownership = get('rostership.php?slateID='+sid+'&rstSource=RotoWire')
+    except Exception:ownership = None  # Ownership failure must not erase valid points/minutes.
+    values, details = parse_rotowire(players,projections,day,pool,ownership)
     return values, details, sid

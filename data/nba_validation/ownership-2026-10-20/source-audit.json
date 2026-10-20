@@ -1,0 +1,18 @@
+{
+  "sources": {
+    "public_ui_script": "https://www.rotowire.com/daily/nba/assets/optimizer-core.js?v=20261016201527",
+    "fd": "https://www.rotowire.com/daily/nba/api/rostership.php?slateID=29793&rstSource=RotoWire",
+    "dk": "https://www.rotowire.com/daily/nba/api/rostership.php?slateID=29798&rstSource=RotoWire"
+  },
+  "fd_full_endpoint_sum": 1410.1,
+  "fd_eligible_pool_sum": 998.2,
+  "fd_policy": "Scenario-derived estimate; external ownership not used: eligible RST total 998.2% differs from 900% for this roster",
+  "dk_full_endpoint_sum": 799.9,
+  "old_export_support_weighted_projection": 287.40978955797937,
+  "old_export_support_equal_weight_projection": 286.36713676240834,
+  "caveats": [
+    "New source fetch is not the frozen input of the earlier uploaded build.",
+    "Equal-weight calculation is a diagnostic on previously sampled support, not a newly built field or an ROI backtest.",
+    "Fallback does not establish real contest ownership. No projections were adjusted."
+  ]
+}

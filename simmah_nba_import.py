@@ -96,7 +96,7 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
     automatic = {}
     try:
         day = slate.get('date') or slate_date(uploaded_file.name)
-        identity = (platform, day, tuple(sorted(zip(pool['Player ID'], pool['Team'], pool['Opponent']))))
+        identity = (platform, day, tuple(sorted(zip(pool['Player ID'], pool['Team'], pool['Opponent']))), 'ownership-v2')
         cached = st.session_state.get('nba_projection_cache')
         import time
         if cached and cached['identity'] == identity and time.time()-cached['time'] < 900:
@@ -111,7 +111,7 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
     try:
         from simmah_nba_projections import download_rotowire
         day = slate.get('date') or slate_date(uploaded_file.name)
-        identity = (platform, day, tuple(sorted(zip(pool['Player ID'], pool['Team'], pool['Opponent']))))
+        identity = (platform, day, tuple(sorted(zip(pool['Player ID'], pool['Team'], pool['Opponent']))), 'ownership-v2')
         cached = st.session_state.get('nba_rotowire_cache')
         if cached and cached['identity'] == identity and time.time()-cached['time'] < 900:
             rw_values, rw_details = cached['values'], cached['details']
@@ -216,12 +216,13 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
         st.subheader('NBA player pool')
         st.caption(f"Positive projections: {pool['Projection'].notna().sum()} / {len(pool)} · Eligible after injuries: {pool['Eligible'].sum()}. Automatic data is cached for up to 15 minutes; refresh runs on app activity.")
         st.caption('Historical FPPG is supplied by FanDuel. It is not a pregame projection. OUT players are ineligible; questionable players remain visible.')
-        if 'RotoWire RST % (unverified)' in pool:
-            raw_own = pd.to_numeric(pool['RotoWire RST % (unverified)'], errors='coerce')
-            st.caption(f'RotoWire raw RST values: {raw_own.notna().sum()} matched; total {raw_own.sum():.1f}%. These are unverified percentages. The experimental field uses them only as relative popularity weights.')
+        from simmah_nba_ownership import field_ownership_inputs
+        ownership_check=field_ownership_inputs(pool)
+        st.caption(ownership_check['source'])
+        if ownership_check['mode']!='projected':st.warning(ownership_check['status'])
         leading_columns = ['Name', 'Starter Confirmed', 'Injury Status', 'Position', 'Team',
                            'Opponent', 'Salary', 'Projection', 'Projection Source',
-                           'RotoWire RST % (unverified)', 'Projected Minutes', 'Minutes Source']
+                           'RotoWire Projected Own %', 'Projected Minutes', 'Minutes Source']
         column_order = [column for column in leading_columns if column in pool.columns]
         column_order += [column for column in pool.columns if column not in leading_columns]
         st.dataframe(pool, hide_index=True, width="stretch", key="nba_player_pool_table",
