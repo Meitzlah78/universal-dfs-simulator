@@ -45,11 +45,13 @@ class MultipleLoadedSlateTests(unittest.TestCase):
         app=AppTest.from_file(str(Path(__file__).with_name('slate_switch_fixture.py'))).run()
         app.button(key='load_DK').click().run()
         self.assertFalse(app.exception)
+        dk_epoch=app.session_state['_slate_upload_epoch']
         app.number_input(key='slate_salary').set_value(45000).run()
         app.button(key='load_FD').click().run()
         self.assertFalse(app.exception)
         self.assertEqual(len(app.session_state['_slate_records']),2)
         self.assertEqual(app.session_state['_slate_active']['name'],'FD.csv')
+        self.assertGreater(app.session_state['_slate_upload_epoch'],dk_epoch)
         self.assertEqual(app.number_input(key='slate_salary').value,0)
         app.number_input(key='slate_salary').set_value(55000).run()
         app.button(key='switch_DK.csv').click().run()

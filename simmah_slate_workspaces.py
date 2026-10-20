@@ -113,6 +113,7 @@ def begin_workspaces(st):
         try:
             restore(st.session_state,pending.get('snapshot',''))
             st.session_state['_slate_active']=pending
+            st.session_state['_slate_upload_epoch']=st.session_state.get('_slate_upload_epoch',0)+1
             records[pending['id']]=pending
         except (ValueError,TypeError,KeyError,OSError) as exc:st.warning('Saved slate could not restore: '+str(exc))
     st.session_state.setdefault('_slate_generation',uuid.uuid4().hex)
@@ -122,8 +123,10 @@ def begin_workspaces(st):
 def select_upload(st,upload):
     if upload is not None:
         digest=hashlib.sha256(upload.getvalue()).hexdigest()
-        if digest!=st.session_state.get('_slate_seen_upload'):
-            st.session_state['_slate_seen_upload']=digest
+        scope=(st.session_state.get('_slate_active',{}).get('id','new'),st.session_state.get('_slate_upload_epoch',0))
+        seen=st.session_state.setdefault('_slate_seen_uploads',{})
+        if digest!=seen.get(scope):
+            seen[scope]=digest
             incoming=slate_record(upload)
             current=st.session_state.get('_slate_active')
             if current and current['id']==incoming['id']:

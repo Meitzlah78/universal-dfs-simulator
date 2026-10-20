@@ -2908,7 +2908,7 @@ with _shared_header:
     auto_slate_file = st.file_uploader(
         "Upload Entries / Slate CSV",
         type=["csv"],
-        key="universal_slate_setup_file_"+st.session_state.get("_slate_active",{}).get("id","new"),
+        key="universal_slate_setup_file_"+st.session_state.get("_slate_active",{}).get("id","new")+"_"+str(st.session_state.get("_slate_upload_epoch",0)),
     )
 
     auto_slate_file = select_upload(st, auto_slate_file)
