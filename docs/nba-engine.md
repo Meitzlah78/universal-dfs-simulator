@@ -162,3 +162,21 @@ The ten-game check uses 1,000 scenarios per game. Without historical market
 snapshots, pooled shooting produces similar team means and cannot reproduce
 pregame team-strength differences. This diagnostic is not a full pregame backtest
 and does not establish that the new market calibration improves predictive error.
+
+### Archived closing-line comparison
+
+ESPN summary pickcenter records expose DraftKings provider ID 100 with explicit
+pointSpread home/away close lines and total over/under close lines. The loader
+requires both sides to agree and uses competitor team IDs, never default/open
+values. These records were retrieved after completion, so their closing labels
+are not independently frozen pregame timestamps. The ten retrieved records are
+retained in data/nba_validation/2026-04-09-10-closing-lines.json.
+
+On the same ten held-out games, 1,000 scenarios each, conditional on recorded
+participants/minutes, archived-market anchoring reduced team-point MAE from
+9.853 to 8.802 and mean bias from +2.153 to -0.135. Maximum evaluation mean
+residual from a market target was 1.407 points. No holdout final score was used
+as a target. This small conditional comparison supports the calibration path;
+it does not validate live player projections, injury handling, ROI or accuracy
+across future slates. Re-run the conditional script with --markets pointing to
+the retained JSON to reproduce the market-conditioned calculation.

@@ -1,0 +1,132 @@
+[
+  {
+    "event_id": "401811025",
+    "date": "2026-04-09",
+    "total": 222.5,
+    "home_spread": -1.5,
+    "team_implied_points": {
+      "9": 112.0,
+      "13": 110.5
+    },
+    "source": "ESPN / DraftKings provider-labeled closing lines",
+    "provenance": "retrieved after game; closing label not independently timestamp-verified",
+    "retrieved_at": "2026-10-20T05:16:12.506182+00:00"
+  },
+  {
+    "event_id": "401811026",
+    "date": "2026-04-10",
+    "total": 225.5,
+    "home_spread": -6.5,
+    "team_implied_points": {
+      "30": 116.0,
+      "8": 109.5
+    },
+    "source": "ESPN / DraftKings provider-labeled closing lines",
+    "provenance": "retrieved after game; closing label not independently timestamp-verified",
+    "retrieved_at": "2026-10-20T05:16:12.506193+00:00"
+  },
+  {
+    "event_id": "401811020",
+    "date": "2026-04-09",
+    "total": 236.5,
+    "home_spread": -4.5,
+    "team_implied_points": {
+      "28": 120.5,
+      "14": 116.0
+    },
+    "source": "ESPN / DraftKings provider-labeled closing lines",
+    "provenance": "retrieved after game; closing label not independently timestamp-verified",
+    "retrieved_at": "2026-10-20T05:16:12.506195+00:00"
+  },
+  {
+    "event_id": "401811024",
+    "date": "2026-04-09",
+    "total": 226.5,
+    "home_spread": -6.5,
+    "team_implied_points": {
+      "10": 116.5,
+      "20": 110.0
+    },
+    "source": "ESPN / DraftKings provider-labeled closing lines",
+    "provenance": "retrieved after game; closing label not independently timestamp-verified",
+    "retrieved_at": "2026-10-20T05:16:12.506196+00:00"
+  },
+  {
+    "event_id": "401811027",
+    "date": "2026-04-10",
+    "total": 243.5,
+    "home_spread": 15.5,
+    "team_implied_points": {
+      "27": 114.0,
+      "14": 129.5
+    },
+    "source": "ESPN / DraftKings provider-labeled closing lines",
+    "provenance": "retrieved after game; closing label not independently timestamp-verified",
+    "retrieved_at": "2026-10-20T05:16:12.506197+00:00"
+  },
+  {
+    "event_id": "401811023",
+    "date": "2026-04-09",
+    "total": 210.5,
+    "home_spread": -3.5,
+    "team_implied_points": {
+      "18": 107.0,
+      "2": 103.5
+    },
+    "source": "ESPN / DraftKings provider-labeled closing lines",
+    "provenance": "retrieved after game; closing label not independently timestamp-verified",
+    "retrieved_at": "2026-10-20T05:16:12.506198+00:00"
+  },
+  {
+    "event_id": "401811022",
+    "date": "2026-04-09",
+    "total": 224.5,
+    "home_spread": 3.5,
+    "team_implied_points": {
+      "17": 110.5,
+      "11": 114.0
+    },
+    "source": "ESPN / DraftKings provider-labeled closing lines",
+    "provenance": "retrieved after game; closing label not independently timestamp-verified",
+    "retrieved_at": "2026-10-20T05:16:12.506199+00:00"
+  },
+  {
+    "event_id": "401811021",
+    "date": "2026-04-09",
+    "total": 249.5,
+    "home_spread": 6.5,
+    "team_implied_points": {
+      "27": 121.5,
+      "4": 128.0
+    },
+    "source": "ESPN / DraftKings provider-labeled closing lines",
+    "provenance": "retrieved after game; closing label not independently timestamp-verified",
+    "retrieved_at": "2026-10-20T05:16:12.506200+00:00"
+  },
+  {
+    "event_id": "401811029",
+    "date": "2026-04-10",
+    "total": 227.5,
+    "home_spread": -18.5,
+    "team_implied_points": {
+      "2": 123.0,
+      "3": 104.5
+    },
+    "source": "ESPN / DraftKings provider-labeled closing lines",
+    "provenance": "retrieved after game; closing label not independently timestamp-verified",
+    "retrieved_at": "2026-10-20T05:16:12.506201+00:00"
+  },
+  {
+    "event_id": "401811028",
+    "date": "2026-04-10",
+    "total": 233.5,
+    "home_spread": -8.5,
+    "team_implied_points": {
+      "1": 121.0,
+      "5": 112.5
+    },
+    "source": "ESPN / DraftKings provider-labeled closing lines",
+    "provenance": "retrieved after game; closing label not independently timestamp-verified",
+    "retrieved_at": "2026-10-20T05:16:12.506202+00:00"
+  }
+]
