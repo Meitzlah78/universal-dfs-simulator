@@ -110,3 +110,12 @@ DNP risk, pregame injury information, or redistribution after scratches.
 Consequently recent averages do not replace RotoWire's pregame projected minutes.
 Historical uncertainty calibration still requires a larger sample and a separate
 validation set before any tuned uncertainty model enters live builds.
+
+### Rotation scheduling bridge
+
+Complete team-minute arrays now convert into 48 one-minute on-court lineups per
+scenario. Integer apportionment preserves 240 team minutes, five distinct players
+per minute and at most 48 minutes per player. Missing reserve minutes are rejected.
+This is a feasibility schedule, not learned coaching or substitution timing.
+A synthetic 10,000 team-scenario run took 0.206 seconds locally. Integration tests
+feed these schedules into the shared forward engine. Live NBA builds remain disabled.
