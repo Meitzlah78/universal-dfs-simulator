@@ -149,3 +149,16 @@ This checks numerical targeting on synthetic inputs, not player prediction,
 real-world spread coverage, or the accuracy of the market itself. Separate
 contract tests ensure changed targets trigger changed event-rate calibration and
 conflicting source rows cannot produce an automatic market.
+
+### Conditional historical event check
+
+scripts/nba_conditional_check.py runs fitted event rates and player role weights
+on held-out games using their recorded participating players and minute budgets.
+A guard rejects overlapping game IDs. Changing held-out actual points does not
+change simulated scores (covered by a regression test). This deliberately does
+not use postgame points as calibration targets. Box minutes are normalized to
+240 only when their rounded ledger lies within 235–245; overtime is excluded.
+The ten-game check uses 1,000 scenarios per game. Without historical market
+snapshots, pooled shooting produces similar team means and cannot reproduce
+pregame team-strength differences. This diagnostic is not a full pregame backtest
+and does not establish that the new market calibration improves predictive error.
