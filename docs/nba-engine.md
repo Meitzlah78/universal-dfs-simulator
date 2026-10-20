@@ -554,3 +554,25 @@ Historical source probe on 2026-10-20: NBA CDN box score and play-by-play URLs
 returned HTTP 403 from the development host. Historical source connectivity is
 not verified by the snapshot feature. The existing historical corpus remains
 unchanged until further collection and validation.
+
+### Offline team-minutes uncertainty challenger
+
+`simmah_nba_minutes_uncertainty.py` fits empirical joint minutes residuals only
+from frozen pregame minutes and verified final regulation box scores. Every team
+ledger must total 240 with each player between 0 and 48; overtime is rejected.
+Captured inputs must precede tipoff and all training games precede the cutoff.
+An exact team/roster match and at least three observations are required; missing
+history fails explicitly rather than inventing a standard deviation.
+
+Residual vectors are sampled together, preserving observed substitution
+tradeoffs. A vectorized capped-simplex projection enforces the team budget and
+individual bounds after applying residuals to new baseline minutes. This can
+change marginal means near bounds, so holdout validation reports challenger and
+baseline MAE, central-80% interval coverage and uncovered teams. Existing
+rotation scheduling accepts these draws, but live builds do not use them yet.
+
+Current tests use synthetic records to check feasibility, reproducibility and
+leakage guards. They are not a real historical predictive backtest. Exact-roster
+matching is deliberately restrictive and does not solve injury replacements,
+foul-trouble, coaching or score-dependent blowout substitutions. Those require
+more historical collection and separate validation before production use.
