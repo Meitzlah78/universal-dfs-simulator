@@ -81,3 +81,15 @@ class RestoredUploadWidgetTests(unittest.TestCase):
         app.button(key='nba_projection_upload_FanDuel_remove_restored').click().run()
         self.assertFalse(app.exception)
         self.assertTrue(any(x.value=='Removed' for x in app.markdown))
+
+class HistoryUploaderRestoreTests(unittest.TestCase):
+    def test_legacy_empty_upload_values_render_and_are_not_saved_again(self):
+        from pathlib import Path
+        from streamlit.testing.v1 import AppTest
+        app=AppTest.from_file(str(Path(__file__).with_name('slate_history_restore_fixture.py'))).run()
+        self.assertFalse(app.exception)
+        restored={};restore(restored,app.session_state['_slate_test_blob'])
+        self.assertNotIn('contest_history_uploads_v2',restored)
+        self.assertNotIn('future_upload_key',restored)
+        app.run()
+        self.assertFalse(app.exception)

@@ -62,10 +62,12 @@ def transient_key(key):
     return (key.endswith('_remove_restored') or key.startswith('nba_projection_upload_')
             or key in {'nba_build','nba_field_download','nba_entries_download',
                        'nba_fast_late_swap','nba_late_swap_upload','nba_late_swap_download',
-                       'loaded_slates_browser','nba_underdog_x_feed','sticky_refresh_projections'})
+                       'loaded_slates_browser','nba_underdog_x_feed','sticky_refresh_projections',
+                       'contest_history_uploads_v2'})
 
 
 def snapshot(state, transient_keys=()):
+    transient_keys=set(transient_keys) | set(state.get('_slate_uploader_keys',()))
     values={};omitted=[]
     for key in list(state):
         if str(key).startswith(('_slate_','$$','universal_slate_setup_file')) or private_key(key):continue
@@ -139,6 +141,14 @@ def select_upload(st,upload):
 
 
 def workspace_file_uploader(st,label,*args,**kwargs):
+    key=str(kwargs.get('key',label))
+    st.session_state.setdefault('_slate_uploader_keys',set()).add(key)
+    # Older browser snapshots may contain None or [] for ANY uploader. Streamlit
+    # forbids assigning those values just as it forbids assigning real files.
+    # Clear only programmatic assignments, never native uploaded widget state.
+    from streamlit.runtime.state import get_session_state
+    if get_session_state().is_new_state_value(key):
+        del st.session_state[key]
     value=st.file_uploader(label,*args,**kwargs)
     if kwargs.get('accept_multiple_files'):return value  # History imports remain explicit actions.
     key=str(kwargs.get('key',label));saved=st.session_state.setdefault('_slate_restored_uploads',{})
