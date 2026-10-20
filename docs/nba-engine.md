@@ -512,5 +512,23 @@ controlled by X; no promise of a complete or real-time API feed is made.
 The posts are for reading, not parsed as lineup/injury records. Existing
 RotoWire confirmation polling and projection refresh remain the machine-readable
 inputs; viewing an X post never silently changes a player's projection or lock.
-No X API token, account credentials, or server-side scraping is used.
+The embedded fallback needs no X API token or server-side scraping.
 Official embedding reference: https://help.x.com/en/using-x/embed-x-feed
+
+### Optional X API connection
+
+When `X_BEARER_TOKEN` is present in Streamlit Secrets, the NBA roster news panel
+uses the official read-only X v2 API instead of the website embed. Enable
+**Load latest X news** to fetch up to ten original @UnderdogNBA posts. Account
+lookup is cached for 24 hours; successful post responses for five minutes,
+shared across DK/FD and slate switches. No background polling or forced paid
+refresh is performed. A new request happens on app activity after cache expiry.
+The token stays server-side, is excluded from cache arguments, and is never
+included in displayed errors or returned data. A credential fingerprint isolates
+cached results. Authentication, credit, access, rate-limit and timeout errors
+leave the rest of the app usable and retain the direct X profile link.
+
+Posts remain read-only news, not automatically inferred lineup/injury updates.
+Without the secret, the existing on-demand official embed remains available.
+Live credentials must be verified from the deployed panel; local mock checks do
+not establish account access or available API credits.
