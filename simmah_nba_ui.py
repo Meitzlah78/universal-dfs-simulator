@@ -48,7 +48,7 @@ def render_exports(st,upload,cid,pool,built,portfolio,platform,stale,location):
     if not stale:
         try:data=export_portfolio(upload.getvalue(),cid,pool,built)
         except (ValueError,KeyError,IndexError) as exc:export_error=str(exc)
-    workspace_download_button(st,'UPLOAD TO '+platform.upper()+' — EDIT ENTRIES CSV',data,
+    workspace_download_button(st,'EXPORT TO '+platform.upper()+' — EDIT ENTRIES CSV',data,
         'Simmah_NBA_'+platform+'_Edit_Entries.csv','text/csv',
         disabled=stale or bool(export_error),key='nba_entries_download' if location=='lineups' else 'nba_entries_download_build',on_click='ignore')
     if stale:st.caption('Inputs changed. Rebuild before downloading a site upload file.')
