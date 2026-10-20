@@ -53,6 +53,10 @@ def build_candidates(pool,outcomes,target=5000,seed=83,salary_min=0,salary_cap=N
     # feasible partial lineup.
     order=sorted(range(5),key=lambda j:eligible[j].sum())+list(range(5,size))
     minimum=np.array([salary[eligible[j]].min() for j in order])
+    remaining_minimum=np.array([minimum[k+1:].sum() for k in range(size)])
+    if rules['min_games']>1:
+        game_keys=[str(tuple(sorted((str(r.Team),str(r.Opponent))))) for r in players.itertuples()]
+        _,game_ids=np.unique(game_keys,return_inverse=True)
     rng=np.random.default_rng(seed);seen=set();answer=[];attempted=0;incomplete=0;duplicates=0
     while attempted<max_attempts and len(answer)<target:
         n=min(batch_size,max_attempts-attempted);attempted+=n
@@ -64,9 +68,9 @@ def build_candidates(pool,outcomes,target=5000,seed=83,salary_min=0,salary_cap=N
         spent=np.zeros(n);counts=np.zeros((n,teams.max()+1),int);alive=np.ones(n,bool)
         for k,slot in enumerate(order):
             allowed=eligible[slot][None,:]&~used&(counts[:,teams]<rules['max_from_team'])
-            allowed &= spent[:,None]+salary[None,:]+minimum[k+1:].sum()<=salary_cap
+            allowed &= spent[:,None]+salary[None,:]+remaining_minimum[k]<=salary_cap
             possible=allowed.any(axis=1);alive &= possible
-            utility=score+(correlation/100)*.5*scale[:,None]*pair_bonus/max(k,1)
+            utility=score if correlation==0 else score+(correlation/100)*.5*scale[:,None]*pair_bonus/max(k,1)
             pick=np.argmax(np.where(allowed,utility,-np.inf),axis=1)
             ids=np.flatnonzero(alive);chosen[ids,slot]=pick[ids]
             used[ids,pick[ids]]=True;spent[ids]+=salary[pick[ids]]
@@ -75,9 +79,9 @@ def build_candidates(pool,outcomes,target=5000,seed=83,salary_min=0,salary_cap=N
         valid=alive&(spent>=salary_min)&(spent<=salary_cap)
         valid &= (counts>0).sum(axis=1)>=rules['min_teams']
         if rules['min_games']>1:
-            games=np.array([str(tuple(sorted((str(r.Team),str(r.Opponent))))) for r in players.itertuples()])
-            for row_index in np.flatnonzero(valid):
-                valid[row_index]=len(set(games[chosen[row_index]]))>=rules['min_games']
+            valid_ids=np.flatnonzero(valid)
+            sorted_games=np.sort(game_ids[chosen[valid_ids]],axis=1)
+            valid[valid_ids]=1+np.count_nonzero(np.diff(sorted_games,axis=1),axis=1)>=rules['min_games']
         incomplete+=int((~valid).sum())
         for row in chosen[valid]:
             canonical=tuple(sorted(row))
@@ -88,3 +92,4 @@ def build_candidates(pool,outcomes,target=5000,seed=83,salary_min=0,salary_cap=N
             'build_correlation':float(correlation),'requested':target,'attempted':attempted,'unique':len(answer),
             'rejected_incomplete_or_salary':incomplete,'duplicates':duplicates,
             'complete':len(answer)==target,'status':'experimental bounded heuristic; not live NBA build'}
+

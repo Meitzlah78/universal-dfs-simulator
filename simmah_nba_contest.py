@@ -40,9 +40,20 @@ def evaluate_candidates(outcomes,candidates,field,payouts,entry_fee,*,constructi
         # prevent float summation order from breaking exact ties.
         cs=np.rint(cs.T*score_ticks).astype(np.int64);fs=np.rint(fs.T*score_ticks).astype(np.int64)
         for j in range(len(cs)):
-            order=np.argsort(fs[j],kind='stable');scores=fs[j,order]
-            cumulative=np.r_[0,np.cumsum(copies[order])]
-            left=np.searchsorted(scores,cs[j],side='left');right=np.searchsorted(scores,cs[j],side='right')
+            low=int(fs[j].min());high=int(fs[j].max());span=high-low+1
+            # Integer score ticks permit exact weighted rank lookup without
+            # sorting every opponent roster in every simulated contest.
+            # Bound memory for unusual user-supplied score ranges; retain the
+            # original sort path when a histogram would be wasteful.
+            if span<=65536 and count<=2**53:
+                histogram=np.bincount(fs[j]-low,weights=copies,minlength=span).astype(np.int64)
+                cumulative=np.r_[0,np.cumsum(histogram)]
+                left=np.clip(cs[j]-low,0,span)
+                right=np.clip(cs[j]-low+1,0,span)
+            else:
+                order=np.argsort(fs[j],kind='stable');scores=fs[j,order]
+                cumulative=np.r_[0,np.cumsum(copies[order])]
+                left=np.searchsorted(scores,cs[j],side='left');right=np.searchsorted(scores,cs[j],side='right')
             above=count-1-cumulative[right];ties=cumulative[right]-cumulative[left]+1
             winnings=(prefix[above+ties]-prefix[above])/ties
             def top(k):return np.clip(k-above,0,ties)/ties
@@ -72,3 +83,4 @@ def select_entries(pool,candidates,report,count,diversity=50,controls=None,metri
         rows[column]=pool.iloc[indices[:,slot]]['Player ID'].astype(str).to_numpy()
     return select_portfolio(rows,list(rules_for(pool)['slots']),count,metric,
                             controls=controls,diversity=diversity)
+
