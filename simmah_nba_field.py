@@ -2,6 +2,7 @@
 import numpy as np
 from scipy.optimize import minimize
 from scipy.special import logsumexp
+from scipy.sparse import csr_matrix
 
 
 def build_field(lineups,ownership,entries,seed=83,source=None,max_iterations=100):
@@ -25,9 +26,9 @@ def build_field(lineups,ownership,entries,seed=83,source=None,max_iterations=100
     # independent probabilities for the same lineup.
     _,unique=np.unique(np.sort(ids,axis=1),axis=0,return_index=True)
     ids=ids[np.sort(unique)]
-    incidence=np.zeros((len(ids),len(target)))
-    incidence[np.arange(len(ids))[:,None],ids]=1
-    if ((target>0)&~incidence.any(axis=0)).any():
+    incidence=csr_matrix((np.ones(ids.size),(np.repeat(np.arange(len(ids)),ids.shape[1]),ids.ravel())),
+                         shape=(len(ids),len(target)))
+    if ((target>0)&~(np.asarray(incidence.sum(axis=0)).ravel()>0)).any():
         raise ValueError('Ownership targets include players absent from legal field support')
     desired=target/100
     def loss(theta):
@@ -71,8 +72,8 @@ def sample_popularity_field(lineups,popularity,entries,seed=83,source=None,stren
     # A documented 0.1 floor preserves possible low-popularity combinations.
     logits=strength*np.log(np.maximum(raw,.1))[ids].sum(axis=1)
     probability=np.exp(logits-logsumexp(logits))
-    incidence=np.zeros((len(ids),len(raw)))
-    incidence[np.arange(len(ids))[:,None],ids]=1
+    incidence=csr_matrix((np.ones(ids.size),(np.repeat(np.arange(len(ids)),ids.shape[1]),ids.ravel())),
+                         shape=(len(ids),len(raw)))
     copies=np.random.default_rng(seed).multinomial(entries,probability)
     keep=copies>0
     return {'indices':ids[keep],'copies':copies[keep],
@@ -111,3 +112,4 @@ def ownership_support_diagnostic(lineups,ownership,tolerance=5):
         result.update(status='feasible' if error<=tolerance+1e-6 else 'support-limited',
                       minimum_max_error_pct=error)
     return result
+
