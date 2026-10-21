@@ -134,10 +134,71 @@ class LoadingTests(unittest.TestCase):
 
     def test_failed_confirmation_is_cached(self):
         st=FakeStreamlit()
+        from simmah_nba_lineup_cache import LineupPageCache
         with patch('simmah_nba_confirmed.download_lineup_page',side_effect=OSError('timeout')) as fetch:
+            from simmah_nba_confirmed import download_lineup_page_result
+            cache=LineupPageCache(download_lineup_page_result)
+            try:
+                with patch('simmah_nba_confirmed._lineup_cache',cache):
+                    cache.get('2026-10-21')
+                    cache.records['2026-10-21']['future'].result(timeout=1)
+                    for _ in range(2):
+                        with self.assertRaises(ValueError):cached_confirmed_status(st,'2026-10-21',[('NY','PHI')])
+                    self.assertEqual(fetch.call_count,1)
+            finally:cache.executor.shutdown(wait=True)
+
+    def test_lineup_request_is_nonblocking_and_shared_while_pending(self):
+        from simmah_nba_lineup_cache import LineupPageCache
+        release=Event();calls=[]
+        def fetch(day):
+            calls.append(day);release.wait(timeout=2)
+            return {'html':'page','checked_at':100}
+        cache=LineupPageCache(fetch)
+        try:
+            start=monotonic()
+            self.assertTrue(cache.get('2026-10-21')['pending'])
+            self.assertLess(monotonic()-start,.5)
+            self.assertTrue(cache.get('2026-10-21',force=True)['pending'])
+            release.set();cache.records['2026-10-21']['future'].result(timeout=1)
+            self.assertEqual(cache.get('2026-10-21')['html'],'page')
+            self.assertEqual(len(calls),1)
+        finally:release.set();cache.executor.shutdown(wait=True)
+
+    def test_expected_page_accepts_span_abbreviations_and_link_text(self):
+        players=''.join('<a href="/basketball/player/player-'+str(i)+'">Player '+str(i)+'</a>' for i in range(5))
+        html='<div data-gamedate="2026-10-21"></div><div class="lineup is-nba" data-gameid="1"><span class="lineup__abbr">NY</span><span class="lineup__abbr">PHI</span><ul class="lineup__list is-visit"><li class="lineup__status is-expected"></li>'+players+'</ul></div>'
+        values=parse_confirmed_page(html,'2026-10-21',[('NY','PHI')])
+        self.assertEqual(len(values),5)
+        self.assertIn(('player 0','NY'),values)
+        self.assertTrue(all(v['Expected Starter'] for v in values.values()))
+        self.assertFalse(any(v['Starter Confirmed'] for v in values.values()))
+
+    def test_loaded_expected_lineups_survive_build_recheck_failure(self):
+        from simmah_nba_confirmed import LineupFetchPending
+        p=self.pool();p.attrs['slate_date']='2026-10-21';st=FakeStreamlit()
+        values={(r.Name.casefold(),r.Team):{'Expected Starter':True,'Starter Confirmed':False} for r in p.itertuples()}
+        responses=[{'players':values,'checked_at':100},LineupFetchPending('checking'),OSError('timeout')]
+        with patch('simmah_nba_confirmed.cached_confirmed_status',side_effect=responses):
+            initial,_=current_confirmed_pool(st,p,'2026-10-21',[('NY','PHI')])
+            self.assertEqual(team_lineup(initial,'NY')['status'],'Expected')
             for _ in range(2):
-                with self.assertRaises(ValueError):cached_confirmed_status(st,'2026-10-21',[('NY','PHI')])
-            self.assertEqual(fetch.call_count,1)
+                view,status=current_confirmed_pool(st,p,'2026-10-21',[('PHI','NY'),('NY','PHI')])
+                self.assertEqual(team_lineup(view,'NY')['status'],'Last expected')
+                self.assertEqual(len(team_lineup(view,'NY')['starters']),5)
+
+    def test_public_page_cache_keeps_last_success_after_refresh_error(self):
+        from simmah_nba_lineup_cache import LineupPageCache
+        fetch=iter([{'html':'expected page','checked_at':100},{'error':'timeout','checked_at':200}])
+        cache=LineupPageCache(lambda day:next(fetch))
+        try:
+            cache.get('2026-10-21');cache.records['2026-10-21']['future'].result(timeout=1)
+            self.assertEqual(cache.get('2026-10-21')['html'],'expected page')
+            cache.get('2026-10-21',force=True);cache.records['2026-10-21']['future'].result(timeout=1)
+            result=cache.get('2026-10-21')
+            self.assertEqual(result['html'],'expected page')
+            self.assertEqual(result['checked_at'],100)
+            self.assertTrue(result['stale'])
+        finally:cache.executor.shutdown(wait=True)
 
     def test_same_slate_last_good_is_labeled_stale(self):
         st=FakeStreamlit();p=self.pool();pairs=(('NY','PHI'),)

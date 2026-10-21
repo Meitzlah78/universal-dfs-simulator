@@ -1,7 +1,8 @@
 """Site-independent NBA lineup confirmation from the dated public lineup page."""
 from html.parser import HTMLParser
 import time
-from urllib.request import urlopen
+from urllib.request import Request,urlopen
+from simmah_nba_lineup_cache import LineupPageCache
 from simmah_nba_projections import team_key,player_key
 from simmah_nba_game_strip import explicit_true
 
@@ -13,28 +14,33 @@ class LineupPage(HTMLParser):
         a=dict(attrs);classes=set(a.get('class','').split())
         if a.get('data-gamedate'):self.day=a['data-gamedate']
         if self.card is None:
-            if tag=='div' and 'lineup' in classes and a.get('data-lnum'):
+            if tag=='div' and 'lineup' in classes and (a.get('data-lnum') or a.get('data-gameid') or 'is-nba' in classes):
                 self.card={'teams':[],'lists':[]};self.depth=1
             return
         if tag=='div':
             self.depth+=1
-            if 'lineup__abbr' in classes:self.abbr=self.depth
+        if 'lineup__abbr' in classes:self.abbr=(tag,self.depth)
         if tag=='ul' and 'lineup__list' in classes:
             side='away' if 'is-visit' in classes else 'home' if 'is-home' in classes else None
             self.list={'side':side,'confirmed':False,'names':[]}
             self.card['lists'].append(self.list)
         if self.list is not None:
             if tag=='li' and 'lineup__status' in classes:self.list['confirmed']='is-confirmed' in classes
-            if tag=='a' and '/basketball/player/' in a.get('href','') and len(self.list['names'])<5:
+            if tag=='a' and '/basketball/player' in a.get('href','') and len(self.list['names'])<5:
                 name=a.get('title','').strip()
                 if name:self.list['names'].append(name)
+                else:self.name_parts=[]
     def handle_data(self,data):
         if self.card is not None and self.abbr is not None and data.strip():self.card['teams'].append(team_key(data.strip()))
+        if self.card is not None and getattr(self,'name_parts',None) is not None:self.name_parts.append(data)
     def handle_endtag(self,tag):
         if self.card is None:return
+        if tag=='a' and getattr(self,'name_parts',None) is not None:
+            name=' '.join(''.join(self.name_parts).split());self.name_parts=None
+            if name and self.list is not None and len(self.list['names'])<5:self.list['names'].append(name)
         if tag=='ul':self.list=None
+        if self.abbr==(tag,self.depth):self.abbr=None
         if tag=='div':
-            if self.abbr==self.depth:self.abbr=None
             self.depth-=1
             if self.depth==0:
                 self.cards.append(self.card);self.card=None;self.list=None
@@ -65,7 +71,9 @@ def parse_confirmed_page(html,day,pairs):
 def download_lineup_page(day):
     from datetime import date
     date.fromisoformat(day)
-    with urlopen('https://www.rotowire.com/basketball/nba-lineups.php?date='+day,timeout=3) as response:
+    request=Request('https://www.rotowire.com/basketball/nba-lineups.php?date='+day,
+                    headers={'User-Agent':'Mozilla/5.0','Accept':'text/html'})
+    with urlopen(request,timeout=8) as response:
         html=response.read().decode('utf-8')
     return {'html':html,'checked_at':time.time()}
 
@@ -73,10 +81,12 @@ def download_lineup_page(day):
 def cached_confirmed_status(st,day,pairs):
     # Cache by day, not site/slate or game subset: DK and FD must read the
     # same page snapshot even when one slate contains additional games.
-    page=st.cache_data(ttl=60,show_spinner=False,max_entries=8)(download_lineup_page_result)(day)
+    page=_lineup_cache.get(day)
+    if not page.get('html') and page.get('pending'):raise LineupFetchPending('Checking the dated RotoWire lineup page')
     if page.get('error'):raise ValueError(page['error'])
     return {'players':parse_confirmed_page(page['html'],day,pairs),
-            'checked_at':page['checked_at'],'source':'RotoWire shared NBA lineup page'}
+            'checked_at':page['checked_at'],'source':'RotoWire shared NBA lineup page',
+            'pending':bool(page.get('pending')),'stale':bool(page.get('stale')),'issue':page.get('issue','')}
 
 
 def download_lineup_page_result(day):
@@ -85,14 +95,27 @@ def download_lineup_page_result(day):
         return {'error':str(exc),'checked_at':time.time()}
 
 
+class LineupFetchPending(ValueError):pass
+
+
+_lineup_cache=LineupPageCache(download_lineup_page_result)
+
+
+def request_lineup_refresh(day):
+    return _lineup_cache.get(day,force=True)
+
+
 def current_confirmed_pool(st,pool,day,pairs):
     scope=(day,tuple(sorted({tuple(sorted(map(team_key,p))) for p in pairs})))
     saved=st.session_state.get('nba_confirmed_last_good',{})
-    stale=False
+    stale=False;issue='';pending=False
     try:
         response=cached_confirmed_status(st,day,pairs)
+        pending=bool(response.get('pending'));stale=pending or bool(response.get('stale'))
+        issue=response.get('issue','')
         st.session_state['nba_confirmed_last_good']={'scope':scope,'response':response}
-    except (ValueError,OSError,KeyError,TypeError):
+    except (ValueError,OSError,KeyError,TypeError) as exc:
+        issue=str(exc);pending=isinstance(exc,LineupFetchPending)
         stale=True
         response=saved.get('response',{}) if saved.get('scope')==scope else {}
         if not response and pool.attrs.get('slate_date')!=day:
@@ -100,8 +123,9 @@ def current_confirmed_pool(st,pool,day,pairs):
             pool['Expected Starter']=False
             pool['Starter Confirmed']=False
     view=apply_confirmed_status(pool,response.get('players',{}))
+    view.attrs['lineup_status_pending']=pending
     if stale:view['Lineup Status Stale']=True
-    return view,{**response,'stale':stale}
+    return view,{**response,'stale':stale,'pending':pending,'issue':issue}
 
 
 def apply_confirmed_status(pool,values):

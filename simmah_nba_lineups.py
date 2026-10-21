@@ -34,10 +34,12 @@ def render_live_strip(st,pool,markets,slate_id,day,fallback_time=None):
     from simmah_nba_game_strip import render_game_strip
     from simmah_nba_confirmed import current_confirmed_pool
     pairs=tuple(sorted({(team_key(r.Team),team_key(r.Opponent)) for r in pool.itertuples()}))
-    @st.fragment(run_every='60s')
+    @st.fragment(run_every='10s')
     def draw():
         view,response=current_confirmed_pool(st,pool,day,pairs)
         checked=response.get('checked_at',fallback_time);source_ok=not response['stale']
+        if response.get('pending'):st.caption('Checking RotoWire starting lineups…')
+        elif response.get('issue'):st.caption('RotoWire lineup check: '+response['issue'])
         scope=(day,pairs)
         if source_ok:
             observe_lineup_change(st.session_state,scope,lineup_snapshot(view),lineup_snapshot(pool))

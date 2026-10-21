@@ -84,8 +84,8 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
     from simmah_nba_projections import slate_date, download_dff, apply_projections, player_key, read_projection_upload, EntriesInProjectionUpload
     _force_refresh=st.session_state.pop('refresh_projections_requested',False)
     if _force_refresh:
-        from simmah_nba_confirmed import download_lineup_page_result
-        st.cache_data(ttl=60,show_spinner=False,max_entries=8)(download_lineup_page_result).clear()
+        from simmah_nba_confirmed import request_lineup_refresh
+        request_lineup_refresh(day)
         from simmah_nba_game_context import download_game_context_result
         st.cache_data(ttl=60,show_spinner=False,max_entries=8)(download_game_context_result).clear()
         st.session_state['nba_lineup_refresh_requested']=True

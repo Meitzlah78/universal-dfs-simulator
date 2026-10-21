@@ -13,11 +13,11 @@ def explicit_true(value):
 def team_lineup(pool,team):
     rows=pool[pool['Team'].map(team_key)==team_key(team)]
     if 'Expected Starter' not in rows or 'Starter Confirmed' not in rows:
-        return {'status':'Unavailable','starters':[]}
+        return {'status':'Checking' if pool.attrs.get('lineup_status_pending') else 'Unavailable','starters':[]}
     starters=rows[rows['Expected Starter'].map(explicit_true)]
     names=starters['Name'].astype(str).tolist()
     if len(starters)!=5:
-        return {'status':'Pending' if len(starters) else 'Unavailable','starters':names}
+        return {'status':'Pending' if len(starters) else ('Checking' if pool.attrs.get('lineup_status_pending') else 'Unavailable'),'starters':names}
     injured=starters['Injury Status'].astype(str).str.upper().isin({'O','OUT','IR','SUSPENDED'}).any()
     confirmed=starters['Starter Confirmed'].map(explicit_true).all()
     status='Confirmed' if confirmed and not injured else 'Expected'
@@ -75,8 +75,8 @@ def game_records(pool,markets):
 def render_game_strip(st,pool,markets,updated_at=None):
     games=game_records(pool,markets)
     if not games:return
-    colors={'Confirmed':'#69db9b','Expected':'#ffd166','Pending':'#ffd166','Unavailable':'#a3adba','Last confirmed':'#a3adba','Last expected':'#a3adba'}
-    symbols={'Confirmed':'●','Expected':'○','Pending':'○','Unavailable':'—','Last confirmed':'○','Last expected':'○'}
+    colors={'Confirmed':'#69db9b','Expected':'#ffd166','Pending':'#ffd166','Unavailable':'#a3adba','Last confirmed':'#a3adba','Last expected':'#a3adba','Checking':'#ffd166'}
+    symbols={'Confirmed':'●','Expected':'○','Pending':'○','Unavailable':'—','Last confirmed':'○','Last expected':'○','Checking':'○'}
     cards=[]
     for game in games:
         teams=[]
