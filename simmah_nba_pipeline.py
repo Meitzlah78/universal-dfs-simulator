@@ -1,7 +1,7 @@
 """Experimental NBA orchestration boundary; Streamlit-free and not live-enabled."""
 import numpy as np
 from simmah_nba_candidates import build_candidates
-from simmah_nba_field import build_field,sample_popularity_field
+from simmah_nba_field import build_field,sample_popularity_field,ownership_support_diagnostic
 from simmah_nba_contest import evaluate_candidates,select_entries
 from simmah_nba_rosters import export_entries,SLOT_COLUMNS
 from simmah_nba_rules import rules_for
@@ -47,8 +47,16 @@ def run_pipeline(pool,outcome_factory,ownership,ownership_source,payouts,entry_f
             if str(exc)!='Ownership targets include players absent from legal field support':raise
             fallback_reason=str(exc)
         if fallback_reason:
+            diagnostic=ownership_support_diagnostic(support['indices'],ownership,max_ownership_error)
+            if diagnostic['status']=='support-limited':
+                fallback_reason+=f" Generated legal roster support cannot meet tolerance; best possible maximum error is {diagnostic['minimum_max_error_pct']:.2f} points."
+            elif diagnostic['status']=='feasible':
+                fallback_reason+=" Generated roster support can meet tolerance; ownership optimizer did not reach an acceptable fit."
+            else:
+                fallback_reason+=" Support feasibility check was inconclusive."
             field=sample_popularity_field(support['indices'],np.ones(len(pool)),len(payouts)-1,
                 seed+1011,'Scenario-derived estimate; external ownership not used. '+fallback_reason)
+            field['ownership_fit_diagnostic']=diagnostic
             field['ownership_fit_warning']=fallback_reason
             field['ownership_target']=np.asarray(ownership,float).copy()
     else:

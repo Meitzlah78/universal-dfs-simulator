@@ -84,3 +84,30 @@ def sample_popularity_field(lineups,popularity,entries,seed=83,source=None,stren
             'largest_roster_probability':float(probability.max()),
             'popularity_strength':strength,
             'status':'estimated ownership from legal support; not verified projected ownership'}
+
+
+def ownership_support_diagnostic(lineups,ownership,tolerance=5):
+    """Bound the best possible maximum ownership error on this support.
+
+    This is a diagnostic only: its sparse LP weights never replace the field.
+    A failed/time-limited solve is inconclusive, not proof of infeasibility.
+    """
+    from scipy.optimize import linprog
+    from scipy.sparse import coo_matrix,hstack,vstack
+    ids=np.asarray(lineups);target=np.asarray(ownership,float)
+    rows=ids.ravel();columns=np.repeat(np.arange(len(ids)),ids.shape[1])
+    incidence=coo_matrix((np.full(len(rows),100.),(rows,columns)),
+                         shape=(len(target),len(ids))).tocsr()
+    slack=-np.ones((len(target),1))
+    constraints=vstack([hstack([incidence,slack]),hstack([-incidence,slack])]).tocsr()
+    objective=np.r_[np.zeros(len(ids)),1.]
+    fit=linprog(objective,A_ub=constraints,b_ub=np.r_[target,-target],
+        A_eq=coo_matrix((np.ones(len(ids)),(np.zeros(len(ids),dtype=int),np.arange(len(ids)))),
+                       shape=(1,len(ids)+1)).tocsr(),b_eq=[1.],
+        bounds=(0,None),method='highs',options={'time_limit':5.})
+    result={'status':'inconclusive','solver_message':str(fit.message)}
+    if fit.success:
+        error=float(fit.x[-1])
+        result.update(status='feasible' if error<=tolerance+1e-6 else 'support-limited',
+                      minimum_max_error_pct=error)
+    return result
