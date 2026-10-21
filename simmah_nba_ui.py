@@ -156,6 +156,14 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         candidate_rows=built['report'].copy()
         for j,slot in enumerate(slots):candidate_rows[slot]=saved_pool.iloc[built['candidates']['indices'][:,j]]['Player ID'].to_numpy()
         st.dataframe(display_lineups(saved_pool,candidate_rows,status_pool=pool).sort_values(metric,ascending=False),hide_index=True,width="stretch")
+        candidate_export=candidate_rows.sort_values(metric,ascending=False).copy()
+        candidate_names=saved_pool.set_index('Player ID')['Name']
+        for slot in slots:
+            candidate_export[slot+' Name']=candidate_export[slot].map(candidate_names)
+        workspace_download_button(st,'DOWNLOAD ALL CANDIDATE LINEUPS',
+            candidate_export.to_csv(index=False).encode('utf-8-sig'),
+            'Simmah_NBA_'+platform.replace(' ','_')+'_All_Candidates.csv','text/csv',
+            key='nba_all_candidates_download',on_click='ignore')
         workspace_download_button(st,'DOWNLOAD OPPONENT FIELD',pd.DataFrame(built['field']['indices'],columns=slots).apply(lambda c:c.map(saved_pool['Player ID'].to_dict())).assign(Copies=built['field']['copies']).to_csv(index=False).encode(),
             'Simmah_NBA_Opponent_Field.csv','text/csv',key='nba_field_download',on_click='ignore')
         if st.session_state.get('nba_show_advanced',False):
