@@ -138,10 +138,23 @@ def export_swaps(template, contest_id, pool, result, *, now=None):
     return output.getvalue().encode()
 
 
-def render_late_swap(st,pool,contest_id,salary_min,diversity):
+def render_late_swap(st,pool,contest_id,salary_min,diversity,markets=None,contest=None):
     rules=rules_for(pool);platform=rules['platform']
     with st.expander('NBA LATE SWAP — fast',expanded=False):
-        st.caption(f'For contests that allow late swap. Upload your latest filled {platform} entries. Started games stay frozen in their exact slots. Open slots use current projections and exposure diversity; no full simulation or live ROI calculation. Search is bounded to 10 seconds; unresolved entries stay unchanged.')
+        mode=st.radio('Late-swap method',['Simulate remaining games','Fast projection optimizer'],key='nba_late_swap_method')
+        simulation=mode=='Simulate remaining games'
+        actuals=None;actual_bytes=b''
+        if simulation:
+            st.caption('Sim mode freezes final scores for started games and simulates only unstarted games. It uses independent construction/evaluation scenarios and the saved opponent field. In-progress games are not supported.')
+            actual_file=workspace_file_uploader(st,'Final locked-game fantasy scores CSV',type=['csv'],key='nba_late_swap_actuals_upload',
+                help='Player ID, Actual Points, Status. Use exact DK or FD scores and FINAL status. Include explicit zeros; missing scores are never assumed zero.')
+            if actual_file is not None:
+                try:
+                    actual_bytes=actual_file.getvalue()
+                    actuals=pd.read_csv(io.BytesIO(actual_bytes),dtype={'Player ID':str})
+                except (ValueError,UnicodeError) as exc:
+                    st.error('Cannot read final scores: '+str(exc));return
+        st.caption(f'For contests that allow late swap. Upload your latest filled {platform} entries. Started games stay frozen in their exact slots. Fast mode uses current projections and exposure diversity, with a 10-second search budget. Sim mode reruns unstarted games; its runtime is longer.')
         upload=workspace_file_uploader(st,'Current '+platform+' NBA entries',type=['csv'],key='nba_late_swap_upload')
         if upload is None:return
         try:
@@ -149,16 +162,24 @@ def render_late_swap(st,pool,contest_id,salary_min,diversity):
             locked=locked_players(pool)
             st.caption(f'{int(locked.sum())} slate players locked by scheduled tipoff. Refresh projections for latest injury and starting-lineup news.')
             import hashlib
-            signature=hashlib.sha256(data+pool.to_json().encode()+str(contest_id).encode()+str((salary_min,diversity)).encode()).hexdigest()
-            if st.button('FAST LATE SWAP',key='nba_fast_late_swap'):
+            saved_build=st.session_state.get('nba_build_result')
+            field_signature=str(saved_build.get('identity','')) if saved_build else ''
+            signature=hashlib.sha256(data+actual_bytes+pool.to_json().encode()+str(contest_id).encode()+str((salary_min,diversity,mode,markets,field_signature)).encode()).hexdigest()
+            if st.button('SIMULATE LATE SWAP' if simulation else 'FAST LATE SWAP',key='nba_fast_late_swap'):
                 started=time.monotonic()
                 with st.spinner('Updating unlocked roster spots…'):
-                    result=swap_entries(data,contest_id,pool,salary_min=salary_min,diversity=diversity)
+                    if simulation:
+                        result=run_simulated_late_swap(data,contest_id,pool,markets,contest,saved_build,actuals,
+                            salary_min=salary_min,diversity=diversity,progress=st.write)
+                    else:
+                        result=swap_entries(data,contest_id,pool,salary_min=salary_min,diversity=diversity)
                 st.session_state['nba_late_swap_result']=(signature,result,time.monotonic()-started)
             saved=st.session_state.get('nba_late_swap_result')
             if saved and saved[0]==signature:
                 result=saved[1]
                 st.caption(f'Completed in {saved[2]:.2f} seconds. Review unchanged entries before uploading.')
+                if result.get('status'):st.caption(result['status'])
+                if result.get('field_warning'):st.warning(result['field_warning'])
                 st.dataframe(result['report'],hide_index=True,width='stretch')
                 frame=pd.DataFrame(result['lineups'],columns=rules['slots'])
                 from simmah_nba_ui import display_lineups
@@ -166,8 +187,51 @@ def render_late_swap(st,pool,contest_id,salary_min,diversity):
                 def download_current():
                     try:
                         output=export_swaps(data,contest_id,pool,result)
-                        workspace_download_button(st,'UPLOAD TO '+platform.upper()+' — LATE SWAP CSV',output,'Simmah_NBA_Late_Swap.csv','text/csv',key='nba_late_swap_download',on_click='ignore')
+                        workspace_download_button(st,'EXPORT TO '+platform.upper()+' — LATE SWAP CSV',output,'Simmah_NBA_Late_Swap.csv','text/csv',key='nba_late_swap_download',on_click='ignore')
                         st.caption(f'Upload immediately, before the next tipoff. {platform} controls final lock status; scheduled times are used here.')
                     except ValueError as exc:st.error(f'{exc}. Run FAST LATE SWAP again.')
                 st.fragment(run_every=5)(download_current)()
         except (ValueError,KeyError) as exc:st.error(str(exc))
+
+
+def run_simulated_late_swap(template,contest_id,pool,markets,contest,saved,actuals=None,**kwargs):
+    """Prepare an unstarted-game engine and remap saved field by exact site IDs."""
+    import json
+    from pathlib import Path
+    from simmah_nba_sim_late_swap import simulate_swap_entries
+    from simmah_nba_pregame import PregameEngine
+    from simmah_nba_engine import EventRates
+    from simmah_nba_contests import payout_vector
+    from simmah_nba_projections import team_key
+    if not saved or str(saved.get('contest_id'))!=str(contest_id) or contest is None:
+        raise ValueError('Build this contest first to supply its opponent field and payout schedule')
+    original=saved['pool']
+    if rules_for(original)['platform']!=rules_for(pool)['platform'] or set(original['Player ID'].astype(str))!=set(pool['Player ID'].astype(str)):
+        raise ValueError('Saved opponent field does not match the current salary slate')
+    locked=locked_players(pool)
+    # Check actuals before expensive simulations, including every field/entry lock.
+    lookup={str(pid):i for i,pid in enumerate(pool['Player ID'])}
+    remap=np.array([lookup[str(pid)] for pid in original['Player ID']])
+    field=dict(saved['result']['field']);field['indices']=remap[np.asarray(field['indices'])]
+    factory_engine=None
+    def factory(count,seed,open_indices):
+        nonlocal factory_engine
+        if factory_engine is None:
+            sub=pool.iloc[open_indices].copy().reset_index(drop=True)
+            sub.attrs.update(pool.attrs)
+            teams=set(sub['Team'].map(team_key))
+            lines=[m for m in (markets or []) if set(map(team_key,m['teams']))<=teams]
+            model=json.loads((Path(__file__).parent/'data'/'nba_models'/'event-rates-before-2026-04-09.json').read_text())
+            day=pool.attrs.get('slate_date')
+            if day is None or model['before']>str(day):raise ValueError('Valid slate date and pregame event model required')
+            factory_engine=PregameEngine(sub,lines,EventRates(**model['rates']),platform=rules_for(pool)['platform'])
+        values=factory_engine(count,seed)
+        if any(not r['calibration']['within_four_points'] or r['unresolved_tie_fraction']>0 for r in factory_engine.last_report):
+            raise ValueError('Remaining-game simulation failed calibration or overtime checks')
+        return values
+    result=simulate_swap_entries(template,contest_id,pool,factory,field,payout_vector(contest),contest['entry_fee'],
+        actuals=actuals,**kwargs)
+    if field.get('ownership_fit_warning'):
+        result['field_warning']='Conditional ranks use an estimated opponent field: '+field['ownership_fit_warning']
+    return result
+

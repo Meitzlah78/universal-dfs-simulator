@@ -4,7 +4,7 @@ from simmah_nba_rules import rules_for
 
 
 def build_candidates(pool,outcomes,target=5000,seed=83,salary_min=0,salary_cap=None,
-                     max_attempts=200000,batch_size=512,correlation=0):
+                     max_attempts=200000,batch_size=512,correlation=0,fixed_slots=None,excluded_indices=None):
     """Return original pool-row indices in uploaded slot order, never filler duplicates.
 
     Candidates use individual shared-slate outcomes plus modest search noise.
@@ -24,6 +24,13 @@ def build_candidates(pool,outcomes,target=5000,seed=83,salary_min=0,salary_cap=N
     projection=np.asarray(pool['Projection'],float)
     injury=pool['Injury Status'].astype(str).str.upper().isin(['O','OUT','IR','SUSPENDED']).to_numpy()
     keep=np.isfinite(projection)&(projection>0)&~injury
+    fixed_slots={} if fixed_slots is None else dict(fixed_slots)
+    if len(set(fixed_slots.values()))!=len(fixed_slots):raise ValueError('Repeated fixed NBA player')
+    for slot,index in fixed_slots.items():
+        if not isinstance(slot,(int,np.integer)) or not 0<=slot<size or not isinstance(index,(int,np.integer)) or not 0<=index<len(pool):
+            raise ValueError('Invalid fixed NBA slot or player')
+    if excluded_indices is not None:keep[np.asarray(excluded_indices,dtype=int)]=False
+    for index in fixed_slots.values():keep[index]=True
     original=np.flatnonzero(keep)
     if len(original)<size:raise ValueError('At least nine eligible NBA players required')
     players=pool.iloc[original];values=values[:,original]
@@ -52,8 +59,12 @@ def build_candidates(pool,outcomes,target=5000,seed=83,salary_min=0,salary_cap=N
     # reuse cheap players; this prunes impossible budgets without removing a
     # feasible partial lineup.
     order=sorted(range(5),key=lambda j:eligible[j].sum())+list(range(5,size))
+    local={int(index):j for j,index in enumerate(original)}
+    fixed={slot:local[index] for slot,index in fixed_slots.items()}
+    if any(not eligible[slot,index] for slot,index in fixed.items()):raise ValueError('Fixed NBA player is ineligible for slot')
+    order=[slot for slot in order if slot not in fixed]
     minimum=np.array([salary[eligible[j]].min() for j in order])
-    remaining_minimum=np.array([minimum[k+1:].sum() for k in range(size)])
+    remaining_minimum=np.array([minimum[k+1:].sum() for k in range(len(order))])
     if rules['min_games']>1:
         game_keys=[str(tuple(sorted((str(r.Team),str(r.Opponent))))) for r in players.itertuples()]
         _,game_ids=np.unique(game_keys,return_inverse=True)
@@ -66,6 +77,9 @@ def build_candidates(pool,outcomes,target=5000,seed=83,salary_min=0,salary_cap=N
         chosen=np.full((n,size),-1,dtype=int);used=np.zeros((n,len(players)),bool)
         pair_bonus=np.zeros_like(score)
         spent=np.zeros(n);counts=np.zeros((n,teams.max()+1),int);alive=np.ones(n,bool)
+        for slot,index in fixed.items():
+            chosen[:,slot]=index;used[:,index]=True;spent+=salary[index];counts[:,teams[index]]+=1
+        alive &= (counts<=rules['max_from_team']).all(axis=1)
         for k,slot in enumerate(order):
             allowed=eligible[slot][None,:]&~used&(counts[:,teams]<rules['max_from_team'])
             allowed &= spent[:,None]+salary[None,:]+remaining_minimum[k]<=salary_cap
@@ -92,4 +106,5 @@ def build_candidates(pool,outcomes,target=5000,seed=83,salary_min=0,salary_cap=N
             'build_correlation':float(correlation),'requested':target,'attempted':attempted,'unique':len(answer),
             'rejected_incomplete_or_salary':incomplete,'duplicates':duplicates,
             'complete':len(answer)==target,'status':'experimental bounded heuristic; not live NBA build'}
+
 
