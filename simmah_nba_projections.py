@@ -123,7 +123,7 @@ def apply_projections(pool, automatic, uploaded=None):
 
 def team_key(value):
     value = str(value).upper().strip()
-    return {'NYK':'NY','SAS':'SA','GSW':'GS','NOP':'NO'}.get(value,value)
+    return {'NYK':'NY','SAS':'SA','GSW':'GS','NOP':'NO','PHO':'PHX'}.get(value,value)
 
 
 def select_rotowire_slate(payload, day, pool, platform='FanDuel'):
