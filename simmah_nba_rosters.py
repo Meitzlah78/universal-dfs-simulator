@@ -28,6 +28,13 @@ def validate_lineup(pool, player_ids, *, salary_cap, max_from_team, salary_min=0
         if str(row.get('Injury Status','')).upper() in {'O','OUT','IR','SUSPENDED'}:
             raise ValueError('NBA lineup contains an OUT player')
         if require_projections:
+            if 'Eligible' in row and str(row['Eligible']).casefold() not in {'true','1'}:
+                raise ValueError('NBA lineup contains an excluded player')
+            if 'Projected Minutes' in row:
+                try:minutes=float(row['Projected Minutes'])
+                except (TypeError,ValueError):minutes=float('nan')
+                if not math.isfinite(minutes) or not 0<minutes<=48:
+                    raise ValueError('NBA lineup contains zero or missing projected minutes')
             try:value=float(row.get('Projection'))
             except (ValueError,TypeError):value=float('nan')
             if not math.isfinite(value) or value<=0:

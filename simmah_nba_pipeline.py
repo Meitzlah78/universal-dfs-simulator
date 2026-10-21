@@ -1,6 +1,6 @@
 """Experimental NBA orchestration boundary; Streamlit-free and not live-enabled."""
 import numpy as np
-from simmah_nba_candidates import build_candidates
+from simmah_nba_candidates import build_candidates,build_opponent_support
 from simmah_nba_field import build_field,sample_popularity_field,ownership_support_diagnostic
 from simmah_nba_contest import evaluate_candidates,select_entries
 from simmah_nba_rosters import export_entries,SLOT_COLUMNS
@@ -35,7 +35,10 @@ def run_pipeline(pool,outcome_factory,ownership,ownership_source,payouts,entry_f
     notify('Building independent opponent support')
     field_outcomes=draw(seed+1009)
     if np.array_equal(construction,field_outcomes):raise ValueError('Opponent scenarios repeat construction scenarios')
-    support=build_candidates(pool,field_outcomes,target=field_support_target,seed=seed+1010)
+    if ownership_mode=='projected':
+        support=build_opponent_support(pool,field_outcomes,ownership,target=field_support_target,seed=seed+1010)
+    else:
+        support=build_candidates(pool,field_outcomes,target=field_support_target,seed=seed+1010)
     fallback_reason=None
     if ownership_mode=='projected':
         try:

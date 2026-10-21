@@ -24,6 +24,11 @@ def build_candidates(pool,outcomes,target=5000,seed=83,salary_min=0,salary_cap=N
     projection=np.asarray(pool['Projection'],float)
     injury=pool['Injury Status'].astype(str).str.upper().isin(['O','OUT','IR','SUSPENDED']).to_numpy()
     keep=np.isfinite(projection)&(projection>0)&~injury
+    if 'Eligible' in pool:
+        keep &= pool['Eligible'].astype(str).str.casefold().isin(['true','1']).to_numpy()
+    if 'Projected Minutes' in pool:
+        minutes=np.asarray(pool['Projected Minutes'],float)
+        keep &= np.isfinite(minutes)&(minutes>0)&(minutes<=48)
     fixed_slots={} if fixed_slots is None else dict(fixed_slots)
     if len(set(fixed_slots.values()))!=len(fixed_slots):raise ValueError('Repeated fixed NBA player')
     for slot,index in fixed_slots.items():
@@ -108,3 +113,24 @@ def build_candidates(pool,outcomes,target=5000,seed=83,salary_min=0,salary_cap=N
             'complete':len(answer)==target,'status':'experimental bounded heuristic; not live NBA build'}
 
 
+
+
+def build_opponent_support(pool,outcomes,ownership,*,target=10000,seed=83):
+    """Mix scenario rosters with broad ownership proposals before marginal fit.
+
+    Proposal scores only determine which legal rosters are available. They do
+    not alter game outcomes or become field probabilities; build_field fits
+    those probabilities against the original validated ownership targets.
+    """
+    weights=np.asarray(ownership,float)
+    if weights.shape!=(len(pool),) or not np.isfinite(weights).all() or (weights<0).any():
+        raise ValueError('Finite ownership proposal weights aligned to pool required')
+    scenario_target=max(1,target//2)
+    scenario=build_candidates(pool,outcomes,target=scenario_target,seed=seed)
+    rng=np.random.default_rng(seed+37)
+    proposal=np.log(np.maximum(weights,.1))[None,:]+2*rng.gumbel(size=(1024,len(pool)))
+    broad=build_candidates(pool,proposal,target=max(1,target-scenario_target),seed=seed+38)
+    rows=np.concatenate([scenario['indices'],broad['indices']],axis=0)
+    _,unique=np.unique(np.sort(rows,axis=1),axis=0,return_index=True)
+    return {'indices':rows[np.sort(unique)][:target],
+            'scenario_unique':scenario['unique'],'ownership_proposal_unique':broad['unique']}

@@ -10,6 +10,10 @@ def field_ownership_inputs(pool):
     expected=100*len(rules_for(pool)['slots'])
     projection=pd.to_numeric(pool['Projection'],errors='coerce').to_numpy(float)
     active=np.isfinite(projection)&(projection>0)&~pool['Injury Status'].astype(str).str.upper().isin(['O','OUT','IR','SUSPENDED']).to_numpy()
+    if 'Eligible' in pool:active &= pool['Eligible'].astype(str).str.casefold().isin(['true','1']).to_numpy()
+    if 'Projected Minutes' in pool:
+        minutes=pd.to_numeric(pool['Projected Minutes'],errors='coerce').to_numpy(float)
+        active &= np.isfinite(minutes)&(minutes>0)&(minutes<=48)
     raw=pd.to_numeric(pool.get(COLUMN,pd.Series(np.nan,index=pool.index)),errors='coerce').to_numpy(float)
     reason=None
     if not active.any():reason='no eligible players'
