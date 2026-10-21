@@ -91,3 +91,38 @@ It validates historical player-minute reconstruction, not all event ordering,
 foul/score trigger thresholds, injury redistribution, a learned coaching model,
 pregame projection accuracy, profitable lineups or regular-season coverage.
 No live rotation behavior is enabled.
+
+## 2024–25 regular-season coverage and deterministic sample
+
+The pinned cdnnba_2024.tar.xz archive contains 1,230 regular-season games
+dated October 22, 2024 through April 13, 2025, covering 30 official team IDs.
+Source commit: e829d4678be1e075f99e5d41a1c5f97089be446b.
+Archive SHA256: 35a82e6b29821adb22b8474dea8c51e08847d8e00690d1d5ffde7d000e0087d1.
+
+Reproduce the sample without loading the whole CSV into memory:
+
+    python scripts/sample_nba_rotations.py cdnnba_2024.tar.xz --before 2025-07-01 --output season-sample.json
+    python scripts/reconcile_nba_rotations.py season-sample.json boxscores --fetch-official-pages --output reconciled.json
+
+The sampler selects the SHA256-lowest game ID for each team, then unions those
+games BEFORE structural or box-score outcomes are inspected. This creates a
+21-game sample covering all 30 teams. Eighteen pass structural reconstruction;
+three fail impossible replacement-set checks and remain excluded. Of the 18
+accepted games, 17 reconcile against official final player minutes within the
+existing two-second tolerance: 452 player-game records across 24 teams.
+One game (0022401155) remains pending after NBA.com returned HTTP 500 on two
+requests. The six teams without validated coverage are not counted as audited.
+No extra games were substituted to hide failures.
+
+See regular-season-2024-25-audit.json for immutable source provenance, selection
+IDs, structural rejection reasons, per-game official URLs, normalized box-score
+hashes and measured player-minute residuals. Explicit official NWT records
+(Not With Team / Injury-Illness) are verified nonappearances; unexplained missing
+minutes still fail validation. Team/player identities and final status remain
+required. The raw source archive and cached box scores are reproducible CLI inputs.
+
+These are SAMPLE results, not validation of all 1,230 games, a pregame projection
+backtest or evidence of DFS profitability. The sampler's team coverage does not
+make the sample representative of all coaching, foul or blowout situations.
+Trigger fitting, time-separated validation and live rotation integration remain
+pending. No live NBA/NFL simulation, projections, build counts or settings change.

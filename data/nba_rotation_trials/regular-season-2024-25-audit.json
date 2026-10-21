@@ -1,0 +1,263 @@
+{
+  "season": "2024-25",
+  "before": "2025-07-01",
+  "source_url": "https://raw.githubusercontent.com/shufinskiy/nba_data/e829d4678be1e075f99e5d41a1c5f97089be446b/datasets/cdnnba_2024.tar.xz",
+  "source_commit": "e829d4678be1e075f99e5d41a1c5f97089be446b",
+  "archive_sha256": "35a82e6b29821adb22b8474dea8c51e08847d8e00690d1d5ffde7d000e0087d1",
+  "sampling": {
+    "method": "Union of SHA256-lowest game ID for each team; selected before minute reconciliation",
+    "archive_games_before_cutoff": 1230,
+    "archive_teams": 30,
+    "selected_game_ids": [
+      "22400249",
+      "22400276",
+      "22400283",
+      "22400317",
+      "22400459",
+      "22400524",
+      "22400575",
+      "22400686",
+      "22400708",
+      "22400735",
+      "22400776",
+      "22400826",
+      "22400847",
+      "22400858",
+      "22400880",
+      "22401076",
+      "22401088",
+      "22401155",
+      "22401170",
+      "22401177",
+      "22401205"
+    ],
+    "selected_games": 21,
+    "date_range": [
+      "2024-10-22",
+      "2025-04-13"
+    ]
+  },
+  "structurally_accepted_games": 18,
+  "structurally_rejected_games": [
+    {
+      "game_id": "22400686",
+      "reason": "Impossible replacement set"
+    },
+    {
+      "game_id": "22400735",
+      "reason": "Impossible replacement set"
+    },
+    {
+      "game_id": "22400826",
+      "reason": "Impossible replacement set"
+    }
+  ],
+  "reconciled_games": 17,
+  "audited_teams": [
+    "1610612738",
+    "1610612740",
+    "1610612741",
+    "1610612742",
+    "1610612743",
+    "1610612744",
+    "1610612745",
+    "1610612746",
+    "1610612747",
+    "1610612748",
+    "1610612749",
+    "1610612750",
+    "1610612751",
+    "1610612752",
+    "1610612753",
+    "1610612755",
+    "1610612756",
+    "1610612757",
+    "1610612758",
+    "1610612761",
+    "1610612762",
+    "1610612763",
+    "1610612765",
+    "1610612766"
+  ],
+  "player_game_records": 452,
+  "live_enabled": false,
+  "scope": "Historical player-minute attribution sample; not a pregame backtest, fitted coaching model or live simulation change",
+  "games": [
+    {
+      "game_id": "22400249",
+      "passed": true,
+      "max_absolute_error_seconds": 0.5,
+      "tolerance_seconds": 2.0,
+      "live_enabled": false,
+      "status": "player minutes reconciled",
+      "source_url": "https://www.nba.com/game/0022400249/box-score",
+      "boxscore_sha256": "a797728992e1fc4a51e397ba516a627a6024396807e9935b7ecead2ce7b59578"
+    },
+    {
+      "game_id": "22400276",
+      "passed": true,
+      "max_absolute_error_seconds": 0.5,
+      "tolerance_seconds": 2.0,
+      "live_enabled": false,
+      "status": "player minutes reconciled",
+      "source_url": "https://www.nba.com/game/0022400276/box-score",
+      "boxscore_sha256": "7c3120950189c3961af50643098b490db7c6f40aaa4edcbe8222e0ff6a0a0828"
+    },
+    {
+      "game_id": "22400283",
+      "passed": true,
+      "max_absolute_error_seconds": 0.20000000000027285,
+      "tolerance_seconds": 2.0,
+      "live_enabled": false,
+      "status": "player minutes reconciled",
+      "source_url": "https://www.nba.com/game/0022400283/box-score",
+      "boxscore_sha256": "a7123ca79417946b5ccadf2327bed16f933501fab1faacb4a1cbbb9b8cc53efb"
+    },
+    {
+      "game_id": "22400317",
+      "passed": true,
+      "max_absolute_error_seconds": 1.1368683772161603e-13,
+      "tolerance_seconds": 2.0,
+      "live_enabled": false,
+      "status": "player minutes reconciled",
+      "source_url": "https://www.nba.com/game/0022400317/box-score",
+      "boxscore_sha256": "b25c423bc551be0c4a18418dea985ec3101536e5c8046c90d02575240397caad"
+    },
+    {
+      "game_id": "22400459",
+      "passed": true,
+      "max_absolute_error_seconds": 0.5000000000004547,
+      "tolerance_seconds": 2.0,
+      "live_enabled": false,
+      "status": "player minutes reconciled",
+      "source_url": "https://www.nba.com/game/0022400459/box-score",
+      "boxscore_sha256": "8cd41224c0cd140b8dff28d7ec0a7a467f3da2c4db2d46596f172ccc167a055d"
+    },
+    {
+      "game_id": "22400524",
+      "passed": true,
+      "max_absolute_error_seconds": 0.5000000000001137,
+      "tolerance_seconds": 2.0,
+      "live_enabled": false,
+      "status": "player minutes reconciled",
+      "source_url": "https://www.nba.com/game/0022400524/box-score",
+      "boxscore_sha256": "a7e68db5ba465ab63be48c554b0184f664b3d83f232486801d602c3c5fc6213e"
+    },
+    {
+      "game_id": "22400575",
+      "passed": true,
+      "max_absolute_error_seconds": 0.2999999999999545,
+      "tolerance_seconds": 2.0,
+      "live_enabled": false,
+      "status": "player minutes reconciled",
+      "source_url": "https://www.nba.com/game/0022400575/box-score",
+      "boxscore_sha256": "921cc9e2274ac0b0fe694deaba1d13e10d50d200ee3f377c770b95d7df446ffb"
+    },
+    {
+      "game_id": "22400708",
+      "passed": true,
+      "max_absolute_error_seconds": 0.40000000000009095,
+      "tolerance_seconds": 2.0,
+      "live_enabled": false,
+      "status": "player minutes reconciled",
+      "source_url": "https://www.nba.com/game/0022400708/box-score",
+      "boxscore_sha256": "89676fd90f162f00c09e7384e534388b2e1838a5d5b25c0596931fc49197775b"
+    },
+    {
+      "game_id": "22400776",
+      "passed": true,
+      "max_absolute_error_seconds": 0.40000000000009095,
+      "tolerance_seconds": 2.0,
+      "live_enabled": false,
+      "status": "player minutes reconciled",
+      "source_url": "https://www.nba.com/game/0022400776/box-score",
+      "boxscore_sha256": "2a94a8f6bf9471df82883ccf64a7091743290ca95789d7a028a6702f07d3b637"
+    },
+    {
+      "game_id": "22400847",
+      "passed": true,
+      "max_absolute_error_seconds": 0.4000000000003183,
+      "tolerance_seconds": 2.0,
+      "live_enabled": false,
+      "status": "player minutes reconciled",
+      "source_url": "https://www.nba.com/game/0022400847/box-score",
+      "boxscore_sha256": "d81913d86a7cea51ab9920f0a988aaa9d8b78fc4ffc51e1f86a6c0de5739b3ca"
+    },
+    {
+      "game_id": "22400858",
+      "passed": true,
+      "max_absolute_error_seconds": 0.2999999999999545,
+      "tolerance_seconds": 2.0,
+      "live_enabled": false,
+      "status": "player minutes reconciled",
+      "source_url": "https://www.nba.com/game/0022400858/box-score",
+      "boxscore_sha256": "1f24477319c07d4568025a8b20228e67daa4f17f0ddfedb96a96d9cc40ef5e0f"
+    },
+    {
+      "game_id": "22400880",
+      "passed": true,
+      "max_absolute_error_seconds": 0.10000000000002274,
+      "tolerance_seconds": 2.0,
+      "live_enabled": false,
+      "status": "player minutes reconciled",
+      "source_url": "https://www.nba.com/game/0022400880/box-score",
+      "boxscore_sha256": "9cfdb19f938f03d3aedf8825cc6f4a7ec28a101f53940d4f1896267bdf118994"
+    },
+    {
+      "game_id": "22401076",
+      "passed": true,
+      "max_absolute_error_seconds": 0.19999999999998863,
+      "tolerance_seconds": 2.0,
+      "live_enabled": false,
+      "status": "player minutes reconciled",
+      "source_url": "https://www.nba.com/game/0022401076/box-score",
+      "boxscore_sha256": "eb1123366547c733c803aed041b7e00e668e0dd69866d179fd85f6ec5221ff1c"
+    },
+    {
+      "game_id": "22401088",
+      "passed": true,
+      "max_absolute_error_seconds": 0.40000000000009095,
+      "tolerance_seconds": 2.0,
+      "live_enabled": false,
+      "status": "player minutes reconciled",
+      "source_url": "https://www.nba.com/game/0022401088/box-score",
+      "boxscore_sha256": "48d994774e4ff8936af924ae0aa8764147ce1a93cf9268c4414321451f19013d"
+    },
+    {
+      "game_id": "22401155",
+      "passed": false,
+      "source_url": "https://www.nba.com/game/0022401155/box-score",
+      "status": "pending or quarantined: HTTP Error 500: Internal Server Error"
+    },
+    {
+      "game_id": "22401170",
+      "passed": true,
+      "max_absolute_error_seconds": 0.40000000000009095,
+      "tolerance_seconds": 2.0,
+      "live_enabled": false,
+      "status": "player minutes reconciled",
+      "source_url": "https://www.nba.com/game/0022401170/box-score",
+      "boxscore_sha256": "c600081c0e4f7e95972a3ed22354d8f7121802a0a8dbde40d5602942dc1014e9"
+    },
+    {
+      "game_id": "22401177",
+      "passed": true,
+      "max_absolute_error_seconds": 0.5000000000002274,
+      "tolerance_seconds": 2.0,
+      "live_enabled": false,
+      "status": "player minutes reconciled",
+      "source_url": "https://www.nba.com/game/0022401177/box-score",
+      "boxscore_sha256": "a741aed849a344f58509fb9c93b95ba7893ba2fa885d70ca76b7eff90797cf19"
+    },
+    {
+      "game_id": "22401205",
+      "passed": true,
+      "max_absolute_error_seconds": 0.20000000000004547,
+      "tolerance_seconds": 2.0,
+      "live_enabled": false,
+      "status": "player minutes reconciled",
+      "source_url": "https://www.nba.com/game/0022401205/box-score",
+      "boxscore_sha256": "e839eb567252b917bda3fd2004a347afb93be30dfa3757625692737fff18b32a"
+    }
+  ]
+}

@@ -21,7 +21,7 @@ def parse_boxscore_page(html,game_id):
                     total=60*int(m[1])+sec
                     stats['minutes']=f'PT{int(total//60)}M{total%60}S'
                 elif not str(minute).startswith('PT'):raise ValueError('Invalid player minutes')
-            elif str(player.get('comment','')).startswith(('DNP -','DND -')):
+            elif str(player.get('comment','')).startswith(('DNP -','DND -','NWT -')):
                 player['played']='0'
             # All other missing records remain unknown for reconciliation.
     return {'game':game,'source_url':'https://www.nba.com/game/'+str(game_id)+'/box-score'}

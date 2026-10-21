@@ -15,3 +15,10 @@ class OfficialPageTests(unittest.TestCase):
  def test_final_identity_and_bad_format_guards(self):
   for html,gid in [(self.page(status=2),'0042500101'),(self.page(),'0042500102'),(self.page(minute='25:99'),'0042500101'),(self.page(),'../../x')]:
    with self.assertRaises(ValueError):parse_boxscore_page(html,gid)
+
+ def test_explicit_nwt_is_zero_but_unexplained_absence_is_not(self):
+  for comment in ['NWT - Injury/Illness','NWT - Not With Team']:
+   x=parse_boxscore_page(self.page(minute='',comment=comment),'0042500101')
+   self.assertEqual(x['game']['homeTeam']['players'][0]['played'],'0')
+  x=parse_boxscore_page(self.page(minute='',comment='unknown'),'0042500101')
+  self.assertNotIn('played',x['game']['homeTeam']['players'][0])
