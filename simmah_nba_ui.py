@@ -91,6 +91,8 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         model=json.loads(rates_path.read_text())
         if model['before']>day:raise ValueError('Historical event baseline follows the selected slate date')
         engine=PregameEngine(pool,markets,EventRates(**model['rates']),platform=platform)
+        if engine.missing_markets:
+            with tabs[0]:st.warning('Market lines unavailable for: '+', '.join(' vs '.join(pair) for pair in engine.missing_markets)+'. These games use external player projections and historical event rates without Vegas calibration. No totals or spreads are invented.')
 
     except (ValueError,KeyError,OSError) as exc:error=str(exc)
     with tabs[0]:
@@ -135,7 +137,7 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
                     salary_min=salary_min,correlation=correlation,ownership_mode=ownership['mode'],progress=progress,
                     excluded_indices=excluded)
                 reports=engine.last_report
-                if any(not g['calibration']['within_four_points'] or g['unresolved_tie_fraction']>0 for g in reports):
+                if any((g['calibration'].get('applied',True) and not g['calibration']['within_four_points']) or g['unresolved_tie_fraction']>0 for g in reports):
                     raise ValueError('NBA evaluation failed market calibration or left unresolved overtime; inspect engine validation before exporting')
                 saved={'identity':identity,'result':built,'engine_reports':reports,'pool':pool.copy(),'contest_id':cid}
                 st.session_state['nba_build_result']=saved
@@ -208,6 +210,7 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         st.subheader('Player exposures')
         st.dataframe(exposure[['Name','Team','Injury Status','Lineups','Exposure %']],hide_index=True,width='stretch',key='nba_exposure_table',
                      column_config={'Name':st.column_config.TextColumn('Player',pinned=True)})
+
 
 
 

@@ -10,7 +10,7 @@ ROLE_COLUMNS=['Historical '+r+' Rate' for r in ('Shot','Assist','Rebound','Steal
 
 
 class PregameEngine:
-    def __init__(self,pool,markets,rates,max_overtimes=4,platform='FanDuel'):
+    def __init__(self,pool,markets,rates,max_overtimes=4,platform='FanDuel',require_markets=False):
         if not isinstance(max_overtimes,int) or not 1<=max_overtimes<=10:raise ValueError("Explicit bounded overtime count required")
         self.platform=platform
         self.max_overtimes=max_overtimes
@@ -19,11 +19,20 @@ class PregameEngine:
         if self.pool['Player ID'].duplicated().any():raise ValueError('Duplicate player IDs')
         required={'Projected Minutes',*ROLE_COLUMNS}
         if not required<=set(pool.columns):raise ValueError('Missing NBA projected minutes or historical role rates')
+        markets=[dict(m) for m in markets]
+        uploaded={tuple(sorted((team_key(r.Team),team_key(r.Opponent)))) for r in self.pool.itertuples()}
+        supplied={tuple(sorted(map(team_key,m['teams']))) for m in markets}
+        if not supplied<=uploaded:raise ValueError('Market does not match uploaded game')
+        priced={tuple(sorted(map(team_key,m['teams']))) for m in markets if m.get('implied_points') is not None}
+        self.missing_markets=sorted(uploaded-priced)
+        if require_markets and self.missing_markets:
+            raise ValueError('Every uploaded NBA game needs complete market lines')
+        markets.extend({'teams':pair,'implied_points':None,'source':'Unavailable'} for pair in sorted(uploaded-supplied))
         self.games=[];covered=set()
         for market in markets:
             market=dict(market)
             market['teams']=tuple(market['teams'])
-            market['implied_points']=tuple(market['implied_points'])
+            market['implied_points']=tuple(market['implied_points']) if market.get('implied_points') is not None else None
             pair=tuple(map(team_key,market['teams']))
             if len(pair)!=2 or pair[0]==pair[1] or covered&set(pair):raise ValueError('Duplicate NBA market teams')
             groups=[]
@@ -75,21 +84,32 @@ class PregameEngine:
                 targets[team,:len(ids)]=self.pool.loc[ids,'Projection'].to_numpy(float)
             if game_index not in self.prepared:
                 pilot=min(n,1024);fit_seed=71333+game_index*97
-                baseline=simulate_market_game(rotation[:pilot],profiles,[self.rates]*2,
-                    market['implied_points'],fit_seed,overtime_rotations=ot[:pilot],platform=self.platform)
-                fitted_profiles,fitted_rates,anchor=fit_player_means(rotation[:pilot],profiles,
-                    baseline['calibrated_rates'],targets,fit_seed+17,overtime_rotations=ot[:pilot],platform=self.platform)
-                final=simulate_market_game(rotation[:pilot],fitted_profiles,fitted_rates,
-                    market['implied_points'],fit_seed+31,overtime_rotations=ot[:pilot],platform=self.platform)
-                self.prepared[game_index]=(fitted_profiles,final['calibrated_rates'],anchor,
-                    baseline['market_calibration']['baseline_pilot_means'])
+                if market['implied_points'] is None:
+                    fitted_profiles,fitted_rates,anchor=fit_player_means(rotation[:pilot],profiles,
+                        [self.rates]*2,targets,fit_seed+17,overtime_rotations=ot[:pilot],platform=self.platform)
+                    self.prepared[game_index]=(fitted_profiles,fitted_rates,anchor,None)
+                else:
+                    baseline=simulate_market_game(rotation[:pilot],profiles,[self.rates]*2,
+                        market['implied_points'],fit_seed,overtime_rotations=ot[:pilot],platform=self.platform)
+                    fitted_profiles,fitted_rates,anchor=fit_player_means(rotation[:pilot],profiles,
+                        baseline['calibrated_rates'],targets,fit_seed+17,overtime_rotations=ot[:pilot],platform=self.platform)
+                    final=simulate_market_game(rotation[:pilot],fitted_profiles,fitted_rates,
+                        market['implied_points'],fit_seed+31,overtime_rotations=ot[:pilot],platform=self.platform)
+                    self.prepared[game_index]=(fitted_profiles,final['calibrated_rates'],anchor,
+                        baseline['market_calibration']['baseline_pilot_means'])
             fitted_profiles,fitted_rates,anchor,initial=self.prepared[game_index]
             result=simulate_game(rotation,fitted_profiles,fitted_rates,seed+game_index*97+3,
                                  overtime_rotations=ot,platform=self.platform)
             for team,(ids,_,_) in enumerate(groups):
                 output[:,ids]=result['scores'][:,team*size:team*size+len(ids)]
-            means=result['team_points'].mean(axis=0);target=np.asarray(market['implied_points'])
-            calibration={'targets':target.tolist(),'baseline_pilot_means':initial,
+            means=result['team_points'].mean(axis=0)
+            if market['implied_points'] is None:
+                calibration={'applied':False,'targets':None,'baseline_pilot_means':None,
+                    'evaluation_means':means.tolist(),'residual':None,'within_four_points':None,
+                    'status':'Market unavailable; provider player targets anchored using historical event rates. No spread or total invented.'}
+            else:
+                target=np.asarray(market['implied_points'])
+                calibration={'applied':True,'targets':target.tolist(),'baseline_pilot_means':initial,
                          'evaluation_means':means.tolist(),'residual':(means-target).tolist(),
                          'within_four_points':bool((abs(means-target)<=4).all()),
                          'status':'experimental cached event calibration; inspect residuals'}
@@ -104,3 +124,4 @@ class PregameEngine:
                             'unresolved_tie_fraction':float(result['requires_overtime'].mean())})
         self.last_report=reports
         return output
+
