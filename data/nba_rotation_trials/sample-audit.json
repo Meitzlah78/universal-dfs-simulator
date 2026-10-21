@@ -1,0 +1,464 @@
+{
+  "schema": 1,
+  "before": "2026-10-21",
+  "status": "offline candidate; box-score minute reconciliation pending",
+  "live_enabled": false,
+  "source_games": 60,
+  "accepted_games": 45,
+  "rejected_games": [
+    {
+      "game_id": "42500103",
+      "reason": "Impossible replacement set"
+    },
+    {
+      "game_id": "42500117",
+      "reason": "Impossible replacement set"
+    },
+    {
+      "game_id": "42500131",
+      "reason": "Impossible replacement set"
+    },
+    {
+      "game_id": "42500132",
+      "reason": "Impossible replacement set"
+    },
+    {
+      "game_id": "42500135",
+      "reason": "Impossible replacement set"
+    },
+    {
+      "game_id": "42500152",
+      "reason": "Impossible replacement set"
+    },
+    {
+      "game_id": "42500153",
+      "reason": "Impossible replacement set"
+    },
+    {
+      "game_id": "42500161",
+      "reason": "Impossible replacement set"
+    },
+    {
+      "game_id": "42500162",
+      "reason": "Impossible replacement set"
+    },
+    {
+      "game_id": "42500172",
+      "reason": "Impossible replacement set"
+    },
+    {
+      "game_id": "42500173",
+      "reason": "Ambiguous period starters"
+    },
+    {
+      "game_id": "42500202",
+      "reason": "Impossible replacement set"
+    },
+    {
+      "game_id": "42500203",
+      "reason": "Impossible replacement set"
+    },
+    {
+      "game_id": "42500211",
+      "reason": "Impossible replacement set"
+    },
+    {
+      "game_id": "42500213",
+      "reason": "Impossible replacement set"
+    }
+  ],
+  "source_url": "https://raw.githubusercontent.com/shufinskiy/nba_data/e829d4678be1e075f99e5d41a1c5f97089be446b/datasets/cdnnba_po_2025.tar.xz",
+  "source_commit": "e829d4678be1e075f99e5d41a1c5f97089be446b",
+  "archive_sha256": "4416f6646be578d4045a041d538f5197b700e706040ca4a363705dfb868ac593",
+  "stint_intervals": 29240,
+  "joint_transitions": 1946,
+  "replacement_pattern_count": 1258,
+  "cooccurrence_pair_count": 1087,
+  "replacement_pattern_examples": [
+    {
+      "team": "1610612738",
+      "out": [
+        "1629674"
+      ],
+      "in": [
+        "202696"
+      ],
+      "count": 16,
+      "conditional_frequency": 0.8421052631578947
+    },
+    {
+      "team": "1610612765",
+      "out": [
+        "1630595"
+      ],
+      "in": [
+        "1642450"
+      ],
+      "count": 13,
+      "conditional_frequency": 0.7647058823529411
+    },
+    {
+      "team": "1610612765",
+      "out": [
+        "1631105"
+      ],
+      "in": [
+        "1630191"
+      ],
+      "count": 12,
+      "conditional_frequency": 0.9230769230769231
+    },
+    {
+      "team": "1610612737",
+      "out": [
+        "203468"
+      ],
+      "in": [
+        "1629216"
+      ],
+      "count": 10,
+      "conditional_frequency": 0.7142857142857143
+    },
+    {
+      "team": "1610612738",
+      "out": [
+        "1630573"
+      ],
+      "in": [
+        "1630202"
+      ],
+      "count": 10,
+      "conditional_frequency": 0.6666666666666666
+    },
+    {
+      "team": "1610612747",
+      "out": [
+        "203935"
+      ],
+      "in": [
+        "1628379"
+      ],
+      "count": 9,
+      "conditional_frequency": 0.45
+    },
+    {
+      "team": "1610612750",
+      "out": [
+        "203944"
+      ],
+      "in": [
+        "1629675"
+      ],
+      "count": 9,
+      "conditional_frequency": 0.47368421052631576
+    },
+    {
+      "team": "1610612753",
+      "out": [
+        "1628976"
+      ],
+      "in": [
+        "1629048"
+      ],
+      "count": 9,
+      "conditional_frequency": 0.8181818181818182
+    },
+    {
+      "team": "1610612755",
+      "out": [
+        "1641737"
+      ],
+      "in": [
+        "203083"
+      ],
+      "count": 9,
+      "conditional_frequency": 0.6923076923076923
+    },
+    {
+      "team": "1610612755",
+      "out": [
+        "203083"
+      ],
+      "in": [
+        "1641737"
+      ],
+      "count": 9,
+      "conditional_frequency": 0.6428571428571429
+    },
+    {
+      "team": "1610612765",
+      "out": [
+        "1641709"
+      ],
+      "in": [
+        "1629130"
+      ],
+      "count": 9,
+      "conditional_frequency": 0.5
+    },
+    {
+      "team": "1610612747",
+      "out": [
+        "1629028"
+      ],
+      "in": [
+        "1629637"
+      ],
+      "count": 8,
+      "conditional_frequency": 0.7272727272727273
+    },
+    {
+      "team": "1610612753",
+      "out": [
+        "1630217"
+      ],
+      "in": [
+        "1641783"
+      ],
+      "count": 8,
+      "conditional_frequency": 0.5
+    },
+    {
+      "team": "1610612755",
+      "out": [
+        "1642845"
+      ],
+      "in": [
+        "1629656"
+      ],
+      "count": 8,
+      "conditional_frequency": 0.6153846153846154
+    },
+    {
+      "team": "1610612759",
+      "out": [
+        "1628368",
+        "1630577"
+      ],
+      "in": [
+        "1629640",
+        "1642844"
+      ],
+      "count": 8,
+      "conditional_frequency": 1.0
+    },
+    {
+      "team": "1610612759",
+      "out": [
+        "1628436"
+      ],
+      "in": [
+        "1641705"
+      ],
+      "count": 8,
+      "conditional_frequency": 1.0
+    },
+    {
+      "team": "1610612759",
+      "out": [
+        "1641705"
+      ],
+      "in": [
+        "1628436"
+      ],
+      "count": 8,
+      "conditional_frequency": 0.8888888888888888
+    },
+    {
+      "team": "1610612759",
+      "out": [
+        "1642264"
+      ],
+      "in": [
+        "1628368"
+      ],
+      "count": 8,
+      "conditional_frequency": 0.5
+    },
+    {
+      "team": "1610612760",
+      "out": [
+        "1628392"
+      ],
+      "in": [
+        "1631119"
+      ],
+      "count": 8,
+      "conditional_frequency": 0.6153846153846154
+    },
+    {
+      "team": "1610612747",
+      "out": [
+        "1629637"
+      ],
+      "in": [
+        "1629028"
+      ],
+      "count": 7,
+      "conditional_frequency": 0.7777777777777778
+    }
+  ],
+  "cooccurrence_examples": [
+    {
+      "team": "1610612755",
+      "player_a": "1630178",
+      "player_b": "202331",
+      "shared_seconds": 14104.499999999996,
+      "fraction_a": 0.8162184684293674,
+      "fraction_b": 0.9004692437833178
+    },
+    {
+      "team": "1610612755",
+      "player_a": "1626162",
+      "player_b": "1630178",
+      "shared_seconds": 13925.299999999996,
+      "fraction_a": 0.9501432860262008,
+      "fraction_b": 0.8058482780970235
+    },
+    {
+      "team": "1610612755",
+      "player_a": "1630178",
+      "player_b": "1642845",
+      "shared_seconds": 13882.399999999996,
+      "fraction_a": 0.803365682308756,
+      "fraction_b": 0.8735959121772564
+    },
+    {
+      "team": "1610612755",
+      "player_a": "1642845",
+      "player_b": "202331",
+      "shared_seconds": 13008.299999999997,
+      "fraction_a": 0.818590280093889,
+      "fraction_b": 0.8304848852427619
+    },
+    {
+      "team": "1610612752",
+      "player_a": "1628404",
+      "player_b": "1628973",
+      "shared_seconds": 12862.399999999998,
+      "fraction_a": 0.8766212080939433,
+      "fraction_b": 0.85748190024133
+    },
+    {
+      "team": "1610612765",
+      "player_a": "1630595",
+      "player_b": "202699",
+      "shared_seconds": 12570.499999999996,
+      "fraction_a": 0.7389847447164984,
+      "fraction_b": 0.8445362625550069
+    },
+    {
+      "team": "1610612752",
+      "player_a": "1628384",
+      "player_b": "1628973",
+      "shared_seconds": 12516.199999999999,
+      "fraction_a": 0.8295466595970306,
+      "fraction_b": 0.8344022079705603
+    },
+    {
+      "team": "1610612747",
+      "player_a": "1629060",
+      "player_b": "2544",
+      "shared_seconds": 12505.6,
+      "fraction_a": 0.8118305397229326,
+      "fraction_b": 0.8043634866728416
+    },
+    {
+      "team": "1610612753",
+      "player_a": "1630591",
+      "player_b": "1631094",
+      "shared_seconds": 12402.699999999999,
+      "fraction_a": 0.9623672183554862,
+      "fraction_b": 0.8799361475700604
+    },
+    {
+      "team": "1610612765",
+      "player_a": "1630595",
+      "player_b": "1641709",
+      "shared_seconds": 11996.799999999997,
+      "fraction_a": 0.7052585167984479,
+      "fraction_b": 0.8894160908632601
+    },
+    {
+      "team": "1610612755",
+      "player_a": "1626162",
+      "player_b": "1642845",
+      "shared_seconds": 11874.099999999995,
+      "fraction_a": 0.8101869541484714,
+      "fraction_b": 0.7472169956768252
+    },
+    {
+      "team": "1610612765",
+      "player_a": "1630595",
+      "player_b": "1631105",
+      "shared_seconds": 11850.900000000001,
+      "fraction_a": 0.6966814614502808,
+      "fraction_b": 0.8690955492486746
+    },
+    {
+      "team": "1610612765",
+      "player_a": "1631105",
+      "player_b": "202699",
+      "shared_seconds": 11642.8,
+      "fraction_a": 0.8538343637016992,
+      "fraction_b": 0.7822096812119993
+    },
+    {
+      "team": "1610612755",
+      "player_a": "1626162",
+      "player_b": "202331",
+      "shared_seconds": 11592.5,
+      "fraction_a": 0.7909729803493452,
+      "fraction_b": 0.7400964024643281
+    },
+    {
+      "team": "1610612750",
+      "player_a": "1630183",
+      "player_b": "203944",
+      "shared_seconds": 11550.900000000005,
+      "fraction_a": 0.7976314608293339,
+      "fraction_b": 0.8209478187943314
+    },
+    {
+      "team": "1610612752",
+      "player_a": "1626157",
+      "player_b": "1628404",
+      "shared_seconds": 11455.3,
+      "fraction_a": 0.8724125325575373,
+      "fraction_b": 0.7807220211685649
+    },
+    {
+      "team": "1610612747",
+      "player_a": "203935",
+      "player_b": "2544",
+      "shared_seconds": 11201.199999999999,
+      "fraction_a": 0.7960486106175823,
+      "fraction_b": 0.7204641350210971
+    },
+    {
+      "team": "1610612747",
+      "player_a": "1629028",
+      "player_b": "2544",
+      "shared_seconds": 11129.3,
+      "fraction_a": 0.9076769999918443,
+      "fraction_b": 0.7158395080786252
+    },
+    {
+      "team": "1610612752",
+      "player_a": "1626157",
+      "player_b": "1628973",
+      "shared_seconds": 11059.3,
+      "fraction_a": 0.8422539716387674,
+      "fraction_b": 0.7372768363088491
+    },
+    {
+      "team": "1610612747",
+      "player_a": "1629028",
+      "player_b": "1629060",
+      "shared_seconds": 11047.3,
+      "fraction_a": 0.9009892915106881,
+      "fraction_b": 0.7171615533425947
+    }
+  ],
+  "example_note": "Top 20 examples only; rerun CLI to produce complete tables. Frequencies use all observed transitions for each outgoing set."
+}
