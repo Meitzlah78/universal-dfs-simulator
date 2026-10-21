@@ -143,10 +143,12 @@ def render_late_swap(st,pool,contest_id,salary_min,diversity,markets=None,contes
     with st.expander('NBA LATE SWAP — fast',expanded=False):
         mode=st.radio('Late-swap method',['Simulate remaining games','Fast projection optimizer'],key='nba_late_swap_method')
         simulation=mode=='Simulate remaining games'
-        actuals=None;actual_bytes=b''
+        actuals=None;actual_bytes=b'';pregame_locked=False
         if simulation:
-            st.caption('Sim mode freezes final scores for started games and simulates only unstarted games. It uses independent construction/evaluation scenarios and the saved opponent field. In-progress games are not supported.')
-            actual_file=workspace_file_uploader(st,'Final locked-game fantasy scores CSV',type=['csv'],key='nba_late_swap_actuals_upload',
+            started_method=st.selectbox('Started-game scoring',['Pregame uncertainty — ignores live scores','Final scores CSV'],key='nba_late_swap_started_method')
+            pregame_locked=started_method.startswith('Pregame')
+            if pregame_locked:st.warning('Started players remain locked, but their scores are simulated from saved pregame inputs. Live scores, elapsed time and live news are not modeled.')
+            actual_file=None if pregame_locked else workspace_file_uploader(st,'Final locked-game fantasy scores CSV',type=['csv'],key='nba_late_swap_actuals_upload',
                 help='Player ID, Actual Points, Status. Use exact DK or FD scores and FINAL status. Include explicit zeros; missing scores are never assumed zero.')
             if actual_file is not None:
                 try:
@@ -164,13 +166,13 @@ def render_late_swap(st,pool,contest_id,salary_min,diversity,markets=None,contes
             import hashlib
             saved_build=st.session_state.get('nba_build_result')
             field_signature=str(saved_build.get('identity','')) if saved_build else ''
-            signature=hashlib.sha256(data+actual_bytes+pool.to_json().encode()+str(contest_id).encode()+str((salary_min,diversity,mode,markets,field_signature)).encode()).hexdigest()
+            signature=hashlib.sha256(data+actual_bytes+pool.to_json().encode()+str(contest_id).encode()+str((salary_min,diversity,mode,pregame_locked,markets,field_signature)).encode()).hexdigest()
             if st.button('SIMULATE LATE SWAP' if simulation else 'FAST LATE SWAP',key='nba_fast_late_swap'):
                 started=time.monotonic()
                 with st.spinner('Updating unlocked roster spots…'):
                     if simulation:
                         result=run_simulated_late_swap(data,contest_id,pool,markets,contest,saved_build,actuals,
-                            salary_min=salary_min,diversity=diversity,progress=st.write)
+                            salary_min=salary_min,diversity=diversity,progress=st.write,pregame_locked=pregame_locked)
                     else:
                         result=swap_entries(data,contest_id,pool,salary_min=salary_min,diversity=diversity)
                 st.session_state['nba_late_swap_result']=(signature,result,time.monotonic()-started)
@@ -213,11 +215,19 @@ def run_simulated_late_swap(template,contest_id,pool,markets,contest,saved,actua
     lookup={str(pid):i for i,pid in enumerate(pool['Player ID'])}
     remap=np.array([lookup[str(pid)] for pid in original['Player ID']])
     field=dict(saved['result']['field']);field['indices']=remap[np.asarray(field['indices'])]
+    pregame_locked=kwargs.get('pregame_locked',False)
     factory_engine=None
     def factory(count,seed,open_indices):
         nonlocal factory_engine
         if factory_engine is None:
-            sub=pool.iloc[open_indices].copy().reset_index(drop=True)
+            if pregame_locked:
+                # Started games retain the saved pregame rotation/projections;
+                # only unstarted rows use refreshed news and projections.
+                sub=original.set_index(original['Player ID'].astype(str)).loc[pool['Player ID'].astype(str)].copy().reset_index(drop=True)
+                for column in pool.columns:
+                    if column in sub:sub.loc[~locked,column]=pool.loc[~locked,column].to_numpy()
+            else:
+                sub=pool.iloc[open_indices].copy().reset_index(drop=True)
             sub.attrs.update(pool.attrs)
             teams=set(sub['Team'].map(team_key))
             lines=[m for m in (markets or []) if set(map(team_key,m['teams']))<=teams]

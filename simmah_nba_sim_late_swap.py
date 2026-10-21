@@ -24,7 +24,7 @@ def final_scores(actuals,pool,required):
 
 def simulate_swap_entries(template,contest_id,pool,outcome_factory,field,payouts,entry_fee,
                           actuals=None,*,now=None,salary_min=0,diversity=50,
-                          simulations=10000,candidate_target=5000,seed=617,progress=None):
+                          simulations=10000,candidate_target=5000,seed=617,progress=None,pregame_locked=False):
     """Use independent construction/evaluation draws; preserve exact locked slots.
 
     outcome_factory(count,seed,open_indices) simulates ONLY unstarted games and
@@ -39,11 +39,15 @@ def simulate_swap_entries(template,contest_id,pool,outcome_factory,field,payouts
     if field_ids.ndim!=2 or field_ids.shape[1]!=size or field_ids.dtype.kind not in 'iu' or (field_ids<0).any() or (field_ids>=len(pool)).any():
         raise ValueError('Saved opponent field differs from this NBA slate')
     required=np.zeros(len(pool),bool);required[field_ids.ravel()]=True;required[originals.ravel()]=True;required &= locked
-    actual=final_scores(actuals,pool,required);open_ids=np.flatnonzero(~locked)
+    if pregame_locked and actuals is not None:raise ValueError('Choose final scores or pregame uncertainty, not both')
+    actual=np.zeros(len(pool)) if pregame_locked else final_scores(actuals,pool,required)
+    open_ids=np.flatnonzero(~locked)
     if not len(open_ids):raise ValueError('All games have started; no open slots to simulate')
     def draw(draw_seed):
         values=np.asarray(outcome_factory(simulations,draw_seed,open_ids))
-        if values.shape!=(simulations,len(open_ids)) or not np.isfinite(values).all():raise ValueError('Remaining-game outcomes do not match open players')
+        expected=len(pool) if pregame_locked else len(open_ids)
+        if values.shape!=(simulations,expected) or not np.isfinite(values).all():raise ValueError('Remaining-game outcomes do not match player order')
+        if pregame_locked:return values.copy()
         full=np.tile(actual,(simulations,1));full[:,open_ids]=values
         return full
     if progress:progress('Simulating unstarted games for replacement construction')
@@ -93,4 +97,4 @@ def simulate_swap_entries(template,contest_id,pool,outcome_factory,field,payouts
             'Conditional Top 1%':None if selected is None else float(metric[selected])})
     return {'lineups':output,'report':pd.DataFrame(diagnostics),'original_entries':entries,
             'candidate_report':report,'search':search,'simulations_per_set':simulations,
-            'status':'Experimental conditional Top 1% selection against saved field; no in-progress game modeling'}
+            'status':('Pregame-assumption late swap: started players stay locked; their outcomes remain uncertain. Live scores and game progress are NOT used.' if pregame_locked else 'Experimental conditional Top 1% selection against saved field; final locked-game scores supplied')}
