@@ -150,12 +150,13 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
     from simmah_nba_confirmed import current_confirmed_pool
     from simmah_nba_projections import team_key
     from simmah_nba_game_context import restore_saved_game_metadata
-    from simmah_nba_minutes_recovery import restore_saved_minutes
+    from simmah_nba_minutes_recovery import restore_saved_minutes,restore_verified_zero_snapshot
     _previous_slate=st.session_state.get('nba_imported_slate',{})
     _previous_build=st.session_state.get('nba_build_result',{})
     for _previous_pool in (_previous_slate.get('players'),_previous_build.get('pool')):
         pool=restore_saved_game_metadata(pool,_previous_pool,day)
-        if _rw.get('error'):pool=restore_saved_minutes(pool,_previous_pool,day)
+        pool=restore_saved_minutes(pool,_previous_pool,day)
+    pool=restore_verified_zero_snapshot(pool,day)
     _status_pairs=tuple(sorted({(team_key(r.Team),team_key(r.Opponent)) for r in pool.itertuples()}))
     if _force_refresh:
         from simmah_nba_confirmed import cached_player_lineups

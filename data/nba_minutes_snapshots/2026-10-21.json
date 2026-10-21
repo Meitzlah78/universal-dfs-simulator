@@ -1,0 +1,64 @@
+{
+  "schema": 1,
+  "date": "2026-10-21",
+  "source_file": "Simmah_NBA_FanDuel_Build_Player_Pool.csv",
+  "source_sha256": "2e3e6b7d7c8a7d236a01e2f8bba2ddf04cc3cf07d5e28ed7cbace1508f59c617",
+  "purpose": "Last-known explicit provider zeros only; not refreshed live data. Never fill unknowns. Requires same dated matchup, exact player ID and unchanged positive projection, with no current expected-start assignment.",
+  "records": [
+    {
+      "Player ID": "135636-248941",
+      "Name": "Sergio De Larrea",
+      "Team": "DAL",
+      "Opponent": "HOU",
+      "Game Start": "2026-10-21 20:30:00",
+      "Projection": 6.79,
+      "Projected Minutes": 0.0,
+      "Minutes Source": "RotoWire same-game minutes (DraftKings player feed)",
+      "Eligible": false
+    },
+    {
+      "Player ID": "135636-248994",
+      "Name": "Ryan Conwell",
+      "Team": "MIA",
+      "Opponent": "MIN",
+      "Game Start": "2026-10-21 19:30:00",
+      "Projection": 5.82,
+      "Projected Minutes": 0.0,
+      "Minutes Source": "RotoWire",
+      "Eligible": false
+    },
+    {
+      "Player ID": "135636-233066",
+      "Name": "Chaney Johnson",
+      "Team": "BKN",
+      "Opponent": "CHA",
+      "Game Start": "2026-10-21 19:30:00",
+      "Projection": 5.88,
+      "Projected Minutes": 0.0,
+      "Minutes Source": "RotoWire",
+      "Eligible": false
+    },
+    {
+      "Player ID": "135636-228116",
+      "Name": "Asa Newell",
+      "Team": "ATL",
+      "Opponent": "ORL",
+      "Game Start": "2026-10-21 19:00:00",
+      "Projection": 4.9,
+      "Projected Minutes": 0.0,
+      "Minutes Source": "RotoWire",
+      "Eligible": false
+    },
+    {
+      "Player ID": "135636-228134",
+      "Name": "Liam McNeeley",
+      "Team": "CHA",
+      "Opponent": "BKN",
+      "Game Start": "2026-10-21 19:30:00",
+      "Projection": 3.92,
+      "Projected Minutes": 0.0,
+      "Minutes Source": "RotoWire",
+      "Eligible": false
+    }
+  ]
+}

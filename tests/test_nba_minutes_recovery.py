@@ -31,5 +31,25 @@ class RecoveryTests(unittest.TestCase):
         old=self.old.copy();old['Projection']=None
         self.assertTrue(restore_saved_minutes(self.current,old,'2026-10-21')['Projected Minutes'].isna().all())
 
+    def test_saved_provider_zero_is_recovered_but_changed_projection_is_not(self):
+        old=self.old.copy();old['Projected Minutes']=0.;old['Eligible']=False
+        self.current['Projection']=20.
+        result=restore_saved_minutes(self.current,old,'2026-10-21')
+        self.assertEqual(result['Projected Minutes'].iloc[0],0)
+        self.current['Projection']=21.
+        self.assertTrue(restore_saved_minutes(self.current,old,'2026-10-21')['Projected Minutes'].isna().all())
+        self.current['Projection']=20.;self.current['Expected Starter']=True
+        self.assertTrue(restore_saved_minutes(self.current,old,'2026-10-21')['Projected Minutes'].isna().all())
+
+    def test_persisted_snapshot_restores_sergio_zero_after_reboot(self):
+        from simmah_nba_minutes_recovery import restore_verified_zero_snapshot
+        current=pd.DataFrame([{'Player ID':'135636-248941','Name':'Sergio De Larrea',
+            'Team':'DAL','Opponent':'HOU','Projection':6.79,'Projected Minutes':None,
+            'Expected Starter':False}])
+        result=restore_verified_zero_snapshot(current,'2026-10-21')
+        self.assertEqual(result['Projected Minutes'].iloc[0],0)
+        other=restore_verified_zero_snapshot(current,'2026-10-22')
+        self.assertTrue(other['Projected Minutes'].isna().all())
+
 
 if __name__=='__main__':unittest.main()
