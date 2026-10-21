@@ -200,6 +200,31 @@ class LoadingTests(unittest.TestCase):
             self.assertTrue(result['stale'])
         finally:cache.executor.shutdown(wait=True)
 
+    def test_html_timeout_uses_fresh_player_feed(self):
+        p=self.pool();p.attrs['slate_date']='2026-10-21'
+        values={(r.Name.casefold(),r.Team):{'Expected Starter':True,'Starter Confirmed':False} for r in p.itertuples()}
+        with patch('simmah_nba_confirmed.cached_confirmed_status',side_effect=TimeoutError('HTML timeout')), \
+             patch('simmah_nba_confirmed.cached_player_lineups',return_value={'players':values,'checked_at':200,'source':'RotoWire player-data lineup feed'}):
+            view,status=current_confirmed_pool(FakeStreamlit(),p,'2026-10-21',[('NY','PHI')])
+        self.assertFalse(status['stale'])
+        self.assertEqual(status['issue'],'')
+        self.assertEqual(team_lineup(view,'NY')['status'],'Expected')
+        self.assertFalse(view['Starter Confirmed'].any())
+
+    def test_player_feed_requires_five_explicit_starters_per_team(self):
+        from simmah_nba_confirmed import _download_player_lineups
+        values={('player '+str(i),'NY' if i<5 else 'PHI'):{'Expected Starter':True,'Starter Confirmed':False} for i in range(9)}
+        with patch('simmah_nba_lineups.download_lineup_status',return_value={'players':values,'checked_at':200}):
+            response=_download_player_lineups(('2026-10-21','123',(('NY','PHI'),)))
+        self.assertEqual(len(response['players']),5)
+        self.assertTrue(all(key[1]=='NY' for key in response['players']))
+
+    def test_player_feed_cache_rejects_other_date(self):
+        from simmah_nba_confirmed import cached_player_lineups
+        st=FakeStreamlit();st.session_state['nba_rotowire_cache']={'identity':('FanDuel','2026-10-20'),'slate_id':'123'}
+        with self.assertRaisesRegex(ValueError,'matching'):
+            cached_player_lineups(st,'2026-10-21',[('NY','PHI')])
+
     def test_same_slate_last_good_is_labeled_stale(self):
         st=FakeStreamlit();p=self.pool();pairs=(('NY','PHI'),)
         values={(r.Name.casefold(),r.Team):{'Expected Starter':True,'Starter Confirmed':True} for r in p.itertuples()}

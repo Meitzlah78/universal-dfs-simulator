@@ -15,7 +15,7 @@ def parse_lineup_status(players,day,pairs):
         key=player_key(p.get('firstName','')+' '+p.get('lastName',''),team)
         if not key[0] or key in result:raise ValueError('Duplicate or missing NBA lineup player')
         lineup=p.get('lineup') or {}
-        result[key]={'Game Start':p.get('game',{}).get('dateTime'),'Expected Starter':lineup.get('slot'),
+        result[key]={'Game Start':p.get('game',{}).get('dateTime'),'Expected Starter':explicit_true(lineup.get('slot')),
                      'Starter Confirmed':explicit_true(lineup.get('isConfirmed',False))}
     if not result:raise ValueError('No NBA lineup records returned')
     return result

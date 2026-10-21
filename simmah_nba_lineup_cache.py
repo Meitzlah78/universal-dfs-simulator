@@ -16,7 +16,7 @@ class LineupPageCache:
             if future is not None and future.done():
                 try:record['result']=future.result()
                 except Exception as exc:record['result']={'error':str(exc),'checked_at':time.time()}
-                if record['result'].get('html') and not record['result'].get('error'):
+                if (record['result'].get('html') or record['result'].get('players')) and not record['result'].get('error'):
                     record['last_success']=record['result']
                 record['completed_at']=time.monotonic();record.pop('future',None)
                 future=None

@@ -105,6 +105,35 @@ def request_lineup_refresh(day):
     return _lineup_cache.get(day,force=True)
 
 
+def _download_player_lineups(key):
+    from simmah_nba_lineups import download_lineup_status
+    day,slate_id,pairs=key
+    response=download_lineup_status(slate_id,day,pairs)
+    starters={}
+    for team in {key[1] for key in response['players']}:
+        group={key:value for key,value in response['players'].items()
+               if key[1]==team and explicit_true(value.get('Expected Starter'))}
+        if len(group)==5:starters.update(group)
+    if not starters:raise ValueError('Player feed supplied no complete expected starting five')
+    return {**response,'players':starters,'source':'RotoWire player-data lineup feed'}
+
+
+_player_lineup_cache=LineupPageCache(_download_player_lineups)
+
+
+def cached_player_lineups(st,day,pairs,force=False):
+    record=st.session_state.get('nba_rotowire_cache',{})
+    identity=record.get('identity',())
+    if len(identity)<2 or identity[1]!=day or not str(record.get('slate_id','')).isdigit():
+        raise ValueError('No matching RotoWire player-feed slate ID available')
+    key=(day,str(record['slate_id']),tuple(sorted(pairs)))
+    result=_player_lineup_cache.get(key,force=force)
+    if not result.get('players') and result.get('pending'):
+        raise LineupFetchPending('Checking RotoWire player-data lineups')
+    if result.get('error'):raise ValueError(result['error'])
+    return result
+
+
 def current_confirmed_pool(st,pool,day,pairs):
     scope=(day,tuple(sorted({tuple(sorted(map(team_key,p))) for p in pairs})))
     saved=st.session_state.get('nba_confirmed_last_good',{})
@@ -118,6 +147,15 @@ def current_confirmed_pool(st,pool,day,pairs):
         issue=str(exc);pending=isinstance(exc,LineupFetchPending)
         stale=True
         response=saved.get('response',{}) if saved.get('scope')==scope else {}
+        try:
+            fallback=cached_player_lineups(st,day,pairs)
+            response=fallback;pending=bool(fallback.get('pending'))
+            stale=pending or bool(fallback.get('stale'));issue=fallback.get('issue','')
+            st.session_state['nba_confirmed_last_good']={'scope':scope,'response':response}
+        except LineupFetchPending:
+            pending=True
+        except (ValueError,OSError,KeyError,TypeError) as fallback_error:
+            issue+='; player-data fallback: '+str(fallback_error)
         if not response and pool.attrs.get('slate_date')!=day:
             pool=pool.copy()
             pool['Expected Starter']=False

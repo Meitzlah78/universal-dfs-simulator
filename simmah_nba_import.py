@@ -155,6 +155,10 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
     for _previous_pool in (_previous_slate.get('players'),_previous_build.get('pool')):
         pool=restore_saved_game_metadata(pool,_previous_pool,day)
     _status_pairs=tuple(sorted({(team_key(r.Team),team_key(r.Opponent)) for r in pool.itertuples()}))
+    if _force_refresh:
+        from simmah_nba_confirmed import cached_player_lineups
+        try:cached_player_lineups(st,day,_status_pairs,force=True)
+        except (ValueError,OSError,KeyError,TypeError):pass
     pool,_shared_status=current_confirmed_pool(st,pool,day,_status_pairs)
     if _shared_status['stale']:
         with tabs[1]:st.caption('Starting-lineup feed unavailable. Previous same-slate statuses are labeled Last confirmed / Last expected.')
