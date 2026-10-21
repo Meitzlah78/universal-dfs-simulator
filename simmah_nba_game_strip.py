@@ -23,7 +23,7 @@ def team_lineup(pool,team):
     return {'status':'Confirmed' if confirmed and not injured else 'Expected', 'starters':names}
 
 
-def start_time_label(values):
+def game_start(values):
     starts=set()
     for value in values:
         try:
@@ -33,14 +33,18 @@ def start_time_label(values):
             if instant.tzinfo is None:instant=instant.replace(tzinfo=ZoneInfo('America/New_York'))
             starts.add(instant.astimezone(ZoneInfo('America/New_York')))
         except (ValueError,TypeError):continue
-    if len(starts)!=1:return 'Time TBD'
-    return next(iter(starts)).strftime('%I:%M %p ET').lstrip('0')
+    return next(iter(starts)) if len(starts)==1 else None
+
+
+def start_time_label(values):
+    start=game_start(values)
+    return start.strftime('%I:%M %p ET').lstrip('0') if start is not None else 'Time TBD'
 
 
 def game_records(pool,markets):
     pairs={tuple(sorted((team_key(r.Team),team_key(r.Opponent)))) for r in pool.itertuples()}
     lines={tuple(sorted(map(team_key,m['teams']))):m for m in markets}
-    records=[]
+    records=[];start_keys={}
     for pair in sorted(pairs):
         order=pair;separator=' vs '
         if 'Game' in pool:
@@ -57,9 +61,11 @@ def game_records(pool,markets):
             except (TypeError,ValueError):score=None
             teams.append({'team':team,'score':score,**team_lineup(pool,team)})
         rows=pool[pool['Team'].map(team_key).isin(pair)]
-        start=start_time_label(rows['Game Start'].dropna()) if 'Game Start' in rows else 'Time TBD'
+        instant=game_start(rows['Game Start'].dropna()) if 'Game Start' in rows else None
+        start=instant.strftime('%I:%M %p ET').lstrip('0') if instant is not None else 'Time TBD'
+        start_keys[separator.join(order)]=instant.timestamp() if instant is not None else float('inf')
         records.append({'label':separator.join(order),'start_time':start,'teams':teams})
-    return records
+    return sorted(records,key=lambda r:(start_keys[r['label']],r['label']))
 
 
 def render_game_strip(st,pool,markets,updated_at=None):
@@ -95,3 +101,4 @@ def render_game_strip(st,pool,markets,updated_at=None):
 .simmah-game-strip:focus-visible{outline:2px solid #69bce5;outline-offset:2px}
 @media(max-width:440px){.simmah-game-card{flex-basis:195px}}
 </style><div class="simmah-game-strip" role="region" aria-label="Slate games; scroll left or right" tabindex="0">'''+''.join(cards)+'</div>',unsafe_allow_html=True)
+
