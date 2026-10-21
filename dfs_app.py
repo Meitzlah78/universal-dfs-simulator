@@ -110,6 +110,7 @@ with _contest_history:
         _hist_fee_known = _hc3.checkbox("Entry fee is known", value=False)
         _hist_fee = _hc3.number_input("Historical entry fee ($)", min_value=0., value=.10, step=.10) if _hist_fee_known else None
         _hist_max = st.number_input("Historical max entries per user (0 = unknown)", min_value=0, value=0, step=1)
+        _hist_slate_date = st.date_input("Historical slate date for player-score archive (optional)", value=None, key="history_outcome_slate_date")
         _hist_metadata_file = workspace_file_uploader(st,"Optional player metadata from THAT contest (Name, Team, Position, Salary, Opponent)", type=["csv"], key="history_metadata_v2")
         st.caption("Without historical player metadata, only ownership-concentration features can be learned. Today's salaries/teams are never substituted.")
         if _hist_files and st.button("LEARN FROM CONTESTS", key="learn_contest_history_v2", use_container_width=True):
@@ -133,8 +134,18 @@ with _contest_history:
             for _file in _hist_files:
                 try:
                     _raw = _file.getvalue()
-                    _profiles = ingest_frames(read_standings(_raw, _file.name), hashlib.sha256(_raw).hexdigest(),
+                    _standings_frames = read_standings(_raw, _file.name)
+                    _profiles = ingest_frames(_standings_frames, hashlib.sha256(_raw).hexdigest(),
                         platform=_hist_platform, mode=_hist_mode, fee=_hist_fee, max_entries=int(_hist_max) or None, metadata=_metadata)
+                    from simmah_nfl_outcomes import archive_completed_scores
+                    try:
+                        _outcome_saved = archive_completed_scores(st.session_state,_standings_frames,_profiles,
+                            hashlib.sha256(_raw).hexdigest(),_file.name,
+                            _hist_slate_date.isoformat() if _hist_slate_date else None)
+                        if _outcome_saved['player_scores_added']:
+                            st.caption(f"Saved {_outcome_saved['player_scores_added']} explicit published player scores separately for validation.")
+                    except ValueError as _outcome_error:
+                        st.warning("Player-score archive skipped: "+str(_outcome_error))
                     _new_profiles.extend(profile for profile in _profiles if profile["id"] not in _known or
                         set(profile["features"]) > set(_known[profile["id"]]["features"]) or
                         (_known[profile["id"]].get("stake_bucket")=="UNKNOWN" and profile.get("stake_bucket")!="UNKNOWN") or
@@ -163,6 +174,15 @@ with _contest_history:
             st.dataframe(injury_frame(st, pd.DataFrame([{"Format": p["format"], "Stakes": p["stake_bucket"], "Entries": p["lineups"], "Learned features": ", ".join(p["features"])} for p in _history_store["contests"]])), use_container_width=True, hide_index=True)
         st.download_button("DOWNLOAD FIELD-HISTORY BACKUP", _history_json.dumps(_history_store, indent=2), "Simmah_Field_History.json", "application/json")
         st.caption("New profiles survive app reruns and sessions on this server. Download a backup to retain them across hosting redeploys; checked-in seed profiles are always restored.")
+        _completed_scores = st.session_state.get("nfl_completed_player_results",{})
+        if _completed_scores:
+            from simmah_slate_workspaces import workspace_download_button
+            st.caption(f"{len(_completed_scores)} published player-score snapshots saved in this slate workspace. Scores are retained for validation; saving them does not automatically tune projections. Missing scores remain unknown.")
+            workspace_download_button(st,"EXPORT NFL COMPLETED PLAYER RESULTS",
+                _history_json.dumps({"schema":1,"snapshots":_completed_scores},indent=2,allow_nan=False).encode(),
+                "Simmah_NFL_Completed_Player_Results.json","application/json",
+                key="nfl_completed_results_export",on_click="ignore")
+
 
 
 from datetime import datetime as _sticky_datetime
