@@ -19,12 +19,26 @@ def payout_vector(contest):
     return result
 
 
-def saved_contest(contest_id,day,entry_fee):
+def saved_contest(contest_id,day,entry_fee,*,name=None,platform=None):
     if not re.fullmatch(r'\d+(?:-\d+)?',str(contest_id)):return None
     path=Path(__file__).parent/'data'/'nba_contests'/(str(contest_id)+'.json')
-    if not path.exists():return None
+    if not path.exists():
+        # Screenshot presets have no trustworthy contest ID. Bind only to the
+        # exact uploaded name, platform, date and fee; never guess from a slug.
+        if not name or not platform:return None
+        key=lambda value:' '.join(str(value).split()).casefold()
+        matches=[]
+        for candidate in (path.parent/'named').glob('*.json'):
+            preset=json.loads(candidate.read_text())
+            if (key(preset.get('name'))==key(name) and preset.get('platform')==platform
+                    and preset.get('date')==day and abs(preset['entry_fee']-entry_fee)<1e-9):
+                payout_vector(preset)
+                matches.append(dict(preset,id=str(contest_id)))
+        if len(matches)>1:raise ValueError('Ambiguous named NBA contest preset')
+        return matches[0] if matches else None
     contest=json.loads(path.read_text())
     if contest['id']!=str(contest_id) or contest['date']!=day or abs(contest['entry_fee']-entry_fee)>1e-9:
         raise ValueError('Saved NBA contest differs from uploaded date or entry fee')
     payout_vector(contest)
     return contest
+

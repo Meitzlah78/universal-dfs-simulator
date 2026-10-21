@@ -69,7 +69,7 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
     ownership=field_ownership_inputs(pool)
     try:
         day=slate.get('date') or pool.attrs.get('slate_date') or slate_date(upload.name)
-        contest=saved_contest(cid,day,selected['entry_fee'])
+        contest=saved_contest(cid,day,selected['entry_fee'],name=selected['name'],platform=platform)
         if contest is None:
             pending_path=Path(__file__).parent/'data'/'nba_contests'/'pending'/(str(cid)+'.json')
             if pending_path.exists():
@@ -185,6 +185,7 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         st.subheader('Player exposures')
         st.dataframe(exposure[['Name','Team','Injury Status','Lineups','Exposure %']],hide_index=True,width='stretch',key='nba_exposure_table',
                      column_config={'Name':st.column_config.TextColumn('Player',pinned=True)})
+
 
 
 
