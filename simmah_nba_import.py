@@ -87,6 +87,8 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
         st.session_state.pop('nba_rotowire_cache',None)
         from simmah_nba_confirmed import download_lineup_page
         st.cache_data(ttl=60,show_spinner=False,max_entries=8)(download_lineup_page).clear()
+        from simmah_nba_game_context import download_game_context
+        st.cache_data(ttl=300,show_spinner=False,max_entries=8)(download_game_context).clear()
         st.session_state['nba_lineup_refresh_requested']=True
         st.session_state['projection_updates_found']=False
         st.session_state['injury_updates_found']=False
@@ -180,6 +182,13 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
     if _missing_minutes.any():
         with tabs[1]:
             st.warning(f'{int(_missing_minutes.sum())} projected NBA player(s) have unavailable or invalid minutes. The slate can be viewed, but simulation builds need complete projected rotations. Refresh projections to retry the minutes provider; missing minutes are not treated as zero.')
+    from simmah_nba_game_context import download_game_context,apply_game_context
+    try:
+        _game_pairs=tuple(sorted({tuple(sorted((team_key(r.Team),team_key(r.Opponent)))) for r in pool.itertuples()}))
+        _game_context=st.cache_data(ttl=300,show_spinner=False,max_entries=8)(download_game_context)(day,_game_pairs)
+        pool=apply_game_context(pool,_game_context)
+    except (ValueError,OSError,KeyError,TypeError):
+        with tabs[1]:st.caption('NBA game times / market feed unavailable; existing salary-file and projection metadata retained.')
     markets = extract_markets(pool)
     slate['markets'] = markets
     slate['players'] = pool
@@ -254,5 +263,6 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
         st.write(f"{len(pool)} players · {(pool['Injury Status']=='Out').sum()} Out · {(pool['Injury Status']=='Questionable').sum()} Questionable")
     from simmah_nba_ui import render_workspace
     render_workspace(st,slate,uploaded_file,tabs,controls,markets)
+
 
 
