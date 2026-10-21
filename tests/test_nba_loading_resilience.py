@@ -3,6 +3,8 @@ from unittest.mock import patch
 from threading import Barrier,Event
 from time import monotonic
 import io,json
+import warnings
+import numpy as np
 import pandas as pd
 from simmah_nba_source_cache import load_sources
 from simmah_nba_confirmed import parse_confirmed_page,current_confirmed_pool,cached_confirmed_status
@@ -28,6 +30,25 @@ class LoadingTests(unittest.TestCase):
         return pd.DataFrame([{'Player ID':str(i),'Name':'Player '+str(i),'Team':'NY' if i<5 else 'PHI',
             'Opponent':'PHI' if i<5 else 'NY','Expected Starter':True,
             'Starter Confirmed':True,'Injury Status':'Active'} for i in range(10)])
+
+    def test_provider_strings_and_missing_flags_stay_boolean(self):
+        from simmah_nba_confirmed import apply_confirmed_status
+        p=self.pool()
+        p['Expected Starter']=pd.Series(['Yes','No',None,np.nan,pd.NA,'true','false',1,0,True],dtype=object)
+        with warnings.catch_warnings():
+            warnings.simplefilter('error',FutureWarning)
+            result=apply_confirmed_status(p,{})
+        self.assertEqual(result['Expected Starter'].tolist(),[True,False,False,False,False,True,False,True,False,True])
+        self.assertEqual(result['Expected Starter'].dtype,np.dtype(bool))
+        self.assertEqual(result['Starter Confirmed'].dtype,np.dtype(bool))
+        values={('player 0','NY'):{'Expected Starter':'yes','Starter Confirmed':'false'},
+                ('player 1','NY'):{'Expected Starter':'true','Starter Confirmed':'true'}}
+        with warnings.catch_warnings():
+            warnings.simplefilter('error',FutureWarning)
+            result=apply_confirmed_status(p,values)
+        self.assertTrue(result.at[0,'Expected Starter'])
+        self.assertFalse(result.at[0,'Starter Confirmed'])
+        self.assertTrue(result.at[1,'Starter Confirmed'])
 
     def test_sources_overlap_and_cache(self):
         state={};gate=Barrier(2);calls=[]
@@ -151,6 +172,18 @@ class LoadingTests(unittest.TestCase):
         self.assertNotIn('Game Start',other)
         wrong_ids=p.copy();wrong_ids.loc[0,'Player ID']='wrong'
         self.assertNotIn('Game Start',restore_saved_game_metadata(current,wrong_ids,'2026-10-21'))
+
+    def test_saved_metadata_normalizes_all_missing_and_integer_columns(self):
+        from simmah_nba_game_context import restore_saved_game_metadata
+        p=self.pool();p['Game Start']='2026-10-21 19:00:00';p['Game Total']=230.5;p['Team Implied Points']=115.25
+        current=self.pool();current['Game Start']=np.nan;current['Game Total']=0;current['Team Implied Points']=0
+        current['Expected Starter']=None
+        with warnings.catch_warnings():
+            warnings.simplefilter('error',FutureWarning)
+            result=restore_saved_game_metadata(current,p,'2026-10-21')
+        self.assertTrue(result['Game Total'].eq(230.5).all())
+        self.assertTrue(result['Team Implied Points'].eq(115.25).all())
+        self.assertEqual(result['Expected Starter'].dtype,np.dtype(bool))
 
     def test_confirmation_outage_keeps_dated_expected_five_without_green_checks(self):
         p=self.pool();p.attrs['slate_date']='2026-10-21'

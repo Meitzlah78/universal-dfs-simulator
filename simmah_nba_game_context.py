@@ -64,7 +64,16 @@ def restore_saved_game_metadata(pool,previous,day):
     if not {'Player ID','Team','Opponent','Game Start'}<=set(previous):return pool
     if previous['Player ID'].astype(str).duplicated().any():return pool
     if set(previous['Player ID'].astype(str))!=set(pool['Player ID'].astype(str)):return pool
+    starts=[game_start([value]) for value in previous['Game Start']]
+    if not any(start is not None and start.date().isoformat()==day for start in starts):return pool
     source=previous.set_index(previous['Player ID'].astype(str));view=pool.copy()
+    # Pandas 3 rejects implicit scalar upcasts, including all-missing float
+    # columns receiving a timestamp string or a boolean fallback.
+    view['Game Start']=view['Game Start'].astype(object) if 'Game Start' in view else pd.Series(None,index=view.index,dtype=object)
+    for column in ('Game Total','Team Implied Points'):
+        view[column]=pd.to_numeric(view[column],errors='coerce').astype(float) if column in view else float('nan')
+    for column in ('Expected Starter','Starter Confirmed','Lineup Status Stale'):
+        view[column]=view[column].map(explicit_true).astype(bool) if column in view else False
     changed=False
     for index,row in view.iterrows():
         old=source.loc[str(row['Player ID'])]

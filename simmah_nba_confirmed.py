@@ -3,6 +3,7 @@ from html.parser import HTMLParser
 import time
 from urllib.request import urlopen
 from simmah_nba_projections import team_key,player_key
+from simmah_nba_game_strip import explicit_true
 
 
 class LineupPage(HTMLParser):
@@ -112,8 +113,8 @@ def apply_confirmed_status(pool,values):
         detail=values.get(player_key(row['Name'],row['Team']),{})
         missing_team=team_key(row['Team']) not in source_teams
         fallback=pool.at[index,'Expected Starter'] if missing_team and 'Expected Starter' in pool else False
-        view.at[index,'Expected Starter']=detail.get('Expected Starter',fallback)
-        view.at[index,'Starter Confirmed']=detail.get('Starter Confirmed',False)
+        view.at[index,'Expected Starter']=explicit_true(detail.get('Expected Starter',fallback))
+        view.at[index,'Starter Confirmed']=explicit_true(detail.get('Starter Confirmed',False))
         view.at[index,'Lineup Status Stale']=missing_team
     return view
 
