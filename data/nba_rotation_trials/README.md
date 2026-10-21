@@ -39,3 +39,30 @@ inferred from these counts.
 
 No live simulation, projection, exposure or late-swap parameter is changed.
 Use a time-separated validation set before activating learned rotation rates.
+
+## Player-minute reconciliation and trigger evaluator
+
+Run the saved-box-score audit offline:
+
+    python scripts/reconcile_nba_rotations.py audit.json path/to/boxscores --output reconciled.json
+
+Files must be named boxscore_0042500101.json (ten-digit official game ID).
+The validator requires final NBA CDN game status, matching official game/team/player
+IDs, complete regulation/overtime team minutes and bounded player-level residuals.
+Absent files remain pending. Unknown final player rows are not converted to zeros.
+Only explicitly recorded DNPs may supply zero minutes without a minutes field.
+Failed player attribution quarantines the game. The CLI records input hashes.
+
+On October 21, the pinned archive was reproduced: 60 games, 45 structural accepts.
+An official NBA CDN box-score request returned HTTP 403; real player-minute
+reconciliation remains pending. Unit fixtures are not historical validation.
+
+simmah_nba_rotation_triggers.py provides an offline, configurable priority table.
+Rows specify outgoing/incoming player IDs and optional foul, period, margin and
+remaining-game-clock thresholds. It uses dead-ball opportunities, rule cooldowns
+and legal five-player floors. Missing foul counts do not fire foul rules. A base
+rotation must be supplied explicitly; this does not infer a coach's schedule.
+The example thresholds in tests are synthetic, not fitted coaching tendencies.
+No hardcoded 90-second cycle, empirical substitution model or efficiency penalty
+has been activated. Staggered base schedules still require validation against
+observed stints, including rotation context and substitution opportunities.
