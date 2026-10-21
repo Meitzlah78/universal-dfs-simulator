@@ -150,10 +150,12 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
     from simmah_nba_confirmed import current_confirmed_pool
     from simmah_nba_projections import team_key
     from simmah_nba_game_context import restore_saved_game_metadata
+    from simmah_nba_minutes_recovery import restore_saved_minutes
     _previous_slate=st.session_state.get('nba_imported_slate',{})
     _previous_build=st.session_state.get('nba_build_result',{})
     for _previous_pool in (_previous_slate.get('players'),_previous_build.get('pool')):
         pool=restore_saved_game_metadata(pool,_previous_pool,day)
+        if _rw.get('error'):pool=restore_saved_minutes(pool,_previous_pool,day)
     _status_pairs=tuple(sorted({(team_key(r.Team),team_key(r.Opponent)) for r in pool.itertuples()}))
     if _force_refresh:
         from simmah_nba_confirmed import cached_player_lineups
@@ -164,6 +166,8 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
         with tabs[1]:st.caption('Starting-lineup feed unavailable. Previous same-slate statuses are labeled Last confirmed / Last expected.')
     if pool.attrs.get('saved_game_metadata_restored'):
         with tabs[1]:st.caption('Game times and implied scores recovered from this slate’s saved data; these are last-known pregame values.')
+    if pool.attrs.get('saved_minutes_restored'):
+        with tabs[1]:st.warning('Using last saved provider minutes for: '+', '.join(pool.attrs['saved_minutes_restored'])+'. These minutes are stale; no estimates or team-minute adjustments were added.')
     from simmah_nba_markets import extract_markets
     try:
         import json
@@ -181,7 +185,8 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
     _missing_minutes=(_projection>0) & ~_zero_minutes & ~pool['Injury Status'].astype(str).str.upper().isin(['OUT','O','IR','SUSPENDED']) & ~_minutes.between(0,48,inclusive='right')
     if _missing_minutes.any():
         with tabs[1]:
-            st.warning(f'{int(_missing_minutes.sum())} projected NBA player(s) have unavailable or invalid minutes. The slate can be viewed, but simulation builds need complete projected rotations. Refresh projections to retry the minutes provider; missing minutes are not treated as zero.')
+            _missing_names=', '.join(pool.loc[_missing_minutes,'Name'].astype(str))
+            st.warning(f'{int(_missing_minutes.sum())} projected NBA player(s) have unavailable or invalid minutes: {_missing_names}. The slate can be viewed, but simulation builds need complete projected rotations. Missing minutes are not treated as zero.')
     from simmah_nba_game_context import download_game_context_result,apply_game_context,has_game_context
     if not has_game_context(pool):
         try:
