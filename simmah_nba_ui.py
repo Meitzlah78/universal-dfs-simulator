@@ -15,13 +15,14 @@ from simmah_nba_rules import rules_for
 from simmah_portfolio import portfolio_roi_totals
 
 
-def input_identity(pool,markets,contest,salary_min,correlation=0):
+def input_identity(pool,markets,contest,salary_min,correlation=0,excluded_player_ids=()):
     from simmah_nba_pregame import ROLE_COLUMNS
     columns=[c for c in ['Player ID','Position','Salary','Team','Opponent','Projection','Injury Status',
                          'Projected Minutes','Eligible',*ROLE_COLUMNS,'RotoWire Projected Own %'] if c in pool]
     content={'pool':pool[columns].to_json(orient='split',double_precision=10),'markets':markets,
              'contest':contest,'salary_min':salary_min,'field_model_version':5}
     if correlation:content['build_correlation']=correlation
+    if len(excluded_player_ids):content['excluded_player_ids']=sorted(map(str,excluded_player_ids))
     return hashlib.sha256(json.dumps(content,sort_keys=True).encode()).hexdigest()
 
 
@@ -99,6 +100,19 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         if ownership['mode']!='projected':st.warning(ownership['status'])
     with controls:
         st.write(f'{count} portfolio entries')
+        from simmah_nba_exclusions import game_options,excluded_player_indices
+        from simmah_nba_projections import team_key
+        _games=list(game_options(pool));_teams=sorted({team_key(team) for team in pool['Team']})
+        _game_key='nba_excluded_games_'+platform;_team_key='nba_excluded_teams_'+platform
+        for _key,_options in ((_game_key,_games),(_team_key,_teams)):
+            if _key in st.session_state:
+                _saved_options=st.session_state[_key]
+                _valid_options=[value for value in _saved_options if value in _options]
+                if _valid_options!=_saved_options:st.session_state[_key]=_valid_options
+        excluded_games=st.multiselect('Exclude games',_games,key=_game_key)
+        excluded_teams=st.multiselect('Exclude teams',_teams,key=_team_key)
+        excluded=excluded_player_indices(pool,excluded_games,excluded_teams)
+        if len(excluded):st.caption(f'{len(excluded)} players excluded from your next build. Opponents still use the full slate.')
         salary_min=st.number_input('Minimum salary',min_value=0,max_value=rules['salary_cap'],value=58000 if platform=='FanDuel' else 48000,step=500,key='nba_min_salary' if platform=='FanDuel' else 'nba_min_salary_DraftKings')
         correlation=st.slider('Build correlation',0,100,0,key='nba_build_correlation',
             help='Extra preference for positively correlated player combinations measured from the shared game simulations. 0 = no extra bonus; 100 = strongest bonus. Game simulations remain correlated at every setting.')
@@ -106,7 +120,7 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         metric=st.selectbox('Rank lineups',['Top 1%','Expected ROI (%)','Expected Prize ($)'],key='nba_rank_metric')
         clicked=st.button('BUILD NBA LINEUPS',disabled=bool(error),key='nba_build')
         if error:st.caption(error)
-    identity=input_identity(pool,markets,contest,salary_min,correlation)
+    identity=input_identity(pool,markets,contest,salary_min,correlation,pool.iloc[excluded]['Player ID'])
     saved=st.session_state.get('nba_build_result')
     if clicked:
         with tabs[2]:
@@ -118,7 +132,8 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
                 built=run_pipeline(pool,engine,ownership['weights'],
                     ownership['source'],
                     payout_vector(contest),selected['entry_fee'],count,diversity=diversity,
-                    salary_min=salary_min,correlation=correlation,ownership_mode=ownership['mode'],progress=progress)
+                    salary_min=salary_min,correlation=correlation,ownership_mode=ownership['mode'],progress=progress,
+                    excluded_indices=excluded)
                 reports=engine.last_report
                 if any(not g['calibration']['within_four_points'] or g['unresolved_tie_fraction']>0 for g in reports):
                     raise ValueError('NBA evaluation failed market calibration or left unresolved overtime; inspect engine validation before exporting')
@@ -193,6 +208,7 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         st.subheader('Player exposures')
         st.dataframe(exposure[['Name','Team','Injury Status','Lineups','Exposure %']],hide_index=True,width='stretch',key='nba_exposure_table',
                      column_config={'Name':st.column_config.TextColumn('Player',pinned=True)})
+
 
 
 

@@ -10,7 +10,8 @@ from simmah_nba_rules import rules_for
 def run_pipeline(pool,outcome_factory,ownership,ownership_source,payouts,entry_fee,
                  portfolio_count,*,simulations=10000,candidate_target=5000,
                  field_support_target=10000,seed=83,diversity=50,salary_min=0,
-                 max_ownership_error=5,progress=None,ownership_mode="projected",correlation=0):
+                 max_ownership_error=5,progress=None,ownership_mode="projected",correlation=0,
+                 excluded_indices=None):
 
     """Generate three independent scenario sets and retain scored candidates.
 
@@ -21,6 +22,10 @@ def run_pipeline(pool,outcome_factory,ownership,ownership_source,payouts,entry_f
     if ownership_mode not in {'projected','relative popularity'}:raise ValueError('Unknown ownership mode')
     if not isinstance(simulations,int) or simulations<1:raise ValueError('Positive simulation count required')
     if not np.isfinite(max_ownership_error) or max_ownership_error<0:raise ValueError('Valid ownership error tolerance required')
+    excluded=np.asarray([] if excluded_indices is None else excluded_indices)
+    if excluded.ndim!=1 or (excluded.size and (excluded.dtype.kind not in 'iu' or (excluded<0).any() or (excluded>=len(pool)).any())):
+        raise ValueError('Valid original-pool player indices required for exclusions')
+    excluded=excluded.astype(int)
     def notify(message):
         if progress:progress(message)
     def draw(draw_seed):
@@ -30,7 +35,8 @@ def run_pipeline(pool,outcome_factory,ownership,ownership_source,payouts,entry_f
         return array.copy()
     notify('Simulating candidate scenarios')
     construction=draw(seed)
-    candidates=build_candidates(pool,construction,target=candidate_target,seed=seed+1,salary_min=salary_min,correlation=correlation)
+    candidates=build_candidates(pool,construction,target=candidate_target,seed=seed+1,salary_min=salary_min,correlation=correlation,
+                                excluded_indices=excluded)
     if candidates['unique']<portfolio_count:raise ValueError('Insufficient unique NBA candidates for reserved entries')
     notify('Building independent opponent support')
     field_outcomes=draw(seed+1009)
@@ -78,6 +84,7 @@ def run_pipeline(pool,outcome_factory,ownership,ownership_source,payouts,entry_f
     notify('Selecting portfolio')
     portfolio=select_entries(pool,candidates['indices'],report,portfolio_count,diversity=diversity)
     return {'candidates':candidates,'field':field,'report':report,'portfolio':portfolio,
+            'excluded_player_ids':pool.iloc[excluded]['Player ID'].astype(str).tolist(),
             'simulation_seeds':{'construction':seed,'field':seed+1009,'evaluation':seed+2017},
             'simulations_per_set':simulations,'status':'experimental offline pipeline; marginal contest estimates'}
 
@@ -85,4 +92,5 @@ def run_pipeline(pool,outcome_factory,ownership,ownership_source,payouts,entry_f
 def export_portfolio(template,contest_id,pool,result):
     lineups=result['portfolio'][list(rules_for(pool)['slots'])].astype(str).to_numpy().tolist()
     return export_entries(template,lineups,contest_id,pool,salary_cap=rules_for(pool)['salary_cap'],max_from_team=rules_for(pool)['max_from_team'])
+
 
