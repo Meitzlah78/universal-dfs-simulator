@@ -1,0 +1,71 @@
+{
+  "status": "offline exploratory sensitivity; live_enabled false; no outcomes used",
+  "code_commit": "ca244d408ef7ebac8c985440a9b9021809a0c348",
+  "slate": "2026-10-21 FanDuel NBA",
+  "ownership_support_seed": 83,
+  "evaluation_seed": 2100,
+  "evaluation_simulations": 10000,
+  "candidate_count": 5000,
+  "entries": 86227,
+  "selection": {
+    "metric": "Top 1%",
+    "diversity": 100
+  },
+  "salary_constraints": {
+    "mean_min": 59500,
+    "tail_salary": 58000,
+    "tail_fraction_max": 0.05
+  },
+  "input_sha256": {
+    "Simmah_NBA_FanDuel_All_Candidates.csv": "1569a6a9986f2f9fbd2f84ce310e057b80d1833c71b6cc6c0f266d2fceb7f0fb",
+    "Simmah_NBA_FanDuel_Build_Player_Pool.csv": "2e3e6b7d7c8a7d236a01e2f8bba2ddf04cc3cf07d5e28ed7cbace1508f59c617",
+    "Simmah_NBA_Opponent_Field (2)(2).csv": "4918dc85ba98b8d1ab9fada7bae45b4eadae42a358011dc95898e78653909969"
+  },
+  "caps_are_assumptions": true,
+  "results": [
+    {
+      "max_expected_error_pct": 0.941599133232085,
+      "max_sampled_error_pct": 0.954332763019984,
+      "expected_mean_salary": 59500.000000000226,
+      "integer_mean_salary": 59500.04638918204,
+      "integer_tail_fraction": 0.013835573544249481,
+      "unique_rosters": 1059,
+      "maximum_copies": 87,
+      "effective_rosters": 1020.2237871783768,
+      "max_roster_weight": 0.001,
+      "live_enabled": false,
+      "status": "Offline sensitivity test; duplication cap is not empirically calibrated",
+      "selected_average_top1_pct": 14.728840011111691,
+      "mean_field_projection": 283.2485063843112,
+      "selected_average_projection": 316.96325
+    },
+    {
+      "max_expected_error_pct": 2.387097499132567,
+      "max_sampled_error_pct": 2.398196054100538,
+      "expected_mean_salary": 59499.999999996755,
+      "integer_mean_salary": 59499.88750623354,
+      "integer_tail_fraction": 0.012107576513157131,
+      "unique_rosters": 2016,
+      "maximum_copies": 44,
+      "effective_rosters": 2005.9982755462943,
+      "max_roster_weight": 0.0005,
+      "live_enabled": false,
+      "status": "Offline sensitivity test; duplication cap is not empirically calibrated",
+      "selected_average_top1_pct": 17.174586557520648,
+      "mean_field_projection": 279.7552727683904,
+      "selected_average_projection": 317.18275000000006
+    },
+    {
+      "cap": 0.0002,
+      "error": "Bounded field fit unavailable: The problem is infeasible. (HiGHS Status 8: model_status is Infeasible; primal_status is None)"
+    }
+  ],
+  "limitations": [
+    "No verified contest payout vector; no recomputed ROI.",
+    "At 0.001 cap mean field projection 283.25 versus existing field 291.73; concentration fix does not establish opponent strength.",
+    "0.0002 cap infeasible within this 10000-roster support and salary constraints; not proof of global infeasibility.",
+    "Integer conversion can slightly change salary and ownership marginals.",
+    "LP maximizes neither entropy nor projected quality; bounded sparse solutions remain possible.",
+    "Historical salary comparison is another slate; duplication caps are uncalibrated."
+  ]
+}
