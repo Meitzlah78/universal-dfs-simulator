@@ -77,7 +77,12 @@ def render_game_strip(st,pool,markets,updated_at=None):
                          f'<span title="{escape(tooltip,quote=True)}" style="color:{colors[status]}">{symbols[status]} {status}</span></div>')
         cards.append('<div class="simmah-game-card"><div class="simmah-game-title">'+escape(game['label'])+'<span>'+escape(game['start_time'])+'</span></div>'+''.join(teams)+'</div>')
     st.markdown('''<style>
-.st-key-simmah_pinned_games{position:sticky;top:3.75rem;z-index:100;background:var(--background-color,#0e1117);padding:4px 0;border-bottom:1px solid #293e52;box-shadow:0 4px 12px #0003;min-width:0}
+.st-key-simmah_pinned_games{position:fixed !important;top:7rem;left:50%;transform:translateX(-50%);width:calc(100% - 3rem) !important;max-width:1752px;max-height:11rem;overflow-y:auto;z-index:989;background:var(--background-color,#0e1117);padding:4px 0;border-bottom:1px solid #293e52;box-shadow:0 4px 12px #0003;min-width:0}
+[data-testid="stTabs"] [data-baseweb="tab-list"]{top:18.5rem !important;z-index:988}
+[data-testid="stMainBlockContainer"],section.main>div.block-container{padding-top:22rem !important}
+@media(min-width:901px){.st-key-simmah_build_panel{top:21.5rem !important;height:max(8rem,calc(100dvh - 22.5rem)) !important}}
+@media(max-width:640px){.st-key-simmah_pinned_games{width:calc(100% - 1rem) !important}}
+
 .simmah-game-strip{display:flex;flex-wrap:nowrap;gap:7px;overflow-x:scroll;overflow-y:hidden;width:100%;max-width:100%;min-width:0;box-sizing:border-box;padding:7px 7px 9px;margin:2px 0 7px;border:1px solid #293e52;border-radius:8px;scroll-snap-type:x proximity;scrollbar-width:auto;scrollbar-gutter:stable;scrollbar-color:#50728f #102337;-webkit-overflow-scrolling:touch}
 .simmah-game-strip::after{content:"";flex:0 0 18px}
 .simmah-game-strip::-webkit-scrollbar{height:12px}
