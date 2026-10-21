@@ -146,9 +146,9 @@ def select_rotowire_slate(payload, day, pool, platform='FanDuel'):
 
 
 def parse_rotowire(players, projections, day, pool, ownership=None):
-    if projections.get('access') is not True or projections.get('source') != 'RotoWire':
+    if projections is not None and (projections.get('access') is not True or projections.get('source') != 'RotoWire'):
         raise ValueError('RotoWire NBA projection access unavailable')
-    pts = {str(r['slateID']):positive(r.get('pts')) for r in projections.get('projections',[])}
+    pts = {str(r['slateID']):positive(r.get('pts')) for r in (projections or {}).get('projections',[])}
     allowed = {(team_key(r.Team),team_key(r.Opponent)) for r in pool.itertuples()}
     values, details = {}, {}
     for player in players:
@@ -210,13 +210,28 @@ def download_rotowire(day, pool, platform='FanDuel'):
     import json
     base = 'https://www.rotowire.com/daily/nba/api/'
     def get(endpoint):
-        with urlopen(base+endpoint,timeout=15) as response:
-            return json.load(response)
+        # Retry a transient public-feed failure once, with bounded timeouts.
+        for attempt in range(2):
+            try:
+                with urlopen(base+endpoint,timeout=8) as response:
+                    return json.load(response)
+            except (OSError,ValueError):
+                if attempt:raise
     slate = select_rotowire_slate(get('slate-list.php?siteID='+('1' if platform=='DraftKings' else '2')),day,pool,platform=platform)
     sid = str(slate['slateID'])
-    players = get('players.php?slateID='+sid)
-    projections = get('projections.php?slateID='+sid+'&projSource=RotoWire')
-    try:ownership = get('rostership.php?slateID='+sid+'&rstSource=RotoWire')
-    except Exception:ownership = None  # Ownership failure must not erase valid points/minutes.
+    # Minutes/injuries live in players.php and do not depend on access to
+    # fantasy projections or ownership. Fetch independent feeds concurrently.
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        players_job=executor.submit(get,'players.php?slateID='+sid)
+        projection_job=executor.submit(get,'projections.php?slateID='+sid+'&projSource=RotoWire')
+        ownership_job=executor.submit(get,'rostership.php?slateID='+sid+'&rstSource=RotoWire')
+        players=players_job.result()
+        try:projections=projection_job.result()
+        except (OSError,ValueError):projections=None
+        if projections is not None and (projections.get('access') is not True or projections.get('source')!='RotoWire'):
+            projections=None
+        try:ownership=ownership_job.result()
+        except (OSError,ValueError):ownership=None
     values, details = parse_rotowire(players,projections,day,pool,ownership)
     return values, details, sid
