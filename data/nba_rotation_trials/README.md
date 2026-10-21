@@ -126,3 +126,43 @@ backtest or evidence of DFS profitability. The sampler's team coverage does not
 make the sample representative of all coaching, foul or blowout situations.
 Trigger fitting, time-separated validation and live rotation integration remain
 pending. No live NBA/NFL simulation, projections, build counts or settings change.
+
+## First learned empirical rotation baseline — offline only
+
+The 17 box-score-verified 2024–25 games now feed an empirical learner:
+simmah_nba_rotation_learning.py. The compact frozen inputs are in
+learning-2024-25/verified-rotation-records.json. Five-man unit durations and
+joint outgoing/incoming replacement sets are aggregated within each verified
+game. Game dates use the source event UTC date. The immutable source archive
+hash and canonical verification-report hash are recorded in the inputs.
+
+The chronological split was fixed before evaluating predictions: train on
+11 games before March 1, 2025; evaluate on six later games. No factors were
+adjusted against those six outcomes. The learner estimates team-specific
+five-man unit time shares and replacement frequencies CONDITIONAL ON THE
+OBSERVED OUTGOING SET. Multi-player substitutions stay joint sets; individual
+A-to-B pairings are not invented. A simple comparison baseline predicts each
+team's most frequent incoming set of the same size, ignoring the outgoing IDs.
+
+Reproduce the saved model and heldout metrics:
+
+    python scripts/fit_nba_rotation_baseline.py data/nba_rotation_trials/learning-2024-25/verified-rotation-records.json --before 2025-03-01 --model model.json --report report.json
+
+Results: 213 heldout substitution events, but only 29 had an outgoing condition
+seen during training (13.6% coverage). On those same 29 events, the conditional
+model matched 7 incoming sets (24.1%) versus 3 (10.3%) for the simple baseline.
+Only 0.63% of heldout on-court unit-seconds used an exact five-man unit seen in
+training. Unknown conditions remain uncovered; they are not counted as
+successful predictions or silently filled with later outcomes.
+
+This is a real fitted historical baseline, but these tiny conditional counts
+do not establish predictive improvement or DFS value. It does not predict who
+leaves, when a substitution happens, score/foul triggers, injuries, coaching
+changes or today's roster. The 2024–25 player/team IDs must not be blindly
+transferred to 2026–27 rosters. CraftedNBA remains an external role cross-check,
+not ingested training labels or an automatic minutes override.
+
+The model, records and heldout report are versioned together. Live-enabled is
+false throughout; no learned rotation is called by Streamlit, the candidate
+builder or late swap. Broader time-separated coverage and context validation
+are required before replacing provider-minute rotations.
