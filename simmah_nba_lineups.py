@@ -32,23 +32,18 @@ def download_lineup_status(slate_id,day,pairs):
 def render_live_strip(st,pool,markets,slate_id,day,fallback_time=None):
     import time
     from simmah_nba_game_strip import render_game_strip
-    cached=st.cache_data(ttl=60,show_spinner=False,max_entries=8)(download_lineup_status)
+    from simmah_nba_confirmed import cached_confirmed_status,apply_confirmed_status
     pairs=tuple(sorted({(team_key(r.Team),team_key(r.Opponent)) for r in pool.itertuples()}))
     @st.fragment(run_every='60s')
     def draw():
         view=pool.copy();checked=fallback_time;source_ok=False
         try:
-            if slate_id is None:raise ValueError('No matching RotoWire slate')
-            response=cached(str(slate_id),day,pairs)
+            response=cached_confirmed_status(st,day,pairs)
             values=response['players'];checked=response['checked_at'];source_ok=True
-            for i,row in view.iterrows():
-                detail=values.get(player_key(row['Name'],row['Team']),{})
-                view.at[i,'Expected Starter']=detail.get('Expected Starter')
-                view.at[i,'Starter Confirmed']=detail.get('Starter Confirmed',False)
-                view.at[i,'Game Start']=detail.get('Game Start',row.get('Game Start'))
+            view=apply_confirmed_status(view,values)
         except (ValueError,OSError,KeyError,TypeError):
-            if checked is None or time.time()-checked>120:
-                view['Expected Starter']=None;view['Starter Confirmed']=False
+            view['Expected Starter']=None;view['Starter Confirmed']=False
+            checked=None
         scope=(day,pairs)
         if source_ok:
             observe_lineup_change(st.session_state,scope,lineup_snapshot(view),lineup_snapshot(pool))
@@ -89,3 +84,4 @@ def refresh_button_style(pending):
     return ('<style>.st-key-sticky_projection_bar button {'
             f'background-color:{background} !important;border-color:{border} !important;color:#ffffff !important;'
             '}</style>')
+

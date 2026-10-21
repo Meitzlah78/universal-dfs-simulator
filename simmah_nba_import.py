@@ -85,8 +85,8 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
     if st.session_state.pop('refresh_projections_requested',False):
         st.session_state.pop('nba_projection_cache',None)
         st.session_state.pop('nba_rotowire_cache',None)
-        from simmah_nba_lineups import download_lineup_status,acknowledge_lineup_refresh
-        st.cache_data(ttl=60,show_spinner=False,max_entries=8)(download_lineup_status).clear()
+        from simmah_nba_confirmed import download_lineup_page
+        st.cache_data(ttl=60,show_spinner=False,max_entries=8)(download_lineup_page).clear()
         st.session_state['nba_lineup_refresh_requested']=True
         st.session_state['projection_updates_found']=False
         st.session_state['injury_updates_found']=False
@@ -155,6 +155,15 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
         with tabs[1]:
             st.error(str(exc))
         return
+    from simmah_nba_confirmed import cached_confirmed_status,apply_confirmed_status
+    from simmah_nba_projections import team_key
+    _status_pairs=tuple(sorted({(team_key(r.Team),team_key(r.Opponent)) for r in pool.itertuples()}))
+    try:
+        _shared_status=cached_confirmed_status(st,day,_status_pairs)
+        pool=apply_confirmed_status(pool,_shared_status['players'])
+    except (ValueError,OSError,KeyError,TypeError):
+        pool=apply_confirmed_status(pool,{})
+        with tabs[1]:st.caption('Shared NBA starting-lineup confirmation is unavailable; no site-specific confirmation assumed.')
     from simmah_nba_markets import extract_markets
     try:
         import json
@@ -239,3 +248,4 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
         st.write(f"{len(pool)} players · {(pool['Injury Status']=='Out').sum()} Out · {(pool['Injury Status']=='Questionable').sum()} Questionable")
     from simmah_nba_ui import render_workspace
     render_workspace(st,slate,uploaded_file,tabs,controls,markets)
+

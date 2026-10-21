@@ -25,20 +25,20 @@ def input_identity(pool,markets,contest,salary_min,correlation=0):
     return hashlib.sha256(json.dumps(content,sort_keys=True).encode()).hexdigest()
 
 
-def display_lineups(pool,frame):
+def display_lineups(pool,frame,status_pool=None):
     result=frame.copy()
     from simmah_nba_player_display import player_labels
-    names=player_labels(pool)
+    names=player_labels(pool,status_pool)
     for c in rules_for(pool)['slots']:
         if c in result:result[c]=result[c].astype(str).map(names).fillna(result[c])
     return result
 
 
 
-def render_exports(st,upload,cid,pool,built,portfolio,platform,stale,location):
+def render_exports(st,upload,cid,pool,built,portfolio,platform,stale,location,status_pool=None):
     st.subheader('Export lineups')
     st.caption('Export the selected portfolio ('+str(len(portfolio))+' lineups), not the full candidate pool.')
-    workspace_download_button(st,'DOWNLOAD PORTFOLIO REPORT',display_lineups(pool,portfolio).to_csv(index=False).encode(),
+    workspace_download_button(st,'DOWNLOAD PORTFOLIO REPORT',display_lineups(pool,portfolio,status_pool).to_csv(index=False).encode(),
         'Simmah_NBA_'+platform+'_Portfolio_Report.csv','text/csv',
         key='nba_portfolio_report_'+location,on_click='ignore')
     workspace_download_button(st,'DOWNLOAD BUILD PLAYER POOL',pool.to_csv(index=False).encode('utf-8-sig'),
@@ -124,7 +124,7 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
     stale=saved['identity']!=identity
     built=saved['result'];saved_pool=saved['pool']
     from simmah_nba_player_display import display_pool
-    labeled_pool=display_pool(saved_pool)
+    labeled_pool=display_pool(saved_pool,status_pool=pool)
     if built['field'].get('ownership_fit_warning'):
         with tabs[2]:st.warning('Opponent field uses a scenario-derived estimate because external ownership could not be fitted. '+built['field']['ownership_fit_warning'])
         with tabs[3]:st.warning('ROI uses estimated opponent ownership; the external ownership fit failed.')
@@ -137,12 +137,12 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         return
     with tabs[2]:
         if stale:st.info('Inputs or build settings changed. Previous results remain visible; rebuild before exporting.')
-        render_exports(st,upload,cid,saved_pool,built,portfolio,platform,stale,'build')
+        render_exports(st,upload,cid,saved_pool,built,portfolio,platform,stale,'build',status_pool=pool)
         st.subheader('Candidate lineups')
         st.caption(f"{built['candidates']['unique']:,} unique candidates · {built['field']['entries']:,} modeled opponents · {built['field']['unique_rosters']:,} unique opponent rosters. Ownership and ROI are estimates.")
         candidate_rows=built['report'].copy()
         for j,slot in enumerate(slots):candidate_rows[slot]=saved_pool.iloc[built['candidates']['indices'][:,j]]['Player ID'].to_numpy()
-        st.dataframe(display_lineups(saved_pool,candidate_rows).sort_values(metric,ascending=False),hide_index=True,width="stretch")
+        st.dataframe(display_lineups(saved_pool,candidate_rows,status_pool=pool).sort_values(metric,ascending=False),hide_index=True,width="stretch")
         workspace_download_button(st,'DOWNLOAD OPPONENT FIELD',pd.DataFrame(built['field']['indices'],columns=slots).apply(lambda c:c.map(saved_pool['Player ID'].to_dict())).assign(Copies=built['field']['copies']).to_csv(index=False).encode(),
             'Simmah_NBA_Opponent_Field.csv','text/csv',key='nba_field_download',on_click='ignore')
         with st.expander('NBA engine and ownership report'):
@@ -161,9 +161,9 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         for col,label,value in zip(cols,['Entries','Fees','Estimated winnings','Estimated ROI'],
                                    [str(totals['entries']),f"${totals['fees']:.2f}",f"${totals['winnings']:.2f}",f"{totals['roi']:.1f}%"]):col.metric(label,value)
         st.caption('Experimental model estimates; totals sum marginal lineup estimates against the modeled field.')
-        render_exports(st,upload,cid,saved_pool,built,portfolio,platform,stale,'lineups')
+        render_exports(st,upload,cid,saved_pool,built,portfolio,platform,stale,'lineups',status_pool=pool)
         st.subheader('My lineups')
-        st.dataframe(display_lineups(saved_pool,portfolio),hide_index=True,width="stretch")
+        st.dataframe(display_lineups(saved_pool,portfolio,status_pool=pool),hide_index=True,width="stretch")
         exposure=portfolio[list(slots)].stack().value_counts().rename('Lineups')
         exposure=exposure.rename_axis('Player ID').reset_index()
         exposure['Exposure %']=100*exposure['Lineups']/len(portfolio)
@@ -171,4 +171,5 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         st.subheader('Player exposures')
         st.dataframe(exposure[['Name','Team','Injury Status','Lineups','Exposure %']],hide_index=True,width='stretch',key='nba_exposure_table',
                      column_config={'Name':st.column_config.TextColumn('Player',pinned=True)})
+
 
