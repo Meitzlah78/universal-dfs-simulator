@@ -70,6 +70,20 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
     try:
         day=slate.get('date') or pool.attrs.get('slate_date') or slate_date(upload.name)
         contest=saved_contest(cid,day,selected['entry_fee'])
+        if contest is None:
+            pending_path=Path(__file__).parent/'data'/'nba_contests'/'pending'/(str(cid)+'.json')
+            if pending_path.exists():
+                pending=json.loads(pending_path.read_text())
+                if pending['id']!=str(cid) or pending['date']!=day or abs(pending['entry_fee']-selected['entry_fee'])>1e-9:
+                    raise ValueError('Saved payout schedule differs from uploaded contest')
+                with tabs[0]:
+                    st.info('Payouts are saved. Enter the exact full contest capacity; the rounded '+pending.get('capacity_display','')+' display cannot determine it.')
+                    capacity=st.number_input('Exact contest capacity',min_value=pending['payout_tiers'][-1]['last'],
+                        max_value=1000000,value=None,step=1,key='nba_exact_capacity_'+str(cid))
+                if capacity is not None:
+                    contest=dict(pending,capacity=int(capacity))
+                    payout_vector(contest)
+
         if contest is None:raise ValueError('This NBA contest needs its capacity and payout schedule before builds can run.')
         rates_path=Path(__file__).parent/'data'/'nba_models'/'event-rates-before-2026-04-09.json'
         model=json.loads(rates_path.read_text())
