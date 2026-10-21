@@ -174,6 +174,11 @@ with _contest_history:
             st.dataframe(injury_frame(st, pd.DataFrame([{"Format": p["format"], "Stakes": p["stake_bucket"], "Entries": p["lineups"], "Learned features": ", ".join(p["features"])} for p in _history_store["contests"]])), use_container_width=True, hide_index=True)
         st.download_button("DOWNLOAD FIELD-HISTORY BACKUP", _history_json.dumps(_history_store, indent=2), "Simmah_Field_History.json", "application/json")
         st.caption("New profiles survive app reruns and sessions on this server. Download a backup to retain them across hosting redeploys; checked-in seed profiles are always restored.")
+        from simmah_nfl_outcomes import load_seed_results
+        try:
+            load_seed_results(st.session_state,_HISTORY_ROOT / "nfl_results")
+        except (OSError,ValueError,KeyError,TypeError) as _outcome_seed_error:
+            st.warning("Saved player-result seed could not load: "+str(_outcome_seed_error))
         _completed_scores = st.session_state.get("nfl_completed_player_results",{})
         if _completed_scores:
             from simmah_slate_workspaces import workspace_download_button

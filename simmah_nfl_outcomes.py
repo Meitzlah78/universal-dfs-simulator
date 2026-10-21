@@ -50,3 +50,21 @@ def archive_completed_scores(state,frames,profiles,raw_digest,filename,slate_dat
             'coverage':'Only players explicitly listed in this file; not guaranteed full-slate coverage'}
         added+=1;players_saved+=len(rows)
     return {'snapshots_added':added,'player_scores_added':players_saved}
+
+
+def load_seed_results(state,root):
+    """Restore checked-in published scores without fitting or changing projections."""
+    from pathlib import Path
+    archive=state.setdefault('nfl_completed_player_results',{})
+    for path in sorted(Path(root).glob('*.json')):
+        payload=json.loads(path.read_text())
+        if payload.get('schema')!=1 or not isinstance(payload.get('snapshots'),dict):
+            raise ValueError('Invalid completed-player results seed')
+        for identity,record in payload['snapshots'].items():
+            if record.get('schema')!=1 or record.get('platform') not in {'DraftKings','FanDuel'} or not isinstance(record.get('players'),list):
+                raise ValueError('Invalid player-score snapshot')
+            for player in record['players']:
+                if not player.get('Player') or not math.isfinite(float(player['Actual Points'])):
+                    raise ValueError('Invalid published player score')
+            archive.setdefault(identity,record)
+    return archive

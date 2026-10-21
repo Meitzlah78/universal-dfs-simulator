@@ -1,0 +1,267 @@
+{
+  "schema": 1,
+  "snapshots": {
+    "ef49a885f9d256889603548a9cfda39a4dc9e3bb4732b173bbefacb77ef5017c": {
+      "schema": 1,
+      "platform": "FanDuel",
+      "formats": [
+        "FD_SINGLE"
+      ],
+      "slate_date": "2026-10-19",
+      "source_file": "135541-281148543.csv",
+      "source_sha256": "fff3270c8a05596964f2f2a6a4726ffe4527c79356feba6698f0523a27def294",
+      "players": [
+        {
+          "Player": "Antonio Williams (135541-166323)",
+          "Player ID": "135541-166323",
+          "Actual Points": 6.5
+        },
+        {
+          "Player": "Athan Kaliakmanis (135541-152673)",
+          "Player ID": "135541-152673",
+          "Actual Points": 0.0
+        },
+        {
+          "Player": "Austin Ekeler (135541-80001)",
+          "Player ID": "135541-80001",
+          "Actual Points": 1.7
+        },
+        {
+          "Player": "Ben Sinnott (135541-137265)",
+          "Player ID": "135541-137265",
+          "Actual Points": 0.0
+        },
+        {
+          "Player": "Brandin Cooks (135541-29501)",
+          "Player ID": "135541-29501",
+          "Actual Points": 1.8
+        },
+        {
+          "Player": "Brayden Willis (135541-86612)",
+          "Player ID": "135541-86612",
+          "Actual Points": 0.0
+        },
+        {
+          "Player": "Brock Purdy (135541-85607)",
+          "Player ID": "135541-85607",
+          "Actual Points": 17.36
+        },
+        {
+          "Player": "Chig Okonkwo (135541-88297)",
+          "Player ID": "135541-88297",
+          "Actual Points": 10.4
+        },
+        {
+          "Player": "Christian Kirk (135541-60858)",
+          "Player ID": "135541-60858",
+          "Actual Points": 0.0
+        },
+        {
+          "Player": "Christian McCaffrey (135541-55050)",
+          "Player ID": "135541-55050",
+          "Actual Points": 26.2
+        },
+        {
+          "Player": "Colson Yankoff (135541-86800)",
+          "Player ID": "135541-86800",
+          "Actual Points": 0.0
+        },
+        {
+          "Player": "Craig Reynolds (135541-104424)",
+          "Player ID": "135541-104424",
+          "Actual Points": 0.0
+        },
+        {
+          "Player": "Devin Neal (135541-154971)",
+          "Player ID": "135541-154971",
+          "Actual Points": 0.0
+        },
+        {
+          "Player": "Drew Stevens (135541-169438)",
+          "Player ID": "135541-169438",
+          "Actual Points": 7.0
+        },
+        {
+          "Player": "Dyami Brown (135541-93538)",
+          "Player ID": "135541-93538",
+          "Actual Points": 1.1
+        },
+        {
+          "Player": "Eddy Pineiro (135541-69307)",
+          "Player ID": "135541-69307",
+          "Actual Points": 5.0
+        },
+        {
+          "Player": "George Kittle (135541-39793)",
+          "Player ID": "135541-39793",
+          "Actual Points": 15.4
+        },
+        {
+          "Player": "Jack Stoll (135541-69451)",
+          "Player ID": "135541-69451",
+          "Actual Points": 0.0
+        },
+        {
+          "Player": "Jack Westover (135541-86762)",
+          "Player ID": "135541-86762",
+          "Actual Points": 0.0
+        },
+        {
+          "Player": "Jacob Cowing (135541-114530)",
+          "Player ID": "135541-114530",
+          "Actual Points": 0.0
+        },
+        {
+          "Player": "Jacory Croskey-Merritt (135541-117178)",
+          "Player ID": "135541-117178",
+          "Actual Points": 0.0
+        },
+        {
+          "Player": "Jake Tonges (135541-91467)",
+          "Player ID": "135541-91467",
+          "Actual Points": 0.0
+        },
+        {
+          "Player": "Jayden Daniels (135541-102785)",
+          "Player ID": "135541-102785",
+          "Actual Points": 24.0
+        },
+        {
+          "Player": "Jaylin Lane (135541-128986)",
+          "Player ID": "135541-128986",
+          "Actual Points": 0.0
+        },
+        {
+          "Player": "Jeremy McNichols (135541-56648)",
+          "Player ID": "135541-56648",
+          "Actual Points": 1.3
+        },
+        {
+          "Player": "John Bates (135541-72705)",
+          "Player ID": "135541-72705",
+          "Actual Points": 0.9
+        },
+        {
+          "Player": "Jordan James (135541-175021)",
+          "Player ID": "135541-175021",
+          "Actual Points": 0.0
+        },
+        {
+          "Player": "Jordan Watkins (135541-134014)",
+          "Player ID": "135541-134014",
+          "Actual Points": 2.7
+        },
+        {
+          "Player": "Kaelon Black (135541-167881)",
+          "Player ID": "135541-167881",
+          "Actual Points": 4.2
+        },
+        {
+          "Player": "Kurtis Rourke (135541-104306)",
+          "Player ID": "135541-104306",
+          "Actual Points": 0.0
+        },
+        {
+          "Player": "Kyle Juszczyk (135541-39428)",
+          "Player ID": "135541-39428",
+          "Actual Points": 1.5
+        },
+        {
+          "Player": "Luke Farrell (135541-73176)",
+          "Player ID": "135541-73176",
+          "Actual Points": 0.0
+        },
+        {
+          "Player": "Luke McCaffrey (135541-103547)",
+          "Player ID": "135541-103547",
+          "Actual Points": 0.0
+        },
+        {
+          "Player": "Mac Jones (135541-90584)",
+          "Player ID": "135541-90584",
+          "Actual Points": 0.0
+        },
+        {
+          "Player": "Malik Turner (135541-55088)",
+          "Player ID": "135541-55088",
+          "Actual Points": 0.0
+        },
+        {
+          "Player": "Marcus Mariota (135541-29358)",
+          "Player ID": "135541-29358",
+          "Actual Points": 0.0
+        },
+        {
+          "Player": "Mike Evans (135541-32384)",
+          "Player ID": "135541-32384",
+          "Actual Points": 10.9
+        },
+        {
+          "Player": "Rachaad White (135541-137902)",
+          "Player ID": "135541-137902",
+          "Actual Points": 13.7
+        },
+        {
+          "Player": "River Cracraft (135541-41997)",
+          "Player ID": "135541-41997",
+          "Actual Points": 0.0
+        },
+        {
+          "Player": "San Francisco 49ers (135541-12549)",
+          "Player ID": "135541-12549",
+          "Actual Points": 5.0
+        },
+        {
+          "Player": "Sincere McCormick (135541-104054)",
+          "Player ID": "135541-104054",
+          "Actual Points": 0.0
+        },
+        {
+          "Player": "Stefon Diggs (135541-25079)",
+          "Player ID": "135541-25079",
+          "Actual Points": 13.4
+        },
+        {
+          "Player": "Terry McLaurin (135541-56250)",
+          "Player ID": "135541-56250",
+          "Actual Points": 3.2
+        },
+        {
+          "Player": "Treylon Burks (135541-110259)",
+          "Player ID": "135541-110259",
+          "Actual Points": 8.6
+        },
+        {
+          "Player": "Tyler Ott (135541-54746)",
+          "Player ID": "135541-54746",
+          "Actual Points": 0.0
+        },
+        {
+          "Player": "Van Jefferson (135541-64581)",
+          "Player ID": "135541-64581",
+          "Actual Points": 0.0
+        },
+        {
+          "Player": "Washington Commanders (135541-12552)",
+          "Player ID": "135541-12552",
+          "Actual Points": 4.0
+        },
+        {
+          "Player": "Will Pauling (135541-152756)",
+          "Player ID": "135541-152756",
+          "Actual Points": 0.0
+        },
+        {
+          "Player": "Xavier Smith (135541-113096)",
+          "Player ID": "135541-113096",
+          "Actual Points": 0.0
+        }
+      ],
+      "imported_at": "2026-10-21T00:38:39.193332+00:00",
+      "status": "User-uploaded completed standings; final status not independently verified",
+      "usage": "Validation archive only; no automatic projection or parameter updates",
+      "missing_policy": "Unlisted or missing scores are unknown, never zero",
+      "coverage": "Only players explicitly listed in this file; not guaranteed full-slate coverage"
+    }
+  }
+}
