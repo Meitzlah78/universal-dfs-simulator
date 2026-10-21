@@ -54,8 +54,13 @@ def run_pipeline(pool,outcome_factory,ownership,ownership_source,payouts,entry_f
                 fallback_reason+=" Generated roster support can meet tolerance; ownership optimizer did not reach an acceptable fit."
             else:
                 fallback_reason+=" Support feasibility check was inconclusive."
-            field=sample_popularity_field(support['indices'],np.ones(len(pool)),len(payouts)-1,
-                seed+1011,'Scenario-derived estimate; external ownership not used. '+fallback_reason)
+            # A failed marginal fit does not invalidate already-validated source
+            # inputs. Preserve their relative popularity instead of flattening
+            # every legal roster to equal probability. This is NOT a fitted field.
+            field=sample_popularity_field(support['indices'],ownership,len(payouts)-1,
+                seed+1011,'Validated ownership used only as relative popularity: '+ownership_source)
+            field['fallback_mode']='relative popularity from validated ownership'
+            field['max_expected_error_pct']=float(abs(field['ownership_expected']-np.asarray(ownership,float)).max())
             field['ownership_fit_diagnostic']=diagnostic
             field['ownership_fit_warning']=fallback_reason
             field['ownership_target']=np.asarray(ownership,float).copy()
@@ -77,3 +82,4 @@ def run_pipeline(pool,outcome_factory,ownership,ownership_source,payouts,entry_f
 def export_portfolio(template,contest_id,pool,result):
     lineups=result['portfolio'][list(rules_for(pool)['slots'])].astype(str).to_numpy().tolist()
     return export_entries(template,lineups,contest_id,pool,salary_cap=rules_for(pool)['salary_cap'],max_from_team=rules_for(pool)['max_from_team'])
+

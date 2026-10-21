@@ -20,7 +20,7 @@ def input_identity(pool,markets,contest,salary_min,correlation=0):
     columns=[c for c in ['Player ID','Position','Salary','Team','Opponent','Projection','Injury Status',
                          'Projected Minutes',*ROLE_COLUMNS,'RotoWire Projected Own %'] if c in pool]
     content={'pool':pool[columns].to_json(orient='split',double_precision=10),'markets':markets,
-             'contest':contest,'salary_min':salary_min,'field_model_version':2}
+             'contest':contest,'salary_min':salary_min,'field_model_version':3}
     if correlation:content['build_correlation']=correlation
     return hashlib.sha256(json.dumps(content,sort_keys=True).encode()).hexdigest()
 
@@ -140,7 +140,7 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
     from simmah_nba_player_display import display_pool
     labeled_pool=display_pool(saved_pool,status_pool=pool)
     if built['field'].get('ownership_fit_warning'):
-        with tabs[2]:st.warning('Opponent field uses a scenario-derived estimate because external ownership could not be fitted. '+built['field']['ownership_fit_warning'])
+        with tabs[2]:st.warning('Opponent field uses estimated relative popularity because external ownership could not be fitted. '+built['field']['ownership_fit_warning'])
         with tabs[3]:st.warning('ROI uses estimated opponent ownership; the external ownership fit failed.')
 
     try:
@@ -185,5 +185,6 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         st.subheader('Player exposures')
         st.dataframe(exposure[['Name','Team','Injury Status','Lineups','Exposure %']],hide_index=True,width='stretch',key='nba_exposure_table',
                      column_config={'Name':st.column_config.TextColumn('Player',pinned=True)})
+
 
 
