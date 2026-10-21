@@ -41,6 +41,10 @@ def apply_position_priors(pool,model,slate_day):
     if date.fromisoformat(model['before'])>date.fromisoformat(slate_day) or date.fromisoformat(model['latest_game'])>=date.fromisoformat(model['before']):
         raise ValueError('Position prior would use future results')
     result=pool.copy()
+    # Projection feeds can succeed while the minutes provider is unavailable.
+    # Keep unknown minutes explicit; never manufacture a playable rotation.
+    if 'Projected Minutes' not in result:result['Projected Minutes']=np.nan
+    if 'Minutes Source' not in result:result['Minutes Source']='Missing'
     for c in ROLE_COLUMNS:
         if c not in result:result[c]=np.nan
     result['Role Rate Source']='Missing'
@@ -49,7 +53,10 @@ def apply_position_priors(pool,model,slate_day):
         if np.isfinite(existing).all() and (existing>=0).all():
             result.at[i,'Role Rate Source']='Individual historical rates'
             continue
-        try:eligible=np.isfinite(float(row['Projection'])) and float(row['Projection'])>0 and float(row['Projected Minutes'])>0
+        try:
+            projection=float(row.get('Projection',np.nan))
+            minutes=float(row.get('Projected Minutes',np.nan))
+            eligible=np.isfinite([projection,minutes]).all() and projection>0 and 0<minutes<=48
         except (ValueError,TypeError):eligible=False
         if not eligible or str(row['Injury Status']).upper() in {'O','OUT','IR','SUSPENDED'}:continue
         groups=position_groups(row['Position'])
@@ -59,3 +66,4 @@ def apply_position_priors(pool,model,slate_day):
         for c,value in zip(ROLE_COLUMNS,rates):result.at[i,c]=value
         result.at[i,'Role Rate Source']='Position prior ('+'/'.join(groups)+'); '+model['before']
     return result
+

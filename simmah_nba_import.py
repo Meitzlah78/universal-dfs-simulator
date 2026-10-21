@@ -174,6 +174,12 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
     except (ValueError, OSError) as exc:
         with tabs[1]:
             st.warning(f'NBA historical role priors unavailable: {exc}')
+    _minutes=pd.to_numeric(pool.get('Projected Minutes',pd.Series(index=pool.index,dtype=float)),errors='coerce')
+    _projection=pd.to_numeric(pool['Projection'],errors='coerce')
+    _missing_minutes=(_projection>0) & ~pool['Injury Status'].astype(str).str.upper().isin(['OUT','O','IR','SUSPENDED']) & ~_minutes.between(0,48,inclusive='right')
+    if _missing_minutes.any():
+        with tabs[1]:
+            st.warning(f'{int(_missing_minutes.sum())} projected NBA player(s) have unavailable or invalid minutes. The slate can be viewed, but simulation builds need complete projected rotations. Refresh projections to retry the minutes provider; missing minutes are not treated as zero.')
     markets = extract_markets(pool)
     slate['markets'] = markets
     slate['players'] = pool
@@ -248,4 +254,5 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
         st.write(f"{len(pool)} players · {(pool['Injury Status']=='Out').sum()} Out · {(pool['Injury Status']=='Questionable').sum()} Questionable")
     from simmah_nba_ui import render_workspace
     render_workspace(st,slate,uploaded_file,tabs,controls,markets)
+
 
