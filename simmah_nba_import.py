@@ -98,7 +98,7 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
     automatic = {}
     try:
         day = slate.get('date') or slate_date(uploaded_file.name)
-        identity = (platform, day, tuple(sorted(zip(pool['Player ID'], pool['Team'], pool['Opponent']))), 'rotation-names-v4')
+        identity = (platform, day, tuple(sorted(zip(pool['Player ID'], pool['Team'], pool['Opponent']))), 'same-game-minutes-v5')
         cached = st.session_state.get('nba_projection_cache')
         import time
         if cached and cached['identity'] == identity and time.time()-cached['time'] < 900:
@@ -113,7 +113,7 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
     try:
         from simmah_nba_projections import download_rotowire
         day = slate.get('date') or slate_date(uploaded_file.name)
-        identity = (platform, day, tuple(sorted(zip(pool['Player ID'], pool['Team'], pool['Opponent']))), 'rotation-names-v4')
+        identity = (platform, day, tuple(sorted(zip(pool['Player ID'], pool['Team'], pool['Opponent']))), 'same-game-minutes-v5')
         cached = st.session_state.get('nba_rotowire_cache')
         if cached and cached['identity'] == identity and time.time()-cached['time'] < 900:
             rw_values, rw_details = cached['values'], cached['details']

@@ -206,6 +206,22 @@ def parse_rotowire(players, projections, day, pool, ownership=None):
     return values, details
 
 
+
+def select_rotowire_minutes_slate(payload,day,pool,platform='FanDuel'):
+    """Select a same-date superset for game-level metadata only."""
+    expected={(team_key(r.Team),team_key(r.Opponent)) for r in pool.itertuples()}
+    expected|={(b,a) for a,b in expected}
+    matches=[]
+    for slate in payload.get('slates',[]):
+        if slate.get('contestType')!=('Classic' if platform=='DraftKings' else 'Full Roster') or slate.get('startDateOnly')!=day:continue
+        games=[payload.get('games',{}).get(str(g)) for g in slate.get('games',[])]
+        if not games or any(not g or str(g.get('gameDate',''))[:10]!=day for g in games):continue
+        pairs={(team_key(g['homeTeamCode']),team_key(g['visitTeamCode'])) for g in games}
+        pairs|={(b,a) for a,b in pairs}
+        if expected and expected<=pairs:matches.append((len(games),not bool(slate.get('defaultSlate')),str(slate['slateID']),slate))
+    if not matches:raise ValueError('No same-date RotoWire slate covers the uploaded games for minutes')
+    return min(matches,key=lambda x:x[:3])[3]
+
 def download_rotowire(day, pool, platform='FanDuel'):
     import json
     base = 'https://www.rotowire.com/daily/nba/api/'
@@ -217,7 +233,21 @@ def download_rotowire(day, pool, platform='FanDuel'):
                     return json.load(response)
             except (OSError,ValueError):
                 if attempt:raise
-    slate = select_rotowire_slate(get('slate-list.php?siteID='+('1' if platform=='DraftKings' else '2')),day,pool,platform=platform)
+    listing=get('slate-list.php?siteID='+('1' if platform=='DraftKings' else '2'))
+    try:slate=select_rotowire_slate(listing,day,pool,platform=platform)
+    except ValueError:
+        slate=select_rotowire_minutes_slate(listing,day,pool,platform=platform)
+        sid=str(slate['slateID'])
+        allowed={(team_key(r.Team),team_key(r.Opponent)) for r in pool.itertuples()}
+        players=[p for p in get('players.php?slateID='+sid)
+            if str(p.get('game',{}).get('dateTime',''))[:10]==day
+            and (team_key(p.get('team',{}).get('abbr','')),team_key(p.get('opponent',{}).get('team',''))) in allowed]
+        _,details=parse_rotowire(players,None,day,pool)
+        for row in details.values():
+            if row['Projected Minutes'] is not None:row['Minutes Source']='RotoWire same-game minutes (broader slate '+sid+')'
+            row['RotoWire RST % (unverified)']=None
+            row['RotoWire Projected Own %']=None
+        return {},details,sid
     sid = str(slate['slateID'])
     # Minutes/injuries live in players.php and do not depend on access to
     # fantasy projections or ownership. Fetch independent feeds concurrently.
