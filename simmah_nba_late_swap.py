@@ -43,7 +43,7 @@ def entry_rows(template, contest_id, pool):
     size=len(rules_for(pool)['slots'])
     known = set(pool['Player ID'])
     if not entries or any(len(set(r[4:4+size])) != size or not set(r[4:4+size]) <= known for r in entries):
-        raise ValueError('Upload current filled entries from FanDuel, with nine valid player IDs per entry')
+        raise ValueError('Upload current filled entries for this site, with valid player IDs in every roster slot')
     return entries
 
 
@@ -196,6 +196,11 @@ def render_late_swap(st,pool,contest_id,salary_min,diversity,markets=None,contes
             import hashlib
             saved_build=st.session_state.get('nba_build_result')
             field_signature=str(saved_build.get('identity','')) if saved_build else ''
+            if st.checkbox('AUTO LATE SWAP — prepare updated entries automatically',key='nba_auto_swap_enabled'):
+                from simmah_nba_auto_swap import render_auto_swap
+                render_auto_swap(st,pool,data,contest_id,salary_min,diversity,markets,contest,
+                                 saved_build,simulation,actuals,pregame_locked)
+                return
             signature=hashlib.sha256(data+actual_bytes+pool.to_json().encode()+str(contest_id).encode()+str((salary_min,diversity,mode,pregame_locked,markets,field_signature)).encode()).hexdigest()
             if st.button('SIMULATE LATE SWAP' if simulation else 'FAST LATE SWAP',key='nba_fast_late_swap'):
                 started=time.monotonic()
@@ -278,4 +283,5 @@ def run_simulated_late_swap(template,contest_id,pool,markets,contest,saved,actua
     if field.get('ownership_fit_warning'):
         result['field_warning']='Conditional ranks use an estimated opponent field: '+field['ownership_fit_warning']
     return result
+
 
