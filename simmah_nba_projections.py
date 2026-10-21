@@ -30,7 +30,10 @@ def player_key(name, team):
     import unicodedata
     name=''.join(c for c in unicodedata.normalize('NFKD',str(name)) if not unicodedata.combining(c))
     name=re.sub(r'\s+(?:jr\.?|sr\.?|ii|iii|iv)$','',name.strip(),flags=re.I)
-    return (' '.join(name.casefold().split()),team_key(team))
+    name=' '.join(name.casefold().replace('.','').split())
+    # Verified provider aliases; retain team in the key and never fuzzy-match.
+    name={'alexandre sarr':'alex sarr','gregory jackson':'gg jackson'}.get(name,name)
+    return (name,team_key(team))
 
 
 def positive(value):

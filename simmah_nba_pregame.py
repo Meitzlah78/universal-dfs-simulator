@@ -40,7 +40,10 @@ class PregameEngine:
                 minutes=np.asarray(active['Projected Minutes'],float)
                 roles=active[ROLE_COLUMNS].to_numpy(float)
                 if len(active)<5 or not np.isfinite(minutes).all() or (minutes<=0).any() or (minutes>48).any():
-                    raise ValueError('Complete positive projected rotation required for '+team)
+                    invalid=~np.isfinite(minutes)|(minutes<=0)|(minutes>48)
+                    labels=active.get('Name',active['Player ID']).astype(str)
+                    detail=', '.join(labels.loc[invalid]) if invalid.any() else 'fewer than five rotation players'
+                    raise ValueError('Complete positive projected rotation required for '+team+': '+detail)
                 if abs(minutes.sum()-240)>1e-6:
                     raise ValueError(f'{team} projected rotation totals {minutes.sum():.1f} minutes; 240 required')
                 missing=~np.isfinite(roles).all(axis=1)|(roles<0).any(axis=1)
