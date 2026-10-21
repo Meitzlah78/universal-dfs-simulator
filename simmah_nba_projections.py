@@ -157,8 +157,11 @@ def parse_rotowire(players, projections, day, pool, ownership=None):
         value = pts.get(str(player.get('slateID')))
         if value is not None:
             values[key] = value
-        minutes = positive(player.get('minutes'))
-        if minutes is not None and minutes > 48:
+        # Zero is a provider-confirmed non-rotation player, not missing data.
+        try:
+            minutes = float(player.get('minutes'))
+            if not math.isfinite(minutes) or not 0 <= minutes <= 48:minutes = None
+        except (TypeError, ValueError):
             minutes = None
         try:
             rostership = float(player.get('rostership'))
@@ -179,7 +182,7 @@ def parse_rotowire(players, projections, day, pool, ownership=None):
         except (ValueError,TypeError,KeyError):
             role_details = {}
         lineup = player.get('lineup') or {}
-        details[key] = {**role_details, 'Game Start':player.get('game',{}).get('dateTime'), 'RotoWire RST % (unverified)':rostership, 'Projected Minutes':minutes, 'Minutes Source':'RotoWire' if minutes else 'Missing',
+        details[key] = {**role_details, 'Game Start':player.get('game',{}).get('dateTime'), 'RotoWire RST % (unverified)':rostership, 'Projected Minutes':minutes, 'Minutes Source':'RotoWire' if minutes is not None else 'Missing',
             'RotoWire Injury':player.get('injuryStatus') or 'Active',
             'Expected Starter':lineup.get('slot'),
             'Starter Confirmed':str(lineup.get('isConfirmed',False)).strip().casefold() in {'true','yes','1'},

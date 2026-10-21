@@ -98,7 +98,7 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
     automatic = {}
     try:
         day = slate.get('date') or slate_date(uploaded_file.name)
-        identity = (platform, day, tuple(sorted(zip(pool['Player ID'], pool['Team'], pool['Opponent']))), 'ownership-v2')
+        identity = (platform, day, tuple(sorted(zip(pool['Player ID'], pool['Team'], pool['Opponent']))), 'rotation-zero-v3')
         cached = st.session_state.get('nba_projection_cache')
         import time
         if cached and cached['identity'] == identity and time.time()-cached['time'] < 900:
@@ -113,7 +113,7 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
     try:
         from simmah_nba_projections import download_rotowire
         day = slate.get('date') or slate_date(uploaded_file.name)
-        identity = (platform, day, tuple(sorted(zip(pool['Player ID'], pool['Team'], pool['Opponent']))), 'ownership-v2')
+        identity = (platform, day, tuple(sorted(zip(pool['Player ID'], pool['Team'], pool['Opponent']))), 'rotation-zero-v3')
         cached = st.session_state.get('nba_rotowire_cache')
         if cached and cached['identity'] == identity and time.time()-cached['time'] < 900:
             rw_values, rw_details = cached['values'], cached['details']
@@ -178,7 +178,9 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
             st.warning(f'NBA historical role priors unavailable: {exc}')
     _minutes=pd.to_numeric(pool.get('Projected Minutes',pd.Series(index=pool.index,dtype=float)),errors='coerce')
     _projection=pd.to_numeric(pool['Projection'],errors='coerce')
-    _missing_minutes=(_projection>0) & ~pool['Injury Status'].astype(str).str.upper().isin(['OUT','O','IR','SUSPENDED']) & ~_minutes.between(0,48,inclusive='right')
+    _zero_minutes=_minutes.eq(0)
+    pool.loc[_zero_minutes,'Eligible']=False
+    _missing_minutes=(_projection>0) & ~_zero_minutes & ~pool['Injury Status'].astype(str).str.upper().isin(['OUT','O','IR','SUSPENDED']) & ~_minutes.between(0,48,inclusive='right')
     if _missing_minutes.any():
         with tabs[1]:
             st.warning(f'{int(_missing_minutes.sum())} projected NBA player(s) have unavailable or invalid minutes. The slate can be viewed, but simulation builds need complete projected rotations. Refresh projections to retry the minutes provider; missing minutes are not treated as zero.')

@@ -33,7 +33,10 @@ class PregameEngine:
                     raise ValueError('Market does not match uploaded game')
                 injured=group['Injury Status'].astype(str).str.upper().isin(['OUT','O','IR','SUSPENDED'])
                 projection=np.asarray(group['Projection'],float)
-                active=group[np.isfinite(projection)&(projection>0)&~injured]
+                # Explicit provider zero-minute reserves cannot enter a rotation.
+                # Unknown minutes remain in validation below and still block.
+                rotation_minutes=np.asarray(group['Projected Minutes'],float)
+                active=group[np.isfinite(projection)&(projection>0)&~injured&(rotation_minutes!=0)]
                 minutes=np.asarray(active['Projected Minutes'],float)
                 roles=active[ROLE_COLUMNS].to_numpy(float)
                 if len(active)<5 or not np.isfinite(minutes).all() or (minutes<=0).any() or (minutes>48).any():
