@@ -138,6 +138,36 @@ def export_swaps(template, contest_id, pool, result, *, now=None):
     return output.getvalue().encode()
 
 
+def revalidate_current_locks(pool,result,now=None):
+    """Preserve original entries invalidated by tipoff before export.
+
+    Reconcile the visible report and downloaded roster together. Never move a
+    newly locked player or insert a started player into a previously open slot.
+    """
+    locked=locked_players(pool,now);size=len(rules_for(pool)['slots'])
+    lookup={str(pid):i for i,pid in enumerate(pool['Player ID'])}
+    updated=dict(result);updated['lineups']=[list(row) for row in result['lineups']]
+    updated['report']=result['report'].copy()
+    unchanged=0
+    for number,(entry,lineup) in enumerate(zip(result['original_entries'],result['lineups'])):
+        original=np.array([lookup[str(pid)] for pid in entry[4:4+size]])
+        candidate=np.array([lookup[str(pid)] for pid in lineup])
+        if np.array_equal(original,candidate):continue
+        try:validate_swap(pool,original,candidate,locked)
+        except ValueError as exc:
+            unchanged+=1
+            updated['lineups'][number]=[str(pid) for pid in entry[4:4+size]]
+            updated['report'].loc[number,'Status']='Kept original — lock check invalidated swap'
+            updated['report'].loc[number,'Lock check']=str(exc)
+            updated['report'].loc[number,'Changes']=0
+            updated['report'].loc[number,'Locked slots']=int(locked[original].sum())
+            updated['report'].loc[number,'Salary']=int(pool.iloc[original]['Salary'].sum())
+            if 'Conditional Top 1%' in updated['report']:
+                updated['report'].loc[number,'Conditional Top 1%']=np.nan
+    updated['entries_preserved_by_lock_check']=unchanged
+    return updated
+
+
 def render_late_swap(st,pool,contest_id,salary_min,diversity,markets=None,contest=None):
     rules=rules_for(pool);platform=rules['platform']
     with st.expander('NBA LATE SWAP — fast',expanded=False):
@@ -182,16 +212,20 @@ def render_late_swap(st,pool,contest_id,salary_min,diversity,markets=None,contes
                 st.caption(f'Completed in {saved[2]:.2f} seconds. Review unchanged entries before uploading.')
                 if result.get('status'):st.caption(result['status'])
                 if result.get('field_warning'):st.warning(result['field_warning'])
-                st.dataframe(result['report'],hide_index=True,width='stretch')
-                frame=pd.DataFrame(result['lineups'],columns=rules['slots'])
-                from simmah_nba_ui import display_lineups
-                st.dataframe(display_lineups(pool,frame),hide_index=True,width='stretch')
                 def download_current():
                     try:
-                        output=export_swaps(data,contest_id,pool,result)
+                        current=revalidate_current_locks(pool,result)
+                        preserved=current['entries_preserved_by_lock_check']
+                        if preserved:
+                            st.warning(f'{preserved} entry/entries kept exactly as uploaded because the lock check invalidated their swaps. Other valid swaps remain available. Review the report before uploading.')
+                        st.dataframe(current['report'],hide_index=True,width='stretch')
+                        frame=pd.DataFrame(current['lineups'],columns=rules['slots'])
+                        from simmah_nba_ui import display_lineups
+                        st.dataframe(display_lineups(pool,frame),hide_index=True,width='stretch')
+                        output=export_swaps(data,contest_id,pool,current)
                         workspace_download_button(st,'EXPORT TO '+platform.upper()+' — LATE SWAP CSV',output,'Simmah_NBA_Late_Swap.csv','text/csv',key='nba_late_swap_download',on_click='ignore')
                         st.caption(f'Upload immediately, before the next tipoff. {platform} controls final lock status; scheduled times are used here.')
-                    except ValueError as exc:st.error(f'{exc}. Run FAST LATE SWAP again.')
+                    except ValueError as exc:st.error(f'{exc}. Refresh inputs and run the selected late-swap method again.')
                 st.fragment(run_every=5)(download_current)()
         except (ValueError,KeyError) as exc:st.error(str(exc))
 
