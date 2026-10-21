@@ -1,5 +1,6 @@
 """Experimental NBA orchestration boundary; Streamlit-free and not live-enabled."""
 import numpy as np
+from time import perf_counter
 from simmah_nba_candidates import build_candidates,build_opponent_support
 from simmah_nba_field import build_field,sample_popularity_field,ownership_support_diagnostic
 from simmah_nba_contest import evaluate_candidates,select_entries
@@ -26,20 +27,28 @@ def run_pipeline(pool,outcome_factory,ownership,ownership_source,payouts,entry_f
     if excluded.ndim!=1 or (excluded.size and (excluded.dtype.kind not in 'iu' or (excluded<0).any() or (excluded>=len(pool)).any())):
         raise ValueError('Valid original-pool player indices required for exclusions')
     excluded=excluded.astype(int)
+    timings={'game_scenarios':0.};cache_hits=0
     def notify(message):
         if progress:progress(message)
     def draw(draw_seed):
+        nonlocal cache_hits
+        started=perf_counter()
         array=np.asarray(outcome_factory(simulations,draw_seed))
+        timings['game_scenarios']+=perf_counter()-started
+        cache_hits+=int(bool(getattr(outcome_factory,'last_cache_hit',False)))
         if array.shape!=(simulations,len(pool)) or not np.isfinite(array).all():
             raise ValueError('Engine outcomes do not match simulation count and player order')
         return array.copy()
     notify('Simulating candidate scenarios')
     construction=draw(seed)
+    started=perf_counter()
     candidates=build_candidates(pool,construction,target=candidate_target,seed=seed+1,salary_min=salary_min,correlation=correlation,
                                 excluded_indices=excluded)
+    timings['candidates']=perf_counter()-started
     if candidates['unique']<portfolio_count:raise ValueError('Insufficient unique NBA candidates for reserved entries')
     notify('Building independent opponent support')
     field_outcomes=draw(seed+1009)
+    started=perf_counter()
     if np.array_equal(construction,field_outcomes):raise ValueError('Opponent scenarios repeat construction scenarios')
     if ownership_mode=='projected':
         support=build_opponent_support(pool,field_outcomes,ownership,target=field_support_target,seed=seed+1010)
@@ -75,15 +84,19 @@ def run_pipeline(pool,outcome_factory,ownership,ownership_source,payouts,entry_f
             field['ownership_target']=np.asarray(ownership,float).copy()
     else:
         field=sample_popularity_field(support['indices'],ownership,len(payouts)-1,seed+1011,ownership_source)
+    timings['opponent_field']=perf_counter()-started
     notify('Scoring independent evaluation scenarios')
     evaluation=draw(seed+2017)
     if np.array_equal(evaluation,construction) or np.array_equal(evaluation,field_outcomes):
         raise ValueError('Evaluation scenarios repeat construction or opponent scenarios')
+    started=perf_counter()
     report=evaluate_candidates(evaluation,candidates['indices'],field['indices'],payouts,entry_fee,
         construction_seed=seed,evaluation_seed=seed+2017,field_copies=field['copies'],score_ticks=rules_for(pool)['score_ticks'])
+    timings['contest_scoring']=perf_counter()-started
     notify('Selecting portfolio')
     portfolio=select_entries(pool,candidates['indices'],report,portfolio_count,diversity=diversity)
     return {'candidates':candidates,'field':field,'report':report,'portfolio':portfolio,
+            'timings_seconds':timings,'scenario_cache_hits':cache_hits,
             'excluded_player_ids':pool.iloc[excluded]['Player ID'].astype(str).tolist(),
             'simulation_seeds':{'construction':seed,'field':seed+1009,'evaluation':seed+2017},
             'simulations_per_set':simulations,'status':'experimental offline pipeline; marginal contest estimates'}
@@ -92,5 +105,6 @@ def run_pipeline(pool,outcome_factory,ownership,ownership_source,payouts,entry_f
 def export_portfolio(template,contest_id,pool,result):
     lineups=result['portfolio'][list(rules_for(pool)['slots'])].astype(str).to_numpy().tolist()
     return export_entries(template,lineups,contest_id,pool,salary_cap=rules_for(pool)['salary_cap'],max_from_team=rules_for(pool)['max_from_team'])
+
 
 

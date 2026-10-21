@@ -72,13 +72,12 @@ def simulate_game(rotations, profiles, rates, seed, overtime_rotations=None, pla
     counters={k:np.zeros(n,np.int32) for k in ['field_goal_makes','field_goal_misses','free_throw_misses','credited_rebounds','credited_assists','turnovers','steals','blocks']}
     flat_weights=weights.reshape(2*size,5)
     def pick(ids,lineups,role,exclude=None):
-        w=flat_weights[lineups,role].copy()
+        w=flat_weights[lineups,role]
         if exclude is not None:w[lineups==exclude[:,None]]=0
         # Uniform role allocation among eligible on-court players if all supplied
         # weights are zero; a scorer is still never his own assister.
-        allowed=np.ones_like(w,bool) if exclude is None else lineups!=exclude[:,None]
         empty=w.sum(axis=1)<=0
-        w[empty]=allowed[empty]
+        if empty.any():w[empty]=1 if exclude is None else (lineups[empty]!=exclude[empty,None])
         cdf=np.cumsum(w,axis=1);draw=rng.random(len(ids))*cdf[:,-1]
         return lineups[np.arange(len(ids)),np.minimum((cdf<draw[:,None]).sum(axis=1),4)]
     # Event subsets contain unique scenario IDs; no index pair repeats.
@@ -104,7 +103,7 @@ def simulate_game(rotations, profiles, rates, seed, overtime_rotations=None, pla
             ids=ids[valid]
             if not len(ids):continue
             minute=np.minimum((elapsed[ids]/60).astype(int),47)
-            offense=rotation[ids,team,minute].copy();defense=rotation[ids,1-team,minute].copy()
+            offense=rotation[ids,team,minute];defense=rotation[ids,1-team,minute]
             in_ot=overtime_count[ids]>0
             if in_ot.any():
                 oi=ids[in_ot];op=overtime_count[oi]-1
@@ -164,7 +163,8 @@ def simulate_game(rotations, profiles, rates, seed, overtime_rotations=None, pla
         next_quarter=(period_clock<=0)&(clock>0)&(overtime_count==0)
         quarter[next_quarter]+=1
         period_clock[next_quarter]=720
-        side[next_quarter]=np.where(np.isin(quarter[next_quarter],[2,3]),1-opening[next_quarter],opening[next_quarter])
+        next_period=quarter[next_quarter]
+        side[next_quarter]=np.where((next_period==2)|(next_period==3),1-opening[next_quarter],opening[next_quarter])
         tied=(clock<=0)&(team_points[:,0]==team_points[:,1])
         can_extend=tied & (overtime_count < (overtime.shape[2] if overtime is not None else 0))
         if can_extend.any():
@@ -177,3 +177,4 @@ def simulate_game(rotations, profiles, rates, seed, overtime_rotations=None, pla
     return {'scores':scores.astype(np.float32),'stats':stats,'team_points':team_points,
         'requires_overtime':team_points[:,0]==team_points[:,1], 'overtime_periods':overtime_count, 'elapsed_seconds':elapsed, 'counters':counters,
         'engine':'experimental-nba-possession-v2-explicit-overtime'}
+

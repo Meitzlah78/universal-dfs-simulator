@@ -7,6 +7,7 @@ import pandas as pd
 from simmah_nba_contests import saved_contest,payout_vector
 from simmah_nba_projections import slate_date
 from simmah_nba_pregame import PregameEngine
+from simmah_nba_simulation_cache import CachedNBAOutcomes
 from simmah_nba_engine import EventRates
 from simmah_nba_pipeline import run_pipeline,export_portfolio
 from simmah_nba_contest import select_entries
@@ -90,7 +91,7 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         rates_path=Path(__file__).parent/'data'/'nba_models'/'event-rates-before-2026-04-09.json'
         model=json.loads(rates_path.read_text())
         if model['before']>day:raise ValueError('Historical event baseline follows the selected slate date')
-        engine=PregameEngine(pool,markets,EventRates(**model['rates']),platform=platform)
+        engine=CachedNBAOutcomes(PregameEngine(pool,markets,EventRates(**model['rates']),platform=platform))
         if engine.missing_markets:
             with tabs[0]:st.warning('Market lines unavailable for: '+', '.join(' vs '.join(pair) for pair in engine.missing_markets)+'. These games use external player projections and historical event rates without Vegas calibration. No totals or spreads are invented.')
 
@@ -167,6 +168,10 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         return
     with tabs[2]:
         if stale:st.info('Inputs or build settings changed. Previous results remain visible; rebuild before exporting.')
+        if built.get('timings_seconds'):
+            _timing=built['timings_seconds']
+            st.caption('Build timing · '+ ' · '.join(label+f" {_timing[key]:.1f}s" for key,label in [('game_scenarios','Game scenarios'),('candidates','Candidates'),('opponent_field','Opponents'),('contest_scoring','Scoring')])+
+                f" · {built.get('scenario_cache_hits',0)}/3 scenario sets reused")
         render_exports(st,upload,cid,saved_pool,built,portfolio,platform,stale,'build',status_pool=pool)
         st.subheader('Candidate lineups')
         st.caption(f"{built['candidates']['unique']:,} unique candidates · {built['field']['entries']:,} modeled opponents · {built['field']['unique_rosters']:,} unique opponent rosters. Ownership and ROI are estimates.")
@@ -210,6 +215,7 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         st.subheader('Player exposures')
         st.dataframe(exposure[['Name','Team','Injury Status','Lineups','Exposure %']],hide_index=True,width='stretch',key='nba_exposure_table',
                      column_config={'Name':st.column_config.TextColumn('Player',pinned=True)})
+
 
 
 
