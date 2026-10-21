@@ -211,6 +211,8 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
     with tabs[1]:
         from simmah_nba_news import render_underdog_news
         render_underdog_news(st)
+        from simmah_nba_live import render_live_points
+        render_live_points(st,pool,day,platform)
         from simmah_nba_minutes_validation import render_minutes_snapshots
         render_minutes_snapshots(st,pool,platform)
         st.subheader('NBA player pool')
