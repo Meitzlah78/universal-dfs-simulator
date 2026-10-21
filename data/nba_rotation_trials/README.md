@@ -66,3 +66,28 @@ The example thresholds in tests are synthetic, not fitted coaching tendencies.
 No hardcoded 90-second cycle, empirical substitution model or efficiency penalty
 has been activated. Staggered base schedules still require validation against
 observed stints, including rotation context and substitution opportunities.
+
+## Official public-page box-score audit — October 21, 2026
+
+The direct NBA CDN endpoint returned HTTP 403, but public NBA game pages
+exposed final player/team IDs and box-score minutes in __NEXT_DATA__.
+The optional offline downloader reads those public game pages. It does not
+run in Streamlit or change projections:
+
+    python scripts/reconcile_nba_rotations.py audit.json boxscores --fetch-official-pages --output reconciled.json
+
+All 45 structurally accepted games now reconcile at player level within the
+explicit two-second tolerance. The other 15 of the 60 source games remain
+structurally rejected; they are not silently repaired or counted as validated.
+See official-boxscore-audit.json for per-game final-source URLs, normalized
+box-score hashes and residuals. Downloaded normalized box scores are reusable
+CLI inputs; raw source pages and normalized payloads are not committed.
+Official page MM:SS minutes are converted to ISO durations; displayed :60
+rounding carries into the next minute. Explicit DNP and DND records supply
+verified zero minutes; unexplained blanks remain unknown.
+
+This supersedes the earlier pending box-score status for these 45 games only.
+It validates historical player-minute reconstruction, not all event ordering,
+foul/score trigger thresholds, injury redistribution, a learned coaching model,
+pregame projection accuracy, profitable lineups or regular-season coverage.
+No live rotation behavior is enabled.

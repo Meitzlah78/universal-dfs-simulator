@@ -9,12 +9,22 @@ def main():
     parser.add_argument('audit',type=Path)
     parser.add_argument('boxscores',type=Path)
     parser.add_argument('--output',type=Path,required=True)
+    parser.add_argument('--fetch-official-pages',action='store_true',help='Download missing final box scores from public NBA game pages')
     args=parser.parse_args()
+    args.boxscores.mkdir(parents=True,exist_ok=True)
     audit=json.loads(args.audit.read_text());groups={}
     for stint in audit['stints']:groups.setdefault(stint['game_id'],[]).append(stint)
     results=[]
     for gid,stints in sorted(groups.items()):
         path=args.boxscores/('boxscore_'+gid.zfill(10)+'.json')
+        if not path.exists() and args.fetch_official_pages:
+            try:
+                from simmah_nba_boxscore_pages import download_boxscore_page
+                payload=download_boxscore_page(gid.zfill(10))
+                path.write_text(json.dumps(payload)+'\n')
+            except (OSError,ValueError,KeyError,TypeError) as exc:
+                results.append({'game_id':gid,'passed':False,'status':'pending: '+str(exc)})
+                continue
         if not path.exists():
             results.append({'game_id':gid,'passed':False,'status':'pending: final box score unavailable'})
             continue
