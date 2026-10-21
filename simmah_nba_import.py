@@ -198,8 +198,6 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
         for c in slate['contests']:
             st.write(c['name'])
             st.caption(f"Contest {c['id']} · {c['owned_entries']} entries · ${c['entry_fee']:.2f} each")
-        st.write('Games: ' + ' • '.join(sorted(pool['Game'].unique())))
-        st.caption('Roster: ' + ', '.join(slate['slots']))
         st.subheader('NBA market lines')
         from simmah_nba_markets import implied_scores
         from simmah_nba_projections import team_key
@@ -225,7 +223,6 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
             st.caption(market['source'] + (' · refreshed with NBA projections; cached up to 15 minutes' if market['source'] != 'Manual override' else ''))
         if not markets:
             st.info('No complete, consistent market lines are available for this NBA slate.')
-        st.caption('Market lines calibrate the experimental NBA simulation scoring environment.')
     if game_header is not None:
         from simmah_nba_lineups import render_live_strip
         source_cache=st.session_state.get('nba_rotowire_cache',{})
@@ -238,10 +235,10 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
         from simmah_nba_live import render_live_points
         render_live_points(st,pool,day,platform)
         from simmah_nba_minutes_validation import render_minutes_snapshots
-        render_minutes_snapshots(st,pool,platform)
+        _advanced=st.checkbox('Show advanced reports and validation',key='nba_show_advanced')
+        render_minutes_snapshots(st,pool,platform,show_controls=_advanced)
         st.subheader('NBA player pool')
         st.caption(f"Positive projections: {pool['Projection'].notna().sum()} / {len(pool)} · Eligible after injuries: {pool['Eligible'].sum()}. Automatic data is cached for up to 15 minutes; refresh runs on app activity.")
-        st.caption('Historical FPPG is supplied by FanDuel. It is not a pregame projection. OUT players are ineligible; questionable players remain visible.')
         from simmah_nba_ownership import field_ownership_inputs
         ownership_check=field_ownership_inputs(pool)
         st.caption(ownership_check['source'])
@@ -263,6 +260,7 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
         st.write(f"{len(pool)} players · {(pool['Injury Status']=='Out').sum()} Out · {(pool['Injury Status']=='Questionable').sum()} Questionable")
     from simmah_nba_ui import render_workspace
     render_workspace(st,slate,uploaded_file,tabs,controls,markets)
+
 
 
 

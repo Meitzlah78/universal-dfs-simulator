@@ -64,13 +64,15 @@ def grade_minutes(snapshot,actuals):
             'caveat':'Actuals require verified final games and explicit site-ID mapping. Includes overtime minutes; not regulation-only validation.'}
 
 
-def render_minutes_snapshots(st,pool,platform):
+def render_minutes_snapshots(st,pool,platform,show_controls=True):
     frozen=freeze_minutes(pool,platform)
     history=st.session_state.setdefault('nba_minutes_snapshots',[])
     if frozen and not any(x['signature']==frozen['signature'] for x in history):
         history.append(frozen)
+    if not show_controls:return
     with st.expander('Pregame minutes snapshots — validation'):
         st.caption('Automatically records available minutes before each game starts. Saved with this browser’s slate workspace; download an archive for a separate backup. No simulation parameters are changed.')
         st.caption(f'{len(history)} saved snapshots. Missing actual players will stay unmatched, not become zeros.')
         workspace_download_button(st,'DOWNLOAD MINUTES SNAPSHOTS',json.dumps(history,indent=2).encode(),
             'Simmah_NBA_Minutes_Snapshots.json','application/json',key='nba_minutes_snapshot_download',on_click='ignore')
+

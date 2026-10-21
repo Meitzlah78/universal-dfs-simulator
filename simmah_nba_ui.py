@@ -38,13 +38,14 @@ def display_lineups(pool,frame,status_pool=None):
 def render_exports(st,upload,cid,pool,built,portfolio,platform,stale,location,status_pool=None):
     st.subheader('Export lineups')
     st.caption('Export the selected portfolio ('+str(len(portfolio))+' lineups), not the full candidate pool.')
-    workspace_download_button(st,'DOWNLOAD PORTFOLIO REPORT',display_lineups(pool,portfolio,status_pool).to_csv(index=False).encode(),
-        'Simmah_NBA_'+platform+'_Portfolio_Report.csv','text/csv',
-        key='nba_portfolio_report_'+location,on_click='ignore')
-    workspace_download_button(st,'DOWNLOAD BUILD PLAYER POOL',pool.to_csv(index=False).encode('utf-8-sig'),
-        'Simmah_NBA_'+platform+'_Build_Player_Pool.csv','text/csv',
-        key='nba_build_player_pool_'+location,on_click='ignore',
-        help='Frozen player inputs used by this saved build, including RotoWire RST values. Use this file to compare with its opponent field.')
+    with st.expander('Advanced — reports and frozen inputs'):
+        workspace_download_button(st,'DOWNLOAD PORTFOLIO REPORT',display_lineups(pool,portfolio,status_pool).to_csv(index=False).encode(),
+            'Simmah_NBA_'+platform+'_Portfolio_Report.csv','text/csv',
+            key='nba_portfolio_report_'+location,on_click='ignore')
+        workspace_download_button(st,'DOWNLOAD BUILD PLAYER POOL',pool.to_csv(index=False).encode('utf-8-sig'),
+            'Simmah_NBA_'+platform+'_Build_Player_Pool.csv','text/csv',
+            key='nba_build_player_pool_'+location,on_click='ignore',
+            help='Frozen player inputs used by this saved build, including RotoWire RST values. Use this file to compare with its opponent field.')
     data=b'';export_error=None
     if not stale:
         try:data=export_portfolio(upload.getvalue(),cid,pool,built)
@@ -97,14 +98,12 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         st.caption(ownership['source'])
         if ownership['mode']!='projected':st.warning(ownership['status'])
     with controls:
-        st.caption(platform+' NBA · experimental')
         st.write(f'{count} portfolio entries')
         salary_min=st.number_input('Minimum salary',min_value=0,max_value=rules['salary_cap'],value=58000 if platform=='FanDuel' else 48000,step=500,key='nba_min_salary' if platform=='FanDuel' else 'nba_min_salary_DraftKings')
         correlation=st.slider('Build correlation',0,100,0,key='nba_build_correlation',
             help='Extra preference for positively correlated player combinations measured from the shared game simulations. 0 = no extra bonus; 100 = strongest bonus. Game simulations remain correlated at every setting.')
         diversity=st.slider('Exposure diversity',0,100,50,key='nba_exposure_diversity')
         metric=st.selectbox('Rank lineups',['Top 1%','Expected ROI (%)','Expected Prize ($)'],key='nba_rank_metric')
-        st.caption('10,000 scenarios per set · 5,000 candidates · up to 10,000 field-support rosters')
         clicked=st.button('BUILD NBA LINEUPS',disabled=bool(error),key='nba_build')
         if error:st.caption(error)
     identity=input_identity(pool,markets,contest,salary_min,correlation)
@@ -159,15 +158,16 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         st.dataframe(display_lineups(saved_pool,candidate_rows,status_pool=pool).sort_values(metric,ascending=False),hide_index=True,width="stretch")
         workspace_download_button(st,'DOWNLOAD OPPONENT FIELD',pd.DataFrame(built['field']['indices'],columns=slots).apply(lambda c:c.map(saved_pool['Player ID'].to_dict())).assign(Copies=built['field']['copies']).to_csv(index=False).encode(),
             'Simmah_NBA_Opponent_Field.csv','text/csv',key='nba_field_download',on_click='ignore')
-        with st.expander('NBA engine and ownership report'):
-            st.write(saved['engine_reports'])
-            st.caption(built['field']['ownership_source'])
-            report=pd.DataFrame({'Name':labeled_pool['Name'],'Estimated Field Own %':built['field']['ownership_sampled']})
-            if 'RotoWire Projected Own %' in saved_pool:
-                report['RotoWire Projected Own %']=pd.to_numeric(saved_pool['RotoWire Projected Own %'],errors='coerce')
-                report['Field minus RotoWire (pp)']=report['Estimated Field Own %']-report['RotoWire Projected Own %']
-            st.dataframe(report,hide_index=True,width="stretch",key="nba_ownership_table",
-                         column_config={'Name':st.column_config.TextColumn('Player',pinned=True)})
+        if st.session_state.get('nba_show_advanced',False):
+            with st.expander('NBA engine and ownership report'):
+                st.write(saved['engine_reports'])
+                st.caption(built['field']['ownership_source'])
+                report=pd.DataFrame({'Name':labeled_pool['Name'],'Estimated Field Own %':built['field']['ownership_sampled']})
+                if 'RotoWire Projected Own %' in saved_pool:
+                    report['RotoWire Projected Own %']=pd.to_numeric(saved_pool['RotoWire Projected Own %'],errors='coerce')
+                    report['Field minus RotoWire (pp)']=report['Estimated Field Own %']-report['RotoWire Projected Own %']
+                st.dataframe(report,hide_index=True,width="stretch",key="nba_ownership_table",
+                             column_config={'Name':st.column_config.TextColumn('Player',pinned=True)})
     with tabs[3]:
         st.subheader('Portfolio ROI — estimated')
         totals=portfolio_roi_totals(portfolio)
@@ -185,6 +185,7 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         st.subheader('Player exposures')
         st.dataframe(exposure[['Name','Team','Injury Status','Lineups','Exposure %']],hide_index=True,width='stretch',key='nba_exposure_table',
                      column_config={'Name':st.column_config.TextColumn('Player',pinned=True)})
+
 
 
 
