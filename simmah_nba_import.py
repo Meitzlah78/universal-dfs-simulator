@@ -149,10 +149,17 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
         return
     from simmah_nba_confirmed import current_confirmed_pool
     from simmah_nba_projections import team_key
+    from simmah_nba_game_context import restore_saved_game_metadata
+    _previous_slate=st.session_state.get('nba_imported_slate',{})
+    _previous_build=st.session_state.get('nba_build_result',{})
+    for _previous_pool in (_previous_slate.get('players'),_previous_build.get('pool')):
+        pool=restore_saved_game_metadata(pool,_previous_pool,day)
     _status_pairs=tuple(sorted({(team_key(r.Team),team_key(r.Opponent)) for r in pool.itertuples()}))
     pool,_shared_status=current_confirmed_pool(st,pool,day,_status_pairs)
     if _shared_status['stale']:
         with tabs[1]:st.caption('Starting-lineup feed unavailable. Previous same-slate statuses are labeled Last confirmed / Last expected.')
+    if pool.attrs.get('saved_game_metadata_restored'):
+        with tabs[1]:st.caption('Game times and implied scores recovered from this slate’s saved data; these are last-known pregame values.')
     from simmah_nba_markets import extract_markets
     try:
         import json

@@ -137,5 +137,29 @@ class LoadingTests(unittest.TestCase):
         self.assertTrue(has_game_context(p))
         self.assertFalse(has_game_context(p.drop(columns='Game Start')))
 
+    def test_saved_game_data_recovery_is_dated_and_does_not_copy_projections(self):
+        from simmah_nba_game_context import restore_saved_game_metadata
+        p=self.pool();p['Game Start']='2026-10-21 19:00:00';p['Game Total']=230.;p['Team Implied Points']=115.;p['Projection']=99.
+        current=self.pool().drop(columns=['Expected Starter','Starter Confirmed']);current['Projection']=10.
+        result=restore_saved_game_metadata(current,p,'2026-10-21')
+        self.assertTrue(has_game_context(result))
+        self.assertTrue(result['Projection'].eq(10).all())
+        self.assertTrue(result.attrs['saved_game_metadata_restored'])
+        self.assertFalse(result['Starter Confirmed'].any())
+        self.assertEqual(team_lineup(result,'NY')['status'],'Last expected')
+        other=restore_saved_game_metadata(current,p,'2026-10-22')
+        self.assertNotIn('Game Start',other)
+        wrong_ids=p.copy();wrong_ids.loc[0,'Player ID']='wrong'
+        self.assertNotIn('Game Start',restore_saved_game_metadata(current,wrong_ids,'2026-10-21'))
+
+    def test_confirmation_outage_keeps_dated_expected_five_without_green_checks(self):
+        p=self.pool();p.attrs['slate_date']='2026-10-21'
+        with patch('simmah_nba_confirmed.cached_confirmed_status',side_effect=OSError('timeout')):
+            view,status=current_confirmed_pool(FakeStreamlit(),p,'2026-10-21',[('NY','PHI')])
+        self.assertTrue(status['stale'])
+        self.assertEqual(team_lineup(view,'NY')['status'],'Last expected')
+        self.assertFalse(view['Starter Confirmed'].any())
+        self.assertFalse(any('✅' in label for label in player_labels(view).values()))
+
 
 if __name__=='__main__':unittest.main()

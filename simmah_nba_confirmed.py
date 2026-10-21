@@ -94,17 +94,26 @@ def current_confirmed_pool(st,pool,day,pairs):
     except (ValueError,OSError,KeyError,TypeError):
         stale=True
         response=saved.get('response',{}) if saved.get('scope')==scope else {}
+        if not response and pool.attrs.get('slate_date')!=day:
+            pool=pool.copy()
+            pool['Expected Starter']=False
+            pool['Starter Confirmed']=False
     view=apply_confirmed_status(pool,response.get('players',{}))
-    view['Lineup Status Stale']=stale
+    if stale:view['Lineup Status Stale']=True
     return view,{**response,'stale':stale}
 
 
 def apply_confirmed_status(pool,values):
     view=pool.copy()
     view['Expected Starter']=False;view['Starter Confirmed']=False
+    view['Lineup Status Stale']=False
+    source_teams={team_key(key[1]) for key in values}
     for index,row in view.iterrows():
         detail=values.get(player_key(row['Name'],row['Team']),{})
-        view.at[index,'Expected Starter']=detail.get('Expected Starter',False)
+        missing_team=team_key(row['Team']) not in source_teams
+        fallback=pool.at[index,'Expected Starter'] if missing_team and 'Expected Starter' in pool else False
+        view.at[index,'Expected Starter']=detail.get('Expected Starter',fallback)
         view.at[index,'Starter Confirmed']=detail.get('Starter Confirmed',False)
+        view.at[index,'Lineup Status Stale']=missing_team
     return view
 

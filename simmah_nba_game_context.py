@@ -52,6 +52,51 @@ def has_game_context(pool):
     return True
 
 
+def restore_saved_game_metadata(pool,previous,day):
+    """Recover display metadata only, with exact salary IDs and dated games.
+
+    Never copy projections, minutes, ownership or injury eligibility. A saved
+    starting five is only a last-known expectation, never fresh confirmation.
+    """
+    import pandas as pd
+    from simmah_nba_game_strip import game_start,explicit_true
+    if not isinstance(previous,pd.DataFrame) or previous.empty:return pool
+    if not {'Player ID','Team','Opponent','Game Start'}<=set(previous):return pool
+    if previous['Player ID'].astype(str).duplicated().any():return pool
+    if set(previous['Player ID'].astype(str))!=set(pool['Player ID'].astype(str)):return pool
+    source=previous.set_index(previous['Player ID'].astype(str));view=pool.copy()
+    changed=False
+    for index,row in view.iterrows():
+        old=source.loc[str(row['Player ID'])]
+        if (team_key(old['Team']),team_key(old['Opponent']))!=(team_key(row['Team']),team_key(row['Opponent'])):continue
+        start=game_start([old['Game Start']])
+        if start is None or start.date().isoformat()!=day:continue
+        for column in ('Game Start','Game Total','Team Implied Points'):
+            value=old.get(column)
+            if column=='Game Start':
+                current_start=game_start([row.get(column)])
+                valid=current_start is not None and current_start.date().isoformat()==day
+            else:
+                try:valid=math.isfinite(float(row.get(column))) and float(row.get(column))>0
+                except (TypeError,ValueError):valid=False
+                try:
+                    number=float(value)
+                    if not math.isfinite(number) or not ((100<number<400) if column=='Game Total' else (40<number<200)):continue
+                except (TypeError,ValueError):continue
+            if not valid:
+                view.at[index,column]=value;changed=True
+        if 'Expected Starter' in old and explicit_true(old['Expected Starter']):
+            # Restore only when the current provider has supplied no expected
+            # starters for this team. Compute this from the original pool.
+            current=pool[pool['Team'].map(team_key)==team_key(row['Team'])]
+            if 'Expected Starter' not in current or not current['Expected Starter'].map(explicit_true).any():
+                view.at[index,'Expected Starter']=True
+                view.at[index,'Starter Confirmed']=False
+                view.at[index,'Lineup Status Stale']=True
+    if changed:view.attrs['saved_game_metadata_restored']=True
+    return view
+
+
 def apply_game_context(pool,context):
     result=pool.copy();result.attrs.update(pool.attrs)
     for i,row in result.iterrows():

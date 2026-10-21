@@ -67,7 +67,8 @@ def game_records(pool,markets):
         instant=game_start(rows['Game Start'].dropna()) if 'Game Start' in rows else None
         start=instant.strftime('%I:%M %p ET').lstrip('0') if instant is not None else 'Time TBD'
         start_keys[separator.join(order)]=instant.timestamp() if instant is not None else float('inf')
-        records.append({'label':separator.join(order),'start_time':start,'teams':teams})
+        records.append({'label':separator.join(order),'start_time':start,'teams':teams,
+                        'saved_metadata':bool(pool.attrs.get('saved_game_metadata_restored'))})
     return sorted(records,key=lambda r:(start_keys[r['label']],r['label']))
 
 
@@ -84,7 +85,8 @@ def render_game_strip(st,pool,markets,updated_at=None):
             status=t['status'];tooltip=', '.join(t['starters']) or 'No complete starting five supplied by source'
             teams.append(f'<div class="simmah-game-team"><strong>{escape(t["team"])}</strong><strong>{score}</strong>'
                          f'<span title="{escape(tooltip,quote=True)}" style="color:{colors[status]}">{symbols[status]} {status}</span></div>')
-        cards.append('<div class="simmah-game-card"><div class="simmah-game-title">'+escape(game['label'])+'<span>'+escape(game['start_time'])+'</span></div>'+''.join(teams)+'</div>')
+        saved='<div class="simmah-game-title">Last saved game data</div>' if game['saved_metadata'] else ''
+        cards.append('<div class="simmah-game-card"><div class="simmah-game-title">'+escape(game['label'])+'<span>'+escape(game['start_time'])+'</span></div>'+''.join(teams)+saved+'</div>')
     st.markdown('''<style>
 .st-key-simmah_pinned_games{position:fixed !important;top:7rem;left:50%;transform:translateX(-50%);width:calc(100% - 3rem) !important;max-width:1752px;max-height:11rem;overflow-y:auto;z-index:989;background:var(--background-color,#0e1117);padding:4px 0;border-bottom:1px solid #293e52;box-shadow:0 4px 12px #0003;min-width:0}
 [data-testid="stTabs"] [data-baseweb="tab-list"]{top:18.5rem !important;z-index:988}
