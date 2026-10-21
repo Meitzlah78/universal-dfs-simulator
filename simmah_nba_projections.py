@@ -264,4 +264,26 @@ def download_rotowire(day, pool, platform='FanDuel'):
         try:ownership=ownership_job.result()
         except (OSError,ValueError):ownership=None
     values, details = parse_rotowire(players,projections,day,pool,ownership)
+    missing=({player_key(r.Name,r.Team) for r in pool.itertuples()}-set(details)) if 'Name' in pool else set()
+    if missing:
+        # The same provider can omit a reserve from one site's player feed.
+        # Minutes/injuries describe the same game, unlike site scoring/ownership.
+        other='DraftKings' if platform=='FanDuel' else 'FanDuel'
+        try:
+            other_listing=get('slate-list.php?siteID='+('1' if other=='DraftKings' else '2'))
+            other_slate=select_rotowire_minutes_slate(other_listing,day,pool,platform=other)
+            allowed={(team_key(r.Team),team_key(r.Opponent)) for r in pool.itertuples()}
+            other_players=[p for p in get('players.php?slateID='+str(other_slate['slateID']))
+                if str(p.get('game',{}).get('dateTime',''))[:10]==day
+                and (team_key(p.get('team',{}).get('abbr','')),team_key(p.get('opponent',{}).get('team',''))) in allowed]
+            _,other_details=parse_rotowire(other_players,None,day,pool)
+            for key in missing & set(other_details):
+                row=other_details[key]
+                row['RotoWire Projected Own %']=None
+                row['RotoWire RST % (unverified)']=None
+                if row['Projected Minutes'] is not None:
+                    row['Minutes Source']='RotoWire same-game minutes ('+other+' player feed)'
+                details[key]=row
+        except (ValueError,OSError):
+            pass  # Unknown remains unknown; never turn a feed failure into zero.
     return values, details, sid
