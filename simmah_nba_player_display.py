@@ -7,7 +7,7 @@ def player_labels(pool,status_pool=None):
     if status_pool is not None:
         view=pool.copy()
         current=status_pool.set_index(status_pool["Player ID"].astype(str))
-        for column in ("Expected Starter","Starter Confirmed","Injury Status"):
+        for column in ("Expected Starter","Starter Confirmed","Injury Status","Lineup Status Stale"):
             if column in current:view[column]=view["Player ID"].astype(str).map(current[column])
         pool=view
     confirmed={team_key(team) for team in pool['Team'].unique()
@@ -30,4 +30,5 @@ def display_pool(pool,status_pool=None):
     view=pool.copy()
     view['Name']=view['Player ID'].astype(str).map(player_labels(pool,status_pool))
     return view
+
 

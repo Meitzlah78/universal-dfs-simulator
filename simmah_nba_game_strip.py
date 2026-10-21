@@ -20,7 +20,10 @@ def team_lineup(pool,team):
         return {'status':'Pending' if len(starters) else 'Unavailable','starters':names}
     injured=starters['Injury Status'].astype(str).str.upper().isin({'O','OUT','IR','SUSPENDED'}).any()
     confirmed=starters['Starter Confirmed'].map(explicit_true).all()
-    return {'status':'Confirmed' if confirmed and not injured else 'Expected', 'starters':names}
+    status='Confirmed' if confirmed and not injured else 'Expected'
+    if 'Lineup Status Stale' in starters and starters['Lineup Status Stale'].map(explicit_true).any():
+        status='Last confirmed' if status=='Confirmed' else 'Last expected'
+    return {'status':status, 'starters':names}
 
 
 def game_start(values):
@@ -71,8 +74,8 @@ def game_records(pool,markets):
 def render_game_strip(st,pool,markets,updated_at=None):
     games=game_records(pool,markets)
     if not games:return
-    colors={'Confirmed':'#69db9b','Expected':'#ffd166','Pending':'#ffd166','Unavailable':'#a3adba'}
-    symbols={'Confirmed':'●','Expected':'○','Pending':'○','Unavailable':'—'}
+    colors={'Confirmed':'#69db9b','Expected':'#ffd166','Pending':'#ffd166','Unavailable':'#a3adba','Last confirmed':'#a3adba','Last expected':'#a3adba'}
+    symbols={'Confirmed':'●','Expected':'○','Pending':'○','Unavailable':'—','Last confirmed':'○','Last expected':'○'}
     cards=[]
     for game in games:
         teams=[]
@@ -101,4 +104,5 @@ def render_game_strip(st,pool,markets,updated_at=None):
 .simmah-game-strip:focus-visible{outline:2px solid #69bce5;outline-offset:2px}
 @media(max-width:440px){.simmah-game-card{flex-basis:195px}}
 </style><div class="simmah-game-strip" role="region" aria-label="Slate games; scroll left or right" tabindex="0">'''+''.join(cards)+'</div>',unsafe_allow_html=True)
+
 

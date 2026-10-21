@@ -37,6 +37,21 @@ def download_game_context(day,pairs):
         return parse_game_context(json.load(response),day,pairs)
 
 
+def download_game_context_result(day,pairs):
+    try:return {'values':download_game_context(day,pairs)}
+    except (ValueError,OSError,KeyError,TypeError) as exc:return {'error':str(exc)}
+
+
+def has_game_context(pool):
+    from simmah_nba_markets import extract_markets
+    from simmah_nba_game_strip import game_start
+    pairs={tuple(sorted((team_key(r.Team),team_key(r.Opponent)))) for r in pool.itertuples()}
+    if 'Game Start' not in pool or len(extract_markets(pool))!=len(pairs):return False
+    for team in pool['Team'].unique():
+        if game_start(pool.loc[pool['Team']==team,'Game Start'].dropna()) is None:return False
+    return True
+
+
 def apply_game_context(pool,context):
     result=pool.copy();result.attrs.update(pool.attrs)
     for i,row in result.iterrows():
@@ -50,3 +65,4 @@ def apply_game_context(pool,context):
             result.at[i,'Game Total']=item['total']
             result.at[i,'Team Implied Points']=item['points'][team_key(row['Team'])]
     return result
+

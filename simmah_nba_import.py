@@ -82,49 +82,38 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
     slate['date'] = day
     pool.attrs['slate_date'] = day
     from simmah_nba_projections import slate_date, download_dff, apply_projections, player_key, read_projection_upload, EntriesInProjectionUpload
-    if st.session_state.pop('refresh_projections_requested',False):
-        st.session_state.pop('nba_projection_cache',None)
-        st.session_state.pop('nba_rotowire_cache',None)
-        from simmah_nba_confirmed import download_lineup_page
-        st.cache_data(ttl=60,show_spinner=False,max_entries=8)(download_lineup_page).clear()
-        from simmah_nba_game_context import download_game_context
-        st.cache_data(ttl=300,show_spinner=False,max_entries=8)(download_game_context).clear()
+    _force_refresh=st.session_state.pop('refresh_projections_requested',False)
+    if _force_refresh:
+        from simmah_nba_confirmed import download_lineup_page_result
+        st.cache_data(ttl=60,show_spinner=False,max_entries=8)(download_lineup_page_result).clear()
+        from simmah_nba_game_context import download_game_context_result
+        st.cache_data(ttl=60,show_spinner=False,max_entries=8)(download_game_context_result).clear()
         st.session_state['nba_lineup_refresh_requested']=True
         st.session_state['projection_updates_found']=False
         st.session_state['injury_updates_found']=False
     with tabs[1]:
         projection_file = workspace_file_uploader(st,'Optional NBA projections CSV', type=['csv'], key='nba_projection_upload_'+platform,
             help='Player ID and Projection columns. Uploaded values override DFF, including zeros that exclude a player.')
-    automatic = {}
-    try:
-        day = slate.get('date') or slate_date(uploaded_file.name)
-        identity = (platform, day, tuple(sorted(zip(pool['Player ID'], pool['Team'], pool['Opponent']))), 'reserve-metadata-v7')
-        cached = st.session_state.get('nba_projection_cache')
-        import time
-        if cached and cached['identity'] == identity and time.time()-cached['time'] < 900:
-            automatic = cached['values']
-        else:
-            automatic = download_dff(day, pool) if platform == 'FanDuel' else download_dff(day, pool, platform=platform)
-            st.session_state['nba_projection_cache'] = {'identity':identity, 'time':time.time(), 'values':automatic}
-    except Exception as exc:
-        with tabs[1]:
-            st.warning(f'NBA automatic projections unavailable: {exc}')
-    rw_values, rw_details = {}, {}
-    try:
-        from simmah_nba_projections import download_rotowire
-        day = slate.get('date') or slate_date(uploaded_file.name)
-        identity = (platform, day, tuple(sorted(zip(pool['Player ID'], pool['Team'], pool['Opponent']))), 'reserve-metadata-v7')
-        cached = st.session_state.get('nba_rotowire_cache')
-        if cached and cached['identity'] == identity and time.time()-cached['time'] < 900:
-            rw_values, rw_details = cached['values'], cached['details']
-        else:
-            rw_values, rw_details, sid = download_rotowire(day, pool) if platform == 'FanDuel' else download_rotowire(day, pool, platform=platform)
-            st.session_state['nba_rotowire_cache'] = {'identity':identity, 'time':time.time(),
-                'values':rw_values, 'details':rw_details, 'slate_id':sid}
-    except Exception as exc:
-        with tabs[1]:
-            st.warning(f'NBA minutes / RotoWire unavailable: {exc}')
-    if rw_details and st.session_state.pop('nba_lineup_refresh_requested',False):
+    from simmah_nba_source_cache import load_sources
+    from simmah_nba_projections import download_rotowire
+    identity=(platform,day,tuple(sorted(zip(pool['Player ID'],pool['Team'],pool['Opponent']))),'reserve-metadata-v7')
+    def _load_dff():
+        return {'values':download_dff(day,pool,platform=platform)}
+    def _load_rw():
+        values,details,sid=download_rotowire(day,pool,platform=platform)
+        return {'values':values,'details':details,'slate_id':sid}
+    _sources=load_sources(st.session_state,identity,
+        {'nba_projection_cache':_load_dff,'nba_rotowire_cache':_load_rw},force=_force_refresh)
+    automatic=_sources['nba_projection_cache'].get('values',{})
+    _rw=_sources['nba_rotowire_cache']
+    rw_values,rw_details=_rw.get('values',{}),_rw.get('details',{})
+    for _key,_label in [('nba_projection_cache','NBA automatic projections'),('nba_rotowire_cache','NBA minutes / RotoWire')]:
+        _source=_sources[_key]
+        if _source.get('error'):
+            with tabs[1]:
+                _fallback=' Last successful data retained; it may be stale.' if 'time' in _source else ''
+                st.warning(_label+' unavailable: '+_source['error']+_fallback+' Automatic retry pauses for up to 60 seconds; REFRESH retries immediately.')
+    if rw_details and not _rw.get('error') and st.session_state.pop('nba_lineup_refresh_requested',False):
         from simmah_nba_lineups import acknowledge_lineup_refresh
         acknowledge_lineup_refresh(st.session_state)
     keys = set(automatic) | set(rw_values)
@@ -157,15 +146,12 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
         with tabs[1]:
             st.error(str(exc))
         return
-    from simmah_nba_confirmed import cached_confirmed_status,apply_confirmed_status
+    from simmah_nba_confirmed import current_confirmed_pool
     from simmah_nba_projections import team_key
     _status_pairs=tuple(sorted({(team_key(r.Team),team_key(r.Opponent)) for r in pool.itertuples()}))
-    try:
-        _shared_status=cached_confirmed_status(st,day,_status_pairs)
-        pool=apply_confirmed_status(pool,_shared_status['players'])
-    except (ValueError,OSError,KeyError,TypeError):
-        pool=apply_confirmed_status(pool,{})
-        with tabs[1]:st.caption('Shared NBA starting-lineup confirmation is unavailable; no site-specific confirmation assumed.')
+    pool,_shared_status=current_confirmed_pool(st,pool,day,_status_pairs)
+    if _shared_status['stale']:
+        with tabs[1]:st.caption('Starting-lineup feed unavailable. Previous same-slate statuses are labeled Last confirmed / Last expected.')
     from simmah_nba_markets import extract_markets
     try:
         import json
@@ -184,13 +170,15 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
     if _missing_minutes.any():
         with tabs[1]:
             st.warning(f'{int(_missing_minutes.sum())} projected NBA player(s) have unavailable or invalid minutes. The slate can be viewed, but simulation builds need complete projected rotations. Refresh projections to retry the minutes provider; missing minutes are not treated as zero.')
-    from simmah_nba_game_context import download_game_context,apply_game_context
-    try:
-        _game_pairs=tuple(sorted({tuple(sorted((team_key(r.Team),team_key(r.Opponent)))) for r in pool.itertuples()}))
-        _game_context=st.cache_data(ttl=300,show_spinner=False,max_entries=8)(download_game_context)(day,_game_pairs)
-        pool=apply_game_context(pool,_game_context)
-    except (ValueError,OSError,KeyError,TypeError):
-        with tabs[1]:st.caption('NBA game times / market feed unavailable; existing salary-file and projection metadata retained.')
+    from simmah_nba_game_context import download_game_context_result,apply_game_context,has_game_context
+    if not has_game_context(pool):
+        try:
+            _game_pairs=tuple(sorted({tuple(sorted((team_key(r.Team),team_key(r.Opponent)))) for r in pool.itertuples()}))
+            _context_result=st.cache_data(ttl=60,show_spinner=False,max_entries=8)(download_game_context_result)(day,_game_pairs)
+            if _context_result.get('error'):raise ValueError(_context_result['error'])
+            pool=apply_game_context(pool,_context_result['values'])
+        except (ValueError,OSError,KeyError,TypeError):
+            with tabs[1]:st.caption('NBA game times / market feed unavailable; existing salary-file and projection metadata retained.')
     markets = extract_markets(pool)
     slate['markets'] = markets
     slate['players'] = pool
@@ -261,6 +249,7 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
         st.write(f"{len(pool)} players · {(pool['Injury Status']=='Out').sum()} Out · {(pool['Injury Status']=='Questionable').sum()} Questionable")
     from simmah_nba_ui import render_workspace
     render_workspace(st,slate,uploaded_file,tabs,controls,markets)
+
 
 
 

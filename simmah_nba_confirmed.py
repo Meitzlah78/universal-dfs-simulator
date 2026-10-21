@@ -53,11 +53,11 @@ def parse_confirmed_page(html,day,pairs):
         sides={item['side']:item for item in card['lists'] if item['side'] is not None}
         for team,side in zip(teams,('away','home')):
             detail=sides.get(side)
-            if detail is None:raise ValueError('Missing NBA lineup-page team')
+            if detail is None:continue
             names=detail['names'];keys=[player_key(name,team) for name in names]
-            if len(keys)!=5 or len(set(keys))!=5:raise ValueError('Incomplete or ambiguous NBA starting five')
+            if len(keys)!=5 or len(set(keys))!=5:continue
             for key in keys:values[key]={'Expected Starter':True,'Starter Confirmed':detail['confirmed']}
-    if seen!=expected:raise ValueError('NBA lineup page is missing a slate matchup')
+    if not values:raise ValueError('No complete NBA starting five supplied for this slate')
     return values
 
 
@@ -72,9 +72,31 @@ def download_lineup_page(day):
 def cached_confirmed_status(st,day,pairs):
     # Cache by day, not site/slate or game subset: DK and FD must read the
     # same page snapshot even when one slate contains additional games.
-    page=st.cache_data(ttl=60,show_spinner=False,max_entries=8)(download_lineup_page)(day)
+    page=st.cache_data(ttl=60,show_spinner=False,max_entries=8)(download_lineup_page_result)(day)
+    if page.get('error'):raise ValueError(page['error'])
     return {'players':parse_confirmed_page(page['html'],day,pairs),
             'checked_at':page['checked_at'],'source':'RotoWire shared NBA lineup page'}
+
+
+def download_lineup_page_result(day):
+    try:return download_lineup_page(day)
+    except (ValueError,OSError,KeyError,TypeError) as exc:
+        return {'error':str(exc),'checked_at':time.time()}
+
+
+def current_confirmed_pool(st,pool,day,pairs):
+    scope=(day,tuple(sorted({tuple(sorted(map(team_key,p))) for p in pairs})))
+    saved=st.session_state.get('nba_confirmed_last_good',{})
+    stale=False
+    try:
+        response=cached_confirmed_status(st,day,pairs)
+        st.session_state['nba_confirmed_last_good']={'scope':scope,'response':response}
+    except (ValueError,OSError,KeyError,TypeError):
+        stale=True
+        response=saved.get('response',{}) if saved.get('scope')==scope else {}
+    view=apply_confirmed_status(pool,response.get('players',{}))
+    view['Lineup Status Stale']=stale
+    return view,{**response,'stale':stale}
 
 
 def apply_confirmed_status(pool,values):
@@ -85,3 +107,4 @@ def apply_confirmed_status(pool,values):
         view.at[index,'Expected Starter']=detail.get('Expected Starter',False)
         view.at[index,'Starter Confirmed']=detail.get('Starter Confirmed',False)
     return view
+
