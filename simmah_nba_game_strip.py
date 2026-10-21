@@ -95,8 +95,3 @@ def render_game_strip(st,pool,markets,updated_at=None):
 .simmah-game-strip:focus-visible{outline:2px solid #69bce5;outline-offset:2px}
 @media(max-width:440px){.simmah-game-card{flex-basis:195px}}
 </style><div class="simmah-game-strip" role="region" aria-label="Slate games; scroll left or right" tabindex="0">'''+''.join(cards)+'</div>',unsafe_allow_html=True)
-    stamp=''
-    if updated_at is not None:
-        stamp=' · checked '+datetime.fromtimestamp(updated_at,ZoneInfo('America/New_York')).strftime('%I:%M %p ET').lstrip('0')
-    st.caption(f'{len(games)} games · Scroll horizontally below the cards to see every game. Scores: market-implied team points. Lineups: [RotoWire](https://www.rotowire.com/basketball/nba-lineups.php); Confirmed requires five explicitly confirmed starters.'+stamp)
-

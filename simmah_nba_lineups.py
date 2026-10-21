@@ -51,7 +51,6 @@ def render_live_strip(st,pool,markets,slate_id,day,fallback_time=None):
         st.markdown(refresh_button_style(pending),unsafe_allow_html=True)
         if pending:st.caption('Starting lineup changed. Use the red REFRESH button to apply the update.')
         render_game_strip(st,view,markets,checked)
-        st.caption('Starting-lineup indicators check every 60 seconds while this page is connected. Projection refresh updates the full player pool.')
     draw()
 
 
