@@ -69,7 +69,7 @@ def download_dff(day, pool, platform='FanDuel'):
     day = date.fromisoformat(day).isoformat()
     path='fanduel/' if platform=='FanDuel' else ''
     url = f'https://www.dailyfantasyfuel.com/nba/projections/{path}{day}/'
-    with urlopen(Request(url, headers={'User-Agent':'Mozilla/5.0'}), timeout=15) as response:
+    with urlopen(Request(url, headers={'User-Agent':'Mozilla/5.0'}), timeout=6) as response:
         return parse_dff(response.read().decode('utf-8'), day, pool)
 
 
@@ -224,15 +224,16 @@ def select_rotowire_minutes_slate(payload,day,pool,platform='FanDuel'):
 
 def download_rotowire(day, pool, platform='FanDuel'):
     import json
+    from time import monotonic
+    deadline=monotonic()+10
     base = 'https://www.rotowire.com/daily/nba/api/'
     def get(endpoint):
-        # Retry a transient public-feed failure once, with bounded timeouts.
-        for attempt in range(2):
-            try:
-                with urlopen(base+endpoint,timeout=8) as response:
-                    return json.load(response)
-            except (OSError,ValueError):
-                if attempt:raise
+        # All primary and reserve lookups share one budget. Optional calls
+        # cannot each add another retry cycle to a projection refresh.
+        remaining=deadline-monotonic()
+        if remaining<=0:raise TimeoutError('RotoWire refresh budget exhausted')
+        with urlopen(base+endpoint,timeout=min(4,remaining)) as response:
+            return json.load(response)
     listing=get('slate-list.php?siteID='+('1' if platform=='DraftKings' else '2'))
     try:slate=select_rotowire_slate(listing,day,pool,platform=platform)
     except ValueError:
@@ -287,3 +288,4 @@ def download_rotowire(day, pool, platform='FanDuel'):
         except (ValueError,OSError):
             pass  # Unknown remains unknown; never turn a feed failure into zero.
     return values, details, sid
+

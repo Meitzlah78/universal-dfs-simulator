@@ -33,7 +33,7 @@ def parse_game_context(payload,day,pairs):
 def download_game_context(day,pairs):
     # Both sites share NBA games. This endpoint does not require a unique DFS
     # slate or successful player-projection download.
-    with urlopen('https://www.rotowire.com/daily/nba/api/slate-list.php?siteID=2',timeout=10) as response:
+    with urlopen('https://www.rotowire.com/daily/nba/api/slate-list.php?siteID=2',timeout=3) as response:
         return parse_game_context(json.load(response),day,pairs)
 
 

@@ -64,7 +64,7 @@ def parse_confirmed_page(html,day,pairs):
 def download_lineup_page(day):
     from datetime import date
     date.fromisoformat(day)
-    with urlopen('https://www.rotowire.com/basketball/nba-lineups.php?date='+day,timeout=8) as response:
+    with urlopen('https://www.rotowire.com/basketball/nba-lineups.php?date='+day,timeout=3) as response:
         html=response.read().decode('utf-8')
     return {'html':html,'checked_at':time.time()}
 

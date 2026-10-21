@@ -1,6 +1,8 @@
 import unittest
 from unittest.mock import patch
-from threading import Barrier
+from threading import Barrier,Event
+from time import monotonic
+import io,json
 import pandas as pd
 from simmah_nba_source_cache import load_sources
 from simmah_nba_confirmed import parse_confirmed_page,current_confirmed_pool,cached_confirmed_status
@@ -37,6 +39,51 @@ class LoadingTests(unittest.TestCase):
         self.assertEqual(result['a']['values'],{'a':1})
         load_sources(state,'FD',loaders,now=110)
         self.assertEqual(len(calls),2)
+
+    def test_refresh_deadline_keeps_fast_source_and_discards_late_result(self):
+        release=Event();finished=Event();state={}
+        def slow():
+            release.wait(timeout=2)
+            finished.set()
+            return {'values':{'late':99}}
+        start=monotonic()
+        try:
+            result=load_sources(state,'FD',{'slow':slow,'fast':lambda:{'values':{'fresh':20}}},timeout=.05)
+            self.assertLess(monotonic()-start,1)
+            self.assertEqual(result['fast']['values'],{'fresh':20})
+            self.assertIn('wait budget',result['slow']['error'])
+        finally:release.set()
+        self.assertTrue(finished.wait(timeout=1))
+        self.assertNotIn('values',state['slow'])
+
+    def test_refresh_deadline_retains_only_same_slate_success(self):
+        release=Event();state={'a':{'identity':'FD','time':1,'values':{'old':10}}}
+        try:
+            result=load_sources(state,'FD',{'a':lambda:release.wait(timeout=1)},force=True,timeout=.01)
+            self.assertEqual(result['a']['values'],{'old':10})
+            self.assertIn('error',result['a'])
+        finally:release.set()
+
+    def test_optional_provider_failure_does_not_erase_minutes_or_retry(self):
+        from simmah_nba_projections import download_rotowire
+        pool=pd.DataFrame([{'Name':'Player A','Team':'NY','Opponent':'PHI'}])
+        listing={'games':{'g':{'visitTeamCode':'NY','homeTeamCode':'PHI','gameDate':'2026-10-21 19:00:00'}},
+            'slates':[{'slateID':123,'contestType':'Full Roster','startDateOnly':'2026-10-21','games':['g']}]}
+        players=[{'firstName':'Player','lastName':'A','slateID':'1','minutes':30,
+            'team':{'abbr':'NY'},'opponent':{'team':'PHI'},'game':{'dateTime':'2026-10-21 19:00:00'}}]
+        calls=[]
+        def fetch(url,timeout):
+            calls.append((url,timeout))
+            if 'slate-list' in url:return io.BytesIO(json.dumps(listing).encode())
+            if 'players.php' in url:return io.BytesIO(json.dumps(players).encode())
+            raise TimeoutError('optional feed down')
+        with patch('simmah_nba_projections.urlopen',side_effect=fetch):
+            values,details,sid=download_rotowire('2026-10-21',pool)
+        self.assertEqual(sid,'123')
+        self.assertEqual(values,{})
+        self.assertEqual(details[('player a','NY')]['Projected Minutes'],30)
+        self.assertEqual(len(calls),4)
+        self.assertTrue(all(0<timeout<=4 for _,timeout in calls))
 
     def test_failure_backoff_force_and_identity(self):
         state={};calls=[]

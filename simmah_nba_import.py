@@ -102,8 +102,9 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
     def _load_rw():
         values,details,sid=download_rotowire(day,pool,platform=platform)
         return {'values':values,'details':details,'slate_id':sid}
-    _sources=load_sources(st.session_state,identity,
-        {'nba_projection_cache':_load_dff,'nba_rotowire_cache':_load_rw},force=_force_refresh)
+    with st.spinner('Checking NBA projection sources (up to 12 seconds)…'):
+        _sources=load_sources(st.session_state,identity,
+            {'nba_projection_cache':_load_dff,'nba_rotowire_cache':_load_rw},force=_force_refresh)
     automatic=_sources['nba_projection_cache'].get('values',{})
     _rw=_sources['nba_rotowire_cache']
     rw_values,rw_details=_rw.get('values',{}),_rw.get('details',{})
