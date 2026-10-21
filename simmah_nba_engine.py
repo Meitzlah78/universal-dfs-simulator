@@ -81,7 +81,9 @@ def simulate_game(rotations, profiles, rates, seed, overtime_rotations=None, pla
         w[empty]=allowed[empty]
         cdf=np.cumsum(w,axis=1);draw=rng.random(len(ids))*cdf[:,-1]
         return lineups[np.arange(len(ids)),np.minimum((cdf<draw[:,None]).sum(axis=1),4)]
-    def add(ids,player,stat):np.add.at(stats,(ids,player,STAT_NAMES.index(stat)),1)
+    # Event subsets contain unique scenario IDs; no index pair repeats.
+    # Buffered indexed addition is equivalent to add.at without its reduction cost.
+    def add(ids,player,stat):stats[ids,player,STAT_NAMES.index(stat)]+=1
     actions=0
     while np.any(clock>0):
         actions+=1
@@ -123,7 +125,7 @@ def simulate_game(rotations, profiles, rates, seed, overtime_rotations=None, pla
             if trips.any():
                 ti=ids[trips];tp=shooter[trips]
                 made=rng.random((len(ti),2))<r.make_free_throw
-                np.add.at(stats,(ti,tp,2),made.sum(axis=1))
+                stats[ti,tp,2]+=made.sum(axis=1)
                 team_points[ti,team]+=made.sum(axis=1)
                 counters['free_throw_misses'][ti]+=(~made).sum(axis=1)
                 # Only the final miss creates a live rebound opportunity.

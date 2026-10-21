@@ -44,14 +44,14 @@ def build_rotation(minutes, seed, player_offset=0, period_minutes=48):
         players=player_order[:,rank]
         degree=counts[batch,players]
         court_order=np.argsort(-(capacity+rng.random(capacity.shape)*.01),axis=1)
-        for k in range(period_minutes):
-            ids=np.flatnonzero(degree>k)
-            if not len(ids):continue
-            minute=court_order[ids,k]
-            slot=5-capacity[ids,minute]
-            if (slot>=5).any():raise ValueError('Infeasible rotation degree sequence')
-            result[ids,minute,slot]=players[ids]+player_offset
-            capacity[ids,minute]-=1
+        # Each scenario/minute pair is unique within a player's placement.
+        # Batch all minutes at once instead of 48 Python indexing passes.
+        ids,k=np.nonzero(degree[:,None]>np.arange(period_minutes))
+        minute=court_order[ids,k]
+        slot=5-capacity[ids,minute]
+        if (slot>=5).any():raise ValueError('Infeasible rotation degree sequence')
+        result[ids,minute,slot]=players[ids]+player_offset
+        capacity[ids,minute]-=1
     if (capacity!=0).any() or (result<0).any():
         raise ValueError('Incomplete on-court rotation')
     return result
