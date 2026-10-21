@@ -29,6 +29,14 @@ def field_ownership_inputs(pool):
     if reason is None:
         return {'weights':target,'mode':'projected','source':f'RotoWire dedicated slate ownership; total {total:.1f}% rounded to {expected}%',
                 'raw_total':total,'expected_total':expected,'status':'External ownership targets; field fit still requires residual checks.'}
+    # A failed percentage-total check does not erase complete, bounded
+    # popularity inputs. Keep their relative values without calling them
+    # calibrated ownership percentages or scaling them into apparent validity.
+    if active.any() and np.isfinite(raw[active]).all() and ((raw[active]>=0)&(raw[active]<=100)).all() and (raw[active]>0).any():
+        return {'weights':np.where(active,raw,0.),'mode':'relative popularity',
+            'source':'RotoWire values used only as relative popularity: '+reason,
+            'raw_total':total,'expected_total':expected,
+            'status':f'RotoWire values total {total:.1f}% versus {expected}% required. Field uses their relative popularity; not calibrated projected ownership.'}
     return {'weights':np.ones(len(pool)), 'mode':'relative popularity',
         'source':'Scenario-derived estimate; external ownership not used: '+reason,
         'raw_total':total,'expected_total':expected,

@@ -20,7 +20,7 @@ def input_identity(pool,markets,contest,salary_min,correlation=0):
     columns=[c for c in ['Player ID','Position','Salary','Team','Opponent','Projection','Injury Status',
                          'Projected Minutes','Eligible',*ROLE_COLUMNS,'RotoWire Projected Own %'] if c in pool]
     content={'pool':pool[columns].to_json(orient='split',double_precision=10),'markets':markets,
-             'contest':contest,'salary_min':salary_min,'field_model_version':4}
+             'contest':contest,'salary_min':salary_min,'field_model_version':5}
     if correlation:content['build_correlation']=correlation
     return hashlib.sha256(json.dumps(content,sort_keys=True).encode()).hexdigest()
 
