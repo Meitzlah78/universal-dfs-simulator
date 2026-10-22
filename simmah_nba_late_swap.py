@@ -172,6 +172,13 @@ def revalidate_current_locks(pool,result,now=None):
 def render_late_swap(st,pool,contest_id,salary_min,diversity,markets=None,contest=None):
     rules=rules_for(pool);platform=rules['platform']
     with st.expander('NBA LATE SWAP — fast',expanded=False):
+        from simmah_nba_swap_recovery import before_swap_csv
+        recovered=before_swap_csv(st.session_state.get('nba_late_swap_result'),contest_id,rules['slots'])
+        if recovered is not None:
+            st.caption('Saved entries from immediately before the last retained late-swap run. Review file only; no simulations are rerun.')
+            workspace_download_button(st,'DOWNLOAD BEFORE LATE SWAP',recovered,
+                'Simmah_NBA_'+platform+'_Before_Late_Swap_'+str(contest_id)+'.csv','text/csv',
+                key='nba_before_late_swap_download_'+str(contest_id),on_click='ignore')
         mode=st.radio('Late-swap method',['Simulate remaining games','Fast projection optimizer'],key='nba_late_swap_method')
         simulation=mode=='Simulate remaining games'
         actuals=None;actual_bytes=b'';pregame_locked=False
