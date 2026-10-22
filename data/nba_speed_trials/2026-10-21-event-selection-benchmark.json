@@ -1,0 +1,12 @@
+{
+  "scope": "One real NBA game, serial PregameEngine including all calibration; no field, candidates, UI or network",
+  "simulations_per_set": 10000,
+  "games": 1,
+  "before_cold_seconds": 6.0009366459999,
+  "before_warm_seconds": 2.01005994299976,
+  "after_cold_seconds": 5.852047950000269,
+  "after_warm_seconds": 1.724321874999987,
+  "exact_cold_and_warm_scores": true,
+  "cold_reduction_pct": 2.481090949341669,
+  "warm_reduction_pct": 14.215400341411977
+}

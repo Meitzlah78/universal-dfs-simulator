@@ -76,10 +76,19 @@ def simulate_game(rotations, profiles, rates, seed, overtime_rotations=None, pla
         if exclude is not None:w[lineups==exclude[:,None]]=0
         # Uniform role allocation among eligible on-court players if all supplied
         # weights are zero; a scorer is still never his own assister.
-        empty=w.sum(axis=1)<=0
-        if empty.any():w[empty]=1 if exclude is None else (lineups[empty]!=exclude[empty,None])
-        cdf=np.cumsum(w,axis=1);draw=rng.random(len(ids))*cdf[:,-1]
-        return lineups[np.arange(len(ids)),np.minimum((cdf<draw[:,None]).sum(axis=1),4)]
+        cdf=np.cumsum(w,axis=1)
+        empty=cdf[:,-1]<=0
+        if empty.any():
+            w[empty]=1 if exclude is None else (lineups[empty]!=exclude[empty,None])
+            cdf[empty]=np.cumsum(w[empty],axis=1)
+        draw=rng.random(len(ids))*cdf[:,-1]
+        # Five on-court players: the final CDF entry is the draw's upper
+        # bound. Compare the first four boundaries without a row reduction.
+        pick_index=(cdf[:,0]<draw).astype(np.intp)
+        pick_index+=(cdf[:,1]<draw)
+        pick_index+=(cdf[:,2]<draw)
+        pick_index+=(cdf[:,3]<draw)
+        return lineups[np.arange(len(ids)),pick_index]
     # Event subsets contain unique scenario IDs; no index pair repeats.
     # Buffered indexed addition is equivalent to add.at without its reduction cost.
     def add(ids,player,stat):stats[ids,player,STAT_NAMES.index(stat)]+=1
@@ -177,4 +186,5 @@ def simulate_game(rotations, profiles, rates, seed, overtime_rotations=None, pla
     return {'scores':scores.astype(np.float32),'stats':stats,'team_points':team_points,
         'requires_overtime':team_points[:,0]==team_points[:,1], 'overtime_periods':overtime_count, 'elapsed_seconds':elapsed, 'counters':counters,
         'engine':'experimental-nba-possession-v2-explicit-overtime'}
+
 
