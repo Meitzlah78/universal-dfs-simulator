@@ -28,10 +28,12 @@ def main():
     special=np.asarray(t['special'],float);flex=np.asarray(t['flex'],float)
     if special.shape!=(len(target_ids),) or flex.shape!=(len(target_ids),):raise ValueError('One target per player and role required')
     order=np.array([target_ids.index(i) for i in ids]);special=special[order];flex=flex[order]
-    with np.load(a.support,allow_pickle=False) as f:picks=f['indices'];prior=f['probabilities']
+    with np.load(a.support,allow_pickle=False) as f:
+        picks=f['indices'];prior=f['probabilities']
+        salaries=f['salary'] if 'salary' in f.files else None
     started=time.perf_counter()
     r=calibrate_role_weights(picks,prior,special,flex,tolerance=a.tolerance,max_iterations=a.max_iterations,feasibility_seconds=a.feasibility_seconds)
-    meta={'offline_only':True,'method':'KL role-marginal dual projection','target_provenance':t,
+    meta={'source_kind':'calibrated_model','site':t.get('site'),'slate_id':t.get('slate_id'),'offline_only':True,'method':'KL role-marginal dual projection','target_provenance':t,
         'diagnostics':r.diagnostics,'elapsed_seconds':time.perf_counter()-started,
         'configuration':{'tolerance':a.tolerance,'max_iterations':a.max_iterations,'feasibility_seconds':a.feasibility_seconds},
         'source_sha256':{name:hashlib.sha256(path.read_bytes()).hexdigest() for name,path in [('support',a.support),('player_ids',a.player_ids),('targets',a.targets)]}}
@@ -40,7 +42,8 @@ def main():
     with a.output.open('xb') as handle:
         np.savez(handle,indices=picks,probabilities=r.weights,prior=prior,player_ids=np.asarray(ids),
             special_targets=special,flex_targets=flex,special_achieved=r.special_ownership,
-            flex_achieved=r.flex_ownership,metadata_json=np.asarray(json.dumps(meta,allow_nan=False)))
+            flex_achieved=r.flex_ownership,metadata_json=np.asarray(json.dumps(meta,allow_nan=False)),
+            **({'salary':salaries} if salaries is not None else {}))
     print(json.dumps(meta,indent=2))
 
 if __name__=='__main__':main()
