@@ -2410,6 +2410,144 @@
       "current_entries_at_capture": 91,
       "source": "User-provided full payout table",
       "verified_date": "2026-10-22"
+    },
+    "DraftKings:20000-first-down-pit-no": {
+      "name": "NFL Showdown $20K First Down — $1, 20 Max (PIT vs NO)",
+      "site": "DraftKings",
+      "format": "DraftKings Showdown",
+      "payouts": [
+        [
+          1,
+          1,
+          1000
+        ],
+        [
+          2,
+          2,
+          600
+        ],
+        [
+          3,
+          3,
+          400
+        ],
+        [
+          4,
+          4,
+          300
+        ],
+        [
+          5,
+          5,
+          250
+        ],
+        [
+          6,
+          6,
+          200
+        ],
+        [
+          7,
+          8,
+          150
+        ],
+        [
+          9,
+          10,
+          100
+        ],
+        [
+          11,
+          14,
+          75
+        ],
+        [
+          15,
+          19,
+          60
+        ],
+        [
+          20,
+          25,
+          50
+        ],
+        [
+          26,
+          35,
+          40
+        ],
+        [
+          36,
+          45,
+          30
+        ],
+        [
+          46,
+          55,
+          25
+        ],
+        [
+          56,
+          70,
+          20
+        ],
+        [
+          71,
+          90,
+          15
+        ],
+        [
+          91,
+          120,
+          10
+        ],
+        [
+          121,
+          160,
+          8
+        ],
+        [
+          161,
+          280,
+          6
+        ],
+        [
+          281,
+          515,
+          5
+        ],
+        [
+          516,
+          925,
+          4
+        ],
+        [
+          926,
+          1680,
+          3
+        ],
+        [
+          1681,
+          3220,
+          2
+        ],
+        [
+          3221,
+          6420,
+          1.5
+        ]
+      ],
+      "entry_fee": 1,
+      "max_entries_per_user": 20,
+      "prize_pool": 20000,
+      "verified_total_payout": 20000,
+      "paid_positions": 6420,
+      "field_size": null,
+      "capacity_display": "23.7K",
+      "capacity_status": "rounded display; exact capacity unconfirmed",
+      "current_entries_at_capture": 567,
+      "source": "User-provided full payout table",
+      "verified_date": "2026-10-22"
     }
   }
 }
