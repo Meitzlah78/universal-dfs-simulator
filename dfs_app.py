@@ -1,3 +1,4 @@
+from simmah_session_state import safe_state_items
 from simmah_slate_workspaces import workspace_data_editor
 from simmah_slate_workspaces import workspace_button
 import itertools
@@ -1023,10 +1024,12 @@ def apply_injury_statuses(frame, key_prefix):
             return any(cache_contains_out_player(item) for item in value)
         return isinstance(value, str) and value.strip().casefold() in out_names
 
-    stale_cache_found = any(
-        any(token in str(key).lower() for token in cache_tokens)
-        and cache_contains_out_player(value)
-        for key, value in list(st.session_state.items())
+    stale_cache_found = bool(out_names) and any(
+        cache_contains_out_player(value)
+        for key, value in safe_state_items(
+            st.session_state,
+            key_filter=lambda key: any(token in str(key).lower() for token in cache_tokens),
+        )
     )
     if out_names and stale_cache_found:
         clear_tokens = cache_tokens + ("active_slate_signature",)
