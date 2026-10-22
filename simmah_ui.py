@@ -16,6 +16,13 @@ p,label,button,input { font-size:.82rem; }
 .simmah-bars i:nth-child(1){height:12px}.simmah-bars i:nth-child(2){height:21px}.simmah-bars i:nth-child(3){height:29px}
 .simmah-brand-name { font-size:1.85rem; font-weight:800; letter-spacing:.07em; line-height:1; color:#f1f7ff; }
 .simmah-brand-tagline { color:#90a8be; font-size:.61rem; letter-spacing:.15em; margin-top:.3rem; }
+.simmah-brand--compact { padding:0; margin:0; border:0; min-height:34px; gap:.55rem; }
+.simmah-brand--compact .simmah-brand-name { font-size:1.35rem; }
+.simmah-brand--compact .simmah-brand-tagline { font-size:.48rem; letter-spacing:.12em; margin-top:.2rem; }
+.simmah-brand--compact .simmah-bars { height:25px; }
+.simmah-brand--compact .simmah-bars i { width:5px; }
+.simmah-brand--compact .simmah-bars i:nth-child(1){height:10px}.simmah-brand--compact .simmah-bars i:nth-child(2){height:18px}.simmah-brand--compact .simmah-bars i:nth-child(3){height:25px}
+@media(max-width:640px){.simmah-brand--compact .simmah-brand-name{font-size:1rem}.simmah-brand--compact .simmah-brand-tagline{display:none}.simmah-brand--compact{gap:.35rem}}
 [data-baseweb="tab-list"] { gap:1.4rem; border-bottom:1px solid #193c55; background:transparent; }
 button[data-baseweb="tab"] { color:#9db2c6; height:42px; font-size:.84rem; padding:0 .25rem; }
 button[data-baseweb="tab"][aria-selected="true"] { color:#19d3b0; font-weight:700; }
@@ -51,9 +58,11 @@ button[data-baseweb="tab"][aria-selected="true"] { color:#19d3b0; font-weight:70
 </style>'''
 
 
-def render_brand(st):
+def render_brand(st, *, compact=False, show_logo=True):
     st.markdown(CSS,unsafe_allow_html=True)
-    st.markdown('''<div class="simmah-brand"><div class="simmah-bars" aria-hidden="true"><i></i><i></i><i></i></div><div><div class="simmah-brand-name">SIMMAH</div><div class="simmah-brand-tagline">SIMULATE. BUILD. COMPETE.</div></div></div>''',unsafe_allow_html=True)
+    if not show_logo:return
+    brand_class='simmah-brand simmah-brand--compact' if compact else 'simmah-brand'
+    st.markdown('''<div class="'''+brand_class+'''" aria-label="Simmah"><div class="simmah-bars" aria-hidden="true"><i></i><i></i><i></i></div><div><div class="simmah-brand-name">SIMMAH</div><div class="simmah-brand-tagline">SIMULATE. BUILD. COMPETE.</div></div></div>''',unsafe_allow_html=True)
 
 
 def player_columns(frame):

@@ -28,7 +28,7 @@ from simmah_single_stacks import render_controls as render_single_stack_controls
 from simmah_build_state import uploaded_slate_signature, signature_matches_upload
 from simmah_lineup_editor import render_editor
 from simmah_ui import render_brand, player_columns, player_column_config, render_diversity_controls
-render_brand(st)
+render_brand(st, show_logo=False)
 st.session_state["active_game_markets"] = {}
 st.session_state["active_game_lines"] = []
 st.session_state["active_slate_identity"] = ""
@@ -201,7 +201,7 @@ from datetime import datetime as _sticky_datetime
 with _shared_header.container(key="sticky_projection_bar"):
     _sticky_left, _sticky_right = st.columns([3, 2])
     with _sticky_left:
-        st.markdown("**Uploaded CSVs still take priority.**")
+        render_brand(st, compact=True)
     with _sticky_right:
         if workspace_button(st,"REFRESH PROJECTIONS + INJURY NEWS", key="sticky_refresh_projections", use_container_width=True):
             # Defer cache clearing until after the cached functions have been defined.
