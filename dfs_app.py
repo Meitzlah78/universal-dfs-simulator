@@ -8945,6 +8945,17 @@ with _tab_build:
         if "contest_results_df" in st.session_state and not (platform == "DraftKings" and lineup_mode == "Classic"):
 
             results_df = st.session_state["contest_results_df"]
+            if platform == "DraftKings" and lineup_mode == "Showdown" and isinstance(results_df, pd.DataFrame) and not results_df.empty:
+                workspace_download_button(st,
+                    "DOWNLOAD ALL CANDIDATE LINEUPS",
+                    data=results_df.to_csv(index=False).encode("utf-8"),
+                    file_name="draftkings_showdown_all_candidate_lineups.csv",
+                    mime="text/csv",
+                    key="download_dk_showdown_all_candidate_lineups",
+                    on_click="ignore",
+                    use_container_width=True,
+                )
+                st.caption(f"Downloads all {len(results_df):,} scored candidates from this build, before portfolio selection.")
             if platform == "DraftKings" and lineup_mode == "Showdown":
                 render_value_leverage_finder(control_display, results_df, st.session_state.get("contest_field_df"),
                     ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"], "dk_showdown", "Captain")
