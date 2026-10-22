@@ -59,7 +59,7 @@ def private_key(key):
 
 def transient_key(key):
     key=str(key)
-    return (key.endswith('_remove_restored') or key=='projection_accuracy_template_download' or (key.startswith('saved_contest_choice_') and key.endswith(('_use','_save','_restore_button','_backup','_restore'))) or key.startswith(('nba_projection_upload_','nba_minutes_snapshot_download','nba_entries_download','nba_portfolio_report_','nba_open_fanduel_','nba_open_draftkings_'))
+    return (key.startswith(('game_lines_','fd_player_pool_editor_')) or key=='player_controls_editor' or key.endswith('_remove_restored') or key=='projection_accuracy_template_download' or (key.startswith('saved_contest_choice_') and key.endswith(('_use','_save','_restore_button','_backup','_restore'))) or key.startswith(('nba_projection_upload_','nba_minutes_snapshot_download','nba_entries_download','nba_portfolio_report_','nba_open_fanduel_','nba_open_draftkings_'))
             or key in {'nba_build','nba_field_download','nba_entries_download',
                        'nba_fast_late_swap','nba_late_swap_upload','nba_late_swap_download',
                        'loaded_slates_browser','nba_underdog_x_feed','sticky_refresh_projections',
@@ -67,7 +67,7 @@ def transient_key(key):
 
 
 def snapshot(state, transient_keys=()):
-    transient_keys=set(transient_keys) | set(state.get('_slate_uploader_keys',())) | set(state.get('_slate_action_keys',()))
+    transient_keys=set(transient_keys) | set(state.get('_slate_uploader_keys',())) | set(state.get('_slate_action_keys',())) | set(state.get('_slate_readonly_keys',()))
     values={};omitted=[]
     for key in list(state):
         if str(key).startswith(('_slate_','$$','universal_slate_setup_file')) or private_key(key):continue
@@ -91,6 +91,12 @@ def restore(state,content):
     payload=json.loads(gzip.decompress(base64.b64decode(content))) if content else {'values':{},'uploads':{}}
     if payload.get('schema',1)!=1:raise ValueError('Unknown slate backup version')
     values={k:decode(v) for k,v in payload['values'].items() if not private_key(k) and not transient_key(k) and k not in payload.get('transient_keys',[])}
+    # Migrate old game-line deltas into application data before touching session
+    # state: recent Streamlit versions reject assignment to known editor keys.
+    for key,value in payload['values'].items():
+        if str(key).startswith('game_lines_'):
+            migrated='legacy_game_line_edits_'+str(key)[len('game_lines_'):]
+            values.setdefault(migrated,decode(value))
     for k in list(state):
         if not str(k).startswith(('_slate_','$$')):del state[k]
     state.update(values)
@@ -198,6 +204,47 @@ def workspace_download_button(st,*args,**kwargs):
     return st.download_button(*args,**kwargs)
 
 
+def workspace_data_editor(st,data,*args,**kwargs):
+    """Do not replay editor widget state; retain game-line values separately."""
+    key=kwargs.get('key')
+    if key is None:return st.data_editor(data,*args,**kwargs)
+    key=str(key)
+    st.session_state.setdefault('_slate_readonly_keys',set()).add(key)
+    from streamlit.runtime.state import get_session_state
+    assigned=get_session_state().is_new_state_value(key)
+    legacy=st.session_state.get(key) if assigned else None
+    if assigned:del st.session_state[key]
+    game_lines=key.startswith('game_lines_') and isinstance(data,pd.DataFrame) and 'Game' in data
+    if game_lines:
+        # This application value is safe to restore. Only manual line columns
+        # are retained, never automatic odds or the read-only widget payload.
+        saved_key='manual_game_lines_'+key[len('game_lines_'):]
+        migrated=st.session_state.pop('legacy_game_line_edits_'+key[len('game_lines_'):],None)
+        if legacy is None:legacy=migrated
+        saved=st.session_state.get(saved_key,{})
+        base=data.copy()
+        columns=('Game total','Home spread')
+        for index,row in base.iterrows():
+            values=saved.get(str(row['Game']),{})
+            for column in columns:
+                if column in base and column in values:base.at[index,column]=values[column]
+        # Migrate old snapshots' edited_rows once before dropping the forbidden
+        # widget assignment. Never allow edits to game identity or other fields.
+        if isinstance(legacy,dict):
+            for row_number,edits in legacy.get('edited_rows',{}).items():
+                try:position=int(row_number)
+                except (TypeError,ValueError):continue
+                if not 0<=position<len(base) or not isinstance(edits,dict):continue
+                for column in columns:
+                    if column in base and column in edits:base.at[base.index[position],column]=edits[column]
+        data=base
+    result=st.data_editor(data,*args,**kwargs)
+    if game_lines:
+        st.session_state[saved_key]={str(row['Game']):{column:row[column] for column in columns if column in result}
+                                    for _,row in result.iterrows()}
+    return result
+
+
 def capture(st):
     # Button triggers and uploader widget internals must never be replayed.
     from streamlit.runtime.scriptrunner import get_script_run_ctx
@@ -264,4 +311,5 @@ def workspace_stop(st,host):
 def workspace_rerun(st,host):
     finish_workspaces(st,host)
     st.rerun()
+
 

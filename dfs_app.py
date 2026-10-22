@@ -1,3 +1,4 @@
+from simmah_slate_workspaces import workspace_data_editor
 from simmah_slate_workspaces import workspace_button
 import itertools
 import os
@@ -2580,7 +2581,7 @@ def show_detected_slate_games(source_df):
         st.caption("Automatic pregame lines unavailable. You can enter verified pregame lines below.")
     with st.expander("Override spreads and totals (optional)", expanded=False):
         st.caption("Leave blank to use automatic lines. Home spread is negative when the home team is favored; 0 means pick’em. Manual values override the corresponding automatic values.")
-        lines = st.data_editor(base, disabled=["Game"], hide_index=True,
+        lines = workspace_data_editor(st,base, disabled=["Game"], hide_index=True,
             column_config={"Game total": st.column_config.NumberColumn(min_value=1., max_value=100., step=.5),
                            "Home spread": st.column_config.NumberColumn(min_value=-50., max_value=50., step=.5)},
             key="game_lines_" + slate_key, use_container_width=True)
@@ -5133,7 +5134,7 @@ if platform == "FanDuel":
         _fd_show_all_columns = st.checkbox("Show all player columns", value=False,
             key="fd_show_all_player_columns_" + lineup_mode.replace(" ", "_").lower())
         fd_player_display = injury_player_pool(fd_player_display)
-        _fd_edited_pool = st.data_editor(
+        _fd_edited_pool = workspace_data_editor(st,
             fd_player_display,
             use_container_width=True,
             hide_index=True,
@@ -6893,7 +6894,7 @@ else:
             key="dk_show_all_player_columns_" + lineup_mode.replace(" ", "_").lower())
         control_display = injury_player_pool(control_display)
         disabled_control_columns.append("Player")
-        edited_player_controls = st.data_editor(
+        edited_player_controls = workspace_data_editor(st,
             control_display,
             use_container_width=True,
             hide_index=True,
