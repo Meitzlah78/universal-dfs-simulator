@@ -18,7 +18,7 @@ st.set_page_config(
     layout="wide"
 )
 
-from simmah_slate_workspaces import begin_workspaces, finish_workspaces, select_upload, workspace_file_uploader, workspace_stop, workspace_rerun
+from simmah_slate_workspaces import begin_workspaces, finish_workspaces, select_upload, workspace_file_uploader, workspace_stop, workspace_rerun, workspace_download_button
 _loaded_slate_tabs = begin_workspaces(st)
 from simmah_injury_display import injury_frame, injury_player_pool
 from simmah_single_stacks import render_controls as render_single_stack_controls, selected_validator as single_stack_validator
@@ -172,7 +172,7 @@ with _contest_history:
         st.caption(f"Available: {len(_history_store['contests'])} contest profile(s), {sum(p['lineups'] for p in _history_store['contests']):,} historical entries.")
         if _history_store["contests"]:
             st.dataframe(injury_frame(st, pd.DataFrame([{"Format": p["format"], "Stakes": p["stake_bucket"], "Entries": p["lineups"], "Learned features": ", ".join(p["features"])} for p in _history_store["contests"]])), use_container_width=True, hide_index=True)
-        st.download_button("DOWNLOAD FIELD-HISTORY BACKUP", _history_json.dumps(_history_store, indent=2), "Simmah_Field_History.json", "application/json")
+        workspace_download_button(st,"DOWNLOAD FIELD-HISTORY BACKUP", _history_json.dumps(_history_store, indent=2), "Simmah_Field_History.json", "application/json")
         st.caption("New profiles survive app reruns and sessions on this server. Download a backup to retain them across hosting redeploys; checked-in seed profiles are always restored.")
         from simmah_nfl_outcomes import load_seed_results
         try:
@@ -663,7 +663,7 @@ def apply_learned_field(field, pool, slots, platform_name, mode_name, contest, t
             st.warning("Some ownership targets cannot be closely matched within the available legal proposals and salary mix. Review the final ownership comparison; projected ownership remains an estimate.")
         with st.expander("Projected versus final opponent ownership", expanded=False):
             st.dataframe(injury_frame(st, report), use_container_width=True, hide_index=True)
-            st.download_button("DOWNLOAD OWNERSHIP COMPARISON", report.to_csv(index=False).encode("utf-8"),
+            workspace_download_button(st,"DOWNLOAD OWNERSHIP COMPARISON", report.to_csv(index=False).encode("utf-8"),
                 f"{platform_name}_{mode_name.replace(' ', '_')}_Ownership_Comparison.csv", "text/csv",
                 key=f"ownership_comparison_download_{platform_name}_{mode_name}", on_click="ignore")
         st.session_state["ownership_comparison_data_" + platform_name + "_" + mode_name] = report
@@ -2824,7 +2824,7 @@ def lineup_export_download(*args, **kwargs):
     # Bind copies now: callback execution must not pick up a different slate later.
     kwargs["on_click"] = save_export_checkpoint
     kwargs["args"] = (snapshot.copy(deep=True), copy.deepcopy(metadata), data, name)
-    return st.download_button(*args, **kwargs)
+    return workspace_download_button(st,*args, **kwargs)
 
 
 def load_latest_automatic_pregame_snapshot(format_label):
@@ -2974,7 +2974,7 @@ with _tab_roster:
             "GameDate", "Name", "Position", "Team", "ProjectionSource",
             "Projection", "ActualPoints"
         ])
-        st.download_button(
+        workspace_download_button(st,
             "Download Accuracy CSV Template",
             data=accuracy_template.to_csv(index=False).encode("utf-8"),
             file_name="projection_accuracy_template.csv",
@@ -3088,7 +3088,7 @@ with _tab_roster:
                             use_container_width=True,
                             hide_index=True,
                         )
-                        st.download_button(
+                        workspace_download_button(st,
                             "Download Accuracy Results",
                             data=accuracy_df.to_csv(index=False).encode("utf-8"),
                             file_name="projection_accuracy_results.csv",
@@ -4193,7 +4193,7 @@ def render_saved_market_calibration(platform_name, mode_name, pool):
         st.caption("Market target is the implied team score from the spread and total. Pilot mean is the scoring average after calibration; it need not match exactly.")
         report = pd.DataFrame(rows)
         st.dataframe(report, hide_index=True, use_container_width=True)
-        st.download_button("DOWNLOAD MARKET CALIBRATION", report.to_csv(index=False).encode("utf-8"),
+        workspace_download_button(st,"DOWNLOAD MARKET CALIBRATION", report.to_csv(index=False).encode("utf-8"),
             "Simmah_Market_Calibration.csv", "text/csv", key="market_calibration_" + platform_name + mode_name,
             on_click="ignore")
 
@@ -5384,7 +5384,7 @@ if platform == "FanDuel":
                 st.session_state["fd_full_ownership_snapshot"] = fd_pool[own_cols].copy()
                 with st.expander("Opponent projected ownership inputs", expanded=False):
                     st.dataframe(injury_frame(st, fd_pool[own_cols]), use_container_width=True, hide_index=True)
-                    st.download_button("DOWNLOAD OWNERSHIP SNAPSHOT", fd_pool[own_cols].to_csv(index=False).encode("utf-8"), "FanDuel_Full_Ownership_Snapshot.csv", "text/csv", key="fd_full_ownership_snapshot_download", on_click="ignore")
+                    workspace_download_button(st,"DOWNLOAD OWNERSHIP SNAPSHOT", fd_pool[own_cols].to_csv(index=False).encode("utf-8"), "FanDuel_Full_Ownership_Snapshot.csv", "text/csv", key="fd_full_ownership_snapshot_download", on_click="ignore")
             fd_weights = opponent_field_selection_weights(
                 fd_pool, fd_pool["MeanPoints"].to_numpy(dtype=float)
             )
@@ -5657,7 +5657,7 @@ if platform == "FanDuel":
 
                     st.write("### Opponent Field")
                     st.caption(f"FanDuel {lineup_mode}: {len(_fd_persist_field):,} simulated entries.")
-                    st.download_button(
+                    workspace_download_button(st,
                         "DOWNLOAD OPPONENT FIELD", _fd_persist_field.to_csv(index=False).encode("utf-8"),
                         "fanduel_" + lineup_mode.replace(" ", "_").lower() + "_opponent_field.csv",
                         "text/csv", key="fd_opponent_field_visible_" + lineup_mode.replace(" ", "_").lower(),
@@ -5696,7 +5696,7 @@ if platform == "FanDuel":
                         _fd_opponent_show = _fd_opponent_show.sort_values("ProjectedPoints", ascending=False, na_position="last")
                         st.caption("Showing the 100 highest-projected simulated opponent lineups. Download contains the full opponent field, including duplicates.")
                         st.dataframe(injury_frame(st, _fd_opponent_show.head(100)), use_container_width=True, hide_index=True)
-                        st.download_button(
+                        workspace_download_button(st,
                             "Download Full Opponent Field CSV",
                             data=_fd_opponent_show.to_csv(index=False).encode("utf-8"),
                             file_name="fanduel_" + lineup_mode.replace(" ", "_").lower() + "_opponent_field.csv",
@@ -5794,7 +5794,7 @@ if platform == "FanDuel":
             }
             if isinstance(fd_all_ranked, pd.DataFrame) and not fd_all_ranked.empty:
                 _fd_all_candidates_export = fd_all_ranked.copy()
-                st.download_button(
+                workspace_download_button(st,
                     "DOWNLOAD ALL CANDIDATE LINEUPS",
                     data=_fd_all_candidates_export.to_csv(index=False).encode("utf-8"),
                     file_name="fanduel_" + lineup_mode.replace(" ", "_").lower() + "_all_candidate_lineups.csv",
@@ -6943,7 +6943,7 @@ else:
             snapshot_df = players_df[snapshot_columns].copy()
             snapshot_df.insert(0, "GameDate", str(snapshot_date))
             snapshot_df.insert(1, "Format", selected_format)
-            st.download_button(
+            workspace_download_button(st,
                 "Download Pre-Game Projection Snapshot",
                 data=snapshot_df.to_csv(index=False).encode("utf-8"),
                 file_name=f"projection_snapshot_{selected_format.lower().replace(' ', '_')}_{snapshot_date}.csv",
@@ -7460,13 +7460,13 @@ else:
                                 "Mean salary": float(pd.to_numeric(_frame["Salary"], errors="coerce").mean()),
                                 "Mean simulated points": float(pd.to_numeric(_frame["ProjectedPoints"], errors="coerce").mean())})
                         st.dataframe(injury_frame(st, pd.DataFrame(_diagnostic_rows)), hide_index=True, use_container_width=True)
-                        st.download_button("DOWNLOAD CLASSIC OPPONENT FIELD", _classic_portfolio_field.to_csv(index=False).encode("utf-8"),
+                        workspace_download_button(st,"DOWNLOAD CLASSIC OPPONENT FIELD", _classic_portfolio_field.to_csv(index=False).encode("utf-8"),
                             "DraftKings_Classic_Opponent_Field.csv", "text/csv", key="classic_field_diagnostics", on_click="ignore")
                         _ownership_snapshot = st.session_state.get("classic_ownership_snapshot")
                         if isinstance(_ownership_snapshot, pd.DataFrame) and not _ownership_snapshot.empty:
-                            st.download_button("DOWNLOAD OWNERSHIP SNAPSHOT", _ownership_snapshot.to_csv(index=False).encode("utf-8"),
+                            workspace_download_button(st,"DOWNLOAD OWNERSHIP SNAPSHOT", _ownership_snapshot.to_csv(index=False).encode("utf-8"),
                                 "DraftKings_Classic_Ownership_Snapshot.csv", "text/csv", key="classic_ownership_snapshot_download", on_click="ignore")
-                        st.download_button("DOWNLOAD CLASSIC PLAYER INPUTS", classic_pool.to_csv(index=False).encode("utf-8"),
+                        workspace_download_button(st,"DOWNLOAD CLASSIC PLAYER INPUTS", classic_pool.to_csv(index=False).encode("utf-8"),
                             "DraftKings_Classic_Player_Inputs.csv", "text/csv", key="classic_player_diagnostics", on_click="ignore")
 
                 if st.session_state.get("classic_field_context") == classic_contest_name and isinstance(_classic_portfolio_field, pd.DataFrame) and not _classic_portfolio_field.empty and isinstance(_classic_portfolio_outcomes, pd.DataFrame):
@@ -8920,7 +8920,7 @@ with _tab_build:
             "the actual lineups submitted by other DraftKings players."
         )
         _field_csv = _saved_field_df.to_csv(index=False).encode("utf-8")
-        st.download_button(
+        workspace_download_button(st,
             "Download Full Simulated Opponent Field (CSV)",
             data=_field_csv,
             file_name=f"simulated_opponent_field_{lineup_mode.lower().replace(' ', '_')}.csv",
@@ -8929,7 +8929,7 @@ with _tab_build:
         )
         if isinstance(_saved_sample_df, pd.DataFrame) and not _saved_sample_df.empty:
             _sample_csv = _saved_sample_df.to_csv(index=False).encode("utf-8")
-            st.download_button(
+            workspace_download_button(st,
                 "Download Representative Field Sample (CSV)",
                 data=_sample_csv,
                 file_name=f"simulated_opponent_sample_{lineup_mode.lower().replace(' ', '_')}.csv",
@@ -9744,7 +9744,7 @@ with _tab_build:
                 roi_metrics[2].metric("Net Profit / Loss", f"${total_roi_net:,.2f}")
                 roi_metrics[3].metric("Overall ROI", f"{total_roi_pct:.1f}%")
                 st.dataframe(injury_frame(st, roi_history), use_container_width=True, hide_index=True)
-                st.download_button(
+                workspace_download_button(st,
                     "DOWNLOAD ROI HISTORY CSV",
                     data=roi_history[ROI_COLUMNS].to_csv(index=False).encode("utf-8"),
                     file_name="SIMMAH_ROI_History.csv",

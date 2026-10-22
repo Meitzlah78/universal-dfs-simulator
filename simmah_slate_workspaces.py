@@ -59,7 +59,7 @@ def private_key(key):
 
 def transient_key(key):
     key=str(key)
-    return (key.endswith('_remove_restored') or key.startswith(('nba_projection_upload_','nba_minutes_snapshot_download','nba_entries_download','nba_portfolio_report_','nba_open_fanduel_','nba_open_draftkings_'))
+    return (key.endswith('_remove_restored') or key=='projection_accuracy_template_download' or key.startswith(('nba_projection_upload_','nba_minutes_snapshot_download','nba_entries_download','nba_portfolio_report_','nba_open_fanduel_','nba_open_draftkings_'))
             or key in {'nba_build','nba_field_download','nba_entries_download',
                        'nba_fast_late_swap','nba_late_swap_upload','nba_late_swap_download',
                        'loaded_slates_browser','nba_underdog_x_feed','sticky_refresh_projections',
@@ -250,3 +250,4 @@ def workspace_stop(st,host):
 def workspace_rerun(st,host):
     finish_workspaces(st,host)
     st.rerun()
+
