@@ -2684,6 +2684,153 @@
       "current_entries_at_capture": 14415,
       "source": "User-provided Prizes screenshot and contest metadata",
       "verified_date": "2026-10-22"
+    },
+    "FanDuel:20000-thu-nfl-hail-mary": {
+      "name": "$20K Thu NFL Hail Mary — $0.25, 150 Max",
+      "site": "FanDuel",
+      "format": "FanDuel Single Game",
+      "payouts": [
+        [
+          1,
+          1,
+          500
+        ],
+        [
+          2,
+          2,
+          250
+        ],
+        [
+          3,
+          3,
+          150
+        ],
+        [
+          4,
+          4,
+          100
+        ],
+        [
+          5,
+          5,
+          75
+        ],
+        [
+          6,
+          6,
+          50
+        ],
+        [
+          7,
+          7,
+          40
+        ],
+        [
+          8,
+          8,
+          30
+        ],
+        [
+          9,
+          10,
+          25
+        ],
+        [
+          11,
+          15,
+          20
+        ],
+        [
+          16,
+          20,
+          15
+        ],
+        [
+          21,
+          30,
+          12
+        ],
+        [
+          31,
+          40,
+          10
+        ],
+        [
+          41,
+          50,
+          8
+        ],
+        [
+          51,
+          75,
+          6
+        ],
+        [
+          76,
+          100,
+          5
+        ],
+        [
+          101,
+          150,
+          4
+        ],
+        [
+          151,
+          210,
+          3
+        ],
+        [
+          211,
+          400,
+          2.5
+        ],
+        [
+          401,
+          600,
+          2
+        ],
+        [
+          601,
+          1000,
+          1.5
+        ],
+        [
+          1001,
+          1500,
+          1.25
+        ],
+        [
+          1501,
+          3000,
+          1
+        ],
+        [
+          3001,
+          6000,
+          0.75
+        ],
+        [
+          6001,
+          10000,
+          0.6
+        ],
+        [
+          10001,
+          28750,
+          0.5
+        ]
+      ],
+      "entry_fee": 0.25,
+      "max_entries_per_user": 150,
+      "prize_pool": 20000,
+      "verified_total_payout": 20000,
+      "paid_positions": 28750,
+      "field_size": 95808,
+      "capacity_status": "exact user-provided capacity",
+      "current_entries_at_capture": 26045,
+      "source": "User-provided complete Prizes screenshots and contest metadata",
+      "verified_date": "2026-10-22"
     }
   }
 }
