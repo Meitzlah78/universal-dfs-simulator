@@ -1,3 +1,4 @@
+from simmah_slate_workspaces import workspace_form_submit_button
 """Manual, validated edits to the assigned entry portfolio."""
 import hashlib
 import json
@@ -80,7 +81,7 @@ def render_editor(st, portfolio, pool, slots, platform, mode, contest, validator
         number = st.selectbox('Lineup', range(len(current)), format_func=lambda n: f'Lineup {n + 1}')
         slot = st.selectbox('Player slot', slots)
         player = st.selectbox('Replacement player', sorted(pool['Name'].astype(str).unique()), format_func=lambda name: injury_label(name, statuses))
-        apply = st.form_submit_button('Apply player swap')
+        apply = workspace_form_submit_button(st,'Apply player swap',key=key+'_apply_swap')
         if apply:
             try:
                 current = swap_player(current, pool, slots, number, slot, player, platform, validator)
@@ -88,5 +89,5 @@ def render_editor(st, portfolio, pool, slots, platform, mode, contest, validator
                 st.rerun()
             except ValueError as exc:
                 st.error(str(exc))
-    st.caption('Swaps update your assigned entries and their export. Download your updated entry file from Build after editing. Manual swaps may change portfolio exposures.')
+    st.caption('Swaps update your assigned entries and their export. Download your updated entry file from Lineups after editing. Manual swaps may change portfolio exposures.')
     return current
