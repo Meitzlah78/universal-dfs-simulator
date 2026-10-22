@@ -6,6 +6,13 @@ from pathlib import Path
 from simmah_slate_workspaces import workspace_button, workspace_download_button, workspace_file_uploader
 
 
+def payscale_name(value):
+    """Payout templates describe contest structure, not a specific matchup."""
+    name=re.sub(r'\s*\([A-Z]{2,4}\s*(?:@|vs\.?)\s*[A-Z]{2,4}\)\s*$', '', str(value), flags=re.I)
+    name=re.sub(r'^\s*[A-Z]{2,4}\s*(?:@|vs\.?)\s*[A-Z]{2,4}\s*[—–-]\s*', 'NFL Showdown — ', name, flags=re.I)
+    return re.sub(r'\s*\(Oct \d+\)\s*$', '', name).strip()
+
+
 def validate_tiers(tiers):
     result=[]; last=0; previous=float('inf')
     for first,end,prize in tiers:
@@ -58,6 +65,7 @@ def render_panel(st,active,format_name):
     except (OSError,ValueError,KeyError,TypeError) as exc:
         st.error('Saved payscales could not load: '+str(exc));return active
     profiles.update(st.session_state.get('saved_payscales',{}))
+    profiles={pid:dict(p, name=payscale_name(p['name'])) for pid,p in profiles.items()}
     choices={pid:p for pid,p in profiles.items() if p['site']==site}
     st.write('### Saved payscales')
     choice=st.selectbox('Payscale', ['']+list(choices),format_func=lambda pid:choices[pid]['name'] if pid else 'Use current contest payouts',key=key+'_choice')
@@ -80,7 +88,7 @@ def render_panel(st,active,format_name):
             if capacity is None or capacity<tiers[-1][1]:
                 st.warning('Enter a contest field size at least as large as the last paid rank before using this payscale.')
             else:
-                active.update(payouts=tiers,payout_profile_id=choice,prize_pool=sum((b-a+1)*p for a,b,p in tiers))
+                active.update(payouts=tiers,payout_profile_id=choice,payout_profile_name=choices[choice]['name'],prize_pool=sum((b-a+1)*p for a,b,p in tiers))
                 if format_name=='DraftKings Showdown' and active.get('id'):
                     from simmah_contests import payout_vector
                     st.session_state['contest_payout_schedule']=payout_vector(capacity,tiers)
@@ -97,7 +105,7 @@ def render_panel(st,active,format_name):
                 tiers=parse_tiers(text) if text.strip() else validate_tiers(active.get('payouts') or active.get('payout_tiers') or [])
                 pid=site+':'+name.strip()
                 if pid in profiles:raise ValueError('That name already exists. Use a new name to preserve the saved scale.')
-                profiles[pid]={'name':name.strip(),'site':site,'payouts':tiers}
+                profiles[pid]={'name':payscale_name(name),'site':site,'payouts':tiers}
                 persist(path,profiles)
                 st.session_state['saved_payscales']=profiles
                 st.success('Payscale saved. Select it above; download a backup to keep it across hosting rebuilds.')
@@ -136,4 +144,4 @@ def reapply_showdown(st,active):
         from simmah_contests import payout_vector
         st.session_state['contest_payout_schedule']=payout_vector(int(active['field_size']),active['payouts'])
         st.session_state['contest_payout_contest_id']=str(active['id'])
-        st.session_state['contest_payout_source_name']='Selected saved payscale: '+choice
+        st.session_state['contest_payout_source_name']='Selected saved payscale: '+active.get('payout_profile_name','Saved payscale')
