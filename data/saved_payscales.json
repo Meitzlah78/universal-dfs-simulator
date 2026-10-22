@@ -2216,6 +2216,103 @@
       "current_entries_at_capture": 677,
       "source": "User-provided full payout table",
       "verified_date": "2026-10-22"
+    },
+    "DraftKings:2000-first-down-den-ari": {
+      "name": "NFL Showdown $2K First Down — $1, 20 Max (DEN @ ARI)",
+      "site": "DraftKings",
+      "format": "DraftKings Showdown",
+      "payouts": [
+        [
+          1,
+          1,
+          200
+        ],
+        [
+          2,
+          2,
+          100
+        ],
+        [
+          3,
+          3,
+          60
+        ],
+        [
+          4,
+          4,
+          45
+        ],
+        [
+          5,
+          5,
+          35
+        ],
+        [
+          6,
+          7,
+          25
+        ],
+        [
+          8,
+          10,
+          20
+        ],
+        [
+          11,
+          15,
+          15
+        ],
+        [
+          16,
+          20,
+          10
+        ],
+        [
+          21,
+          25,
+          8
+        ],
+        [
+          26,
+          35,
+          6
+        ],
+        [
+          36,
+          55,
+          5
+        ],
+        [
+          56,
+          95,
+          4
+        ],
+        [
+          96,
+          165,
+          3
+        ],
+        [
+          166,
+          322,
+          2
+        ],
+        [
+          323,
+          616,
+          1.5
+        ]
+      ],
+      "entry_fee": 1,
+      "max_entries_per_user": 20,
+      "prize_pool": 2000,
+      "verified_total_payout": 2000,
+      "paid_positions": 616,
+      "field_size": 2378,
+      "capacity_status": "exact user-provided capacity",
+      "current_entries_at_capture": 58,
+      "source": "User-provided full payout table",
+      "verified_date": "2026-10-22"
     }
   }
 }
