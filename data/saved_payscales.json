@@ -1873,6 +1873,129 @@
       "current_entries_at_capture": 23499,
       "source": "User-provided full payout table",
       "verified_date": "2026-10-22"
+    },
+    "DraftKings:1500-dime-package-pit-no": {
+      "name": "NFL Showdown $1.5K Dime Package — $0.10, 20 Max (PIT vs NO)",
+      "site": "DraftKings",
+      "format": "DraftKings Showdown",
+      "payouts": [
+        [
+          1,
+          1,
+          100
+        ],
+        [
+          2,
+          2,
+          75
+        ],
+        [
+          3,
+          3,
+          50
+        ],
+        [
+          4,
+          4,
+          35
+        ],
+        [
+          5,
+          5,
+          25
+        ],
+        [
+          6,
+          6,
+          20
+        ],
+        [
+          7,
+          8,
+          15
+        ],
+        [
+          9,
+          10,
+          10
+        ],
+        [
+          11,
+          13,
+          8
+        ],
+        [
+          14,
+          16,
+          6
+        ],
+        [
+          17,
+          20,
+          5
+        ],
+        [
+          21,
+          25,
+          4
+        ],
+        [
+          26,
+          30,
+          3
+        ],
+        [
+          31,
+          40,
+          2
+        ],
+        [
+          41,
+          55,
+          1.5
+        ],
+        [
+          56,
+          70,
+          1
+        ],
+        [
+          71,
+          110,
+          0.75
+        ],
+        [
+          111,
+          215,
+          0.5
+        ],
+        [
+          216,
+          495,
+          0.4
+        ],
+        [
+          496,
+          1325,
+          0.3
+        ],
+        [
+          1326,
+          4060,
+          0.2
+        ]
+      ],
+      "entry_fee": 0.1,
+      "max_entries_per_user": 20,
+      "prize_pool": 1500,
+      "verified_total_payout": 1500,
+      "paid_positions": 4060,
+      "field_size": null,
+      "capacity_display": "17.8K",
+      "capacity_status": "rounded display; exact capacity unconfirmed",
+      "current_entries_at_capture": 1180,
+      "source": "User-provided full payout table",
+      "verified_date": "2026-10-22"
     }
   }
 }
