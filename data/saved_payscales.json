@@ -1996,6 +1996,103 @@
       "current_entries_at_capture": 1180,
       "source": "User-provided full payout table",
       "verified_date": "2026-10-22"
+    },
+    "DraftKings:1000-quarter-jukebox-sf-atl": {
+      "name": "NFL Showdown $1K Quarter Jukebox — $0.25, 20 Max (SF @ ATL)",
+      "site": "DraftKings",
+      "format": "DraftKings Showdown",
+      "payouts": [
+        [
+          1,
+          1,
+          100
+        ],
+        [
+          2,
+          2,
+          50
+        ],
+        [
+          3,
+          3,
+          30
+        ],
+        [
+          4,
+          4,
+          20
+        ],
+        [
+          5,
+          5,
+          15
+        ],
+        [
+          6,
+          7,
+          10
+        ],
+        [
+          8,
+          10,
+          8
+        ],
+        [
+          11,
+          13,
+          6
+        ],
+        [
+          14,
+          16,
+          5
+        ],
+        [
+          17,
+          20,
+          4
+        ],
+        [
+          21,
+          25,
+          3
+        ],
+        [
+          26,
+          35,
+          2
+        ],
+        [
+          36,
+          60,
+          1.5
+        ],
+        [
+          61,
+          140,
+          1
+        ],
+        [
+          141,
+          370,
+          0.75
+        ],
+        [
+          371,
+          1104,
+          0.5
+        ]
+      ],
+      "entry_fee": 0.25,
+      "max_entries_per_user": 20,
+      "prize_pool": 1000,
+      "verified_total_payout": 1000,
+      "paid_positions": 1104,
+      "field_size": 4756,
+      "capacity_status": "exact user-provided capacity",
+      "current_entries_at_capture": 217,
+      "source": "User-provided full payout table",
+      "verified_date": "2026-10-22"
     }
   }
 }
