@@ -2,7 +2,6 @@
 import numpy as np
 import pandas as pd
 from simmah_nba_arrays import score_batches
-from simmah_nba_rosters import SLOT_COLUMNS
 from simmah_nba_rules import rules_for
 from simmah_portfolio_selection import select_portfolio
 
@@ -83,4 +82,5 @@ def select_entries(pool,candidates,report,count,diversity=50,controls=None,metri
         rows[column]=pool.iloc[indices[:,slot]]['Player ID'].astype(str).to_numpy()
     return select_portfolio(rows,list(rules_for(pool)['slots']),count,metric,
                             controls=controls,diversity=diversity)
+
 

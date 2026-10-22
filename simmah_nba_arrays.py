@@ -24,8 +24,12 @@ def score_batches(player_outcomes, lineup_indices, batch_size=128):
     batch_size=int(batch_size)
     dtype=np.result_type(outcomes.dtype,np.float32)
     for start in range(0,len(outcomes),batch_size):
-        values=outcomes[start:start+batch_size]
-        scores=np.zeros((len(indices),len(values)),dtype=dtype)
+        # Copy only this bounded batch into player-major order once. Each
+        # slot gather then reads contiguous simulation rows instead of
+        # repeatedly gathering strided player columns and transposing them.
+        values=np.ascontiguousarray(outcomes[start:start+batch_size].T)
+        scores=np.zeros((len(indices),values.shape[1]),dtype=dtype)
         for slot in range(indices.shape[1]):
-            scores+=values[:,indices[:,slot]].T
+            scores+=values[indices[:,slot]]
         yield start,scores
+
