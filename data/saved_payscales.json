@@ -2548,6 +2548,138 @@
       "current_entries_at_capture": 567,
       "source": "User-provided full payout table",
       "verified_date": "2026-10-22"
+    },
+    "FanDuel:30000-thu-nfl-dive": {
+      "name": "$30K Thu NFL Dive ($10K to 1st) — $1, 150 Max",
+      "site": "FanDuel",
+      "format": "FanDuel Single Game",
+      "payouts": [
+        [
+          1,
+          1,
+          10000
+        ],
+        [
+          2,
+          2,
+          1000
+        ],
+        [
+          3,
+          3,
+          500
+        ],
+        [
+          4,
+          4,
+          250
+        ],
+        [
+          5,
+          5,
+          150
+        ],
+        [
+          6,
+          6,
+          100
+        ],
+        [
+          7,
+          7,
+          75
+        ],
+        [
+          8,
+          8,
+          50
+        ],
+        [
+          9,
+          9,
+          40
+        ],
+        [
+          10,
+          10,
+          30
+        ],
+        [
+          11,
+          12,
+          25
+        ],
+        [
+          13,
+          15,
+          20
+        ],
+        [
+          16,
+          20,
+          15
+        ],
+        [
+          21,
+          25,
+          10
+        ],
+        [
+          26,
+          30,
+          8
+        ],
+        [
+          31,
+          40,
+          7
+        ],
+        [
+          41,
+          50,
+          6
+        ],
+        [
+          51,
+          100,
+          5
+        ],
+        [
+          101,
+          200,
+          4
+        ],
+        [
+          201,
+          400,
+          3.5
+        ],
+        [
+          401,
+          700,
+          3
+        ],
+        [
+          701,
+          1000,
+          2.5
+        ],
+        [
+          1001,
+          8200,
+          2
+        ]
+      ],
+      "entry_fee": 1,
+      "max_entries_per_user": 150,
+      "prize_pool": 30000,
+      "verified_total_payout": 30000,
+      "paid_positions": 8200,
+      "field_size": 35714,
+      "capacity_status": "exact user-provided capacity",
+      "current_entries_at_capture": 14415,
+      "source": "User-provided Prizes screenshot and contest metadata",
+      "verified_date": "2026-10-22"
     }
   }
 }
