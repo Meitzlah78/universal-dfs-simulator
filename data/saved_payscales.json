@@ -1715,6 +1715,164 @@
       "verified_total_payout": 7000,
       "verified_date": "2026-10-22",
       "source": "User-provided contest Prizes screenshot"
+    },
+    "DraftKings:60000-first-down-ne-chi-20261022": {
+      "name": "NFL Showdown $60K First Down — $1, 20 Max (NE @ CHI)",
+      "site": "DraftKings",
+      "format": "DraftKings Showdown",
+      "payouts": [
+        [
+          1,
+          1,
+          3000
+        ],
+        [
+          2,
+          2,
+          1500
+        ],
+        [
+          3,
+          3,
+          1000
+        ],
+        [
+          4,
+          4,
+          750
+        ],
+        [
+          5,
+          5,
+          600
+        ],
+        [
+          6,
+          6,
+          500
+        ],
+        [
+          7,
+          8,
+          400
+        ],
+        [
+          9,
+          10,
+          300
+        ],
+        [
+          11,
+          14,
+          250
+        ],
+        [
+          15,
+          19,
+          200
+        ],
+        [
+          20,
+          25,
+          150
+        ],
+        [
+          26,
+          35,
+          100
+        ],
+        [
+          36,
+          45,
+          75
+        ],
+        [
+          46,
+          60,
+          60
+        ],
+        [
+          61,
+          80,
+          50
+        ],
+        [
+          81,
+          105,
+          40
+        ],
+        [
+          106,
+          135,
+          30
+        ],
+        [
+          136,
+          170,
+          25
+        ],
+        [
+          171,
+          215,
+          20
+        ],
+        [
+          216,
+          275,
+          15
+        ],
+        [
+          276,
+          365,
+          10
+        ],
+        [
+          366,
+          480,
+          8
+        ],
+        [
+          481,
+          680,
+          6
+        ],
+        [
+          681,
+          1095,
+          5
+        ],
+        [
+          1096,
+          2025,
+          4
+        ],
+        [
+          2026,
+          4110,
+          3
+        ],
+        [
+          4111,
+          8806,
+          2
+        ],
+        [
+          8807,
+          19248,
+          1.5
+        ]
+      ],
+      "entry_fee": 1,
+      "max_entries_per_user": 20,
+      "prize_pool": 60000,
+      "verified_total_payout": 60000,
+      "paid_positions": 19248,
+      "field_size": null,
+      "capacity_display": "71.3K",
+      "capacity_status": "rounded display; exact capacity unconfirmed",
+      "current_entries_at_capture": 23499,
+      "source": "User-provided full payout table",
+      "verified_date": "2026-10-22"
     }
   }
 }
