@@ -105,6 +105,13 @@ def render_game_strip(st,pool,markets,updated_at=None):
 .simmah-game-team span{font-size:.67rem;white-space:nowrap}
 .simmah-game-strip:focus-visible{outline:2px solid #69bce5;outline-offset:2px}
 @media(max-width:440px){.simmah-game-card{flex-basis:195px}}
+
+/* Stack fixed bars against their actual rendered edges, including mobile. */
+.st-key-simmah_pinned_games{anchor-name:--simmah-games;margin:0 !important;border-top:0;border-radius:0}
+@supports(top:anchor(--simmah-refresh bottom)){
+ .st-key-simmah_pinned_games{top:anchor(--simmah-refresh bottom) !important}
+ [data-testid="stTabs"] :is([data-baseweb="tab-list"], [role="tablist"]){top:anchor(--simmah-games bottom) !important;margin-top:0 !important;border-top:0}
+}
 </style><div class="simmah-game-strip" role="region" aria-label="Slate games; scroll left or right" tabindex="0">'''+''.join(cards)+'</div>',unsafe_allow_html=True)
 
 

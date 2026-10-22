@@ -31,4 +31,11 @@ def render_game_cards(st,games):
 .stApp:has(.simmah-nfl-games) [data-testid="stMainBlockContainer"],.stApp:has(.simmah-nfl-games) section.main>div.block-container{padding-top:19.5rem !important}
 @media(min-width:901px){.stApp:has(.simmah-nfl-games) .st-key-simmah_build_panel{top:19rem !important;height:max(8rem,calc(100dvh - 20rem)) !important}}
 @media(max-width:640px){.st-key-simmah_pinned_games:has(.simmah-nfl-games){width:calc(100% - 1rem) !important}}
+
+/* Stack fixed bars against their actual rendered edges, including mobile. */
+.st-key-simmah_pinned_games:has(.simmah-nfl-games){anchor-name:--simmah-games;margin:0 !important;border-top:0;border-radius:0}
+@supports(top:anchor(--simmah-refresh bottom)){
+ .st-key-simmah_pinned_games:has(.simmah-nfl-games){top:anchor(--simmah-refresh bottom) !important}
+ .stApp:has(.simmah-nfl-games) [data-testid="stTabs"] :is([data-baseweb="tab-list"], [role="tablist"]){top:anchor(--simmah-games bottom) !important;margin-top:0 !important;border-top:0}
+}
 </style>'''+game_cards_html(games),unsafe_allow_html=True)
