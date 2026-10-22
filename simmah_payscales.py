@@ -80,13 +80,19 @@ def render_panel(st,active,format_name):
     if choice:
         try:
             tiers=validate_tiers(choices[choice]['payouts'])
-            capacity=int(active.get('field_size') or 0)
-            if not capacity:
-                capacity=st.number_input('Exact contest field size for payscale',min_value=2,value=None,step=1,key=key+'_capacity')
-                if capacity is not None:active['field_size']=int(capacity)
+            profile=choices[choice]
+            saved_capacity=profile.get('field_size')
+            current_capacity=active.get('field_size')
+            initial_capacity=int(saved_capacity or current_capacity or 0)
+            if initial_capacity<tiers[-1][1]:initial_capacity=None
+            capacity=st.number_input('Contest field size',min_value=max(2,tiers[-1][1]),
+                value=initial_capacity,step=1,
+                key=key+'_capacity_'+choice+'_'+str(active.get('id','')),
+                help='Total contest entries, not your entries or the simulated opponent sample. Saved exact capacities fill automatically; rounded lobby counts do not.')
+            if capacity is not None:active['field_size']=int(capacity)
             st.caption(f'{tiers[-1][1]:,} paid places · ${sum((b-a+1)*p for a,b,p in tiers):,.2f} total prizes')
             if capacity is None or capacity<tiers[-1][1]:
-                st.warning('Enter a contest field size at least as large as the last paid rank before using this payscale.')
+                st.info('This payscale has '+format(tiers[-1][1],',')+' paid places. Enter the exact total contest capacity above; its original capacity was not confirmed.')
             else:
                 active.update(payouts=tiers,payout_profile_id=choice,payout_profile_name=choices[choice]['name'],prize_pool=sum((b-a+1)*p for a,b,p in tiers))
                 if format_name=='DraftKings Showdown' and active.get('id'):
