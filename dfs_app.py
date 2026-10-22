@@ -8956,6 +8956,26 @@ with _tab_build:
                     use_container_width=True,
                 )
                 st.caption(f"Downloads all {len(results_df):,} scored candidates from this build, before portfolio selection.")
+                _comparison_sim = st.session_state.get("simulation_df")
+                _comparison_field = st.session_state.get("contest_field_df")
+                if isinstance(_comparison_sim, pd.DataFrame) and isinstance(_comparison_field, pd.DataFrame):
+                    from simmah_comparison_export import comparison_bundle
+                    try:
+                        _comparison_bytes = comparison_bundle(
+                            results_df, showdown_pool, _comparison_field, _comparison_sim,
+                            st.session_state.get("selected_dk_contest") or {})
+                        workspace_download_button(st,
+                            "DOWNLOAD FIELD COMPARISON BUNDLE",
+                            data=_comparison_bytes,
+                            file_name="draftkings_showdown_field_comparison.zip",
+                            mime="application/zip",
+                            key="download_dk_showdown_comparison_bundle",
+                            on_click="ignore",
+                            use_container_width=True,
+                        )
+                    except (ValueError, TypeError) as _comparison_error:
+                        st.caption(f"Comparison bundle unavailable: {_comparison_error}")
+
             if platform == "DraftKings" and lineup_mode == "Showdown":
                 render_value_leverage_finder(control_display, results_df, st.session_state.get("contest_field_df"),
                     ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"], "dk_showdown", "Captain")
