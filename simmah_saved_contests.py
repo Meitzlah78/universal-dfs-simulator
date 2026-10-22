@@ -135,4 +135,5 @@ def render_panel(st,active,format_name):
                 catalog=merge(catalog,json.loads(uploaded.getvalue()))
                 save(local,catalog);st.session_state['saved_contest_catalog']=catalog;st.rerun()
             except (OSError,ValueError,TypeError,KeyError):st.error('Invalid saved-contest backup.')
-    return active
+    from simmah_payscales import render_panel as render_payscales
+    return render_payscales(st, active, format_name)

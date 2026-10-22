@@ -2384,7 +2384,7 @@ def full_roster_contest_parameters(contest, representative_count):
     tiers = contest.get("payouts") or contest.get("payout_tiers")
     field_size = int(contest.get("field_size") or 0)
     preset = "45K Sun NFL Hail Mary" in str(contest.get("name", ""))
-    if preset:
+    if preset and not contest.get("payout_profile_id"):
         tiers = tiers or [(1, 1, 2000.0), (2, 2, 1000.0), (3, 3, 750.0), (4, 4, 500.0), (5, 5, 300.0), (6, 6, 200.0), (7, 7, 150.0), (8, 8, 125.0), (9, 10, 100.0), (11, 12, 75.0), (13, 15, 50.0), (16, 20, 30.0), (21, 25, 20.0), (26, 30, 15.0), (31, 40, 10.0), (41, 50, 7.5), (51, 75, 5.0), (76, 100, 4.0), (101, 150, 3.0), (151, 300, 2.0), (301, 600, 1.5), (601, 1000, 1.25), (1001, 3000, 1.0), (3001, 7500, 0.8), (7501, 15000, 0.7), (15001, 30000, 0.6), (30001, 65000, 0.5)]
         field_size = max(215568, field_size)
     # Confirmed by the user's prize-table screenshot for this exact contest.
@@ -2394,7 +2394,7 @@ def full_roster_contest_parameters(contest, representative_count):
         field_size = field_size or 95808
         contest = dict(contest, entry_fee=0.05 if contest.get("entry_fee") is None else contest["entry_fee"])
     # Screenshot-verified schedule, bound to the entry template's exact contest ID.
-    if str(contest.get("id", "")) == "135541-281148543":
+    if str(contest.get("id", "")) == "135541-281148543" and not contest.get("payout_profile_id"):
         tiers = [(1,1,500),(2,2,250),(3,3,150),(4,4,100),(5,5,75),(6,6,50),
             (7,7,40),(8,8,30),(9,10,25),(11,15,20),(16,20,15),(21,30,12),
             (31,40,10),(41,50,8),(51,75,6),(76,100,5),(101,150,4),(151,210,3),
@@ -7135,6 +7135,14 @@ else:
                     key="dk_classic_contest_name"
                 )
                 classic_contest = CLASSIC_CONTESTS[classic_contest_name]
+                _selected_scale = st.session_state.get("selected_dk_contest", {})
+                if _selected_scale.get("payout_profile_id") and _selected_scale.get("payouts"):
+                    classic_contest = dict(classic_contest,
+                        payouts=_selected_scale["payouts"],
+                        field=int(_selected_scale["field_size"]),
+                        entry=float(_selected_scale.get("entry_fee") or classic_contest["entry"]),
+                        prize_pool=float(_selected_scale["prize_pool"]))
+                    st.caption("Using saved payscale selected in Contests.")
                 classic_entry_count = st.number_input(
                     "My entries in this Classic contest", min_value=1,
                     max_value=int(classic_contest["max_entries"]),
@@ -8309,6 +8317,8 @@ with _tab_build:
                 st.session_state["contest_payout_contest_id"] = _selected_dk_id
                 st.session_state["contest_payout_auto_loaded"] = True
 
+            from simmah_payscales import reapply_showdown
+            reapply_showdown(st, st.session_state.get("selected_dk_contest", {}))
             _saved_payouts = st.session_state.get("contest_payout_schedule")
             _current_payout_contest_id = str(st.session_state.get("selected_dk_contest", {}).get("id", ""))
             _payout_matches_selected_contest = (
