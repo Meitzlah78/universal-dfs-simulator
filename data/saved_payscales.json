@@ -2093,6 +2093,129 @@
       "current_entries_at_capture": 217,
       "source": "User-provided full payout table",
       "verified_date": "2026-10-22"
+    },
+    "DraftKings:4000-quarter-jukebox-pit-no": {
+      "name": "NFL Showdown $4K Quarter Jukebox — $0.25, 20 Max (PIT vs NO)",
+      "site": "DraftKings",
+      "format": "DraftKings Showdown",
+      "payouts": [
+        [
+          1,
+          1,
+          200
+        ],
+        [
+          2,
+          2,
+          150
+        ],
+        [
+          3,
+          3,
+          100
+        ],
+        [
+          4,
+          4,
+          75
+        ],
+        [
+          5,
+          5,
+          50
+        ],
+        [
+          6,
+          6,
+          40
+        ],
+        [
+          7,
+          7,
+          30
+        ],
+        [
+          8,
+          8,
+          25
+        ],
+        [
+          9,
+          10,
+          20
+        ],
+        [
+          11,
+          13,
+          15
+        ],
+        [
+          14,
+          16,
+          10
+        ],
+        [
+          17,
+          20,
+          8
+        ],
+        [
+          21,
+          25,
+          6
+        ],
+        [
+          26,
+          35,
+          5
+        ],
+        [
+          36,
+          45,
+          4
+        ],
+        [
+          46,
+          70,
+          3
+        ],
+        [
+          71,
+          140,
+          2
+        ],
+        [
+          141,
+          295,
+          1.5
+        ],
+        [
+          296,
+          720,
+          1
+        ],
+        [
+          721,
+          1810,
+          0.75
+        ],
+        [
+          1811,
+          4556,
+          0.5
+        ]
+      ],
+      "entry_fee": 0.25,
+      "max_entries_per_user": 20,
+      "prize_pool": 4000,
+      "verified_total_payout": 4000,
+      "paid_positions": 4556,
+      "field_size": null,
+      "capacity_display": "19K",
+      "capacity_status": "rounded display; exact capacity unconfirmed",
+      "current_entries_at_capture": 677,
+      "source": "User-provided full payout table",
+      "verified_date": "2026-10-22"
     }
   }
 }
