@@ -23,9 +23,9 @@ p,label,button,input { font-size:.82rem; }
 .simmah-brand--compact .simmah-bars i { width:5px; }
 .simmah-brand--compact .simmah-bars i:nth-child(1){height:10px}.simmah-brand--compact .simmah-bars i:nth-child(2){height:18px}.simmah-brand--compact .simmah-bars i:nth-child(3){height:25px}
 @media(max-width:640px){.simmah-brand--compact .simmah-brand-name{font-size:1rem}.simmah-brand--compact .simmah-brand-tagline{display:none}.simmah-brand--compact{gap:.35rem}}
-[data-baseweb="tab-list"] { gap:1.4rem; border-bottom:1px solid #193c55; background:transparent; }
-button[data-baseweb="tab"] { color:#9db2c6; height:42px; font-size:.84rem; padding:0 .25rem; }
-button[data-baseweb="tab"][aria-selected="true"] { color:#19d3b0; font-weight:700; }
+:is([data-baseweb="tab-list"], [role="tablist"]) { gap:1.4rem; border-bottom:1px solid #193c55; background:transparent; }
+:is(button[data-baseweb="tab"], [role="tab"]) { color:#9db2c6; height:42px; font-size:.84rem; padding:0 .25rem; }
+:is(button[data-baseweb="tab"], [role="tab"])[aria-selected="true"] { color:#19d3b0; font-weight:700; }
 [data-baseweb="tab-highlight"] { background:#19d3b0; height:2px; }
 [data-testid="stExpander"] { border:1px solid #193c55; background:#091b2b; border-radius:7px; }
 [data-testid="stExpander"] summary { font-size:.8rem; }
@@ -45,14 +45,14 @@ button[data-baseweb="tab"][aria-selected="true"] { color:#19d3b0; font-weight:70
 .st-key-simmah_build_panel [data-testid="stCaptionContainer"] { font-size:.69rem; }
 .st-key-sticky_projection_bar { position:fixed !important; top:3rem; left:50%; transform:translateX(-50%); width:calc(100% - 3rem) !important; max-width:1752px; z-index:990; padding:.45rem .8rem !important; background:rgba(6,19,33,.98) !important; border:1px solid #193c55 !important; border-radius:8px; margin:0 !important; box-shadow:0 5px 16px #0005; }
 [data-testid="stMainBlockContainer"],section.main>div.block-container { padding-top:10.5rem !important; }
-[data-testid="stTabs"] [data-baseweb="tab-list"] { position:fixed !important; top:7rem; left:max(1.5rem, calc((100vw - 1800px) / 2 + 1.5rem)); transform:none; width:calc((100% - 4rem) * .7747748); max-width:1345px; z-index:989; background:#061321 !important; border-bottom:1px solid #193c55; padding:.2rem .6rem; box-shadow:0 5px 12px #0004; }
-@media(max-width:640px) { [data-testid="stTabs"] [data-baseweb="tab-list"] { left:.5rem; width:calc(100% - 1rem); padding:.15rem; overflow-x:auto; } .st-key-sticky_projection_bar { width:calc(100% - 1rem) !important; padding:.35rem .5rem !important; } .st-key-sticky_projection_bar [data-testid="stHorizontalBlock"] { flex-wrap:nowrap !important; } .st-key-sticky_projection_bar [data-testid="stColumn"] { min-width:0 !important; } .st-key-sticky_projection_bar button p { font-size:.65rem !important; } }
+[data-testid="stTabs"] :is([data-baseweb="tab-list"], [role="tablist"]) { position:fixed !important; top:7rem; left:max(1.5rem, calc((100vw - 1800px) / 2 + 1.5rem)); transform:none; width:calc((100% - 4rem) * .7747748); max-width:1345px; z-index:989; background:#061321 !important; border-bottom:1px solid #193c55; padding:.2rem .6rem; box-shadow:0 5px 12px #0004; }
+@media(max-width:640px) { [data-testid="stTabs"] :is([data-baseweb="tab-list"], [role="tablist"]) { left:.5rem; width:calc(100% - 1rem); padding:.15rem; overflow-x:auto; } .st-key-sticky_projection_bar { width:calc(100% - 1rem) !important; padding:.35rem .5rem !important; } .st-key-sticky_projection_bar [data-testid="stHorizontalBlock"] { flex-wrap:nowrap !important; } .st-key-sticky_projection_bar [data-testid="stColumn"] { min-width:0 !important; } .st-key-sticky_projection_bar button p { font-size:.65rem !important; } }
 .st-key-sticky_projection_bar [data-testid="stMarkdownContainer"] p { color:#91aac2 !important; font-size:.75rem; }
 @media(max-width:900px) {
  [data-testid="stMainBlockContainer"] { padding:10.5rem .7rem 1.2rem !important; }
  .simmah-brand-name { font-size:1.45rem; }
- [data-baseweb="tab-list"] { gap:.65rem; }
- button[data-baseweb="tab"] { font-size:.74rem; }
+ :is([data-baseweb="tab-list"], [role="tablist"]) { gap:.65rem; }
+ :is(button[data-baseweb="tab"], [role="tab"]) { font-size:.74rem; }
 }
 @media(prefers-reduced-motion:reduce) { *,*::before,*::after { transition:none !important; animation:none !important; } }
 </style>'''

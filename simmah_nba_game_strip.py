@@ -89,7 +89,7 @@ def render_game_strip(st,pool,markets,updated_at=None):
         cards.append('<div class="simmah-game-card"><div class="simmah-game-title">'+escape(game['label'])+'<span>'+escape(game['start_time'])+'</span></div>'+''.join(teams)+saved+'</div>')
     st.markdown('''<style>
 .st-key-simmah_pinned_games{position:fixed !important;top:7rem;left:50%;transform:translateX(-50%);width:calc(100% - 3rem) !important;max-width:1752px;max-height:11rem;overflow-y:auto;z-index:989;background:var(--background-color,#0e1117);padding:4px 0;border-bottom:1px solid #293e52;box-shadow:0 4px 12px #0003;min-width:0}
-[data-testid="stTabs"] [data-baseweb="tab-list"]{top:18.5rem !important;z-index:988}
+[data-testid="stTabs"] :is([data-baseweb="tab-list"], [role="tablist"]){top:18.5rem !important;z-index:988}
 [data-testid="stMainBlockContainer"],section.main>div.block-container{padding-top:22rem !important}
 @media(min-width:901px){.st-key-simmah_build_panel{top:21.5rem !important;height:max(8rem,calc(100dvh - 22.5rem)) !important}}
 @media(max-width:640px){.st-key-simmah_pinned_games{width:calc(100% - 1rem) !important}}
