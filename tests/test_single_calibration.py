@@ -48,3 +48,11 @@ class CalibrationTests(unittest.TestCase):
         picks,q,_,target=self.problem();picks[0,1]=picks[0,0]
         with self.assertRaises(CalibrationError):RoleDual(picks,q,target[:7],target[7:])
         with self.assertRaises(CalibrationError):RoleDual(self.support(),q,target[:7]*100,target[7:]*100)
+
+    def test_rare_role_targets_converge_with_scaling(self):
+        picks,q,_,_=self.problem()
+        d=RoleDual(picks,q,np.full(7,1/7),np.full(7,5/7))
+        theta=np.zeros(14);theta[0]=-10;theta[8]=-5
+        w,_=d.probabilities(theta);target=d.marginals(w)
+        r=calibrate_role_weights(picks,q,target[:7],target[7:])
+        self.assertLess(r.diagnostics['max_ownership_error'],1e-6)

@@ -30,3 +30,12 @@ Calibrated-support export retains input salaries when present and copies top-lev
 Alert thresholds are optional, explicit, and exploratory. A 5-percentage-point CPT/MVP–FLEX covariance difference and $150 Wasserstein distance have not been validated as universal gates. There is no automatic live promotion, target relaxation or fitted-pair feedback.
 
 Existing `simmah_contest_history.parse_lineups` reads contest CSVs and `verified_fanduel_mvp_first` verifies FD special-role ordering against published scores. Raw standings still need historical player-ID/salary mapping and completeness checks before producing `actual_contest_field.npz`. Current NE–CHI comparison data are generated fields, not observed human tournament results.
+
+
+## Observed-support oracle harness
+
+`scripts/fd_observed_support_oracle.py --standings HISTORICAL.csv --output NEW_DIR --slate-id ID --contest-id ID` verifies first-listed FD MVP against published scores, extracts same-export player IDs and salaries, sorts FLEX slots canonically, deduplicates rosters with integer entry counts, computes actual role targets, and calibrates a uniform prior over the observed support. `--expected-entries` verifies a known entry count when supplied. Without it, completeness remains unverified. The saved CSV's timestamps and true game set need separate provenance verification; CLI IDs are caller assertions.
+
+No observed roster is dropped or given an artificial epsilon prior. Since every observed roster has positive prior mass, actual targets are feasible by construction. This test does not measure coverage of the independently enumerated universe or the realism of an independently trained historical prior. Outcomes/actual scores verify MVP slot order only and are never optimization predictors. The harness assumes the six-player, 1.5x MVP salary/points FD format and rejects observed salaries over $60,000 rather than silently accepting a different format.
+
+On supplied contest 135541-281148543: 88,087 parsed entries, 10,440 distinct rosters, 49 observed players. After inverse-variance coordinate scaling, calibration took about 0.28 seconds / 41 iterations; maximum ownership error was 5.997e-9 probability. Uniform-prior KL distortion was 1.5000 nats, maximum role-pair residual 3.8174 percentage points, salary Wasserstein $254.68. The initial unscaled solve stopped at 500 iterations with residual 0.0002333 probability and was rejected. Coordinate scaling changes neither the KL objective nor the tolerance.

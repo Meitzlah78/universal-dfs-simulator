@@ -116,9 +116,15 @@ def calibrate_role_weights(picks,prior,special_targets,flex_targets,*,tolerance=
     if type(max_iterations) is not int or max_iterations<1:raise CalibrationError('Positive iteration count required')
     dual=RoleDual(picks,prior,special_targets,flex_targets)
     feasible=dual.feasibility(feasibility_seconds)
-    solved=minimize(dual.objective_gradient,np.zeros(2*dual.n),jac=True,method='L-BFGS-B',
+    # Scale rare and popular indicators to comparable curvature. This changes
+    # coordinates, not the KL objective, constraints or acceptance tolerance.
+    scale=1/np.sqrt(np.maximum(dual.target*(1-dual.target),1e-6))
+    def scaled_objective(z):
+        value,gradient=dual.objective_gradient(z*scale)
+        return value,gradient*scale
+    solved=minimize(scaled_objective,np.zeros(2*dual.n),jac=True,method='L-BFGS-B',
         options={'maxiter':max_iterations,'gtol':min(1e-10,tolerance*.01),'ftol':1e-15,'maxls':50})
-    w,_=dual.probabilities(solved.x);achieved=dual.marginals(w)
+    w,_=dual.probabilities(solved.x*scale);achieved=dual.marginals(w)
     error=float(np.max(np.abs(achieved-dual.target)))
     if not np.isfinite(w).all() or error>tolerance or abs(w.sum()-1)>1e-10:
         raise CalibrationNotConverged(f'Feasible targets; dual residual {error:g}, optimizer: {solved.message}')
@@ -128,5 +134,5 @@ def calibrate_role_weights(picks,prior,special_targets,flex_targets,*,tolerance=
     diagnostics={'feasibility':feasible,'optimizer_success':bool(solved.success),'optimizer_message':str(solved.message),
         'iterations':int(solved.nit),'max_ownership_error':error,'kl_from_prior':kl,
         'effective_support':float(1/np.dot(w,w)),'positive_prior_support':len(w),
-        'tolerance':tolerance,'offline_only':True}
+        'tolerance':tolerance,'coordinate_scaling':'inverse target Bernoulli std, variance floor 1e-6','offline_only':True}
     return CalibrationResult(weights,achieved[:dual.n],achieved[dual.n:],diagnostics)
