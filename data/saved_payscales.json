@@ -2313,6 +2313,103 @@
       "current_entries_at_capture": 58,
       "source": "User-provided full payout table",
       "verified_date": "2026-10-22"
+    },
+    "DraftKings:1500-first-down-tb-car": {
+      "name": "NFL Showdown $1.5K First Down — $1, 20 Max (TB @ CAR)",
+      "site": "DraftKings",
+      "format": "DraftKings Showdown",
+      "payouts": [
+        [
+          1,
+          1,
+          150
+        ],
+        [
+          2,
+          2,
+          100
+        ],
+        [
+          3,
+          3,
+          75
+        ],
+        [
+          4,
+          4,
+          50
+        ],
+        [
+          5,
+          5,
+          30
+        ],
+        [
+          6,
+          7,
+          20
+        ],
+        [
+          8,
+          10,
+          15
+        ],
+        [
+          11,
+          14,
+          10
+        ],
+        [
+          15,
+          20,
+          8
+        ],
+        [
+          21,
+          30,
+          6
+        ],
+        [
+          31,
+          45,
+          5
+        ],
+        [
+          46,
+          70,
+          4
+        ],
+        [
+          71,
+          110,
+          3
+        ],
+        [
+          111,
+          165,
+          2.5
+        ],
+        [
+          166,
+          256,
+          2
+        ],
+        [
+          257,
+          421,
+          1.5
+        ]
+      ],
+      "entry_fee": 1,
+      "max_entries_per_user": 20,
+      "prize_pool": 1500,
+      "verified_total_payout": 1500,
+      "paid_positions": 421,
+      "field_size": 1783,
+      "capacity_status": "exact user-provided capacity",
+      "current_entries_at_capture": 91,
+      "source": "User-provided full payout table",
+      "verified_date": "2026-10-22"
     }
   }
 }
