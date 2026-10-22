@@ -1,3 +1,4 @@
+from simmah_slate_workspaces import workspace_button
 from simmah_slate_workspaces import workspace_download_button
 from simmah_slate_workspaces import workspace_file_uploader
 """Bounded NBA late swap: immutable entry slots, current projections, no resimulation."""
@@ -202,7 +203,7 @@ def render_late_swap(st,pool,contest_id,salary_min,diversity,markets=None,contes
                                  saved_build,simulation,actuals,pregame_locked)
                 return
             signature=hashlib.sha256(data+actual_bytes+pool.to_json().encode()+str(contest_id).encode()+str((salary_min,diversity,mode,pregame_locked,markets,field_signature)).encode()).hexdigest()
-            if st.button('SIMULATE LATE SWAP' if simulation else 'FAST LATE SWAP',key='nba_fast_late_swap'):
+            if workspace_button(st,'SIMULATE LATE SWAP' if simulation else 'FAST LATE SWAP',key='nba_fast_late_swap'):
                 started=time.monotonic()
                 with st.spinner('Updating unlocked roster spots…'):
                     if simulation:

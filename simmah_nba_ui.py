@@ -1,3 +1,4 @@
+from simmah_slate_workspaces import workspace_button
 from simmah_slate_workspaces import workspace_download_button
 """Experimental NBA workspace wiring; numerical work stays outside Streamlit."""
 import hashlib,json
@@ -121,7 +122,7 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
             help='Extra preference for positively correlated player combinations measured from the shared game simulations. 0 = no extra bonus; 100 = strongest bonus. Game simulations remain correlated at every setting.')
         diversity=st.slider('Exposure diversity',0,100,50,key='nba_exposure_diversity')
         metric=st.selectbox('Rank lineups',['Top 1%','Expected ROI (%)','Expected Prize ($)'],key='nba_rank_metric')
-        clicked=st.button('BUILD NBA LINEUPS',disabled=bool(error),key='nba_build')
+        clicked=workspace_button(st,'BUILD NBA LINEUPS',disabled=bool(error),key='nba_build')
         if error:st.caption(error)
     identity=input_identity(pool,markets,contest,salary_min,correlation,pool.iloc[excluded]['Player ID'])
     saved=st.session_state.get('nba_build_result')

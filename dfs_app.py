@@ -1,3 +1,4 @@
+from simmah_slate_workspaces import workspace_button
 import itertools
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -113,7 +114,7 @@ with _contest_history:
         _hist_slate_date = st.date_input("Historical slate date for player-score archive (optional)", value=None, key="history_outcome_slate_date")
         _hist_metadata_file = workspace_file_uploader(st,"Optional player metadata from THAT contest (Name, Team, Position, Salary, Opponent)", type=["csv"], key="history_metadata_v2")
         st.caption("Without historical player metadata, only ownership-concentration features can be learned. Today's salaries/teams are never substituted.")
-        if _hist_files and st.button("LEARN FROM CONTESTS", key="learn_contest_history_v2", use_container_width=True):
+        if _hist_files and workspace_button(st,"LEARN FROM CONTESTS", key="learn_contest_history_v2", use_container_width=True):
             import hashlib
             _metadata = None
             if _hist_metadata_file is not None:
@@ -161,7 +162,7 @@ with _contest_history:
                 st.info("No new valid contest profiles were added.")
         import json as _history_json
         _restore = workspace_file_uploader(st,"Restore a Simmah field-history backup", type=["json"], key="history_restore_v2")
-        if _restore is not None and st.button("RESTORE FIELD HISTORY"):
+        if _restore is not None and workspace_button(st,"RESTORE FIELD HISTORY"):
             try:
                 _history_store = merge_stores(_history_store, _history_json.loads(_restore.getvalue()))
                 _history_store = update_store(_HISTORY_LOCAL, _history_store)
@@ -198,7 +199,7 @@ with _shared_header.container(key="sticky_projection_bar"):
     with _sticky_left:
         st.markdown("**Uploaded CSVs still take priority.**")
     with _sticky_right:
-        if st.button("REFRESH PROJECTIONS + INJURY NEWS", key="sticky_refresh_projections", use_container_width=True):
+        if workspace_button(st,"REFRESH PROJECTIONS + INJURY NEWS", key="sticky_refresh_projections", use_container_width=True):
             # Defer cache clearing until after the cached functions have been defined.
             st.session_state["refresh_projections_requested"] = True
             workspace_rerun(st, _loaded_slate_tabs)
@@ -5220,7 +5221,7 @@ if platform == "FanDuel":
         _build_controls.write("### Run")
         _fd_run_center = _build_controls.container()
         with _fd_run_center:
-            fd_sim_button = st.button(
+            fd_sim_button = workspace_button(st,
                 "Run Build",
                 type="primary",
                 use_container_width=True,
@@ -7143,7 +7144,7 @@ else:
 
             with build_cols[2]:
                 st.write("### Run")
-                _classic_sim_button = st.button(
+                _classic_sim_button = workspace_button(st,
                     "SIM", type="primary", use_container_width=True, key="dk_classic_sim"
                 )
                 # One-click Classic workflow: SIM -> BUILD -> CONTEST SIM -> ROI.
@@ -7606,7 +7607,7 @@ with _tab_build:
         st.session_state["active_game_correlation_strength"] = correlation_strength
     with build_cols[2]:
         st.write("### Run")
-        build_clicked = st.button(
+        build_clicked = workspace_button(st,
             "Run Build",
             type="primary",
             use_container_width=True
@@ -7787,7 +7788,7 @@ with _tab_build:
                     f"Selected contest: {_selected_dk_for_details.get('name', 'DraftKings contest')} "
                     f"(ID {_selected_dk_for_details['id']})"
                 )
-                _fetch_dk_details_clicked = st.button(
+                _fetch_dk_details_clicked = workspace_button(st,
                     "FETCH DRAFTKINGS CONTEST DETAILS",
                     key="fetch_dk_contest_details",
                     use_container_width=True,
@@ -9651,7 +9652,7 @@ with _tab_build:
             with roi_load_col:
                 st.write("")
                 st.write("")
-                if st.button("LOAD HISTORY", key="roi_load_history_button", use_container_width=True):
+                if workspace_button(st,"LOAD HISTORY", key="roi_load_history_button", use_container_width=True):
                     if roi_history_file is None:
                         st.warning("Choose a saved ROI history CSV first.")
                     else:

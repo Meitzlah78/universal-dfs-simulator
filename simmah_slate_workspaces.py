@@ -59,7 +59,7 @@ def private_key(key):
 
 def transient_key(key):
     key=str(key)
-    return (key.endswith('_remove_restored') or key=='projection_accuracy_template_download' or key.startswith(('nba_projection_upload_','nba_minutes_snapshot_download','nba_entries_download','nba_portfolio_report_','nba_open_fanduel_','nba_open_draftkings_'))
+    return (key.endswith('_remove_restored') or key=='projection_accuracy_template_download' or (key.startswith('saved_contest_choice_') and key.endswith(('_use','_save','_restore_button','_backup','_restore'))) or key.startswith(('nba_projection_upload_','nba_minutes_snapshot_download','nba_entries_download','nba_portfolio_report_','nba_open_fanduel_','nba_open_draftkings_'))
             or key in {'nba_build','nba_field_download','nba_entries_download',
                        'nba_fast_late_swap','nba_late_swap_upload','nba_late_swap_download',
                        'loaded_slates_browser','nba_underdog_x_feed','sticky_refresh_projections',
@@ -167,10 +167,24 @@ def workspace_file_uploader(st,label,*args,**kwargs):
     seen[key]=value is not None
     if value is None and key in saved:
         st.caption('Restored file: '+saved[key].name)
-        if st.button('Remove restored file',key=key+'_remove_restored'):
+        if workspace_button(st,'Remove restored file',key=key+'_remove_restored'):
             saved.pop(key,None)
     return value if value is not None else saved.get(key)
 
+
+
+
+
+def workspace_button(st,*args,**kwargs):
+    """Action triggers are transient; never assign a restored value to a button."""
+    key=kwargs.get('key')
+    if key is not None:
+        key=str(key)
+        st.session_state.setdefault('_slate_action_keys',set()).add(key)
+        from streamlit.runtime.state import get_session_state
+        if get_session_state().is_new_state_value(key):
+            del st.session_state[key]
+    return st.button(*args,**kwargs)
 
 
 def workspace_download_button(st,*args,**kwargs):

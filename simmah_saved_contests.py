@@ -1,3 +1,4 @@
+from simmah_slate_workspaces import workspace_button, workspace_download_button, workspace_file_uploader
 """Reusable contest metadata only; never persist entry IDs or opponent rosters."""
 import json
 import math
@@ -102,7 +103,7 @@ def render_panel(st,active,format_name):
             format_func=lambda cid:choices[cid]['name']+' | ID '+cid,key=key)
         chosen=choices[selected]
         st.caption(f"Saved field: {chosen.get('field_size','unknown')} · Fee: {chosen.get('entry_fee','unknown')} · Payout tiers: {len(chosen.get('payouts',[]))}")
-        if st.button('Use saved contest details',key=key+'_use'):
+        if workspace_button(st,'Use saved contest details',key=key+'_use'):
             if str(active.get('id',''))!=chosen['id']:
                 st.warning('Upload the entries CSV for this contest in the Contests tab first. Entry IDs and player slates cannot be transferred between contests.')
             else:
@@ -118,7 +119,7 @@ def render_panel(st,active,format_name):
             st.success('Saved contest details selected for the matching entry file.')
     else:
         st.caption('No saved contests for this format yet. Select a contest from your entry file, then save its details.')
-    if active.get('id') and st.button('Save selected contest details',key=key+'_save'):
+    if active.get('id') and workspace_button(st,'Save selected contest details',key=key+'_save'):
         try:
             catalog=merge(catalog,{'contests':[record(active,format_name)]})
             save(local,catalog);st.session_state['saved_contest_catalog']=catalog
@@ -127,9 +128,9 @@ def render_panel(st,active,format_name):
         except (OSError,ValueError,TypeError) as error:
             st.error('Could not save contest details: '+str(error))
     with st.expander('Contest backup / restore',expanded=False):
-        st.download_button('Download saved contests',json.dumps(catalog,indent=2),'Simmah_Saved_Contests.json','application/json',key=key+'_backup')
-        uploaded=st.file_uploader('Restore saved contests JSON',type=['json'],key=key+'_restore')
-        if uploaded is not None and st.button('Restore saved contest details',key=key+'_restore_button'):
+        workspace_download_button(st,'Download saved contests',json.dumps(catalog,indent=2),'Simmah_Saved_Contests.json','application/json',key=key+'_backup')
+        uploaded=workspace_file_uploader(st,'Restore saved contests JSON',type=['json'],key=key+'_restore')
+        if uploaded is not None and workspace_button(st,'Restore saved contest details',key=key+'_restore_button'):
             try:
                 catalog=merge(catalog,json.loads(uploaded.getvalue()))
                 save(local,catalog);st.session_state['saved_contest_catalog']=catalog;st.rerun()
