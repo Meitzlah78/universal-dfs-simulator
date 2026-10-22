@@ -2569,7 +2569,6 @@ def show_detected_slate_games(source_df):
     game_columns = [c for c in source_df if str(c).strip().casefold() in {"game info", "gameinfo", "game"}]
     identity = sorted(set(source_df[game_columns].astype(str).agg("|".join, axis=1)))
     slate_key = hashlib.sha256(repr((platform, lineup_mode, pd.Timestamp.now(tz="America/New_York").date().isoformat(), identity)).encode()).hexdigest()[:16]
-    st.write("#### NFL games")
     base = pd.DataFrame({"Game": games, "Game total": [None] * len(games),
                          "Home spread": [None] * len(games)})
     from simmah_rotowire import salary_dates
@@ -2601,10 +2600,6 @@ def show_detected_slate_games(source_df):
             else:
                 manual = True
         sources[row["Game"]] = "Manual pregame override" if manual else auto.get("source", "Unavailable")
-    if automatic:
-        fetched = min(record["fetched_at"] for record in automatic.values())
-        stamp = pd.Timestamp(fetched).tz_convert("America/New_York").strftime("%I:%M %p ET")
-        st.caption(f"Automatic pregame lines: {len(automatic)}/{len(games)} games · fetched {stamp} · cached up to 5 minutes.")
     markets = {}
     game_cards = []
     for row in lines.to_dict("records"):
