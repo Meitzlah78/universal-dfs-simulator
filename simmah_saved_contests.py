@@ -96,16 +96,19 @@ def render_panel(st,active,format_name):
     catalog=merge(catalog,session)
     compatible=[r for r in catalog['contests'] if r['format']==format_name]
     key='saved_contest_choice_'+format_name
-    st.write('### Saved Contests')
+    from simmah_payscales import render_panel as render_payscales
+    active = render_payscales(st, active, format_name)
+    st.write('### Exact contest backups (optional)')
+    st.caption('To reuse a payout table on any slate, select Saved payscales above. This backup section restores details for the original contest only.')
     if compatible:
         choices={r['id']:r for r in compatible}
         selected=st.selectbox('Previously saved contest',list(choices),
             format_func=lambda cid:choices[cid]['name']+' | ID '+cid,key=key)
         chosen=choices[selected]
         st.caption(f"Saved field: {chosen.get('field_size','unknown')} · Fee: {chosen.get('entry_fee','unknown')} · Payout tiers: {len(chosen.get('payouts',[]))}")
-        if workspace_button(st,'Use saved contest details',key=key+'_use'):
+        if workspace_button(st,'Restore exact contest backup',key=key+'_use'):
             if str(active.get('id',''))!=chosen['id']:
-                st.warning('Upload the entries CSV for this contest in the Contests tab first. Entry IDs and player slates cannot be transferred between contests.')
+                st.info('This backup belongs to another contest. Select its payout table under Saved payscales above to use that ladder on your current slate.')
             else:
                 st.session_state[key+'_active']=chosen
         pending=st.session_state.get(key+'_active')
@@ -135,5 +138,4 @@ def render_panel(st,active,format_name):
                 catalog=merge(catalog,json.loads(uploaded.getvalue()))
                 save(local,catalog);st.session_state['saved_contest_catalog']=catalog;st.rerun()
             except (OSError,ValueError,TypeError,KeyError):st.error('Invalid saved-contest backup.')
-    from simmah_payscales import render_panel as render_payscales
-    return render_payscales(st, active, format_name)
+    return active
