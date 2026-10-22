@@ -71,7 +71,10 @@ def restore(active,saved,format_name):
 
 
 def render_panel(st,active,format_name):
-    """Rendered in Contests; return metadata for this exact uploaded contest only."""
+    """Use reusable payscales for every single-game slate."""
+    if format_name in {"DraftKings Showdown", "FanDuel Single Game"}:
+        from simmah_payscales import render_panel as render_payscales
+        return render_payscales(st, dict(active), format_name)
     root=Path(__file__).resolve().parent/'data'
     local=root/'saved_contests_local.json'
     try:
