@@ -130,7 +130,9 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
             message=st.empty();bar=st.progress(0)
             stages={'Simulating candidate scenarios':.05,'Building independent opponent support':.35,
                     'Scoring independent evaluation scenarios':.65,'Selecting portfolio':.95}
-            def progress(text):message.write(text);bar.progress(stages.get(text,0))
+            def progress(text):
+                message.write(text)
+                if text in stages:bar.progress(stages[text])
             try:
                 built=run_pipeline(pool,engine,ownership['weights'],
                     ownership['source'],
@@ -215,6 +217,7 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         st.subheader('Player exposures')
         st.dataframe(exposure[['Name','Team','Injury Status','Lineups','Exposure %']],hide_index=True,width='stretch',key='nba_exposure_table',
                      column_config={'Name':st.column_config.TextColumn('Player',pinned=True)})
+
 
 
 

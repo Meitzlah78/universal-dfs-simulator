@@ -23,13 +23,14 @@ def simulation_identity(engine):
     inputs=engine.pool[columns]
     implementation=sha256()
     for name in ('simmah_nba_engine.py','simmah_nba_pregame.py','simmah_nba_markets.py',
-                 'simmah_nba_projection_anchor.py','simmah_nba_rotation_schedule.py','simmah_nba_scoring.py'):
+                 'simmah_nba_projection_anchor.py','simmah_nba_rotation_schedule.py','simmah_nba_scoring.py','simmah_nba_parallel.py'):
         implementation.update(Path(__file__).with_name(name).read_bytes())
     payload={'version':1,'platform':engine.platform,'max_overtimes':engine.max_overtimes,
         'implementation':implementation.hexdigest(),
         'pool':sha256(pd.util.hash_pandas_object(inputs,index=False).to_numpy().tobytes()).hexdigest(),
         'dtypes':list(map(str,inputs.dtypes)),
-        'games':[market for market,_ in engine.games],'rates':vars(engine.rates)}
+        'games':[market for market,_ in engine.games],'rates':vars(engine.rates),
+        'game_index_offset':getattr(engine,'game_index_offset',0)}
     return sha256(json.dumps(payload,sort_keys=True).encode()).hexdigest()
 
 
@@ -37,6 +38,9 @@ class CachedNBAOutcomes:
     def __init__(self,engine,construction_seed=83):
         self.engine=engine;self.identity=simulation_identity(engine)
         self.construction_seed=construction_seed;self.last_report=[];self.last_cache_hit=False
+        self.progress=None
+
+    def set_progress(self,progress):self.progress=progress
 
     def __getattr__(self,name):return getattr(self.engine,name)
 
@@ -58,7 +62,9 @@ class CachedNBAOutcomes:
                 # basis when restoring another engine wrapper on a later rerun.
                 if not record['draws'] and seed!=self.construction_seed:
                     raise ValueError('Cached NBA draws must start with the construction seed')
-                values=record['engine'](n,seed)
+                record['engine'].progress=self.progress
+                try:values=record['engine'](n,seed)
+                finally:record['engine'].progress=None
                 values.setflags(write=False)
                 record['draws'][seed]=(values,deepcopy(record['engine'].last_report))
             values,report=record['draws'][seed]
@@ -68,3 +74,4 @@ class CachedNBAOutcomes:
 
 def clear_simulation_cache():
     with _lock:_records.clear()
+

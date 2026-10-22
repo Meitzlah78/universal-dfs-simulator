@@ -10,9 +10,12 @@ ROLE_COLUMNS=['Historical '+r+' Rate' for r in ('Shot','Assist','Rebound','Steal
 
 
 class PregameEngine:
-    def __init__(self,pool,markets,rates,max_overtimes=4,platform='FanDuel',require_markets=False):
+    def __init__(self,pool,markets,rates,max_overtimes=4,platform='FanDuel',require_markets=False,
+                 parallel=True,game_index_offset=0):
         if not isinstance(max_overtimes,int) or not 1<=max_overtimes<=10:raise ValueError("Explicit bounded overtime count required")
         self.platform=platform
+        self.parallel=parallel;self.game_index_offset=game_index_offset;self.progress=None
+        if not isinstance(game_index_offset,int) or game_index_offset<0:raise ValueError('Invalid NBA game seed offset')
         self.max_overtimes=max_overtimes
         self.pool=pool.reset_index(drop=True).copy();self.rates=rates
         rates.validate()
@@ -68,10 +71,21 @@ class PregameEngine:
         self.last_report=[]
         self.prepared={}
 
+    def set_progress(self,progress):self.progress=progress
+
     def __call__(self,n,seed):
         if not isinstance(n,int) or n<1:raise ValueError('Positive simulation count required')
+        if self.parallel and len(self.games)>1 and n>=512:
+            from simmah_nba_parallel import simulate_parallel,worker_count
+            from concurrent.futures.process import BrokenProcessPool
+            if worker_count()>1:
+                try:return simulate_parallel(self,n,seed)
+                except (OSError,BrokenProcessPool):
+                    # Restricted hosts retain the same sequential engine.
+                    self.parallel=False
         output=np.zeros((n,len(self.pool)),np.float32);reports=[]
-        for game_index,(market,groups) in enumerate(self.games):
+        for local_index,(market,groups) in enumerate(self.games):
+            game_index=local_index+self.game_index_offset
             size=max(len(g[0]) for g in groups);profiles=np.zeros((2,size,5));rotations=[];overtime=[]
             for team,(ids,minutes,roles) in enumerate(groups):
                 padded=np.zeros(size);padded[:len(ids)]=minutes
@@ -124,4 +138,5 @@ class PregameEngine:
                             'unresolved_tie_fraction':float(result['requires_overtime'].mean())})
         self.last_report=reports
         return output
+
 

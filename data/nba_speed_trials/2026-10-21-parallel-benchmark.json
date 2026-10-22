@@ -1,0 +1,14 @@
+{
+  "games": 4,
+  "simulations_per_set": 10000,
+  "workers": 2,
+  "scope": "Four real NBA games; game-simulation component only, not a full app benchmark",
+  "serial_cold_seconds": 25.13614298899995,
+  "serial_warm_seconds": 7.18708945100002,
+  "parallel_cold_seconds": 12.751895583000021,
+  "parallel_warm_seconds": 4.847292703999983,
+  "exact_cold_and_warm_parity": true,
+  "candidate_target_unchanged": 5000,
+  "cold_speedup_pct": 49.26868617599569,
+  "warm_speedup_pct": 32.5555534399878
+}

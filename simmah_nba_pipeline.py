@@ -23,6 +23,7 @@ def run_pipeline(pool,outcome_factory,ownership,ownership_source,payouts,entry_f
     if ownership_mode not in {'projected','relative popularity'}:raise ValueError('Unknown ownership mode')
     if not isinstance(simulations,int) or simulations<1:raise ValueError('Positive simulation count required')
     if not np.isfinite(max_ownership_error) or max_ownership_error<0:raise ValueError('Valid ownership error tolerance required')
+    if hasattr(outcome_factory,'set_progress'):outcome_factory.set_progress(progress)
     excluded=np.asarray([] if excluded_indices is None else excluded_indices)
     if excluded.ndim!=1 or (excluded.size and (excluded.dtype.kind not in 'iu' or (excluded<0).any() or (excluded>=len(pool)).any())):
         raise ValueError('Valid original-pool player indices required for exclusions')
@@ -105,6 +106,7 @@ def run_pipeline(pool,outcome_factory,ownership,ownership_source,payouts,entry_f
 def export_portfolio(template,contest_id,pool,result):
     lineups=result['portfolio'][list(rules_for(pool)['slots'])].astype(str).to_numpy().tolist()
     return export_entries(template,lineups,contest_id,pool,salary_cap=rules_for(pool)['salary_cap'],max_from_team=rules_for(pool)['max_from_team'])
+
 
 
 
