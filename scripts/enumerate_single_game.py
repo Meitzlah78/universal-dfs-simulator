@@ -14,12 +14,24 @@ def main():
     parser.add_argument('--min-salary',type=float,default=0)
     parser.add_argument('--output',type=Path,help='New directory for chunked NPZ support. Omit for count-only.')
     parser.add_argument('--special-player-ids',nargs='+',help='Current-slate Captain/MVP IDs; FLEX stays unrestricted.')
+    parser.add_argument('--history',type=Path,help='Frozen special-role rank history JSON')
+    parser.add_argument('--slate-date',help='YYYY-MM-DD, required with history')
+    parser.add_argument('--ownership-column',default='Ownership')
+    parser.add_argument('--captain-coverage',type=float,default=.99)
     args=parser.parse_args()
     raw=args.pool.read_bytes()
     pool=pd.read_parquet(io.BytesIO(raw)) if args.pool.suffix=='.parquet' else pd.read_csv(io.BytesIO(raw),dtype={'Player ID':str})
+    selection=None
+    if args.history:
+        if args.special_player_ids or not args.slate_date:raise ValueError('History requires slate date and cannot combine with explicit IDs')
+        from simmah_special_role_history import likely_special_players
+        history_raw=args.history.read_bytes()
+        selection=likely_special_players(pool,args.site,json.loads(history_raw),slate_date=args.slate_date,ownership_column=args.ownership_column,coverage=args.captain_coverage)
+        selection['history_sha256']=hashlib.sha256(history_raw).hexdigest()
+        args.special_player_ids=selection['player_ids']
     state=prepare(pool,args.site,min_salary=args.min_salary)
     metadata={'schema_version':'1.0','artifact_type':'offline_exhaustive_single_game_support','live_enabled':False,
-      'special_player_ids':args.special_player_ids,'site':args.site,'min_salary':args.min_salary,'salary_cap':50000 if args.site=='dk' else 60000,
+      'special_role_selection':selection,'special_player_ids':args.special_player_ids,'site':args.site,'min_salary':args.min_salary,'salary_cap':50000 if args.site=='dk' else 60000,
       'special_salary_multiplier':1.5,'special_points_multiplier':1.5,
       'special_salary_source':'CaptainSalary' if args.site=='dk' and 'CaptainSalary' in pool else '1.5 * Salary',
       'both_teams_required':True,'flex_order':'ascending original pool-row index','eligible_players':state['eligible_players'],
