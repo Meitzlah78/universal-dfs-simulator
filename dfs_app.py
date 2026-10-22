@@ -8962,7 +8962,7 @@ with _tab_build:
                     from simmah_comparison_export import comparison_bundle
                     try:
                         _comparison_bytes = comparison_bundle(
-                            results_df, showdown_pool, _comparison_field, _comparison_sim,
+                            results_df, players_df, _comparison_field, _comparison_sim,
                             st.session_state.get("selected_dk_contest") or {})
                         workspace_download_button(st,
                             "DOWNLOAD FIELD COMPARISON BUNDLE",
