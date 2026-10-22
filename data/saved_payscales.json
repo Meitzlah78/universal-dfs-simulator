@@ -1569,7 +1569,7 @@
       ]
     },
     "FanDuel:7000-thu-nfl-pooch-punt-20261022": {
-      "name": "$7K Thu NFL Pooch Punt — $0.05",
+      "name": "$7K Thu NFL Pooch Punt — $0.05, 150 Max",
       "site": "FanDuel",
       "payouts": [
         [
@@ -1714,7 +1714,11 @@
       "prize_pool": 7000,
       "verified_total_payout": 7000,
       "verified_date": "2026-10-22",
-      "source": "User-provided contest Prizes screenshot"
+      "source": "User-provided complete Prizes screenshots and contest metadata",
+      "format": "FanDuel Single Game",
+      "paid_positions": 50000,
+      "current_entries_at_capture": 48319,
+      "capacity_status": "exact user-provided capacity"
     },
     "DraftKings:60000-first-down-ne-chi-20261022": {
       "name": "NFL Showdown $60K First Down — $1, 20 Max",
