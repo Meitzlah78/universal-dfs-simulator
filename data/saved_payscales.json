@@ -1453,7 +1453,7 @@
       ]
     },
     "dk:buf-lar-user-20261012": {
-      "name": "BUF @ LAR — user-provided $0.10 ladder (Oct 12)",
+      "name": "NFL Showdown — user-provided $0.10 ladder",
       "site": "DraftKings",
       "payouts": [
         [
@@ -1569,7 +1569,7 @@
       ]
     },
     "FanDuel:7000-thu-nfl-pooch-punt-20261022": {
-      "name": "$7K Thu NFL Pooch Punt — $0.05 (Oct 22)",
+      "name": "$7K Thu NFL Pooch Punt — $0.05",
       "site": "FanDuel",
       "payouts": [
         [
@@ -1717,7 +1717,7 @@
       "source": "User-provided contest Prizes screenshot"
     },
     "DraftKings:60000-first-down-ne-chi-20261022": {
-      "name": "NFL Showdown $60K First Down — $1, 20 Max (NE @ CHI)",
+      "name": "NFL Showdown $60K First Down — $1, 20 Max",
       "site": "DraftKings",
       "format": "DraftKings Showdown",
       "payouts": [
@@ -1875,7 +1875,7 @@
       "verified_date": "2026-10-22"
     },
     "DraftKings:1500-dime-package-pit-no": {
-      "name": "NFL Showdown $1.5K Dime Package — $0.10, 20 Max (PIT vs NO)",
+      "name": "NFL Showdown $1.5K Dime Package — $0.10, 20 Max",
       "site": "DraftKings",
       "format": "DraftKings Showdown",
       "payouts": [
@@ -1998,7 +1998,7 @@
       "verified_date": "2026-10-22"
     },
     "DraftKings:1000-quarter-jukebox-sf-atl": {
-      "name": "NFL Showdown $1K Quarter Jukebox — $0.25, 20 Max (SF @ ATL)",
+      "name": "NFL Showdown $1K Quarter Jukebox — $0.25, 20 Max",
       "site": "DraftKings",
       "format": "DraftKings Showdown",
       "payouts": [
@@ -2095,7 +2095,7 @@
       "verified_date": "2026-10-22"
     },
     "DraftKings:4000-quarter-jukebox-pit-no": {
-      "name": "NFL Showdown $4K Quarter Jukebox — $0.25, 20 Max (PIT vs NO)",
+      "name": "NFL Showdown $4K Quarter Jukebox — $0.25, 20 Max",
       "site": "DraftKings",
       "format": "DraftKings Showdown",
       "payouts": [
@@ -2218,7 +2218,7 @@
       "verified_date": "2026-10-22"
     },
     "DraftKings:2000-first-down-den-ari": {
-      "name": "NFL Showdown $2K First Down — $1, 20 Max (DEN @ ARI)",
+      "name": "NFL Showdown $2K First Down — $1, 20 Max",
       "site": "DraftKings",
       "format": "DraftKings Showdown",
       "payouts": [
@@ -2315,7 +2315,7 @@
       "verified_date": "2026-10-22"
     },
     "DraftKings:1500-first-down-tb-car": {
-      "name": "NFL Showdown $1.5K First Down — $1, 20 Max (TB @ CAR)",
+      "name": "NFL Showdown $1.5K First Down — $1, 20 Max",
       "site": "DraftKings",
       "format": "DraftKings Showdown",
       "payouts": [
@@ -2412,7 +2412,7 @@
       "verified_date": "2026-10-22"
     },
     "DraftKings:20000-first-down-pit-no": {
-      "name": "NFL Showdown $20K First Down — $1, 20 Max (PIT vs NO)",
+      "name": "NFL Showdown $20K First Down — $1, 20 Max",
       "site": "DraftKings",
       "format": "DraftKings Showdown",
       "payouts": [
