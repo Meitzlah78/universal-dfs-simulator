@@ -52,7 +52,9 @@ with _tab_contests:
 with _tab_roster:
     st.caption("2. Review projections, injuries, weather and player controls for the selected slate.")
 with _tab_build:
-    st.caption("3. Build, rank and select your portfolio, then export it into your existing entries.")
+    st.caption("3. Run your build and review candidate lineups. Your selected entries and exports are in Lineups.")
+with _tab_lineups:
+    st.caption("4. Review your selected entries, swap individual players, check exposures and export to your contest.")
 
 @st.cache_data(show_spinner=False, max_entries=8)
 def leverage_opportunities_cached(outcomes, candidates):
@@ -104,7 +106,7 @@ except Exception as _history_error:
 st.session_state["field_history_store"] = _history_store
 
 with _contest_history:
-    with st.expander("Contest History / Field Learning", expanded=False):
+    with st.expander("Advanced — contest history & learning", expanded=False):
         st.caption("Completed standings train anonymous construction profiles used by matching opponent fields. Import all entries, not just winning lineups.")
         _hist_files = workspace_file_uploader(st,"Completed contest standings (CSV or ZIP)", type=["csv", "zip"], accept_multiple_files=True, key="contest_history_uploads_v2")
         _hc1, _hc2, _hc3 = st.columns(3)
@@ -443,7 +445,7 @@ def opponent_field_selection_weights(pool, fallback_scores):
 def render_value_leverage_finder(pool, comparison, field, slots, key, special_slot=None):
     from simmah_leverage import leverage_report
     report = leverage_report(pool, comparison, field, slots, special_slot)
-    with st.expander("Value & leverage finder", expanded=True):
+    with st.expander("Advanced — value & leverage", expanded=False):
         st.caption("Value = projected points per $1,000; position percentile compares players at the same position. Leverage = Top-1%-weighted candidate presence minus simulated field ownership. This is a candidate-dependent signal, not optimal-lineup probability or a guaranteed edge.")
         if report["Sim Leverage (pp)"].notna().any():
             st.caption(f"Based on {report.attrs.get('evaluated_unique_candidates', 0):,} distinct evaluated candidates with positive Top-1% rates and {report.attrs.get('field_entries', 0):,} simulated field entries. Candidate limits, locks and stacks influence these results.")
@@ -2567,7 +2569,7 @@ def show_detected_slate_games(source_df):
     game_columns = [c for c in source_df if str(c).strip().casefold() in {"game info", "gameinfo", "game"}]
     identity = sorted(set(source_df[game_columns].astype(str).agg("|".join, axis=1)))
     slate_key = hashlib.sha256(repr((platform, lineup_mode, pd.Timestamp.now(tz="America/New_York").date().isoformat(), identity)).encode()).hexdigest()[:16]
-    st.write("#### Games on this slate — market-implied scores")
+    st.write("#### NFL games")
     base = pd.DataFrame({"Game": games, "Game total": [None] * len(games),
                          "Home spread": [None] * len(games)})
     from simmah_rotowire import salary_dates
@@ -2582,7 +2584,7 @@ def show_detected_slate_games(source_df):
     except Exception:
         automatic = {}
         st.caption("Automatic pregame lines unavailable. You can enter verified pregame lines below.")
-    with st.expander("Override spreads and totals (optional)", expanded=False):
+    with _tab_roster, st.expander("Override spreads and totals (optional)", expanded=False):
         st.caption("Leave blank to use automatic lines. Home spread is negative when the home team is favored; 0 means pick’em. Manual values override the corresponding automatic values.")
         lines = workspace_data_editor(st,base, disabled=["Game"], hide_index=True,
             column_config={"Game total": st.column_config.NumberColumn(min_value=1., max_value=100., step=.5),
@@ -2604,16 +2606,21 @@ def show_detected_slate_games(source_df):
         stamp = pd.Timestamp(fetched).tz_convert("America/New_York").strftime("%I:%M %p ET")
         st.caption(f"Automatic pregame lines: {len(automatic)}/{len(games)} games · fetched {stamp} · cached up to 5 minutes.")
     markets = {}
+    game_cards = []
     for row in lines.to_dict("records"):
         away, home = row["Game"].split(" @ ")
         scores = implied_scores(row["Game total"], row["Home spread"])
         if scores is None:
-            st.write(f"**{away} @ {home}** · Implied scores unavailable — enter valid total and spread")
+            pass  # The compact card labels this game Lines pending.
         else:
             away_points, home_points = scores
             markets[team_key(away)] = (away_points, home_points)
             markets[team_key(home)] = (home_points, away_points)
-            st.write(f"**{away} {away_points:g} @ {home} {home_points:g}** · Total {float(row['Game total']):g} · {home} {float(row['Home spread']):+g} · {sources[row['Game']]}")
+        game_cards.append({'away': away, 'home': home, 'points': scores,
+                           'total': row['Game total'], 'spread': row['Home spread'],
+                           'source': sources[row['Game']], 'kickoff': automatic.get(row['Game'], {}).get('kickoff')})
+    from simmah_nfl_layout import render_game_cards
+    render_game_cards(st, game_cards)
     st.session_state["active_game_markets"] = markets
     st.session_state["active_slate_identity"] = slate_key
     st.session_state["active_game_lines"] = [
@@ -2622,7 +2629,8 @@ def show_detected_slate_games(source_df):
         for r in lines.to_dict("records") if implied_scores(r["Game total"], r["Home spread"]) is not None
     ]
     if markets:
-        st.caption("Pregame lines populate implied team scores. Experimental field-popularity adjustment (maximum ±15%) applies only without imported ownership. Player projection inputs stay unchanged; new game simulations calibrate team scoring environments to these targets. Run a new build after changing lines.")
+        with _tab_roster:
+            st.caption("Pregame lines populate implied team scores. Experimental field-popularity adjustment (maximum ±15%) applies only without imported ownership. Player projection inputs stay unchanged; new game simulations calibrate team scoring environments to these targets. Run a new build after changing lines.")
 
 
 @st.cache_data(show_spinner=False, ttl=300)
@@ -2970,7 +2978,7 @@ if selected_format in {"FanDuel NBA", "DraftKings NBA"}:
 # Historical projection accuracy report. This uses pre-game projection snapshots
 # matched to actual fantasy points; the volatility check below is not a projection backtest.
 with _tab_roster:
-    with st.expander("Projection Accuracy Report", expanded=False):
+    with st.expander("Advanced — projection accuracy", expanded=False):
         st.caption(
             "Upload a CSV containing saved pre-game projections and actual fantasy points. "
             "The report measures projection accuracy; it does not judge the simulation distribution."
@@ -3149,7 +3157,7 @@ if st.session_state.get("projection_updates_found") or st.session_state.get("inj
 st.session_state["dfs_platform"] = platform
 st.session_state["lineup_mode_" + platform] = lineup_mode
 with _shared_header:
-    st.caption("Selected: " + selected_format + " · Contests → Roster & Projections → Build")
+    st.caption("Selected: " + selected_format + " · Contests → Roster & Projections → Build → Lineups")
 
 # Initialize from the saved slider value; the control itself appears beside SIM.
 aggressiveness = float(st.session_state.get(f"lineup_build_aggressiveness_{platform}_{lineup_mode}", 100 if ((platform == "DraftKings" and lineup_mode == "Showdown") or (platform == "FanDuel" and lineup_mode == "Single Game")) else 50)) / 100.0
@@ -4194,7 +4202,7 @@ def render_saved_market_calibration(platform_name, mode_name, pool):
     saved_names = {str(row.get("Name", "")) for row in metadata.get("input_players", [])}
     if not rows or saved_names != set(pool["Name"].astype(str)):
         return
-    with st.expander("Market scoring calibration — last completed simulation", expanded=True):
+    with st.expander("Advanced — market scoring calibration", expanded=False):
         st.caption("Market target is the implied team score from the spread and total. Pilot mean is the scoring average after calibration; it need not match exactly.")
         report = pd.DataFrame(rows)
         st.dataframe(report, hide_index=True, use_container_width=True)
@@ -4764,7 +4772,8 @@ if platform == "FanDuel":
                 if str(_game_col).lower().replace(" ", "") in {"gameinfo", "game", "starttime", "kickoff"}:
                     fd_players[_game_col] = fd_raw[_game_col]
 
-            show_detected_slate_games(fd_raw)
+            with _slate_games_header:
+                show_detected_slate_games(fd_raw)
             fd_opponent_col = fd_find_column(fd_raw, ["Opponent", "Opp"])
             if fd_opponent_col is not None:
                 fd_players["Opponent"] = (
@@ -5167,7 +5176,8 @@ if platform == "FanDuel":
             )
             fd_players = fd_players[~fd_players["Injury Status"].astype(str).str.casefold().eq("out")].copy()
         fd_player_display = _fd_edited_pool.copy() if isinstance(_fd_edited_pool, pd.DataFrame) else fd_player_display
-        _fd_scoring_download_slot = st.empty()
+        with st.expander("Advanced — player scoring inputs", expanded=False):
+            _fd_scoring_download_slot = st.empty()
 
 
 
@@ -5630,266 +5640,259 @@ if platform == "FanDuel":
             fd_results = remove_out_players_from_lineups(fd_results, fd_slots, "FanDuel")
             st.session_state[fd_build_key] = fd_results
             st.divider()
-            st.write("## Portfolio")
-            st.caption(f"{len(fd_results):,} candidate lineups available. Rank the pool, review your assigned entries, then export.")
+            with _tab_lineups:
+                st.write("## My lineups")
+                st.caption(f"{len(fd_results):,} candidate lineups available. Rank the pool, review your assigned entries, then export.")
 
-            # Use the same ranking choices as DraftKings Showdown for both FanDuel formats.
-            fd_comparison_key = "fd_contest_comparison_" + lineup_mode.replace(" ", "_").lower()
-            fd_rank_source = st.session_state.get(fd_comparison_key)
-            if isinstance(fd_rank_source, pd.DataFrame) and all(slot in fd_rank_source for slot in fd_slots):
-                fd_rank_source = fd_rank_source.loc[fd_rank_source[fd_slots].isin(_fd_eligible_now).all(axis=1)].copy()
-            if lineup_mode == "Full Roster" and st.session_state.get("fd_full_roster_evaluation_context") != dict(st.session_state.get("selected_fd_contest") or {}):
-                fd_rank_source = None
+                # Use the same ranking choices as DraftKings Showdown for both FanDuel formats.
+                fd_comparison_key = "fd_contest_comparison_" + lineup_mode.replace(" ", "_").lower()
+                fd_rank_source = st.session_state.get(fd_comparison_key)
+                if isinstance(fd_rank_source, pd.DataFrame) and all(slot in fd_rank_source for slot in fd_slots):
+                    fd_rank_source = fd_rank_source.loc[fd_rank_source[fd_slots].isin(_fd_eligible_now).all(axis=1)].copy()
+                if lineup_mode == "Full Roster" and st.session_state.get("fd_full_roster_evaluation_context") != dict(st.session_state.get("selected_fd_contest") or {}):
+                    fd_rank_source = None
 
-            if lineup_mode == "Single Game" and (st.session_state.get("fd_single_game_evaluation_engine") != "shared-contest-mvp-v1" or st.session_state.get("fd_single_game_evaluation_context") != dict(st.session_state.get("selected_fd_contest") or {})):
-                fd_rank_source = None
-                st.warning("Run a fresh Single Game SIM to calculate shared-outcome finish rates.")
-            render_value_leverage_finder(fd_player_display, fd_rank_source,
-                st.session_state.get("fd_contest_field_" + lineup_mode.replace(" ", "_").lower()),
-                fd_slots, "fd_" + lineup_mode, "MVP" if lineup_mode == "Single Game" else None)
-            if not isinstance(fd_rank_source, pd.DataFrame) or fd_rank_source.empty:
-                fd_rank_source = add_field_ranking_metrics(fd_results, fd_results["ProjectedPoints"].to_numpy(dtype=float))
-            # Persistent FanDuel Full Roster sanity check and opponent lineup viewer.
-            # Read from session state so these remain visible after SIM triggers workspace_rerun(st, _loaded_slate_tabs).
-            if lineup_mode in {"Full Roster", "Single Game"}:
-                _fd_field_key = "fd_contest_field_" + lineup_mode.replace(" ", "_").lower()
-                _fd_persist_field = st.session_state.get(_fd_field_key)
-                if isinstance(_fd_persist_field, pd.DataFrame) and not _fd_persist_field.empty:
-                    _fd_field_proj = pd.to_numeric(_fd_persist_field.get("ProjectedPoints"), errors="coerce").dropna()
-                    _fd_field_salary = pd.to_numeric(_fd_persist_field.get("Salary"), errors="coerce").dropna()
-                    _fd_my_proj = pd.to_numeric(fd_rank_source.get("ProjectedPoints"), errors="coerce").dropna()
-                    _fd_my_salary = pd.to_numeric(fd_rank_source.get("Salary"), errors="coerce").dropna()
+                if lineup_mode == "Single Game" and (st.session_state.get("fd_single_game_evaluation_engine") != "shared-contest-mvp-v1" or st.session_state.get("fd_single_game_evaluation_context") != dict(st.session_state.get("selected_fd_contest") or {})):
+                    fd_rank_source = None
+                    st.warning("Run a fresh Single Game SIM to calculate shared-outcome finish rates.")
+                render_value_leverage_finder(fd_player_display, fd_rank_source,
+                    st.session_state.get("fd_contest_field_" + lineup_mode.replace(" ", "_").lower()),
+                    fd_slots, "fd_" + lineup_mode, "MVP" if lineup_mode == "Single Game" else None)
+                if not isinstance(fd_rank_source, pd.DataFrame) or fd_rank_source.empty:
+                    fd_rank_source = add_field_ranking_metrics(fd_results, fd_results["ProjectedPoints"].to_numpy(dtype=float))
+                # Persistent FanDuel Full Roster sanity check and opponent lineup viewer.
+                # Read from session state so these remain visible after SIM triggers workspace_rerun(st, _loaded_slate_tabs).
+                if lineup_mode in {"Full Roster", "Single Game"}:
+                    _fd_field_key = "fd_contest_field_" + lineup_mode.replace(" ", "_").lower()
+                    _fd_persist_field = st.session_state.get(_fd_field_key)
+                    if isinstance(_fd_persist_field, pd.DataFrame) and not _fd_persist_field.empty:
+                        _fd_field_proj = pd.to_numeric(_fd_persist_field.get("ProjectedPoints"), errors="coerce").dropna()
+                        _fd_field_salary = pd.to_numeric(_fd_persist_field.get("Salary"), errors="coerce").dropna()
+                        _fd_my_proj = pd.to_numeric(fd_rank_source.get("ProjectedPoints"), errors="coerce").dropna()
+                        _fd_my_salary = pd.to_numeric(fd_rank_source.get("Salary"), errors="coerce").dropna()
 
-                    st.write("### Opponent Field")
-                    st.caption(f"FanDuel {lineup_mode}: {len(_fd_persist_field):,} simulated entries.")
-                    workspace_download_button(st,
-                        "DOWNLOAD OPPONENT FIELD", _fd_persist_field.to_csv(index=False).encode("utf-8"),
-                        "fanduel_" + lineup_mode.replace(" ", "_").lower() + "_opponent_field.csv",
-                        "text/csv", key="fd_opponent_field_visible_" + lineup_mode.replace(" ", "_").lower(),
+                        with st.expander("Advanced — opponent field", expanded=False):
+                            st.write("### Opponent Field")
+                            st.caption(f"FanDuel {lineup_mode}: {len(_fd_persist_field):,} simulated entries.")
+                            workspace_download_button(st,
+                                "DOWNLOAD OPPONENT FIELD", _fd_persist_field.to_csv(index=False).encode("utf-8"),
+                                "fanduel_" + lineup_mode.replace(" ", "_").lower() + "_opponent_field.csv",
+                                "text/csv", key="fd_opponent_field_visible_" + lineup_mode.replace(" ", "_").lower(),
+                                on_click="ignore", use_container_width=True,
+                            )
+                            _fd_sc = st.columns(4)
+                            _fd_sc[0].metric("Opponent avg projection", f"{_fd_field_proj.mean():.2f}" if not _fd_field_proj.empty else "N/A")
+                            _fd_sc[1].metric("My avg projection", f"{_fd_my_proj.mean():.2f}" if not _fd_my_proj.empty else "N/A")
+                            _fd_sc[2].metric("Opponent avg salary", f"${_fd_field_salary.mean():,.0f}" if not _fd_field_salary.empty else "N/A")
+                            _fd_sc[3].metric("My avg salary", f"${_fd_my_salary.mean():,.0f}" if not _fd_my_salary.empty else "N/A")
+
+                            if not _fd_field_proj.empty:
+                                _fd_q_levels = [0.10, 0.25, 0.50, 0.75, 0.90, 0.95, 0.99]
+                                _fd_q = _fd_field_proj.quantile(_fd_q_levels)
+                                st.dataframe(injury_frame(st, pd.DataFrame({
+                                    "Opponent field": ["P10", "P25", "P50", "P75", "P90", "P95", "P99"],
+                                    "Projected points": [round(float(_fd_q.loc[q]), 2) for q in _fd_q_levels],
+                                })), use_container_width=True, hide_index=True)
+                                if not _fd_my_proj.empty:
+                                    _fd_field_values = _fd_field_proj.to_numpy(dtype=float)
+                                    _fd_my_percentiles = [float(np.mean(_fd_field_values <= x)) for x in _fd_my_proj.to_numpy(dtype=float)]
+                                    st.caption(
+                                        f"Projection-only diagnostic: your generated lineup pool averages the "
+                                        f"{100.0 * float(np.mean(_fd_my_percentiles)):.1f}th percentile versus the opponent field."
+                                    )
+                            if not _fd_field_salary.empty:
+                                st.caption(
+                                    f"Opponent salary usage: {100.0 * float((_fd_field_salary >= 59000).mean()):.1f}% use at least $59,000; "
+                                    f"{100.0 * float((_fd_field_salary >= 57000).mean()):.1f}% use at least $57,000."
+                                )
+
+                            with st.container():
+                                _fd_opponent_show = _fd_persist_field.copy()
+                                _fd_opponent_show["ProjectedPoints"] = pd.to_numeric(_fd_opponent_show.get("ProjectedPoints"), errors="coerce")
+                                _fd_opponent_show["Salary"] = pd.to_numeric(_fd_opponent_show.get("Salary"), errors="coerce")
+                                _fd_opponent_show = _fd_opponent_show.sort_values("ProjectedPoints", ascending=False, na_position="last")
+                                st.caption("Showing the 100 highest-projected simulated opponent lineups. Download contains the full opponent field, including duplicates.")
+                                st.dataframe(injury_frame(st, _fd_opponent_show.head(100)), use_container_width=True, hide_index=True)
+                    else:
+                        st.caption("FanDuel field sanity and opponent lineup info will appear here after Contest SIM builds the opponent field.")
+
+                _fd_rank_options = [label for label, column in PORTFOLIO_METRICS.items() if column in fd_rank_source.columns]
+                fd_rank_label = st.selectbox(
+                    "Rank lineups by", _fd_rank_options, index=_fd_rank_options.index("Top 1%") if "Top 1%" in _fd_rank_options else 0,
+                    key="fd_rank_metric_top1_default_v2_" + lineup_mode.replace(" ", "_").lower()
+                )
+                fd_rank_column = PORTFOLIO_METRICS[fd_rank_label]
+                fd_rank_source = fd_rank_source.sort_values(fd_rank_column, ascending=False, kind="stable").reset_index(drop=True)
+                fd_rank_count = st.number_input(
+                    "Number of lineups to show", min_value=1, max_value=max(1, len(fd_rank_source)),
+                    value=min(20, max(1, len(fd_rank_source))), step=1,
+                    key="fd_rank_count_" + lineup_mode.replace(" ", "_").lower()
+                )
+                st.caption("Run SIM/contest comparison first for field-based estimates. Without a completed comparison, ranking uses the available lineup results as a temporary estimate.")
+                # Keep all built lineups for export. The display limit only controls
+                # how many rows are shown on screen, not how many get downloaded.
+                fd_all_ranked = fd_rank_source.copy()
+                _fd_diverse_portfolio = None
+                if lineup_mode in ("Full Roster", "Single Game"):
+                    from simmah_portfolio_selection import select_portfolio, put_portfolio_first
+                    _fd_owned_count = full_roster_contest_parameters(st.session_state.get("selected_fd_contest") or {}, 1)["owned"]
+                    try:
+                        _fd_diverse_portfolio = select_portfolio(fd_all_ranked, fd_slots, _fd_owned_count, fd_rank_column,
+                            controls=fd_player_display.set_index("Name").to_dict("index"), diversity=portfolio_diversity)
+                    except ValueError as exc:
+                        st.error(str(exc))
+                        workspace_stop(st, _loaded_slate_tabs)
+                    if _fd_diverse_portfolio.attrs.get("effective_auto_cap_pct", 100) > (100 - .4 * portfolio_diversity):
+                        st.warning(f"The candidate pool cannot fill all assigned entries at the preferred exposure cap. Automatic cap increased to {_fd_diverse_portfolio.attrs['effective_auto_cap_pct']}%; your manual exposure limits remain enforced.")
+                    fd_all_ranked = put_portfolio_first(fd_all_ranked, _fd_diverse_portfolio, fd_slots)
+                    st.caption(f"Lineup exposure diversity: {portfolio_diversity}%. Preferred player cap: {100 - .4 * portfolio_diversity:.0f}%. Locks and manual limits remain enforced. Candidate alternatives remain available below.")
+                with _tab_lineups:
+                    _fd_diverse_portfolio = render_editor(st, _fd_diverse_portfolio, fd_players, fd_slots,
+                        "FanDuel", lineup_mode, st.session_state.get("selected_fd_contest", {}),
+                        validator=(lambda row: full_roster_stack_matches(row, fd_players, fd_stack_rules, secondary_stacks=fd_secondary_stack_rules)) if lineup_mode == "Full Roster" else single_stack_validator(st, "FanDuel", lineup_mode, full_roster_stack_lookup(fd_players)))
+                fd_results = fd_all_ranked.head(int(fd_rank_count)).copy()
+
+                fd_export_portfolio = fd_all_ranked
+                if lineup_mode == "Full Roster":
+                    _fd_selected_contest = st.session_state.get("selected_fd_contest") or {}
+                    _fd_spec = full_roster_contest_parameters(_fd_selected_contest, 1)
+                    fd_export_portfolio = _fd_diverse_portfolio.copy()
+                    _fd_joint_field = st.session_state.get("fd_contest_field_full_roster")
+                    _fd_joint_outcomes = st.session_state.get("fd_simulation_df_full_roster")
+                    _fd_context = st.session_state.get("fd_full_roster_evaluation_context")
+                    if isinstance(_fd_joint_field, pd.DataFrame) and not _fd_joint_field.empty and isinstance(_fd_joint_outcomes, pd.DataFrame) and _fd_context == _fd_selected_contest:
+                        _fd_spec = full_roster_contest_parameters(_fd_selected_contest, len(_fd_joint_field))
+                        with st.spinner("Evaluating assigned FanDuel entries together..."):
+                            fd_export_portfolio = evaluate_full_roster_portfolio_cached(_fd_joint_outcomes, fd_export_portfolio,
+                                _fd_joint_field, fd_slots, _fd_spec["field_size"], _fd_spec["tiers"], _fd_spec["fee"])
+                        if not _fd_spec["payouts_known"]:
+                            fd_export_portfolio = fd_export_portfolio.drop(columns=["CashRate", "Expected Prize ($)", "Expected Net ($)", "Expected ROI (%)", "Entry Fee ($)"], errors="ignore")
+                            fd_export_portfolio["ContestScore"] = fd_export_portfolio["Top1"]
+                    else:
+                        st.warning("Run CONTEST SIM for the selected contest before exporting evaluated entries.")
+                        fd_export_portfolio = fd_export_portfolio.drop(columns=["CashRate", "Expected Prize ($)", "Expected Net ($)", "Expected ROI (%)", "Entry Fee ($)"], errors="ignore")
+                    st.session_state["fd_full_roster_assigned_portfolio"] = fd_export_portfolio.copy()
+                    st.write("### Assigned contest portfolio")
+                    st.caption(f"These {_fd_spec['owned']} entries are the source for both downloads. Additional displayed candidates are alternatives.")
+                    st.dataframe(injury_frame(st, fd_export_portfolio), use_container_width=True, hide_index=True)
+                    st.caption("Candidate alternatives — the assigned portfolio above is used for your entry replacement.")
+
+                if lineup_mode == "Single Game":
+                    _fd_single_owned = int((st.session_state.get("selected_fd_contest") or {}).get("your_entries") or len(fd_results))
+                    fd_export_portfolio = _fd_diverse_portfolio.copy()
+                    _single_field = st.session_state.get("fd_contest_field_single_game")
+                    _single_outcomes = st.session_state.get("fd_simulation_df_single_game")
+                    if st.session_state.get("fd_single_game_evaluation_engine") == "shared-contest-mvp-v1" and st.session_state.get("fd_single_game_evaluation_context") == dict(st.session_state.get("selected_fd_contest") or {}) and isinstance(_single_field, pd.DataFrame) and isinstance(_single_outcomes, pd.DataFrame):
+                        _single_spec = full_roster_contest_parameters(st.session_state.get("selected_fd_contest"), len(_single_field))
+                        fd_export_portfolio = evaluate_full_roster_portfolio_cached(_single_outcomes, fd_export_portfolio,
+                            _single_field, fd_slots, _single_spec["field_size"], _single_spec["tiers"], _single_spec["fee"],
+                            multipliers=(1.5, 1, 1, 1, 1, 1))
+                        if not _single_spec["payouts_known"]:
+                            fd_export_portfolio = fd_export_portfolio.drop(columns=["CashRate", "Expected Prize ($)", "Expected Net ($)", "Expected ROI (%)", "Entry Fee ($)"], errors="ignore")
+                    st.write("### Assigned contest portfolio")
+                    st.caption("These lineups are used for both the portfolio report and entry replacement.")
+                    st.dataframe(injury_frame(st, fd_export_portfolio), use_container_width=True, hide_index=True)
+
+                st.session_state["fd_assigned_display_" + lineup_mode.replace(" ", "_").lower()] = fd_export_portfolio.copy()
+                with _tab_build:
+                    st.write("### Candidate Lineups")
+                    # Use the same player-by-player points layout as the DraftKings Portfolio.
+                    fd_display = fd_results.copy()
+                    fd_player_means = {
+                        str(name): float(values.get("Mean", 0.0))
+                        for name, values in player_sim.items()
+                    }
+                    if isinstance(fd_all_ranked, pd.DataFrame) and not fd_all_ranked.empty:
+                        _fd_all_candidates_export = fd_all_ranked.copy()
+                        workspace_download_button(st,
+                            "DOWNLOAD ALL CANDIDATE LINEUPS",
+                            data=_fd_all_candidates_export.to_csv(index=False).encode("utf-8"),
+                            file_name="fanduel_" + lineup_mode.replace(" ", "_").lower() + "_all_candidate_lineups.csv",
+                            mime="text/csv",
+                            key="download_fd_all_candidate_lineups_" + lineup_mode.replace(" ", "_").lower(),
+                            on_click="ignore",
+                            use_container_width=True,
+                        )
+                    fd_display_columns = []
+                    for slot in fd_slots:
+                        if slot not in fd_display.columns:
+                            continue
+                        multiplier = 1.5 if slot in {"MVP"} else 1.0
+                        points_col = slot + " Sim Pts"
+                        fd_display[points_col] = fd_display[slot].map(
+                            lambda player: round(fd_player_means.get(str(player), 0.0) * multiplier, 2)
+                        )
+                        fd_display_columns.extend([slot, points_col])
+                    if "ProjectedPoints" in fd_display.columns:
+                        fd_display_columns.append("ProjectedPoints")
+                    if "Score" in fd_display.columns:
+                        fd_display_columns.append("Score")
+                    if "Salary" in fd_display.columns:
+                        fd_display_columns.append("Salary")
+                    # FanDuel contest comparison already calculates these metrics. Keep them
+                    # visible in the post-SIM portfolio table so the completed contest run is
+                    # not reduced back to only projection/score/salary after workspace_rerun(st, _loaded_slate_tabs).
+                    for metric_col in [
+                        "ContestScore", "WinRate", "Top1", "Top5", "Top10", "CashRate",
+                        "AvgPercentile", "Entry Fee ($)", "Expected Prize ($)",
+                        "Expected Net ($)", "Expected ROI (%)", "Estimated Full Field Rank",
+                        "Exact Matches in Final Field", "Estimated Field Copies",
+                    ]:
+                        if metric_col in fd_display.columns:
+                            fd_display_columns.append(metric_col)
+                    fd_display_columns = list(dict.fromkeys(
+                        col for col in fd_display_columns if col in fd_display.columns
+                    ))
+                    st.dataframe(
+                        injury_frame(st, fd_display[fd_display_columns] if fd_display_columns else fd_display),
+                        use_container_width=True,
+                        hide_index=True
+                    )
+
+                render_portfolio_roi_panel(fd_export_portfolio, st.session_state.get("selected_fd_contest"))
+                with st.expander("Analysis report (optional)", expanded=False):
+                    lineup_export_download(
+                        "DOWNLOAD PORTFOLIO REPORT (FOR REVIEW)",
+                        fd_export_portfolio.to_csv(index=False).encode("utf-8"),
+                        "FanDuel_Assigned_Portfolio_Report.csv", "text/csv",
+                        key="fd_portfolio_report_top_" + lineup_mode.replace(" ", "_").lower(),
                         on_click="ignore", use_container_width=True,
                     )
-                    _fd_sc = st.columns(4)
-                    _fd_sc[0].metric("Opponent avg projection", f"{_fd_field_proj.mean():.2f}" if not _fd_field_proj.empty else "N/A")
-                    _fd_sc[1].metric("My avg projection", f"{_fd_my_proj.mean():.2f}" if not _fd_my_proj.empty else "N/A")
-                    _fd_sc[2].metric("Opponent avg salary", f"${_fd_field_salary.mean():,.0f}" if not _fd_field_salary.empty else "N/A")
-                    _fd_sc[3].metric("My avg salary", f"${_fd_my_salary.mean():,.0f}" if not _fd_my_salary.empty else "N/A")
-
-                    if not _fd_field_proj.empty:
-                        _fd_q_levels = [0.10, 0.25, 0.50, 0.75, 0.90, 0.95, 0.99]
-                        _fd_q = _fd_field_proj.quantile(_fd_q_levels)
-                        st.dataframe(injury_frame(st, pd.DataFrame({
-                            "Opponent field": ["P10", "P25", "P50", "P75", "P90", "P95", "P99"],
-                            "Projected points": [round(float(_fd_q.loc[q]), 2) for q in _fd_q_levels],
-                        })), use_container_width=True, hide_index=True)
-                        if not _fd_my_proj.empty:
-                            _fd_field_values = _fd_field_proj.to_numpy(dtype=float)
-                            _fd_my_percentiles = [float(np.mean(_fd_field_values <= x)) for x in _fd_my_proj.to_numpy(dtype=float)]
-                            st.caption(
-                                f"Projection-only diagnostic: your generated lineup pool averages the "
-                                f"{100.0 * float(np.mean(_fd_my_percentiles)):.1f}th percentile versus the opponent field."
-                            )
-                    if not _fd_field_salary.empty:
-                        st.caption(
-                            f"Opponent salary usage: {100.0 * float((_fd_field_salary >= 59000).mean()):.1f}% use at least $59,000; "
-                            f"{100.0 * float((_fd_field_salary >= 57000).mean()):.1f}% use at least $57,000."
-                        )
-
-                    with st.expander(f"Opponent Lineup Info — {len(_fd_persist_field):,} simulated entries", expanded=False):
-                        _fd_opponent_show = _fd_persist_field.copy()
-                        _fd_opponent_show["ProjectedPoints"] = pd.to_numeric(_fd_opponent_show.get("ProjectedPoints"), errors="coerce")
-                        _fd_opponent_show["Salary"] = pd.to_numeric(_fd_opponent_show.get("Salary"), errors="coerce")
-                        _fd_opponent_show = _fd_opponent_show.sort_values("ProjectedPoints", ascending=False, na_position="last")
-                        st.caption("Showing the 100 highest-projected simulated opponent lineups. Download contains the full opponent field, including duplicates.")
-                        st.dataframe(injury_frame(st, _fd_opponent_show.head(100)), use_container_width=True, hide_index=True)
-                        workspace_download_button(st,
-                            "Download Full Opponent Field CSV",
-                            data=_fd_opponent_show.to_csv(index=False).encode("utf-8"),
-                            file_name="fanduel_" + lineup_mode.replace(" ", "_").lower() + "_opponent_field.csv",
-                            mime="text/csv",
-                            key="fd_download_opponent_field_" + lineup_mode.replace(" ", "_").lower(),
-                            on_click="ignore",
-                        )
+                render_entry_export_header("FanDuel")
+                if "FD_ID" in fd_players.columns:
+                    if fd_entry_file is None or not st.session_state.get("selected_fd_contest"):
+                        st.warning("Upload the original FanDuel entries template and select your contest to enable the entry download.")
+                    else:
+                        try:
+                            from simmah_exports import build_fanduel_entry_export
+                            fd_ids = dict(zip(fd_players["Name"], fd_players["FD_ID"].astype(str)))
+                            fd_entry_bytes, fd_entry_count = build_fanduel_entry_export(
+                                fd_entry_file.getvalue(), fd_export_portfolio, fd_ids,
+                                st.session_state["selected_fd_contest"], lineup_mode)
+                            import csv as _fd_export_csv
+                            import io as _fd_export_io
+                            _fd_upload_rows = list(_fd_export_csv.reader(_fd_export_io.StringIO(fd_entry_bytes.decode("utf-8-sig"))))
+                            _fd_upload_header = [c.strip().casefold() for c in _fd_upload_rows[0]]
+                            if not set(_fd_upload_header).intersection({"entry_id", "entry id", "entryid"}) or not set(_fd_upload_header).intersection({"contest_id", "contest id", "contestid"}):
+                                raise ValueError("Export blocked: replacement CSV is missing reserved entry identifiers.")
+                            _fd_export_name = "FanDuel_" + lineup_mode.replace(" ", "_") + "_" + str(st.session_state["selected_fd_contest"]["id"]) + "_UPLOAD.csv"
+                            st.success(f"Ready to replace {fd_entry_count} reserved entries. Entry IDs and original template details are preserved.")
+                            st.caption("FanDuel upload file: " + _fd_export_name + ". This file contains entry_id, contest_id, and roster player IDs.")
+                            with st.expander("Preview FanDuel upload IDs", expanded=False):
+                                _fd_preview_text = _fd_export_io.StringIO()
+                                _fd_export_csv.writer(_fd_preview_text).writerows([row[:10 if lineup_mode == "Single Game" else 13] for row in _fd_upload_rows[:3]])
+                                st.code(_fd_preview_text.getvalue(), language="csv")
+                            lineup_export_download(
+                                f"EXPORT TO FANDUEL — {fd_entry_count} ENTRIES",
+                                fd_entry_bytes,
+                                file_name=_fd_export_name,
+                                mime="text/csv", use_container_width=True, type="primary",
+                                key="fd_entry_upload_v2_" + lineup_mode.replace(" ", "_").lower() + "_" + str(st.session_state["selected_fd_contest"]["id"]), on_click="ignore")
+                            st.caption("Export saves a timestamped player snapshot and the exact entry CSV for later comparison.")
+                        except Exception as exc:
+                            st.error(f"Could not create FanDuel replacement CSV: {exc}")
                 else:
-                    st.caption("FanDuel field sanity and opponent lineup info will appear here after Contest SIM builds the opponent field.")
-
-            _fd_rank_options = [label for label, column in PORTFOLIO_METRICS.items() if column in fd_rank_source.columns]
-            fd_rank_label = st.selectbox(
-                "Rank lineups by", _fd_rank_options, index=_fd_rank_options.index("Top 1%") if "Top 1%" in _fd_rank_options else 0,
-                key="fd_rank_metric_top1_default_v2_" + lineup_mode.replace(" ", "_").lower()
-            )
-            fd_rank_column = PORTFOLIO_METRICS[fd_rank_label]
-            fd_rank_source = fd_rank_source.sort_values(fd_rank_column, ascending=False, kind="stable").reset_index(drop=True)
-            fd_rank_count = st.number_input(
-                "Number of lineups to show", min_value=1, max_value=max(1, len(fd_rank_source)),
-                value=min(20, max(1, len(fd_rank_source))), step=1,
-                key="fd_rank_count_" + lineup_mode.replace(" ", "_").lower()
-            )
-            st.caption("Run SIM/contest comparison first for field-based estimates. Without a completed comparison, ranking uses the available lineup results as a temporary estimate.")
-            # Keep all built lineups for export. The display limit only controls
-            # how many rows are shown on screen, not how many get downloaded.
-            fd_all_ranked = fd_rank_source.copy()
-            _fd_diverse_portfolio = None
-            if lineup_mode in ("Full Roster", "Single Game"):
-                from simmah_portfolio_selection import select_portfolio, put_portfolio_first
-                _fd_owned_count = full_roster_contest_parameters(st.session_state.get("selected_fd_contest") or {}, 1)["owned"]
-                try:
-                    _fd_diverse_portfolio = select_portfolio(fd_all_ranked, fd_slots, _fd_owned_count, fd_rank_column,
-                        controls=fd_player_display.set_index("Name").to_dict("index"), diversity=portfolio_diversity)
-                except ValueError as exc:
-                    st.error(str(exc))
-                    workspace_stop(st, _loaded_slate_tabs)
-                if _fd_diverse_portfolio.attrs.get("effective_auto_cap_pct", 100) > (100 - .4 * portfolio_diversity):
-                    st.warning(f"The candidate pool cannot fill all assigned entries at the preferred exposure cap. Automatic cap increased to {_fd_diverse_portfolio.attrs['effective_auto_cap_pct']}%; your manual exposure limits remain enforced.")
-                fd_all_ranked = put_portfolio_first(fd_all_ranked, _fd_diverse_portfolio, fd_slots)
-                st.caption(f"Lineup exposure diversity: {portfolio_diversity}%. Preferred player cap: {100 - .4 * portfolio_diversity:.0f}%. Locks and manual limits remain enforced. Candidate alternatives remain available below.")
-            with _tab_lineups:
-                _fd_diverse_portfolio = render_editor(st, _fd_diverse_portfolio, fd_players, fd_slots,
-                    "FanDuel", lineup_mode, st.session_state.get("selected_fd_contest", {}),
-                    validator=(lambda row: full_roster_stack_matches(row, fd_players, fd_stack_rules, secondary_stacks=fd_secondary_stack_rules)) if lineup_mode == "Full Roster" else single_stack_validator(st, "FanDuel", lineup_mode, full_roster_stack_lookup(fd_players)))
-            fd_results = fd_all_ranked.head(int(fd_rank_count)).copy()
-
-            fd_export_portfolio = fd_all_ranked
-            if lineup_mode == "Full Roster":
-                _fd_selected_contest = st.session_state.get("selected_fd_contest") or {}
-                _fd_spec = full_roster_contest_parameters(_fd_selected_contest, 1)
-                fd_export_portfolio = _fd_diverse_portfolio.copy()
-                _fd_joint_field = st.session_state.get("fd_contest_field_full_roster")
-                _fd_joint_outcomes = st.session_state.get("fd_simulation_df_full_roster")
-                _fd_context = st.session_state.get("fd_full_roster_evaluation_context")
-                if isinstance(_fd_joint_field, pd.DataFrame) and not _fd_joint_field.empty and isinstance(_fd_joint_outcomes, pd.DataFrame) and _fd_context == _fd_selected_contest:
-                    _fd_spec = full_roster_contest_parameters(_fd_selected_contest, len(_fd_joint_field))
-                    with st.spinner("Evaluating assigned FanDuel entries together..."):
-                        fd_export_portfolio = evaluate_full_roster_portfolio_cached(_fd_joint_outcomes, fd_export_portfolio,
-                            _fd_joint_field, fd_slots, _fd_spec["field_size"], _fd_spec["tiers"], _fd_spec["fee"])
-                    if not _fd_spec["payouts_known"]:
-                        fd_export_portfolio = fd_export_portfolio.drop(columns=["CashRate", "Expected Prize ($)", "Expected Net ($)", "Expected ROI (%)", "Entry Fee ($)"], errors="ignore")
-                        fd_export_portfolio["ContestScore"] = fd_export_portfolio["Top1"]
-                else:
-                    st.warning("Run CONTEST SIM for the selected contest before exporting evaluated entries.")
-                    fd_export_portfolio = fd_export_portfolio.drop(columns=["CashRate", "Expected Prize ($)", "Expected Net ($)", "Expected ROI (%)", "Entry Fee ($)"], errors="ignore")
-                st.session_state["fd_full_roster_assigned_portfolio"] = fd_export_portfolio.copy()
-                st.write("### Assigned contest portfolio")
-                st.caption(f"These {_fd_spec['owned']} entries are the source for both downloads. Additional displayed candidates are alternatives.")
-                st.dataframe(injury_frame(st, fd_export_portfolio), use_container_width=True, hide_index=True)
-                st.caption("Candidate alternatives — the assigned portfolio above is used for your entry replacement.")
-
-            if lineup_mode == "Single Game":
-                _fd_single_owned = int((st.session_state.get("selected_fd_contest") or {}).get("your_entries") or len(fd_results))
-                fd_export_portfolio = _fd_diverse_portfolio.copy()
-                _single_field = st.session_state.get("fd_contest_field_single_game")
-                _single_outcomes = st.session_state.get("fd_simulation_df_single_game")
-                if st.session_state.get("fd_single_game_evaluation_engine") == "shared-contest-mvp-v1" and st.session_state.get("fd_single_game_evaluation_context") == dict(st.session_state.get("selected_fd_contest") or {}) and isinstance(_single_field, pd.DataFrame) and isinstance(_single_outcomes, pd.DataFrame):
-                    _single_spec = full_roster_contest_parameters(st.session_state.get("selected_fd_contest"), len(_single_field))
-                    fd_export_portfolio = evaluate_full_roster_portfolio_cached(_single_outcomes, fd_export_portfolio,
-                        _single_field, fd_slots, _single_spec["field_size"], _single_spec["tiers"], _single_spec["fee"],
-                        multipliers=(1.5, 1, 1, 1, 1, 1))
-                    if not _single_spec["payouts_known"]:
-                        fd_export_portfolio = fd_export_portfolio.drop(columns=["CashRate", "Expected Prize ($)", "Expected Net ($)", "Expected ROI (%)", "Entry Fee ($)"], errors="ignore")
-                st.write("### Assigned contest portfolio")
-                st.caption("These lineups are used for both the portfolio report and entry replacement.")
-                st.dataframe(injury_frame(st, fd_export_portfolio), use_container_width=True, hide_index=True)
-
-            st.session_state["fd_assigned_display_" + lineup_mode.replace(" ", "_").lower()] = fd_export_portfolio.copy()
-            st.write("### Candidate Lineups")
-            # Use the same player-by-player points layout as the DraftKings Portfolio.
-            fd_display = fd_results.copy()
-            fd_player_means = {
-                str(name): float(values.get("Mean", 0.0))
-                for name, values in player_sim.items()
-            }
-            if isinstance(fd_all_ranked, pd.DataFrame) and not fd_all_ranked.empty:
-                _fd_all_candidates_export = fd_all_ranked.copy()
-                workspace_download_button(st,
-                    "DOWNLOAD ALL CANDIDATE LINEUPS",
-                    data=_fd_all_candidates_export.to_csv(index=False).encode("utf-8"),
-                    file_name="fanduel_" + lineup_mode.replace(" ", "_").lower() + "_all_candidate_lineups.csv",
-                    mime="text/csv",
-                    key="download_fd_all_candidate_lineups_" + lineup_mode.replace(" ", "_").lower(),
-                    on_click="ignore",
-                    use_container_width=True,
-                )
-            fd_display_columns = []
-            for slot in fd_slots:
-                if slot not in fd_display.columns:
-                    continue
-                multiplier = 1.5 if slot in {"MVP"} else 1.0
-                points_col = slot + " Sim Pts"
-                fd_display[points_col] = fd_display[slot].map(
-                    lambda player: round(fd_player_means.get(str(player), 0.0) * multiplier, 2)
-                )
-                fd_display_columns.extend([slot, points_col])
-            if "ProjectedPoints" in fd_display.columns:
-                fd_display_columns.append("ProjectedPoints")
-            if "Score" in fd_display.columns:
-                fd_display_columns.append("Score")
-            if "Salary" in fd_display.columns:
-                fd_display_columns.append("Salary")
-            # FanDuel contest comparison already calculates these metrics. Keep them
-            # visible in the post-SIM portfolio table so the completed contest run is
-            # not reduced back to only projection/score/salary after workspace_rerun(st, _loaded_slate_tabs).
-            for metric_col in [
-                "ContestScore", "WinRate", "Top1", "Top5", "Top10", "CashRate",
-                "AvgPercentile", "Entry Fee ($)", "Expected Prize ($)",
-                "Expected Net ($)", "Expected ROI (%)", "Estimated Full Field Rank",
-                "Exact Matches in Final Field", "Estimated Field Copies",
-            ]:
-                if metric_col in fd_display.columns:
-                    fd_display_columns.append(metric_col)
-            fd_display_columns = list(dict.fromkeys(
-                col for col in fd_display_columns if col in fd_display.columns
-            ))
-            st.dataframe(
-                injury_frame(st, fd_display[fd_display_columns] if fd_display_columns else fd_display),
-                use_container_width=True,
-                hide_index=True
-            )
-
-            render_portfolio_roi_panel(fd_export_portfolio, st.session_state.get("selected_fd_contest"))
-            st.write("### Export to FanDuel")
-            st.caption("Use the entry file below to update your reserved FanDuel entries.")
-            with st.expander("Analysis report (optional)", expanded=False):
-                lineup_export_download(
-                    "DOWNLOAD PORTFOLIO REPORT (FOR REVIEW)",
-                    fd_export_portfolio.to_csv(index=False).encode("utf-8"),
-                    "FanDuel_Assigned_Portfolio_Report.csv", "text/csv",
-                    key="fd_portfolio_report_top_" + lineup_mode.replace(" ", "_").lower(),
-                    on_click="ignore", use_container_width=True,
-                )
-            render_entry_export_header("FanDuel")
-            if "FD_ID" in fd_players.columns:
-                if fd_entry_file is None or not st.session_state.get("selected_fd_contest"):
-                    st.warning("Upload the original FanDuel entries template and select your contest to enable the entry download.")
-                else:
-                    try:
-                        from simmah_exports import build_fanduel_entry_export
-                        fd_ids = dict(zip(fd_players["Name"], fd_players["FD_ID"].astype(str)))
-                        fd_entry_bytes, fd_entry_count = build_fanduel_entry_export(
-                            fd_entry_file.getvalue(), fd_export_portfolio, fd_ids,
-                            st.session_state["selected_fd_contest"], lineup_mode)
-                        import csv as _fd_export_csv
-                        import io as _fd_export_io
-                        _fd_upload_rows = list(_fd_export_csv.reader(_fd_export_io.StringIO(fd_entry_bytes.decode("utf-8-sig"))))
-                        _fd_upload_header = [c.strip().casefold() for c in _fd_upload_rows[0]]
-                        if not set(_fd_upload_header).intersection({"entry_id", "entry id", "entryid"}) or not set(_fd_upload_header).intersection({"contest_id", "contest id", "contestid"}):
-                            raise ValueError("Export blocked: replacement CSV is missing reserved entry identifiers.")
-                        _fd_export_name = "FanDuel_" + lineup_mode.replace(" ", "_") + "_" + str(st.session_state["selected_fd_contest"]["id"]) + "_UPLOAD.csv"
-                        st.success(f"Ready to replace {fd_entry_count} reserved entries. Entry IDs and original template details are preserved.")
-                        st.caption("FanDuel upload file: " + _fd_export_name + ". This file contains entry_id, contest_id, and roster player IDs.")
-                        with st.expander("Preview FanDuel upload IDs", expanded=False):
-                            _fd_preview_text = _fd_export_io.StringIO()
-                            _fd_export_csv.writer(_fd_preview_text).writerows([row[:10 if lineup_mode == "Single Game" else 13] for row in _fd_upload_rows[:3]])
-                            st.code(_fd_preview_text.getvalue(), language="csv")
-                        lineup_export_download(
-                            f"EXPORT TO FANDUEL — {fd_entry_count} ENTRIES",
-                            fd_entry_bytes,
-                            file_name=_fd_export_name,
-                            mime="text/csv", use_container_width=True, type="primary",
-                            key="fd_entry_upload_v2_" + lineup_mode.replace(" ", "_").lower() + "_" + str(st.session_state["selected_fd_contest"]["id"]), on_click="ignore")
-                        st.caption("Export saves a timestamped player snapshot and the exact entry CSV for later comparison.")
-                    except Exception as exc:
-                        st.error(f"Could not create FanDuel replacement CSV: {exc}")
-            else:
-                st.info("This CSV has no player ID column, so lineup export is unavailable.")
+                    st.info("This CSV has no player ID column, so lineup export is unavailable.")
 
 
         # Populate the earlier download location after SIM/BUILD has updated this
@@ -5901,9 +5904,10 @@ if platform == "FanDuel":
         if isinstance(_fd_fit_report, pd.DataFrame) and not _fd_fit_report.empty:
             _fd_fit_cols = [c for c in ["Name", "Before Calibration", "Pilot Mean", "Passing Input", "Opportunity Input", "Skill Gain Input", "Calibration Status"] if c in _fd_fit_report]
             _fd_scoring_report = _fd_scoring_report.merge(_fd_fit_report[_fd_fit_cols], on="Name", how="left")
-        _fd_scoring_download_slot.download_button("DOWNLOAD PLAYER SCORING INPUTS", _fd_scoring_report.to_csv(index=False).encode("utf-8"),
-            "FanDuel_" + lineup_mode.replace(" ", "_") + "_Player_Scoring_Inputs.csv", "text/csv",
-            key="fd_player_scoring_inputs_" + lineup_mode.replace(" ", "_").lower(), on_click="ignore")
+        with _fd_scoring_download_slot:
+            workspace_download_button(st,"DOWNLOAD PLAYER SCORING INPUTS", _fd_scoring_report.to_csv(index=False).encode("utf-8"),
+                "FanDuel_" + lineup_mode.replace(" ", "_") + "_Player_Scoring_Inputs.csv", "text/csv",
+                key="fd_player_scoring_inputs_" + lineup_mode.replace(" ", "_").lower(), on_click="ignore")
         workspace_stop(st, _loaded_slate_tabs)
 
 else:
@@ -6349,7 +6353,8 @@ else:
                         if str(_game_col).lower().replace(" ", "") in {"gameinfo", "game", "starttime", "kickoff"}:
                             loaded_players[_game_col] = uploaded_df[_game_col]
 
-                    show_detected_slate_games(uploaded_df)
+                    with _slate_games_header:
+                        show_detected_slate_games(uploaded_df)
                     loaded_players["Position"] = (
                         uploaded_df[position_col].astype(str).str.strip()
                         if position_col is not None else "FLEX"
@@ -7149,7 +7154,7 @@ else:
             with build_cols[2]:
                 st.write("### Run")
                 _classic_sim_button = workspace_button(st,
-                    "SIM", type="primary", use_container_width=True, key="dk_classic_sim"
+                    "Run Build", type="primary", use_container_width=True, key="dk_classic_sim"
                 )
                 # One-click Classic workflow: SIM -> BUILD -> CONTEST SIM -> ROI.
                 _classic_build_button = _classic_sim_button
@@ -7401,166 +7406,169 @@ else:
                     hide_index=True
                 )
 
-                # Classic portfolio controls match the larger portfolio selector used by other formats.
-                st.divider()
-                st.write("## Portfolio")
-                st.caption("Browse up to 5,000 candidates. The assigned portfolio below fills your reserved contest entries and is the source for both downloads.")
-                classic_portfolio_source = st.session_state.get("classic_contest_comparison_df") if st.session_state.get("classic_field_context") == classic_contest_name else None
-                render_value_leverage_finder(control_display, classic_portfolio_source,
-                    st.session_state.get("classic_contest_field_df"),
-                    ["QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "FLEX", "DST"], "dk_classic")
-                if not isinstance(classic_portfolio_source, pd.DataFrame) or classic_portfolio_source.empty:
-                    classic_portfolio_source = classic_results.copy()
-                # Match the Showdown ranking menu across all formats.
-                if not all(metric in classic_portfolio_source.columns for metric in PORTFOLIO_METRICS.values()):
-                    classic_portfolio_source = add_field_ranking_metrics(
-                        classic_portfolio_source,
-                        classic_portfolio_source.get("ProjectedPoints", pd.Series(dtype=float)).to_numpy(dtype=float)
-                    )
-                classic_rank_options = list(PORTFOLIO_METRICS.keys())
-                classic_portfolio_count = st.number_input(
-                    "Number of lineups to show",
-                    min_value=1,
-                    max_value=min(5000, max(1, len(classic_portfolio_source))),
-                    value=min(20, max(1, len(classic_portfolio_source))),
-                    step=1,
-                    key="dk_classic_portfolio_count"
-                )
-                classic_rank_label = st.selectbox(
-                    "Rank lineups by",
-                    classic_rank_options,
-                    index=classic_rank_options.index("Top 1%"),
-                    key="dk_classic_portfolio_metric_top1_default_v2"
-                )
-                classic_rank_metric = PORTFOLIO_METRICS[classic_rank_label]
-                from simmah_portfolio_selection import select_portfolio, put_portfolio_first
-                _classic_assignment_count = max(1, int((st.session_state.get("selected_dk_contest") or {}).get("your_entries") or classic_entry_count))
-                _classic_slots = [col for col in ["QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "FLEX", "DST"] if col in classic_portfolio_source]
-                try:
-                    classic_export_portfolio = select_portfolio(classic_portfolio_source, _classic_slots,
-                        _classic_assignment_count, classic_rank_metric, controls=control_map, diversity=portfolio_diversity)
-                except ValueError as exc:
-                    st.error(str(exc))
-                    workspace_stop(st, _loaded_slate_tabs)
-                if classic_export_portfolio.attrs.get("effective_auto_cap_pct", 100) > (100 - .4 * portfolio_diversity):
-                    st.warning(f"The candidate pool cannot fill all assigned entries at the preferred exposure cap. Automatic cap increased to {classic_export_portfolio.attrs['effective_auto_cap_pct']}%; your manual exposure limits remain enforced.")
                 with _tab_lineups:
-                    classic_export_portfolio = render_editor(st, classic_export_portfolio, classic_pool, _classic_slots,
-                        "DraftKings", "Classic", st.session_state.get("selected_dk_contest", {}),
-                        validator=lambda row: full_roster_stack_matches(row, classic_pool, dk_classic_stack_rules, secondary_stacks=dk_secondary_stack_rules))
-                _classic_unique_entries = classic_export_portfolio.copy()
-                classic_top_portfolio = put_portfolio_first(classic_portfolio_source, classic_export_portfolio,
-                    _classic_slots).head(int(classic_portfolio_count)).copy()
-                st.caption(f"Lineup exposure diversity: {portfolio_diversity}%. Preferred player cap: {100 - .4 * portfolio_diversity:.0f}%. Manual limits remain enforced; display count does not change assigned entries.")
-                st.session_state["classic_contest_entries_df"] = classic_export_portfolio.copy()
-                classic_top_portfolio["Assigned to contest"] = np.arange(len(classic_top_portfolio)) < len(_classic_unique_entries)
-                _classic_portfolio_field = st.session_state.get("classic_contest_field_df")
-                _classic_portfolio_outcomes = st.session_state.get("simulation_df")
-                if st.session_state.get("classic_field_context") == classic_contest_name and isinstance(_classic_portfolio_field, pd.DataFrame) and not _classic_portfolio_field.empty:
-                    with st.expander("Opponent field diagnostics"):
-                        st.caption("This estimated field determines finish rates and ROI. Construction learning does not validate future ownership or profitability.")
-                        _diagnostic_rows = []
-                        for _label, _frame in [("Opponent field", _classic_portfolio_field), ("Assigned portfolio", classic_export_portfolio)]:
-                            _diagnostic_rows.append({"Group": _label, "Lineups": len(_frame),
-                                "Mean salary": float(pd.to_numeric(_frame["Salary"], errors="coerce").mean()),
-                                "Mean simulated points": float(pd.to_numeric(_frame["ProjectedPoints"], errors="coerce").mean())})
-                        st.dataframe(injury_frame(st, pd.DataFrame(_diagnostic_rows)), hide_index=True, use_container_width=True)
-                        workspace_download_button(st,"DOWNLOAD CLASSIC OPPONENT FIELD", _classic_portfolio_field.to_csv(index=False).encode("utf-8"),
-                            "DraftKings_Classic_Opponent_Field.csv", "text/csv", key="classic_field_diagnostics", on_click="ignore")
-                        _ownership_snapshot = st.session_state.get("classic_ownership_snapshot")
-                        if isinstance(_ownership_snapshot, pd.DataFrame) and not _ownership_snapshot.empty:
-                            workspace_download_button(st,"DOWNLOAD OWNERSHIP SNAPSHOT", _ownership_snapshot.to_csv(index=False).encode("utf-8"),
-                                "DraftKings_Classic_Ownership_Snapshot.csv", "text/csv", key="classic_ownership_snapshot_download", on_click="ignore")
-                        workspace_download_button(st,"DOWNLOAD CLASSIC PLAYER INPUTS", classic_pool.to_csv(index=False).encode("utf-8"),
-                            "DraftKings_Classic_Player_Inputs.csv", "text/csv", key="classic_player_diagnostics", on_click="ignore")
-
-                if st.session_state.get("classic_field_context") == classic_contest_name and isinstance(_classic_portfolio_field, pd.DataFrame) and not _classic_portfolio_field.empty and isinstance(_classic_portfolio_outcomes, pd.DataFrame):
-                    with st.spinner("Evaluating the selected portfolio together..."):
-                        classic_export_portfolio = evaluate_full_roster_portfolio_cached(
-                            _classic_portfolio_outcomes, classic_export_portfolio, _classic_portfolio_field,
-                            [slot for slot,_ in roster_slots], int(classic_contest["field"]),
-                            classic_contest["payouts"], float(classic_contest["entry"]))
-                    st.session_state["classic_contest_entries_df"] = classic_export_portfolio
-                    st.caption(f"{_classic_assignment_count} assigned contest entries are evaluated jointly, including repeated lineups when needed to fill the entry template. Additional displayed candidates are alternatives, not extra owned entries. The opponent field remains an estimate.")
-                    st.write("### Assigned contest portfolio")
-                    st.dataframe(injury_frame(st, classic_export_portfolio), use_container_width=True, hide_index=True)
-                else:
-                    st.caption("Run CONTEST SIM for field-based portfolio metrics.")
-                render_portfolio_roi_panel(classic_export_portfolio, classic_contest)
-                st.caption("Candidate alternatives — only rows marked Assigned to contest are included in your entry replacement.")
-                st.dataframe(injury_frame(st, classic_top_portfolio), use_container_width=True, hide_index=True)
-
-                lineup_export_download(
-                    label="DOWNLOAD ASSIGNED PORTFOLIO REPORT",
-                    data=classic_export_portfolio.to_csv(index=False).encode("utf-8"),
-                    file_name="DraftKings_Classic_Assigned_Portfolio.csv",
-                    mime="text/csv",
-                    key="dk_classic_assigned_report",
-                    on_click="ignore"
-                )
-
-                classic_results = remove_out_players_from_lineups(
-                    classic_results, ["QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "FLEX", "DST"], "DraftKings Classic"
-                )
-                st.session_state["classic_lineups"] = classic_results
-                id_column = "DK_ID" if "DK_ID" in classic_pool.columns else None
-                if id_column:
-                    ids = dict(zip(classic_pool["Name"], classic_pool[id_column].astype(str)))
-                    export_slots = ["QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "FLEX", "DST"]
-                    export_data = []
-                    missing = []
-                    for _, lineup in classic_export_portfolio.iterrows():
-                        row_ids = []
-                        for slot in export_slots:
-                            player_name = lineup[slot]
-                            player_id = ids.get(player_name, "")
-                            if not player_id or player_id.lower() == "nan":
-                                missing.append(player_name)
-                            row_ids.append(player_id)
-                        export_data.append(row_ids)
-                    if missing:
-                        st.warning("Some player IDs are missing. Upload the DraftKings lineup template to enable export.")
-                    else:
-                        # Keep the official DraftKings entry upload separate from a basic lineup export.
-                        dk_upload_columns = ["QB", "RB", "RB", "WR", "WR", "WR", "TE", "FLEX", "DST"]
-                        lineup_ids_df = pd.DataFrame(export_data, columns=dk_upload_columns)
-                        render_entry_export_header("DraftKings")
-                        has_entry_template = (
-                            entry_file is not None
-                            and selected_contest_id
-                            and "entry_df" in locals()
-                            and isinstance(entry_df, pd.DataFrame)
-                            and not entry_df.empty
+                    # Classic portfolio controls match the larger portfolio selector used by other formats.
+                    st.divider()
+                    st.write("## My lineups")
+                    st.caption("Browse up to 5,000 candidates. The assigned portfolio below fills your reserved contest entries and is the source for both downloads.")
+                    classic_portfolio_source = st.session_state.get("classic_contest_comparison_df") if st.session_state.get("classic_field_context") == classic_contest_name else None
+                    render_value_leverage_finder(control_display, classic_portfolio_source,
+                        st.session_state.get("classic_contest_field_df"),
+                        ["QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "FLEX", "DST"], "dk_classic")
+                    if not isinstance(classic_portfolio_source, pd.DataFrame) or classic_portfolio_source.empty:
+                        classic_portfolio_source = classic_results.copy()
+                    # Match the Showdown ranking menu across all formats.
+                    if not all(metric in classic_portfolio_source.columns for metric in PORTFOLIO_METRICS.values()):
+                        classic_portfolio_source = add_field_ranking_metrics(
+                            classic_portfolio_source,
+                            classic_portfolio_source.get("ProjectedPoints", pd.Series(dtype=float)).to_numpy(dtype=float)
                         )
-                        if has_entry_template:
-                            st.caption("FOR EXISTING ENTRIES: Download this file, then go to DraftKings → My Lineups → Edit Entries → Upload CSV. Do not upload this file on the regular Upload Lineups page. Entry IDs and Contest ID are preserved.")
-                            export_df = build_dk_contest_entry_export(
-                                entry_df,
-                                selected_contest_id,
-                                lineup_ids_df,
-                                dk_upload_columns,
-                                "Classic"
-                            )
-                            if export_df is not None:
-                                lineup_export_download(
-                                    label="DOWNLOAD FILE FOR EDIT ENTRIES",
-                                    data=export_df.to_csv(index=False).encode("utf-8"),
-                                    file_name="DraftKings_Classic_Contest_Entries.csv",
-                                    mime="text/csv",
-                                    use_container_width=True,
-                                    key="dk_classic_replace_export",
-                                    on_click="ignore"
-                                )
-                                st.caption("On DraftKings, open My Lineups and choose Edit Entries to upload the downloaded replacement CSV.")
+                    classic_rank_options = list(PORTFOLIO_METRICS.keys())
+                    classic_portfolio_count = st.number_input(
+                        "Number of lineups to show",
+                        min_value=1,
+                        max_value=min(5000, max(1, len(classic_portfolio_source))),
+                        value=min(20, max(1, len(classic_portfolio_source))),
+                        step=1,
+                        key="dk_classic_portfolio_count"
+                    )
+                    classic_rank_label = st.selectbox(
+                        "Rank lineups by",
+                        classic_rank_options,
+                        index=classic_rank_options.index("Top 1%"),
+                        key="dk_classic_portfolio_metric_top1_default_v2"
+                    )
+                    classic_rank_metric = PORTFOLIO_METRICS[classic_rank_label]
+                    from simmah_portfolio_selection import select_portfolio, put_portfolio_first
+                    _classic_assignment_count = max(1, int((st.session_state.get("selected_dk_contest") or {}).get("your_entries") or classic_entry_count))
+                    _classic_slots = [col for col in ["QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "FLEX", "DST"] if col in classic_portfolio_source]
+                    try:
+                        classic_export_portfolio = select_portfolio(classic_portfolio_source, _classic_slots,
+                            _classic_assignment_count, classic_rank_metric, controls=control_map, diversity=portfolio_diversity)
+                    except ValueError as exc:
+                        st.error(str(exc))
+                        workspace_stop(st, _loaded_slate_tabs)
+                    if classic_export_portfolio.attrs.get("effective_auto_cap_pct", 100) > (100 - .4 * portfolio_diversity):
+                        st.warning(f"The candidate pool cannot fill all assigned entries at the preferred exposure cap. Automatic cap increased to {classic_export_portfolio.attrs['effective_auto_cap_pct']}%; your manual exposure limits remain enforced.")
+                    with _tab_lineups:
+                        classic_export_portfolio = render_editor(st, classic_export_portfolio, classic_pool, _classic_slots,
+                            "DraftKings", "Classic", st.session_state.get("selected_dk_contest", {}),
+                            validator=lambda row: full_roster_stack_matches(row, classic_pool, dk_classic_stack_rules, secondary_stacks=dk_secondary_stack_rules))
+                    _classic_unique_entries = classic_export_portfolio.copy()
+                    classic_top_portfolio = put_portfolio_first(classic_portfolio_source, classic_export_portfolio,
+                        _classic_slots).head(int(classic_portfolio_count)).copy()
+                    st.caption(f"Lineup exposure diversity: {portfolio_diversity}%. Preferred player cap: {100 - .4 * portfolio_diversity:.0f}%. Manual limits remain enforced; display count does not change assigned entries.")
+                    st.session_state["classic_contest_entries_df"] = classic_export_portfolio.copy()
+                    classic_top_portfolio["Assigned to contest"] = np.arange(len(classic_top_portfolio)) < len(_classic_unique_entries)
+                    _classic_portfolio_field = st.session_state.get("classic_contest_field_df")
+                    _classic_portfolio_outcomes = st.session_state.get("simulation_df")
+                    if st.session_state.get("classic_field_context") == classic_contest_name and isinstance(_classic_portfolio_field, pd.DataFrame) and not _classic_portfolio_field.empty:
+                        with st.expander("Opponent field diagnostics"):
+                            st.caption("This estimated field determines finish rates and ROI. Construction learning does not validate future ownership or profitability.")
+                            _diagnostic_rows = []
+                            for _label, _frame in [("Opponent field", _classic_portfolio_field), ("Assigned portfolio", classic_export_portfolio)]:
+                                _diagnostic_rows.append({"Group": _label, "Lineups": len(_frame),
+                                    "Mean salary": float(pd.to_numeric(_frame["Salary"], errors="coerce").mean()),
+                                    "Mean simulated points": float(pd.to_numeric(_frame["ProjectedPoints"], errors="coerce").mean())})
+                            st.dataframe(injury_frame(st, pd.DataFrame(_diagnostic_rows)), hide_index=True, use_container_width=True)
+                            workspace_download_button(st,"DOWNLOAD CLASSIC OPPONENT FIELD", _classic_portfolio_field.to_csv(index=False).encode("utf-8"),
+                                "DraftKings_Classic_Opponent_Field.csv", "text/csv", key="classic_field_diagnostics", on_click="ignore")
+                            _ownership_snapshot = st.session_state.get("classic_ownership_snapshot")
+                            if isinstance(_ownership_snapshot, pd.DataFrame) and not _ownership_snapshot.empty:
+                                workspace_download_button(st,"DOWNLOAD OWNERSHIP SNAPSHOT", _ownership_snapshot.to_csv(index=False).encode("utf-8"),
+                                    "DraftKings_Classic_Ownership_Snapshot.csv", "text/csv", key="classic_ownership_snapshot_download", on_click="ignore")
+                            workspace_download_button(st,"DOWNLOAD CLASSIC PLAYER INPUTS", classic_pool.to_csv(index=False).encode("utf-8"),
+                                "DraftKings_Classic_Player_Inputs.csv", "text/csv", key="classic_player_diagnostics", on_click="ignore")
+
+                    if st.session_state.get("classic_field_context") == classic_contest_name and isinstance(_classic_portfolio_field, pd.DataFrame) and not _classic_portfolio_field.empty and isinstance(_classic_portfolio_outcomes, pd.DataFrame):
+                        with st.spinner("Evaluating the selected portfolio together..."):
+                            classic_export_portfolio = evaluate_full_roster_portfolio_cached(
+                                _classic_portfolio_outcomes, classic_export_portfolio, _classic_portfolio_field,
+                                [slot for slot,_ in roster_slots], int(classic_contest["field"]),
+                                classic_contest["payouts"], float(classic_contest["entry"]))
+                        st.session_state["classic_contest_entries_df"] = classic_export_portfolio
+                        st.caption(f"{_classic_assignment_count} assigned contest entries are evaluated jointly, including repeated lineups when needed to fill the entry template. Additional displayed candidates are alternatives, not extra owned entries. The opponent field remains an estimate.")
+                        st.write("### Assigned contest portfolio")
+                        st.dataframe(injury_frame(st, classic_export_portfolio), use_container_width=True, hide_index=True)
+                    else:
+                        st.caption("Run CONTEST SIM for field-based portfolio metrics.")
+                    render_portfolio_roi_panel(classic_export_portfolio, classic_contest)
+                    with _tab_build:
+                        st.caption("Candidate alternatives — only rows marked Assigned to contest are included in your entry replacement.")
+                        st.dataframe(injury_frame(st, classic_top_portfolio), use_container_width=True, hide_index=True)
+
+                    with st.expander("Advanced — portfolio report", expanded=False):
+                        lineup_export_download(
+                            label="DOWNLOAD ASSIGNED PORTFOLIO REPORT",
+                            data=classic_export_portfolio.to_csv(index=False).encode("utf-8"),
+                            file_name="DraftKings_Classic_Assigned_Portfolio.csv",
+                            mime="text/csv",
+                            key="dk_classic_assigned_report",
+                            on_click="ignore"
+                        )
+
+                    classic_results = remove_out_players_from_lineups(
+                        classic_results, ["QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "FLEX", "DST"], "DraftKings Classic"
+                    )
+                    st.session_state["classic_lineups"] = classic_results
+                    id_column = "DK_ID" if "DK_ID" in classic_pool.columns else None
+                    if id_column:
+                        ids = dict(zip(classic_pool["Name"], classic_pool[id_column].astype(str)))
+                        export_slots = ["QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "FLEX", "DST"]
+                        export_data = []
+                        missing = []
+                        for _, lineup in classic_export_portfolio.iterrows():
+                            row_ids = []
+                            for slot in export_slots:
+                                player_name = lineup[slot]
+                                player_id = ids.get(player_name, "")
+                                if not player_id or player_id.lower() == "nan":
+                                    missing.append(player_name)
+                                row_ids.append(player_id)
+                            export_data.append(row_ids)
+                        if missing:
+                            st.warning("Some player IDs are missing. Upload the DraftKings lineup template to enable export.")
                         else:
-                            st.warning(
-                                "To put these lineups into your existing entries, upload the CSV from DraftKings "
-                                "My Contests / Edit Entries in this app and select the matching contest. "
-                                "Then this app will make one replacement file that preserves Entry IDs and Contest ID. "
-                                "A separate new-lineups export is intentionally disabled."
+                            # Keep the official DraftKings entry upload separate from a basic lineup export.
+                            dk_upload_columns = ["QB", "RB", "RB", "WR", "WR", "WR", "TE", "FLEX", "DST"]
+                            lineup_ids_df = pd.DataFrame(export_data, columns=dk_upload_columns)
+                            render_entry_export_header("DraftKings")
+                            has_entry_template = (
+                                entry_file is not None
+                                and selected_contest_id
+                                and "entry_df" in locals()
+                                and isinstance(entry_df, pd.DataFrame)
+                                and not entry_df.empty
                             )
-                else:
-                    st.info("Upload a DraftKings salary/template CSV containing player IDs to enable lineup export.")
+                            if has_entry_template:
+                                st.caption("FOR EXISTING ENTRIES: Download this file, then go to DraftKings → My Lineups → Edit Entries → Upload CSV. Do not upload this file on the regular Upload Lineups page. Entry IDs and Contest ID are preserved.")
+                                export_df = build_dk_contest_entry_export(
+                                    entry_df,
+                                    selected_contest_id,
+                                    lineup_ids_df,
+                                    dk_upload_columns,
+                                    "Classic"
+                                )
+                                if export_df is not None:
+                                    lineup_export_download(
+                                        label="DOWNLOAD FILE FOR EDIT ENTRIES",
+                                        data=export_df.to_csv(index=False).encode("utf-8"),
+                                        file_name="DraftKings_Classic_Contest_Entries.csv",
+                                        mime="text/csv",
+                                        use_container_width=True,
+                                        key="dk_classic_replace_export",
+                                        on_click="ignore"
+                                    )
+                                    st.caption("On DraftKings, open My Lineups and choose Edit Entries to upload the downloaded replacement CSV.")
+                            else:
+                                st.warning(
+                                    "To put these lineups into your existing entries, upload the CSV from DraftKings "
+                                    "My Contests / Edit Entries in this app and select the matching contest. "
+                                    "Then this app will make one replacement file that preserves Entry IDs and Contest ID. "
+                                    "A separate new-lineups export is intentionally disabled."
+                                )
+                    else:
+                        st.info("Upload a DraftKings salary/template CSV containing player IDs to enable lineup export.")
 
             # Re-render the player table, which appears before the SIM button.
             if classic_run_all:
@@ -8897,543 +8905,531 @@ with _tab_build:
     # PORTFOLIO
     # ============================================
 
-    st.divider()
-    st.write("## Portfolio")
+    with _tab_lineups:
+        st.divider()
+        st.write("## My lineups")
 
-    # Save the generated opponent field before it is lost from this browser session.
-    # Classic uses its own field key; Showdown and other formats use contest_field_df.
-    _saved_field_key = (
-        "classic_contest_field_df"
-        if platform == "DraftKings" and lineup_mode == "Classic"
-        else "fd_full_contest_field_df"
-        if platform == "FanDuel" and lineup_mode == "Full Roster"
-        else "contest_field_df"
-    )
-    _saved_field_df = st.session_state.get(_saved_field_key)
-    _saved_sample_df = st.session_state.get(
-        "classic_contest_field_sample_df"
-        if platform == "DraftKings" and lineup_mode == "Classic"
-        else "fd_full_contest_field_sample_df"
-        if platform == "FanDuel" and lineup_mode == "Full Roster"
-        else "contest_field_sample_df"
-    )
-    if isinstance(_saved_field_df, pd.DataFrame) and not _saved_field_df.empty:
-        st.write("### Save Simulated Opponent Lineups")
-        st.caption(
-            "Download these estimated opponent lineups now so you can compare them "
-            "with your actual contest results later. The field is an estimate, not "
-            "the actual lineups submitted by other DraftKings players."
+        # Save the generated opponent field before it is lost from this browser session.
+        # Classic uses its own field key; Showdown and other formats use contest_field_df.
+        _saved_field_key = (
+            "classic_contest_field_df"
+            if platform == "DraftKings" and lineup_mode == "Classic"
+            else "fd_full_contest_field_df"
+            if platform == "FanDuel" and lineup_mode == "Full Roster"
+            else "contest_field_df"
         )
-        _field_csv = _saved_field_df.to_csv(index=False).encode("utf-8")
-        workspace_download_button(st,
-            "Download Full Simulated Opponent Field (CSV)",
-            data=_field_csv,
-            file_name=f"simulated_opponent_field_{lineup_mode.lower().replace(' ', '_')}.csv",
-            mime="text/csv",
-            key="download_simulated_opponent_field"
-        )
-        if isinstance(_saved_sample_df, pd.DataFrame) and not _saved_sample_df.empty:
-            _sample_csv = _saved_sample_df.to_csv(index=False).encode("utf-8")
-            workspace_download_button(st,
-                "Download Representative Field Sample (CSV)",
-                data=_sample_csv,
-                file_name=f"simulated_opponent_sample_{lineup_mode.lower().replace(' ', '_')}.csv",
-                mime="text/csv",
-                key="download_simulated_opponent_sample"
-            )
+        _saved_field_df = st.session_state.get(_saved_field_key)
 
-    if "contest_results_df" in st.session_state and not (platform == "DraftKings" and lineup_mode == "Classic"):
-
-        results_df = st.session_state["contest_results_df"]
-        if platform == "DraftKings" and lineup_mode == "Showdown":
-            render_value_leverage_finder(control_display, results_df, st.session_state.get("contest_field_df"),
-                ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"], "dk_showdown", "Captain")
-        classic_mode = platform == "DraftKings" and lineup_mode == "Classic"
-        portfolio_lineup_columns = (
-            ["QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "FLEX", "DST"]
-            if classic_mode else ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"]
-        )
-        portfolio_lineup_columns = [col for col in portfolio_lineup_columns if col in results_df.columns]
-        st.caption("Generate 5,000 candidates, then select up to 20 final lineups for your contest.")
-
-        portfolio_limit = min(20, len(results_df))
-        portfolio_count = st.number_input(
-            "Number of lineups to show",
-            min_value=1,
-            max_value=max(1, portfolio_limit),
-            value=max(1, portfolio_limit),
-            step=1,
-            key="portfolio_count"
-        )
-
-        portfolio_metric_label = st.selectbox(
-            "Rank lineups by",
-            list(PORTFOLIO_METRICS.keys()),
-            index=list(PORTFOLIO_METRICS.keys()).index("Top 1%"),
-            key="portfolio_metric_top1_default_v2"
-        )
-
-        portfolio_metric = PORTFOLIO_METRICS[
-            portfolio_metric_label
-        ]
-
-        current_control_signature = tuple(
-            sorted(
-                (
-                    str(name),
-                    float(values.get("Max Exposure %", 100)),
-                    float(values.get("Captain Max %", 100)),
-                    float(values.get("Min Exposure %", 0)),
-                    float(values.get("Captain Min %", 0)),
-                    bool(values.get("Lock", False)),
-                    bool(values.get("Fade", False))
-                )
-                for name, values in control_map.items()
-            )
-        )
-        if (
-            "portfolio_df" not in st.session_state
-            or st.session_state.get("portfolio_count_used") != portfolio_count
-            or st.session_state.get("portfolio_control_signature") != current_control_signature
-            or st.session_state.get("portfolio_metric_used") != portfolio_metric
-            or st.session_state.get("portfolio_exposure_diversity_used") != portfolio_diversity
-        ):
-
-            from simmah_portfolio_selection import select_portfolio
-            try:
-                portfolio_df = select_portfolio(results_df, portfolio_lineup_columns,
-                    int(portfolio_count), portfolio_metric, controls=control_map,
-                    diversity=portfolio_diversity)
-            except ValueError as exc:
-                st.error(str(exc))
-                workspace_stop(st, _loaded_slate_tabs)
-            portfolio_df["Locked"] = False
-            if portfolio_df.attrs.get("effective_auto_cap_pct",100) > (100-.4*portfolio_diversity):
-                st.warning(f"Automatic exposure cap increased to {portfolio_df.attrs['effective_auto_cap_pct']}% to fill entries. Manual limits remain enforced.")
-
-            st.session_state["portfolio_df"] = portfolio_df
-            st.session_state["portfolio_count_used"] = portfolio_count
-            st.session_state["portfolio_metric_used"] = portfolio_metric
-            st.session_state["portfolio_control_signature"] = current_control_signature
-            st.session_state["portfolio_exposure_diversity_used"] = portfolio_diversity
-
-        # Changing the sort option must reorder the existing pool, not select a new one.
-        # This keeps the exact same lineups while letting the user inspect a different ranking.
-        portfolio_df = st.session_state["portfolio_df"].copy()
-        # Keep saved/restored portfolio rows mathematically consistent too.
-        if "WinRate" in portfolio_df.columns and "Top1" in portfolio_df.columns:
-            portfolio_df["WinRate"] = np.minimum(
-                pd.to_numeric(portfolio_df["WinRate"], errors="coerce").fillna(0.0),
-                pd.to_numeric(portfolio_df["Top1"], errors="coerce").fillna(0.0),
-            )
-        if portfolio_metric in portfolio_df.columns:
-            portfolio_df = portfolio_df.sort_values(
-                portfolio_metric, ascending=False, kind="stable"
-            ).reset_index(drop=True)
-        st.session_state["portfolio_df"] = portfolio_df.copy()
-        st.session_state["portfolio_metric_used"] = portfolio_metric
-        with _tab_lineups:
-            portfolio_df = render_editor(st, portfolio_df, players_df, portfolio_lineup_columns,
-                "DraftKings", "Showdown", st.session_state.get("selected_dk_contest", {}),
-                validator=single_stack_validator(st, "DraftKings", "Showdown", full_roster_stack_lookup(players_df)))
-        portfolio_df = add_lineup_field_ownership(portfolio_df)
-
-        # Add each lineup's total salary to the portfolio display and export.
-        if classic_mode:
-            portfolio_df["Salary"] = portfolio_df.apply(
-                lambda row: int(sum(salary_map.get(str(row.get(col, "")), 0) for col in portfolio_lineup_columns)),
-                axis=1
-            )
-        else:
-            portfolio_df["Salary"] = portfolio_df.apply(
-                lambda row: int(
-                    captain_salary_map.get(str(row.get("Captain", "")), 0)
-                    + sum(salary_map.get(str(row.get(col, "")), 0) for col in ["Flex1", "Flex2", "Flex3", "Flex4", "Flex5"])
-                ),
-                axis=1
-            )
-        st.session_state["portfolio_df"] = portfolio_df
-
-        # Show each rostered player's average score across the player simulations.
-        # For the Showdown captain, apply the 1.5x scoring multiplier.
-        sim_scores = st.session_state.get("simulation_df")
-        if isinstance(sim_scores, pd.DataFrame) and not sim_scores.empty:
-            sim_player_means = sim_scores.mean(axis=0, numeric_only=True).to_dict()
-            for slot in portfolio_lineup_columns:
-                if slot not in portfolio_df.columns:
-                    continue
-                multiplier = 1.5 if slot == "Captain" else 1.0
-                score_col = slot + " Sim Pts"
-                portfolio_df[score_col] = portfolio_df[slot].map(
-                    lambda player: round(float(sim_player_means.get(str(player), 0.0)) * multiplier, 2)
-                )
-            sim_point_columns = [
-                slot + " Sim Pts"
-                for slot in portfolio_lineup_columns
-                if slot + " Sim Pts" in portfolio_df.columns
-            ]
-            portfolio_df["Total Sim Pts"] = portfolio_df[sim_point_columns].apply(
-                pd.to_numeric, errors="coerce"
-            ).sum(axis=1).round(2)
-            st.session_state["portfolio_df"] = portfolio_df
-
-        st.write(
-            f"Portfolio: {len(portfolio_df)} lineups"
-        )
-        if "Lineup Ownership Score (%)" in portfolio_df.columns:
-            st.caption("Lineup Ownership Score is the sum of each player's simulated ownership in the contest field. Lower scores generally mean a less popular lineup; this is a score, not the chance the exact lineup appears.")
-
-        # Add the selected contest entry fee beside each lineup when available.
-        selected_contest_for_portfolio = st.session_state.get("selected_dk_contest", {})
-        _portfolio_entry_fee = pd.to_numeric(
-            selected_contest_for_portfolio.get("entry_fee"), errors="coerce"
-        )
-        if pd.notna(_portfolio_entry_fee) and float(_portfolio_entry_fee) >= 0:
-            portfolio_df["Entry Fee ($)"] = float(_portfolio_entry_fee)
-
-        # Score the selected portfolio jointly. Each simulation compares every selected
-        # entry with the sampled opponent field AND with the user's other entries.
-        # This avoids simply adding independent per-lineup estimates that ignore
-        # portfolio overlap and ties among the user's own entries.
-        if pd.notna(_portfolio_entry_fee):
-            _portfolio_lineup_count = len(portfolio_df)
-            _portfolio_total_fees = _portfolio_lineup_count * float(_portfolio_entry_fee)
-            _portfolio_prize_schedule = st.session_state.get("contest_payout_schedule")
-            _portfolio_contest_id = str(st.session_state.get("selected_dk_contest", {}).get("id", ""))
-            _portfolio_payout_is_valid = (
-                bool(_portfolio_contest_id)
-                and str(st.session_state.get("contest_payout_contest_id", "")) == _portfolio_contest_id
-                and isinstance(_portfolio_prize_schedule, np.ndarray)
-                and len(_portfolio_prize_schedule) > 0
-            )
-            if _portfolio_payout_is_valid and _portfolio_lineup_count > 0:
-                _portfolio_slot_indices = np.array([
-                    [player_index[str(row[col])] for col in lineup_cols]
-                    for _, row in portfolio_df.iterrows()
-                ], dtype=np.int16)
-                _portfolio_prize_totals = np.zeros(_portfolio_lineup_count, dtype=np.float64)
-                _portfolio_batch_size = 128
-                _portfolio_full_size = int(max(2, estimated_full_field_size))
-                _portfolio_rank_axis = np.arange(1, len(_portfolio_prize_schedule) + 1, dtype=np.int64)
-                _portfolio_rank_prizes = np.where(
-                    _portfolio_rank_axis <= _portfolio_full_size,
-                    _portfolio_prize_schedule,
-                    0.0,
-                )
-                _portfolio_cumulative_prizes = np.concatenate((
-                    [0.0], np.cumsum(_portfolio_rank_prizes, dtype=np.float64)
-                ))
-                _field_cache_owner, _portfolio_cached_field = showdown_sorted_field_cached(
-                    simulation_values, contest_idx, scoring_multiplier, holdout_start, n_sims)
-                for _portfolio_batch_start in range(holdout_start, n_sims, _portfolio_batch_size):
-                    _portfolio_batch_end = min(_portfolio_batch_start + _portfolio_batch_size, n_sims)
-                    _portfolio_values = simulation_values[_portfolio_batch_start:_portfolio_batch_end]
-                    _portfolio_scores = _portfolio_values[:, _portfolio_slot_indices].sum(axis=2)
-                    if scoring_multiplier != 1.0:
-                        _portfolio_scores += (
-                            _portfolio_values[:, _portfolio_slot_indices[:, 0]]
-                            * (scoring_multiplier - 1.0)
-                        )
-                    # Field scores are unchanged when exposure diversity changes.
-                    _portfolio_sorted_field = _portfolio_cached_field[
-                        _portfolio_batch_start-holdout_start:_portfolio_batch_end-holdout_start]
-                    _portfolio_batch_count = _portfolio_batch_end - _portfolio_batch_start
-                    _portfolio_sim_rows = np.arange(_portfolio_batch_count)[:, None]
-
-                    # Right insertion point = number of field scores <= each user lineup.
-                    _portfolio_low = np.zeros(
-                        (_portfolio_batch_count, _portfolio_lineup_count), dtype=np.int32
-                    )
-                    _portfolio_high = np.full_like(_portfolio_low, total_field)
-                    while np.any(_portfolio_low < _portfolio_high):
-                        _active = _portfolio_low < _portfolio_high
-                        _mid = (_portfolio_low + _portfolio_high) // 2
-                        _mid_values = _portfolio_sorted_field[_portfolio_sim_rows, np.minimum(_mid, total_field - 1)]
-                        _move_right = (_mid_values <= _portfolio_scores) & _active
-                        _move_left = (_mid_values > _portfolio_scores) & _active
-                        _portfolio_low = np.where(_move_right, _mid + 1, _portfolio_low)
-                        _portfolio_high = np.where(_move_left, _mid, _portfolio_high)
-
-                    # Left insertion point = number of field scores strictly below each lineup.
-                    _portfolio_left = np.zeros_like(_portfolio_low)
-                    _portfolio_left_high = np.full_like(_portfolio_left, total_field)
-                    while np.any(_portfolio_left < _portfolio_left_high):
-                        _active_left = _portfolio_left < _portfolio_left_high
-                        _mid_left = (_portfolio_left + _portfolio_left_high) // 2
-                        _mid_left_values = _portfolio_sorted_field[
-                            _portfolio_sim_rows, np.minimum(_mid_left, total_field - 1)
-                        ]
-                        _move_right_left = (_mid_left_values < _portfolio_scores) & _active_left
-                        _move_left_left = (_mid_left_values >= _portfolio_scores) & _active_left
-                        _portfolio_left = np.where(_move_right_left, _mid_left + 1, _portfolio_left)
-                        _portfolio_left_high = np.where(_move_left_left, _mid_left, _portfolio_left_high)
-
-                    _greater_field = total_field - _portfolio_low
-                    _equal_field = _portfolio_low - _portfolio_left
-                    # Compare the user's small portfolio internally; this matrix is only
-                    # entries-by-entries, not opponents-by-entries.
-                    _greater_own = np.sum(
-                        _portfolio_scores[:, None, :] > _portfolio_scores[:, :, None], axis=2
-                    )
-                    _equal_own = np.sum(
-                        _portfolio_scores[:, None, :] == _portfolio_scores[:, :, None], axis=2
-                    ) - 1
-                    _sampled_greater = _greater_field + _greater_own
-                    _sampled_ties = _equal_field + _equal_own
-                    _rank_fraction = (_sampled_greater + 0.5 * _sampled_ties + 1.0) / (total_field + 1.0)
-                    _estimated_ranks = np.clip(
-                        1.0 + _rank_fraction * (_portfolio_full_size - 1),
-                        1.0,
-                        float(_portfolio_full_size),
-                    )
-                    _estimated_tie_sizes = np.maximum(
-                        1,
-                        np.rint(
-                            (_sampled_ties + 1.0) / (total_field + _portfolio_lineup_count + 1.0)
-                            * _portfolio_full_size
-                        ).astype(np.int64),
-                    )
-                    _tie_start = np.maximum(
-                        1,
-                        np.floor(_estimated_ranks - (_estimated_tie_sizes - 1) / 2.0).astype(np.int64),
-                    )
-                    _tie_end = np.minimum(
-                        _portfolio_full_size,
-                        _tie_start + _estimated_tie_sizes - 1,
-                    )
-                    _safe_start = np.clip(_tie_start - 1, 0, len(_portfolio_cumulative_prizes) - 1)
-                    _safe_end = np.clip(_tie_end, 0, len(_portfolio_cumulative_prizes) - 1)
-                    _tie_prize_sum = _portfolio_cumulative_prizes[_safe_end] - _portfolio_cumulative_prizes[_safe_start]
-                    _portfolio_prize_totals += np.sum(
-                        np.divide(
-                            _tie_prize_sum,
-                            _estimated_tie_sizes,
-                            out=np.zeros_like(_tie_prize_sum, dtype=np.float64),
-                            where=_estimated_tie_sizes > 0,
-                        ),
-                        axis=0,
-                    )
-                portfolio_df["Expected Prize ($)"] = _portfolio_prize_totals / holdout_n_sims
-                portfolio_df["Expected Net ($)"] = portfolio_df["Expected Prize ($)"] - float(_portfolio_entry_fee)
-                portfolio_df["Expected ROI (%)"] = np.where(
-                    float(_portfolio_entry_fee) > 0,
-                    portfolio_df["Expected Net ($)"] / float(_portfolio_entry_fee) * 100.0,
-                    np.nan,
-                )
-                st.session_state["portfolio_df"] = portfolio_df
-                _portfolio_total_prizes = float(_portfolio_prize_totals.sum() / holdout_n_sims)
-                _portfolio_expected_net = _portfolio_total_prizes - _portfolio_total_fees
-                _portfolio_expected_roi = (
-                    _portfolio_expected_net / _portfolio_total_fees * 100.0
-                    if _portfolio_total_fees > 0 else np.nan
-                )
+        if isinstance(_saved_field_df, pd.DataFrame) and not _saved_field_df.empty:
+            with st.expander("Advanced — opponent field export", expanded=False):
+                st.write("### Save Simulated Opponent Lineups")
                 st.caption(
-                    "Holdout portfolio estimate: lineups are selected using one half of the simulations, then "
-                    "ROI is measured on the untouched second half. Entries are scored together and ties are split. "
-                    "Full-field ranks and winnings remain estimates."
+                    "Download these estimated opponent lineups now so you can compare them "
+                    "with your actual contest results later. The field is an estimate, not "
+                    "the actual lineups submitted by other DraftKings players."
+                )
+                _field_csv = _saved_field_df.to_csv(index=False).encode("utf-8")
+                workspace_download_button(st,
+                    "Download Full Simulated Opponent Field (CSV)",
+                    data=_field_csv,
+                    file_name=f"simulated_opponent_field_{lineup_mode.lower().replace(' ', '_')}.csv",
+                    mime="text/csv",
+                    key="download_simulated_opponent_field"
+                )
+
+        if "contest_results_df" in st.session_state and not (platform == "DraftKings" and lineup_mode == "Classic"):
+
+            results_df = st.session_state["contest_results_df"]
+            if platform == "DraftKings" and lineup_mode == "Showdown":
+                render_value_leverage_finder(control_display, results_df, st.session_state.get("contest_field_df"),
+                    ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"], "dk_showdown", "Captain")
+            classic_mode = platform == "DraftKings" and lineup_mode == "Classic"
+            portfolio_lineup_columns = (
+                ["QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "FLEX", "DST"]
+                if classic_mode else ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"]
+            )
+            portfolio_lineup_columns = [col for col in portfolio_lineup_columns if col in results_df.columns]
+            st.caption("Generate 5,000 candidates, then select up to 20 final lineups for your contest.")
+
+            portfolio_limit = min(20, len(results_df))
+            portfolio_count = st.number_input(
+                "Number of lineups to show",
+                min_value=1,
+                max_value=max(1, portfolio_limit),
+                value=max(1, portfolio_limit),
+                step=1,
+                key="portfolio_count"
+            )
+
+            portfolio_metric_label = st.selectbox(
+                "Rank lineups by",
+                list(PORTFOLIO_METRICS.keys()),
+                index=list(PORTFOLIO_METRICS.keys()).index("Top 1%"),
+                key="portfolio_metric_top1_default_v2"
+            )
+
+            portfolio_metric = PORTFOLIO_METRICS[
+                portfolio_metric_label
+            ]
+
+            current_control_signature = tuple(
+                sorted(
+                    (
+                        str(name),
+                        float(values.get("Max Exposure %", 100)),
+                        float(values.get("Captain Max %", 100)),
+                        float(values.get("Min Exposure %", 0)),
+                        float(values.get("Captain Min %", 0)),
+                        bool(values.get("Lock", False)),
+                        bool(values.get("Fade", False))
+                    )
+                    for name, values in control_map.items()
+                )
+            )
+            if (
+                "portfolio_df" not in st.session_state
+                or st.session_state.get("portfolio_count_used") != portfolio_count
+                or st.session_state.get("portfolio_control_signature") != current_control_signature
+                or st.session_state.get("portfolio_metric_used") != portfolio_metric
+                or st.session_state.get("portfolio_exposure_diversity_used") != portfolio_diversity
+            ):
+
+                from simmah_portfolio_selection import select_portfolio
+                try:
+                    portfolio_df = select_portfolio(results_df, portfolio_lineup_columns,
+                        int(portfolio_count), portfolio_metric, controls=control_map,
+                        diversity=portfolio_diversity)
+                except ValueError as exc:
+                    st.error(str(exc))
+                    workspace_stop(st, _loaded_slate_tabs)
+                portfolio_df["Locked"] = False
+                if portfolio_df.attrs.get("effective_auto_cap_pct",100) > (100-.4*portfolio_diversity):
+                    st.warning(f"Automatic exposure cap increased to {portfolio_df.attrs['effective_auto_cap_pct']}% to fill entries. Manual limits remain enforced.")
+
+                st.session_state["portfolio_df"] = portfolio_df
+                st.session_state["portfolio_count_used"] = portfolio_count
+                st.session_state["portfolio_metric_used"] = portfolio_metric
+                st.session_state["portfolio_control_signature"] = current_control_signature
+                st.session_state["portfolio_exposure_diversity_used"] = portfolio_diversity
+
+            # Changing the sort option must reorder the existing pool, not select a new one.
+            # This keeps the exact same lineups while letting the user inspect a different ranking.
+            portfolio_df = st.session_state["portfolio_df"].copy()
+            # Keep saved/restored portfolio rows mathematically consistent too.
+            if "WinRate" in portfolio_df.columns and "Top1" in portfolio_df.columns:
+                portfolio_df["WinRate"] = np.minimum(
+                    pd.to_numeric(portfolio_df["WinRate"], errors="coerce").fillna(0.0),
+                    pd.to_numeric(portfolio_df["Top1"], errors="coerce").fillna(0.0),
+                )
+            if portfolio_metric in portfolio_df.columns:
+                portfolio_df = portfolio_df.sort_values(
+                    portfolio_metric, ascending=False, kind="stable"
+                ).reset_index(drop=True)
+            st.session_state["portfolio_df"] = portfolio_df.copy()
+            st.session_state["portfolio_metric_used"] = portfolio_metric
+            with _tab_lineups:
+                portfolio_df = render_editor(st, portfolio_df, players_df, portfolio_lineup_columns,
+                    "DraftKings", "Showdown", st.session_state.get("selected_dk_contest", {}),
+                    validator=single_stack_validator(st, "DraftKings", "Showdown", full_roster_stack_lookup(players_df)))
+            portfolio_df = add_lineup_field_ownership(portfolio_df)
+
+            # Add each lineup's total salary to the portfolio display and export.
+            if classic_mode:
+                portfolio_df["Salary"] = portfolio_df.apply(
+                    lambda row: int(sum(salary_map.get(str(row.get(col, "")), 0) for col in portfolio_lineup_columns)),
+                    axis=1
                 )
             else:
-                st.info(
-                    "Joint portfolio winnings are not available because a payout schedule has not been confirmed "
-                    "for the selected contest. Upload or select the correct contest payout table to calculate ROI."
+                portfolio_df["Salary"] = portfolio_df.apply(
+                    lambda row: int(
+                        captain_salary_map.get(str(row.get("Captain", "")), 0)
+                        + sum(salary_map.get(str(row.get(col, "")), 0) for col in ["Flex1", "Flex2", "Flex3", "Flex4", "Flex5"])
+                    ),
+                    axis=1
+                )
+            st.session_state["portfolio_df"] = portfolio_df
+
+            # Show each rostered player's average score across the player simulations.
+            # For the Showdown captain, apply the 1.5x scoring multiplier.
+            sim_scores = st.session_state.get("simulation_df")
+            if isinstance(sim_scores, pd.DataFrame) and not sim_scores.empty:
+                sim_player_means = sim_scores.mean(axis=0, numeric_only=True).to_dict()
+                for slot in portfolio_lineup_columns:
+                    if slot not in portfolio_df.columns:
+                        continue
+                    multiplier = 1.5 if slot == "Captain" else 1.0
+                    score_col = slot + " Sim Pts"
+                    portfolio_df[score_col] = portfolio_df[slot].map(
+                        lambda player: round(float(sim_player_means.get(str(player), 0.0)) * multiplier, 2)
+                    )
+                sim_point_columns = [
+                    slot + " Sim Pts"
+                    for slot in portfolio_lineup_columns
+                    if slot + " Sim Pts" in portfolio_df.columns
+                ]
+                portfolio_df["Total Sim Pts"] = portfolio_df[sim_point_columns].apply(
+                    pd.to_numeric, errors="coerce"
+                ).sum(axis=1).round(2)
+                st.session_state["portfolio_df"] = portfolio_df
+
+            st.write(
+                f"Portfolio: {len(portfolio_df)} lineups"
+            )
+            if "Lineup Ownership Score (%)" in portfolio_df.columns:
+                st.caption("Lineup Ownership Score is the sum of each player's simulated ownership in the contest field. Lower scores generally mean a less popular lineup; this is a score, not the chance the exact lineup appears.")
+
+            # Add the selected contest entry fee beside each lineup when available.
+            selected_contest_for_portfolio = st.session_state.get("selected_dk_contest", {})
+            _portfolio_entry_fee = pd.to_numeric(
+                selected_contest_for_portfolio.get("entry_fee"), errors="coerce"
+            )
+            if pd.notna(_portfolio_entry_fee) and float(_portfolio_entry_fee) >= 0:
+                portfolio_df["Entry Fee ($)"] = float(_portfolio_entry_fee)
+
+            # Score the selected portfolio jointly. Each simulation compares every selected
+            # entry with the sampled opponent field AND with the user's other entries.
+            # This avoids simply adding independent per-lineup estimates that ignore
+            # portfolio overlap and ties among the user's own entries.
+            if pd.notna(_portfolio_entry_fee):
+                _portfolio_lineup_count = len(portfolio_df)
+                _portfolio_total_fees = _portfolio_lineup_count * float(_portfolio_entry_fee)
+                _portfolio_prize_schedule = st.session_state.get("contest_payout_schedule")
+                _portfolio_contest_id = str(st.session_state.get("selected_dk_contest", {}).get("id", ""))
+                _portfolio_payout_is_valid = (
+                    bool(_portfolio_contest_id)
+                    and str(st.session_state.get("contest_payout_contest_id", "")) == _portfolio_contest_id
+                    and isinstance(_portfolio_prize_schedule, np.ndarray)
+                    and len(_portfolio_prize_schedule) > 0
+                )
+                if _portfolio_payout_is_valid and _portfolio_lineup_count > 0:
+                    _portfolio_slot_indices = np.array([
+                        [player_index[str(row[col])] for col in lineup_cols]
+                        for _, row in portfolio_df.iterrows()
+                    ], dtype=np.int16)
+                    _portfolio_prize_totals = np.zeros(_portfolio_lineup_count, dtype=np.float64)
+                    _portfolio_batch_size = 128
+                    _portfolio_full_size = int(max(2, estimated_full_field_size))
+                    _portfolio_rank_axis = np.arange(1, len(_portfolio_prize_schedule) + 1, dtype=np.int64)
+                    _portfolio_rank_prizes = np.where(
+                        _portfolio_rank_axis <= _portfolio_full_size,
+                        _portfolio_prize_schedule,
+                        0.0,
+                    )
+                    _portfolio_cumulative_prizes = np.concatenate((
+                        [0.0], np.cumsum(_portfolio_rank_prizes, dtype=np.float64)
+                    ))
+                    _field_cache_owner, _portfolio_cached_field = showdown_sorted_field_cached(
+                        simulation_values, contest_idx, scoring_multiplier, holdout_start, n_sims)
+                    for _portfolio_batch_start in range(holdout_start, n_sims, _portfolio_batch_size):
+                        _portfolio_batch_end = min(_portfolio_batch_start + _portfolio_batch_size, n_sims)
+                        _portfolio_values = simulation_values[_portfolio_batch_start:_portfolio_batch_end]
+                        _portfolio_scores = _portfolio_values[:, _portfolio_slot_indices].sum(axis=2)
+                        if scoring_multiplier != 1.0:
+                            _portfolio_scores += (
+                                _portfolio_values[:, _portfolio_slot_indices[:, 0]]
+                                * (scoring_multiplier - 1.0)
+                            )
+                        # Field scores are unchanged when exposure diversity changes.
+                        _portfolio_sorted_field = _portfolio_cached_field[
+                            _portfolio_batch_start-holdout_start:_portfolio_batch_end-holdout_start]
+                        _portfolio_batch_count = _portfolio_batch_end - _portfolio_batch_start
+                        _portfolio_sim_rows = np.arange(_portfolio_batch_count)[:, None]
+
+                        # Right insertion point = number of field scores <= each user lineup.
+                        _portfolio_low = np.zeros(
+                            (_portfolio_batch_count, _portfolio_lineup_count), dtype=np.int32
+                        )
+                        _portfolio_high = np.full_like(_portfolio_low, total_field)
+                        while np.any(_portfolio_low < _portfolio_high):
+                            _active = _portfolio_low < _portfolio_high
+                            _mid = (_portfolio_low + _portfolio_high) // 2
+                            _mid_values = _portfolio_sorted_field[_portfolio_sim_rows, np.minimum(_mid, total_field - 1)]
+                            _move_right = (_mid_values <= _portfolio_scores) & _active
+                            _move_left = (_mid_values > _portfolio_scores) & _active
+                            _portfolio_low = np.where(_move_right, _mid + 1, _portfolio_low)
+                            _portfolio_high = np.where(_move_left, _mid, _portfolio_high)
+
+                        # Left insertion point = number of field scores strictly below each lineup.
+                        _portfolio_left = np.zeros_like(_portfolio_low)
+                        _portfolio_left_high = np.full_like(_portfolio_left, total_field)
+                        while np.any(_portfolio_left < _portfolio_left_high):
+                            _active_left = _portfolio_left < _portfolio_left_high
+                            _mid_left = (_portfolio_left + _portfolio_left_high) // 2
+                            _mid_left_values = _portfolio_sorted_field[
+                                _portfolio_sim_rows, np.minimum(_mid_left, total_field - 1)
+                            ]
+                            _move_right_left = (_mid_left_values < _portfolio_scores) & _active_left
+                            _move_left_left = (_mid_left_values >= _portfolio_scores) & _active_left
+                            _portfolio_left = np.where(_move_right_left, _mid_left + 1, _portfolio_left)
+                            _portfolio_left_high = np.where(_move_left_left, _mid_left, _portfolio_left_high)
+
+                        _greater_field = total_field - _portfolio_low
+                        _equal_field = _portfolio_low - _portfolio_left
+                        # Compare the user's small portfolio internally; this matrix is only
+                        # entries-by-entries, not opponents-by-entries.
+                        _greater_own = np.sum(
+                            _portfolio_scores[:, None, :] > _portfolio_scores[:, :, None], axis=2
+                        )
+                        _equal_own = np.sum(
+                            _portfolio_scores[:, None, :] == _portfolio_scores[:, :, None], axis=2
+                        ) - 1
+                        _sampled_greater = _greater_field + _greater_own
+                        _sampled_ties = _equal_field + _equal_own
+                        _rank_fraction = (_sampled_greater + 0.5 * _sampled_ties + 1.0) / (total_field + 1.0)
+                        _estimated_ranks = np.clip(
+                            1.0 + _rank_fraction * (_portfolio_full_size - 1),
+                            1.0,
+                            float(_portfolio_full_size),
+                        )
+                        _estimated_tie_sizes = np.maximum(
+                            1,
+                            np.rint(
+                                (_sampled_ties + 1.0) / (total_field + _portfolio_lineup_count + 1.0)
+                                * _portfolio_full_size
+                            ).astype(np.int64),
+                        )
+                        _tie_start = np.maximum(
+                            1,
+                            np.floor(_estimated_ranks - (_estimated_tie_sizes - 1) / 2.0).astype(np.int64),
+                        )
+                        _tie_end = np.minimum(
+                            _portfolio_full_size,
+                            _tie_start + _estimated_tie_sizes - 1,
+                        )
+                        _safe_start = np.clip(_tie_start - 1, 0, len(_portfolio_cumulative_prizes) - 1)
+                        _safe_end = np.clip(_tie_end, 0, len(_portfolio_cumulative_prizes) - 1)
+                        _tie_prize_sum = _portfolio_cumulative_prizes[_safe_end] - _portfolio_cumulative_prizes[_safe_start]
+                        _portfolio_prize_totals += np.sum(
+                            np.divide(
+                                _tie_prize_sum,
+                                _estimated_tie_sizes,
+                                out=np.zeros_like(_tie_prize_sum, dtype=np.float64),
+                                where=_estimated_tie_sizes > 0,
+                            ),
+                            axis=0,
+                        )
+                    portfolio_df["Expected Prize ($)"] = _portfolio_prize_totals / holdout_n_sims
+                    portfolio_df["Expected Net ($)"] = portfolio_df["Expected Prize ($)"] - float(_portfolio_entry_fee)
+                    portfolio_df["Expected ROI (%)"] = np.where(
+                        float(_portfolio_entry_fee) > 0,
+                        portfolio_df["Expected Net ($)"] / float(_portfolio_entry_fee) * 100.0,
+                        np.nan,
+                    )
+                    st.session_state["portfolio_df"] = portfolio_df
+                    _portfolio_total_prizes = float(_portfolio_prize_totals.sum() / holdout_n_sims)
+                    _portfolio_expected_net = _portfolio_total_prizes - _portfolio_total_fees
+                    _portfolio_expected_roi = (
+                        _portfolio_expected_net / _portfolio_total_fees * 100.0
+                        if _portfolio_total_fees > 0 else np.nan
+                    )
+                    st.caption(
+                        "Holdout portfolio estimate: lineups are selected using one half of the simulations, then "
+                        "ROI is measured on the untouched second half. Entries are scored together and ties are split. "
+                        "Full-field ranks and winnings remain estimates."
+                    )
+                else:
+                    st.info(
+                        "Joint portfolio winnings are not available because a payout schedule has not been confirmed "
+                        "for the selected contest. Upload or select the correct contest payout table to calculate ROI."
+                    )
+
+            if not classic_mode and "Captain" in portfolio_df.columns:
+                from simmah_duplicates import showdown_opponent_copies
+                portfolio_df = portfolio_df.drop(columns=["Projected Dupes"], errors="ignore")
+                portfolio_df["Simulated Opponent Copies"] = showdown_opponent_copies(
+                    portfolio_df, st.session_state.get("contest_field_df")
                 )
 
-        if not classic_mode and "Captain" in portfolio_df.columns:
-            from simmah_duplicates import showdown_opponent_copies
-            portfolio_df = portfolio_df.drop(columns=["Projected Dupes"], errors="ignore")
-            portfolio_df["Simulated Opponent Copies"] = showdown_opponent_copies(
-                portfolio_df, st.session_state.get("contest_field_df")
+            render_portfolio_roi_panel(portfolio_df, st.session_state.get("selected_dk_contest"))
+            _payout_columns = ["Expected Prize ($)", "Expected Net ($)", "Expected ROI (%)"]
+            if classic_mode:
+                # Show each Classic roster slot beside that player's simulated points,
+                # matching the player-by-player layout used for Showdown.
+                display_columns = []
+                for slot in portfolio_lineup_columns:
+                    display_columns.extend([slot, slot + " Sim Pts"])
+                display_columns.extend([
+                    "Total Sim Pts", "Lineup Ownership Score (%)", "Salary",
+                    "ContestScore", "WinRate", "Top1", "Top5", "Top10", "CashRate",
+                    "AvgPercentile", "Entry Fee ($)", *_payout_columns, "Locked"
+                ])
+            else:
+                display_columns = [
+                    "Captain", "Captain Sim Pts", "Flex1", "Flex1 Sim Pts",
+                    "Flex2", "Flex2 Sim Pts", "Flex3", "Flex3 Sim Pts",
+                    "Flex4", "Flex4 Sim Pts", "Flex5", "Flex5 Sim Pts",
+                    "Total Sim Pts", "Lineup Ownership Score (%)", "Salary", "Simulated Opponent Copies",
+                    "ContestScore", "WinRate", "Top1", "Top5", "Top10", "CashRate",
+                    "AvgPercentile", "Entry Fee ($)", *_payout_columns, "Locked"
+                ]
+
+            display_df = portfolio_df[
+                [c for c in display_columns if c in portfolio_df.columns]
+            ].copy()
+
+            # Show every ranking option as a column in the actual portfolio, not just
+            # the metric currently selected in the ranking dropdown.
+            for col in [
+                "ContestScore",
+                "WinRate",
+                "Top1",
+                "Top5",
+                "Top10",
+                "CashRate"
+            ]:
+                if col in display_df.columns:
+                    display_df[col] = display_df[col] * 100
+
+            display_df = display_df.rename(columns={
+                "ContestScore": "Contest Score",
+                "WinRate": "Win %",
+                "Top1": "Top 1%",
+                "Top5": "Top 5%",
+                "Top10": "Top 10%",
+                "CashRate": "Cash %",
+                "AvgPercentile": "Average Percentile",
+            })
+
+            st.write("### Assigned contest portfolio")
+
+            st.dataframe(
+                injury_frame(st, display_df),
+                use_container_width=True,
+                hide_index=True
             )
 
-        render_portfolio_roi_panel(portfolio_df, st.session_state.get("selected_dk_contest"))
-        _payout_columns = ["Expected Prize ($)", "Expected Net ($)", "Expected ROI (%)"]
-        if classic_mode:
-            # Show each Classic roster slot beside that player's simulated points,
-            # matching the player-by-player layout used for Showdown.
-            display_columns = []
-            for slot in portfolio_lineup_columns:
-                display_columns.extend([slot, slot + " Sim Pts"])
-            display_columns.extend([
-                "Total Sim Pts", "Lineup Ownership Score (%)", "Salary",
-                "ContestScore", "WinRate", "Top1", "Top5", "Top10", "CashRate",
-                "AvgPercentile", "Entry Fee ($)", *_payout_columns, "Locked"
-            ])
-        else:
-            display_columns = [
+            if not classic_mode:
+                st.caption("Simulated Opponent Copies counts matching opponents in the current simulated field, with Captain fixed and FLEX order ignored. It excludes your own entries and is not a forecast of actual contest duplicates.")
+
+            # Final portfolio exposure is shown in the Player Pool table, so no separate table is built here.
+
+            export_columns = [
                 "Captain", "Captain Sim Pts", "Flex1", "Flex1 Sim Pts",
                 "Flex2", "Flex2 Sim Pts", "Flex3", "Flex3 Sim Pts",
                 "Flex4", "Flex4 Sim Pts", "Flex5", "Flex5 Sim Pts",
-                "Total Sim Pts", "Lineup Ownership Score (%)", "Salary", "Simulated Opponent Copies",
-                "ContestScore", "WinRate", "Top1", "Top5", "Top10", "CashRate",
-                "AvgPercentile", "Entry Fee ($)", *_payout_columns, "Locked"
+                "Salary", "Lineup Ownership Score (%)", "Simulated Opponent Copies", "ContestScore", "WinRate", "Top1", "Top5",
+                "Top10", "CashRate", "Entry Fee ($)", "Expected Prize ($)", "Expected Net ($)",
+                "Expected ROI (%)"
             ]
-
-        display_df = portfolio_df[
-            [c for c in display_columns if c in portfolio_df.columns]
-        ].copy()
-
-        # Show every ranking option as a column in the actual portfolio, not just
-        # the metric currently selected in the ranking dropdown.
-        for col in [
-            "ContestScore",
-            "WinRate",
-            "Top1",
-            "Top5",
-            "Top10",
-            "CashRate"
-        ]:
-            if col in display_df.columns:
-                display_df[col] = display_df[col] * 100
-
-        display_df = display_df.rename(columns={
-            "ContestScore": "Contest Score",
-            "WinRate": "Win %",
-            "Top1": "Top 1%",
-            "Top5": "Top 5%",
-            "Top10": "Top 10%",
-            "CashRate": "Cash %",
-            "AvgPercentile": "Average Percentile",
-        })
-
-        st.write("### Assigned contest portfolio")
-
-        st.dataframe(
-            injury_frame(st, display_df),
-            use_container_width=True,
-            hide_index=True
-        )
-
-        if not classic_mode:
-            st.caption("Simulated Opponent Copies counts matching opponents in the current simulated field, with Captain fixed and FLEX order ignored. It excludes your own entries and is not a forecast of actual contest duplicates.")
-
-        # Final portfolio exposure is shown in the Player Pool table, so no separate table is built here.
-
-        export_columns = [
-            "Captain", "Captain Sim Pts", "Flex1", "Flex1 Sim Pts",
-            "Flex2", "Flex2 Sim Pts", "Flex3", "Flex3 Sim Pts",
-            "Flex4", "Flex4 Sim Pts", "Flex5", "Flex5 Sim Pts",
-            "Salary", "Lineup Ownership Score (%)", "Simulated Opponent Copies", "ContestScore", "WinRate", "Top1", "Top5",
-            "Top10", "CashRate", "Entry Fee ($)", "Expected Prize ($)", "Expected Net ($)",
-            "Expected ROI (%)"
-        ]
-        portfolio_df = remove_out_players_from_lineups(
-            portfolio_df,
-            portfolio_lineup_columns,
-            "portfolio export"
-        )
-        st.session_state["portfolio_df"] = portfolio_df
-        portfolio_export_df = portfolio_df[
-            [col for col in export_columns if col in portfolio_df.columns]
-        ].copy()
-
-        # Include the selected contest number/name in analysis exports too.
-        # Keep these metadata columns out of DraftKings roster-upload templates.
-        selected_dk_contest = st.session_state.get("selected_dk_contest", {})
-        if isinstance(selected_dk_contest, dict):
-            contest_id = selected_dk_contest.get("id")
-            contest_name = selected_dk_contest.get("name")
-            if contest_id not in (None, ""):
-                portfolio_export_df.insert(0, "Contest ID", str(contest_id))
-            if contest_name not in (None, ""):
-                insert_at = 1 if "Contest ID" in portfolio_export_df.columns else 0
-                portfolio_export_df.insert(insert_at, "Contest Name", str(contest_name))
-
-        for col in ["WinRate", "Top1", "Top5", "Top10", "CashRate"]:
-            if col in portfolio_export_df.columns:
-                portfolio_export_df[col] = portfolio_export_df[col] * 100
-
-        lineup_export_download(
-            label="DOWNLOAD ASSIGNED PORTFOLIO REPORT",
-            data=portfolio_export_df.to_csv(index=False).encode("utf-8"),
-            file_name="DraftKings_Showdown_Assigned_Portfolio.csv",
-            mime="text/csv",
-            use_container_width=True,
-            on_click="ignore"
-        )
-
-
-    else:
-        st.info(
-            "Run CONTEST SIM before building a portfolio."
-        )
-
-
-    # ============================================
-    # ============================================
-    # DRAFTKINGS SHOWDOWN EXPORT BUTTON
-    # Export the selected final portfolio using CPT and FLEX IDs from the uploaded DK template.
-    with st.container():
-        if platform == "DraftKings" and lineup_mode == "Showdown":
-            render_entry_export_header("DraftKings")
-            export_portfolio = st.session_state.get("portfolio_df")
-            export_portfolio = remove_out_players_from_lineups(
-                export_portfolio, ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"], "DraftKings Showdown export"
+            portfolio_df = remove_out_players_from_lineups(
+                portfolio_df,
+                portfolio_lineup_columns,
+                "portfolio export"
             )
-            if isinstance(export_portfolio, pd.DataFrame):
-                st.session_state["portfolio_df"] = export_portfolio
-            dk_player_ids = st.session_state.get("dk_player_ids", {})
-            if isinstance(export_portfolio, pd.DataFrame) and not export_portfolio.empty:
-                if not dk_player_ids:
-                    st.warning("Upload the DraftKings Showdown lineup template CSV first so the app can get the CPT/FLEX player IDs.")
-                else:
-                    export_rows = []
-                    missing_ids = []
-                    for _, row in export_portfolio.iterrows():
-                        captain = str(row.get("Captain", "")).strip()
-                        flex_players = [str(row.get(f"Flex{i}", "")).strip() for i in range(1, 6)]
-                        captain_id = dk_player_ids.get(captain, {}).get("CPT")
-                        flex_ids = [dk_player_ids.get(player, {}).get("FLEX") for player in flex_players]
-                        if not captain_id:
-                            missing_ids.append(f"{captain} - CPT")
-                        for player, player_id in zip(flex_players, flex_ids):
-                            if not player_id:
-                                missing_ids.append(f"{player} - FLEX")
-                        export_rows.append([captain_id or ""] + [player_id or "" for player_id in flex_ids])
-                    if missing_ids:
-                        st.warning("Some DraftKings CPT/FLEX IDs are missing. Re-upload the correct Showdown template CSV.")
-                        st.write(sorted(set(missing_ids)))
+            st.session_state["portfolio_df"] = portfolio_df
+            portfolio_export_df = portfolio_df[
+                [col for col in export_columns if col in portfolio_df.columns]
+            ].copy()
+
+            # Include the selected contest number/name in analysis exports too.
+            # Keep these metadata columns out of DraftKings roster-upload templates.
+            selected_dk_contest = st.session_state.get("selected_dk_contest", {})
+            if isinstance(selected_dk_contest, dict):
+                contest_id = selected_dk_contest.get("id")
+                contest_name = selected_dk_contest.get("name")
+                if contest_id not in (None, ""):
+                    portfolio_export_df.insert(0, "Contest ID", str(contest_id))
+                if contest_name not in (None, ""):
+                    insert_at = 1 if "Contest ID" in portfolio_export_df.columns else 0
+                    portfolio_export_df.insert(insert_at, "Contest Name", str(contest_name))
+
+            for col in ["WinRate", "Top1", "Top5", "Top10", "CashRate"]:
+                if col in portfolio_export_df.columns:
+                    portfolio_export_df[col] = portfolio_export_df[col] * 100
+
+            with st.expander("Advanced — portfolio report", expanded=False):
+                lineup_export_download(
+                    label="DOWNLOAD ASSIGNED PORTFOLIO REPORT",
+                    data=portfolio_export_df.to_csv(index=False).encode("utf-8"),
+                    file_name="DraftKings_Showdown_Assigned_Portfolio.csv",
+                    mime="text/csv",
+                    use_container_width=True,
+                    on_click="ignore"
+                )
+
+
+        else:
+            st.info(
+                "Run CONTEST SIM before building a portfolio."
+            )
+
+
+        # ============================================
+        # ============================================
+        # DRAFTKINGS SHOWDOWN EXPORT BUTTON
+        # Export the selected final portfolio using CPT and FLEX IDs from the uploaded DK template.
+        with st.container():
+            if platform == "DraftKings" and lineup_mode == "Showdown":
+                render_entry_export_header("DraftKings")
+                export_portfolio = st.session_state.get("portfolio_df")
+                export_portfolio = remove_out_players_from_lineups(
+                    export_portfolio, ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"], "DraftKings Showdown export"
+                )
+                if isinstance(export_portfolio, pd.DataFrame):
+                    st.session_state["portfolio_df"] = export_portfolio
+                dk_player_ids = st.session_state.get("dk_player_ids", {})
+                if isinstance(export_portfolio, pd.DataFrame) and not export_portfolio.empty:
+                    if not dk_player_ids:
+                        st.warning("Upload the DraftKings Showdown lineup template CSV first so the app can get the CPT/FLEX player IDs.")
                     else:
-                        # Keep the official DraftKings entry upload separate from a basic lineup export.
-                        showdown_slots = ["CPT", "FLEX", "FLEX", "FLEX", "FLEX", "FLEX"]
-                        lineup_ids_df = pd.DataFrame(export_rows, columns=showdown_slots)
-                        contest_meta = st.session_state.get("selected_dk_contest", {})
-                        has_entry_template = (
-                            entry_file is not None
-                            and selected_contest_id
-                            and "entry_df" in locals()
-                            and isinstance(entry_df, pd.DataFrame)
-                            and not entry_df.empty
-                        )
-                        if has_entry_template:
-                            st.caption("FOR EXISTING ENTRIES: Download this file, then go to DraftKings → My Lineups → Edit Entries → Upload CSV. Do not upload this file on the regular Upload Lineups page. Entry IDs and Contest ID are preserved.")
-                            export_df = build_dk_contest_entry_export(
-                                entry_df,
-                                selected_contest_id,
-                                lineup_ids_df,
-                                showdown_slots,
-                                "Showdown"
-                            )
-                            if export_df is not None:
-                                lineup_export_download(
-                                    label="DOWNLOAD FILE FOR EDIT ENTRIES",
-                                    data=export_df.to_csv(index=False).encode("utf-8"),
-                                    file_name="DraftKings_Showdown_Contest_Entries.csv",
-                                    mime="text/csv",
-                                    use_container_width=True,
-                                    key="dk_showdown_unified_export",
-                                    on_click="ignore"
-                                )
-                                st.caption("On DraftKings, open My Lineups and choose Edit Entries to upload the downloaded replacement CSV.")
+                        export_rows = []
+                        missing_ids = []
+                        for _, row in export_portfolio.iterrows():
+                            captain = str(row.get("Captain", "")).strip()
+                            flex_players = [str(row.get(f"Flex{i}", "")).strip() for i in range(1, 6)]
+                            captain_id = dk_player_ids.get(captain, {}).get("CPT")
+                            flex_ids = [dk_player_ids.get(player, {}).get("FLEX") for player in flex_players]
+                            if not captain_id:
+                                missing_ids.append(f"{captain} - CPT")
+                            for player, player_id in zip(flex_players, flex_ids):
+                                if not player_id:
+                                    missing_ids.append(f"{player} - FLEX")
+                            export_rows.append([captain_id or ""] + [player_id or "" for player_id in flex_ids])
+                        if missing_ids:
+                            st.warning("Some DraftKings CPT/FLEX IDs are missing. Re-upload the correct Showdown template CSV.")
+                            st.write(sorted(set(missing_ids)))
                         else:
-                            # Always target existing contest entries; don't offer a new-entry upload path.
-                            st.warning(
-                                "To put these lineups into your existing entries, upload the CSV from DraftKings "
-                                "My Contests / Edit Entries in this app and select the matching contest. "
-                                "Then this app will make one replacement file that preserves Entry IDs and Contest ID. "
-                                "A separate new-lineups export is intentionally disabled."
+                            # Keep the official DraftKings entry upload separate from a basic lineup export.
+                            showdown_slots = ["CPT", "FLEX", "FLEX", "FLEX", "FLEX", "FLEX"]
+                            lineup_ids_df = pd.DataFrame(export_rows, columns=showdown_slots)
+                            contest_meta = st.session_state.get("selected_dk_contest", {})
+                            has_entry_template = (
+                                entry_file is not None
+                                and selected_contest_id
+                                and "entry_df" in locals()
+                                and isinstance(entry_df, pd.DataFrame)
+                                and not entry_df.empty
                             )
-            else:
-                st.info("Run CONTEST SIM and build your final portfolio first.")
+                            if has_entry_template:
+                                st.caption("FOR EXISTING ENTRIES: Download this file, then go to DraftKings → My Lineups → Edit Entries → Upload CSV. Do not upload this file on the regular Upload Lineups page. Entry IDs and Contest ID are preserved.")
+                                export_df = build_dk_contest_entry_export(
+                                    entry_df,
+                                    selected_contest_id,
+                                    lineup_ids_df,
+                                    showdown_slots,
+                                    "Showdown"
+                                )
+                                if export_df is not None:
+                                    lineup_export_download(
+                                        label="DOWNLOAD FILE FOR EDIT ENTRIES",
+                                        data=export_df.to_csv(index=False).encode("utf-8"),
+                                        file_name="DraftKings_Showdown_Contest_Entries.csv",
+                                        mime="text/csv",
+                                        use_container_width=True,
+                                        key="dk_showdown_unified_export",
+                                        on_click="ignore"
+                                    )
+                                    st.caption("On DraftKings, open My Lineups and choose Edit Entries to upload the downloaded replacement CSV.")
+                            else:
+                                # Always target existing contest entries; don't offer a new-entry upload path.
+                                st.warning(
+                                    "To put these lineups into your existing entries, upload the CSV from DraftKings "
+                                    "My Contests / Edit Entries in this app and select the matching contest. "
+                                    "Then this app will make one replacement file that preserves Entry IDs and Contest ID. "
+                                    "A separate new-lineups export is intentionally disabled."
+                                )
+                else:
+                    st.info("Run CONTEST SIM and build your final portfolio first.")
 
     # Player Pool appears above the SIM handler, so refresh it after a completed
     # Showdown simulation/build to show the newly generated player attributes.
