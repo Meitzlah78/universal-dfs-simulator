@@ -80,6 +80,11 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
             return
         day = chosen.isoformat()
     slate['date'] = day
+    from simmah_nba_pool_overrides import requested_pool_exclusions
+    pool,_requested_drops=requested_pool_exclusions(pool,day,platform)
+    slate['players']=pool
+    if _requested_drops:
+        with tabs[1]:st.caption('Excluded by request for this slate: '+', '.join(_requested_drops)+'.')
     pool.attrs['slate_date'] = day
     from simmah_nba_projections import slate_date, download_dff, apply_projections, player_key, read_projection_upload, EntriesInProjectionUpload
     _force_refresh=st.session_state.pop('refresh_projections_requested',False)
@@ -267,6 +272,7 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
         st.write(f"{len(pool)} players · {(pool['Injury Status']=='Out').sum()} Out · {(pool['Injury Status']=='Questionable').sum()} Questionable")
     from simmah_nba_ui import render_workspace
     render_workspace(st,slate,uploaded_file,tabs,controls,markets)
+
 
 
 
