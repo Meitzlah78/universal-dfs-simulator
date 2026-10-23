@@ -81,7 +81,7 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
         day = chosen.isoformat()
     slate['date'] = day
     from simmah_nba_pool_overrides import requested_pool_exclusions
-    pool,_requested_drops=requested_pool_exclusions(pool,day,platform)
+    pool,_requested_drops=requested_pool_exclusions(pool,day,platform,restore_rotation=False)
     slate['players']=pool
     if _requested_drops:
         with tabs[1]:st.caption('Excluded by request for this slate: '+', '.join(_requested_drops)+'.')
@@ -168,6 +168,9 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
         try:cached_player_lineups(st,day,_status_pairs,force=True)
         except (ValueError,OSError,KeyError,TypeError):pass
     pool,_shared_status=current_confirmed_pool(st,pool,day,_status_pairs)
+    # Provider application recomputes eligibility; apply the requested fade
+    # again while retaining the player's verified simulation-only rotation.
+    pool,_requested_drops=requested_pool_exclusions(pool,day,platform)
     if _shared_status['stale']:
         with tabs[1]:st.caption('Starting-lineup feed unavailable. Previous same-slate statuses are labeled Last confirmed / Last expected.')
     if pool.attrs.get('saved_game_metadata_restored'):
