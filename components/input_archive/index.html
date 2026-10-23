@@ -1,0 +1,41 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><style>body{margin:0;font:12px system-ui;color:#a9bed1;background:transparent}#status{padding:5px 0}</style></head>
+<body><div id="status">Opening saved-file archive…</div><script>
+'use strict';
+const send=(type,extra={})=>window.parent.postMessage({isStreamlitMessage:true,type,...extra},'*');
+let db,owner,ready=false,busy=false,queued=null,lastSignature='',lastError='',persistent=false;
+const request=r=>new Promise((resolve,reject)=>{r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});
+async function open(){
+ const r=indexedDB.open('simmah-original-inputs-v1',1);
+ r.onupgradeneeded=()=>{r.result.createObjectStore('files',{keyPath:'digest'});r.result.createObjectStore('identity')};
+ db=await request(r);
+ owner=await request(db.transaction('identity').objectStore('identity').get('owner'));
+ if(!owner){owner=crypto.randomUUID().replaceAll('-','');await write('identity',owner,'owner')}
+ if(navigator.storage?.persist){try{persistent=await navigator.storage.persist()}catch(_){}}
+ ready=true;
+}
+function write(store,value,key){return new Promise((resolve,reject)=>{const tx=db.transaction(store,'readwrite');if(key===undefined)tx.objectStore(store).put(value);else tx.objectStore(store).put(value,key);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||Error('Storage write aborted'))})}
+async function hash(data){const bytes=Uint8Array.from(atob(data),c=>c.charCodeAt(0));const h=await crypto.subtle.digest('SHA-256',bytes);return [...new Uint8Array(h)].map(v=>v.toString(16).padStart(2,'0')).join('')}
+window.addEventListener('message',async event=>{
+ if(event.data?.type!=='streamlit:render')return;
+ if(busy){queued=event.data;return}
+ busy=true;
+ try{
+  if(!ready)await open();
+  const args=event.data.args;
+  for(const record of args.records||[]){
+   if(await hash(record.data)!==record.digest)throw Error('Original input failed SHA-256 check');
+   await write('files',record);
+  }
+  const hashes=await request(db.transaction('files').objectStore('files').getAllKeys());
+  const restored=[];
+  for(const digest of args.restore||[]){const row=await request(db.transaction('files').objectStore('files').get(digest));if(row)restored.push(row)}
+  const signature=JSON.stringify([owner,hashes,args.restore||[],persistent]);
+  lastError='';
+  document.getElementById('status').textContent=`${hashes.length} original files retained in this browser. Closing slate tabs keeps these files.`;
+  if(signature!==lastSignature||restored.length){lastSignature=signature;send('streamlit:setComponentValue',{value:{event:crypto.randomUUID(),owner,hashes,restored,persistent},dataType:'json'})}
+ }catch(error){document.getElementById('status').textContent='Browser archive failed: '+error.message;if(lastError!==error.message){lastError=error.message;send('streamlit:setComponentValue',{value:{event:crypto.randomUUID(),error:'Browser archive failed: '+error.message},dataType:'json'})}}
+ finally{busy=false;send('streamlit:setFrameHeight',{height:40});if(queued){const data=queued;queued=null;window.dispatchEvent(new MessageEvent('message',{data}))}}
+});
+send('streamlit:componentReady',{apiVersion:1});send('streamlit:setFrameHeight',{height:40});
+</script></body></html>

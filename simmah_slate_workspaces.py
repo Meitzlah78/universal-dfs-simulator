@@ -1,4 +1,4 @@
-"""Browser-owned loaded slates. JSON only; no entries sent to a shared database."""
+"""Browser-owned slate tabs, with a separate private original-input archive."""
 import base64,csv,gzip,hashlib,io,json,math,uuid
 from pathlib import Path
 from datetime import date,datetime
@@ -119,6 +119,9 @@ def slate_record(upload):
 
 
 def begin_workspaces(st):
+    from simmah_archive_jobs import end_live_build
+    if st.session_state.pop('_slate_archive_live_build',False):
+        end_live_build(st.session_state.get('_slate_archive_build_token',''))
     if st.session_state.pop('_slate_clear_active',False):
         restore(st.session_state,'')
         st.session_state.pop('_slate_active',None)
@@ -139,6 +142,8 @@ def begin_workspaces(st):
 
 def select_upload(st,upload):
     if upload is not None:
+        from simmah_archive_ui import capture_upload
+        capture_upload(st,upload,'primary_slate_upload')
         digest=hashlib.sha256(upload.getvalue()).hexdigest()
         scope=(st.session_state.get('_slate_active',{}).get('id','new'),st.session_state.get('_slate_upload_epoch',0))
         seen=st.session_state.setdefault('_slate_seen_uploads',{})
@@ -165,6 +170,8 @@ def workspace_file_uploader(st,label,*args,**kwargs):
     if get_session_state().is_new_state_value(key):
         del st.session_state[key]
     value=st.file_uploader(label,*args,**kwargs)
+    from simmah_archive_ui import capture_upload
+    capture_upload(st,value,key)
     if kwargs.get('accept_multiple_files'):return value  # History imports remain explicit actions.
     key=str(kwargs.get('key',label));saved=st.session_state.setdefault('_slate_restored_uploads',{})
     seen=st.session_state.setdefault('_slate_widget_seen',{})
@@ -190,7 +197,18 @@ def workspace_button(st,*args,**kwargs):
         from streamlit.runtime.state import get_session_state
         if get_session_state().is_new_state_value(key):
             del st.session_state[key]
-    return st.button(*args,**kwargs)
+    result=st.button(*args,**kwargs)
+    _prioritize_build(st,result,args,kwargs)
+    return result
+
+
+def _prioritize_build(st,pressed,args,kwargs):
+    label=str(args[0] if args else kwargs.get('label','')).upper()
+    if pressed and any(word in label for word in ('BUILD','SIMULAT','RUN SIM')):
+        from simmah_archive_jobs import begin_live_build
+        token=st.session_state.setdefault('_slate_archive_build_token',uuid.uuid4().hex)
+        st.session_state['_slate_archive_live_build']=True
+        begin_live_build(token)
 
 
 
@@ -204,7 +222,9 @@ def workspace_form_submit_button(st,*args,**kwargs):
     from streamlit.runtime.state import get_session_state
     if get_session_state().is_new_state_value(key):
         del st.session_state[key]
-    return st.form_submit_button(*args,**kwargs)
+    result=st.form_submit_button(*args,**kwargs)
+    _prioritize_build(st,result,args,kwargs)
+    return result
 
 
 def workspace_download_button(st,*args,**kwargs):
@@ -285,6 +305,12 @@ def capture(st):
 
 def finish_workspaces(st,host):
     import streamlit.components.v1 as components
+    from simmah_archive_jobs import end_live_build
+    if st.session_state.pop('_slate_archive_live_build',False):
+        end_live_build(st.session_state.get('_slate_archive_build_token',''))
+    from simmah_archive_ui import render_archive
+    with host:
+        render_archive(st)
     current=st.session_state.get('_slate_active')
     blob=capture(st) if current else ''
     if current and st.session_state.get('dfs_format'):current['title']=st.session_state['dfs_format']+' · '+current['name'].replace('.csv','')
@@ -337,6 +363,7 @@ def workspace_stop(st,host):
 def workspace_rerun(st,host):
     finish_workspaces(st,host)
     st.rerun()
+
 
 
 

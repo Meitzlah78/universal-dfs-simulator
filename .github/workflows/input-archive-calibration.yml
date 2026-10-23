@@ -1,0 +1,39 @@
+name: Original input archive and exact calibration
+on:
+  push:
+    paths:
+      - 'simmah_input_archive.py'
+      - 'simmah_archive_ui.py'
+      - 'simmah_archive_jobs.py'
+      - 'simmah_slate_workspaces.py'
+      - 'calibration/**'
+      - 'components/input_archive/**'
+      - 'tests/test_input_archive*'
+      - 'tests/test_nba_canonical_dp.py'
+      - '.github/workflows/input-archive-calibration.yml'
+  pull_request:
+    paths:
+      - 'simmah_*archive*.py'
+      - 'simmah_slate_workspaces.py'
+      - 'calibration/**'
+      - 'components/input_archive/**'
+      - 'tests/test_input_archive*'
+      - 'tests/test_nba_canonical_dp.py'
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: python -m pip install numpy pandas scipy
+      - run: python -m compileall -q dfs_app.py simmah_slate_workspaces.py simmah_input_archive.py simmah_archive_ui.py simmah_archive_jobs.py calibration
+      - run: python -m unittest discover -s tests -p test_input_archive.py -v
+      - run: python -m unittest discover -s tests -p test_nba_canonical_dp.py -v
+      - run: node tests/test_input_archive_component.js

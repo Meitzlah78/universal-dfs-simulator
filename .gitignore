@@ -5,3 +5,8 @@ data/field_history_local.json.lock
 
 # Host-local prepared simulation matrices; never commit player data/cache files.
 data/simulation_cache/
+
+# Private original uploads, per-browser job histories and calibration outputs.
+data/input_archive/
+__pycache__/
+*.pyc
