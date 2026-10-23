@@ -2832,6 +2832,14 @@ def lineup_export_download(*args, **kwargs):
     # Bind copies now: callback execution must not pick up a different slate later.
     kwargs["on_click"] = save_export_checkpoint
     kwargs["args"] = (snapshot.copy(deep=True), copy.deepcopy(metadata), data, name)
+    label=str(kwargs.get('label',args[0] if args else '')).upper()
+    contest_key='selected_fd_contest' if str(selected_format).startswith('FanDuel') else 'selected_dk_contest'
+    contest=st.session_state.get(contest_key) or {}
+    kwargs['export_checkpoint']={
+        'format':selected_format,'contest_id':str(contest.get('id') or metadata.get('contest_id') or ''),
+        'slate_id':str(metadata.get('slate_id') or st.session_state.get('active_slate_identity') or ''),
+        'kind':'report' if 'REPORT' in label else 'entries',
+        'player_pool':snapshot.copy(deep=True),'snapshot_metadata':copy.deepcopy(metadata)}
     return workspace_download_button(st,*args, **kwargs)
 
 
@@ -9575,7 +9583,15 @@ with _tab_build:
                                 player_actuals["Actual Field Own %"] = player_actuals["Name"].map(overall)
                                 player_actuals["Actual CPT/MVP Own %"] = player_actuals["Name"].map(special).fillna(0.0)
 
-                        snapshot, snapshot_meta = load_latest_automatic_pregame_snapshot(selected_format)
+                        from simmah_export_history import latest_player_snapshot
+                        _review_match=re.search(r'contest-standings-(\d+)',str(getattr(completed_contest_file,'name',''))) if 'completed_contest_file' in locals() else None
+                        _review_contest_id=_review_match.group(1) if _review_match else str((st.session_state.get('selected_fd_contest' if str(selected_format).startswith('FanDuel') else 'selected_dk_contest') or {}).get('id',''))
+                        snapshot, snapshot_meta = latest_player_snapshot(st.session_state,selected_format,_review_contest_id)
+                        if snapshot.empty:
+                            snapshot, snapshot_meta = load_latest_automatic_pregame_snapshot(selected_format)
+                            st.caption('No saved export matched this contest; using the available player snapshot (not a verified last-export build).')
+                        else:
+                            st.caption('Review uses the last matching '+snapshot_meta.get('kind','entries')+' export: '+snapshot_meta.get('exported_utc',''))
                         comparison = pd.DataFrame()
                         if isinstance(snapshot, pd.DataFrame) and not snapshot.empty and not player_actuals.empty:
                             snapshot = snapshot.copy()

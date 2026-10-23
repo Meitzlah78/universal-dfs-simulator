@@ -55,7 +55,9 @@ def render_exports(st,upload,cid,pool,built,portfolio,platform,stale,location,st
         except (ValueError,KeyError,IndexError) as exc:export_error=str(exc)
     workspace_download_button(st,'EXPORT TO '+platform.upper()+' — EDIT ENTRIES CSV',data,
         'Simmah_NBA_'+platform+'_Edit_Entries.csv','text/csv',
-        disabled=stale or bool(export_error),key='nba_entries_download' if location=='lineups' else 'nba_entries_download_build',on_click='ignore')
+        disabled=stale or bool(export_error),key='nba_entries_download' if location=='lineups' else 'nba_entries_download_build',on_click='ignore',
+        export_checkpoint={'format':platform+' NBA','contest_id':str(cid),'kind':'entries',
+            'player_pool':pool.copy(deep=True),'original_entries':upload.getvalue(),'build':built,'portfolio':portfolio.copy(deep=True)})
     if stale:st.caption('Inputs changed. Rebuild before downloading a site upload file.')
     if export_error:st.error('Entries export unavailable: '+export_error)
     if platform=='FanDuel':st.link_button('OPEN FANDUEL / EDIT ENTRIES','https://www.fanduel.com/upcoming',key='nba_open_fanduel_'+location)
@@ -218,6 +220,7 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         st.subheader('Player exposures')
         st.dataframe(exposure[['Name','Team','Injury Status','Lineups','Exposure %']],hide_index=True,width='stretch',key='nba_exposure_table',
                      column_config={'Name':st.column_config.TextColumn('Player',pinned=True)})
+
 
 
 

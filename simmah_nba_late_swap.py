@@ -236,7 +236,11 @@ def render_late_swap(st,pool,contest_id,salary_min,diversity,markets=None,contes
                         from simmah_nba_ui import display_lineups
                         st.dataframe(display_lineups(pool,frame),hide_index=True,width='stretch')
                         output=export_swaps(data,contest_id,pool,current)
-                        workspace_download_button(st,'EXPORT TO '+platform.upper()+' — LATE SWAP CSV',output,'Simmah_NBA_Late_Swap.csv','text/csv',key='nba_late_swap_download',on_click='ignore')
+                        workspace_download_button(st,'EXPORT TO '+platform.upper()+' — LATE SWAP CSV',output,'Simmah_NBA_Late_Swap.csv','text/csv',key='nba_late_swap_download',on_click='ignore',
+                            export_checkpoint={'format':platform+' NBA','contest_id':str(contest_id),'kind':'late_swap',
+                                'player_pool':pool.copy(deep=True),'original_entries':data,'late_swap':current,
+                                'portfolio':frame.copy(deep=True),
+                                'lock_check':'Exported CSV uses current lock reconciliation; original and revised rows retained in late_swap payload'})
                         st.caption(f'Upload immediately, before the next tipoff. {platform} controls final lock status; scheduled times are used here.')
                     except ValueError as exc:st.error(f'{exc}. Refresh inputs and run the selected late-swap method again.')
                 st.fragment(run_every=5)(download_current)()
@@ -291,5 +295,6 @@ def run_simulated_late_swap(template,contest_id,pool,markets,contest,saved,actua
     if field.get('ownership_fit_warning'):
         result['field_warning']='Conditional ranks use an estimated opponent field: '+field['ownership_fit_warning']
     return result
+
 
 
