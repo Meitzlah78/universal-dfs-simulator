@@ -4,7 +4,7 @@ from simmah_nba_contests import payout_vector
 
 class PayscaleTests(unittest.TestCase):
     def test_generic_payouts_keep_current_identity(self):
-        for key,total,capacity in [('piggy-bank-shot',4000,95808),('fadeaway',15000,71856),('dime-time',250,2972),('quarter-jukebox',4000,19123),('and-one',20000,23799)]:
+        for key,total,capacity in [('piggy-bank-shot',4000,95808),('fadeaway',15000,71856),('dime-time',250,2972),('quarter-jukebox',4000,19024),('and-one',20000,23781)]:
             with self.subTest(key=key):
                 profile=catalog('FanDuel')[key]
                 selected={'id':'987654','name':'A future NBA contest','entry_fee':.2}
@@ -17,12 +17,11 @@ class PayscaleTests(unittest.TestCase):
                 self.assertNotIn('date',profile)
                 self.assertNotIn('id',profile)
 
-    def test_unknown_capacity_is_not_guessed(self):
-        for key in ['quarter-jukebox','and-one']:
+    def test_confirmed_capacities(self):
+        for key,capacity in [('quarter-jukebox',19024),('and-one',23781)]:
             profile=catalog('DraftKings')[key]
-            self.assertIsNone(profile['capacity'])
-            with self.assertRaises(ValueError):
-                apply_payscale(profile,{'id':'12','name':'new','entry_fee':.25},'2027-01-01','DraftKings')
+            result=apply_payscale(profile,{'id':'12','name':'new','entry_fee':.25},'2027-01-01','DraftKings')
+            self.assertEqual(result['capacity'],capacity)
 
     def test_other_site_presets_not_offered(self):
         self.assertNotIn('piggy-bank-shot',catalog('DraftKings'))

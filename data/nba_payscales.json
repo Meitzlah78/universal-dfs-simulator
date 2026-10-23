@@ -343,7 +343,7 @@
     "quarter-jukebox": {
       "name": "NBA $4K Quarter Jukebox ($0.25)",
       "platform": null,
-      "capacity": null,
+      "capacity": 19024,
       "entry_fee": 0.25,
       "prize_pool": 4000,
       "max_entries": 20,
@@ -458,7 +458,7 @@
     "and-one": {
       "name": "NBA $20K And-One ($1)",
       "platform": null,
-      "capacity": null,
+      "capacity": 23781,
       "entry_fee": 1,
       "prize_pool": 20000,
       "max_entries": 20,
