@@ -90,6 +90,9 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
                     contest=dict(pending,capacity=int(capacity))
                     payout_vector(contest)
 
+        from simmah_nba_payscales import render_panel as render_payscales
+        with tabs[0]:
+            contest=render_payscales(st,contest,dict(selected,id=str(cid)),day,platform)
         if contest is None:raise ValueError('This NBA contest needs its capacity and payout schedule before builds can run.')
         rates_path=Path(__file__).parent/'data'/'nba_models'/'event-rates-before-2026-04-09.json'
         model=json.loads(rates_path.read_text())
@@ -101,7 +104,7 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
     except (ValueError,KeyError,OSError) as exc:error=str(exc)
     with tabs[0]:
         if contest:
-            st.caption(f"{contest['capacity']:,} contest places · ${contest['prize_pool']:,.0f} prizes · {count} reserved entries · payouts supplied from your contest")
+            st.caption(f"{contest['capacity']:,} contest places · ${contest['prize_pool']:,.0f} prizes · {count} reserved entries · selected payout schedule")
         st.caption(ownership['source'])
         if ownership['mode']!='projected':st.warning(ownership['status'])
     with controls:
