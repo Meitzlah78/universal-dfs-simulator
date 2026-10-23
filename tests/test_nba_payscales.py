@@ -6,9 +6,10 @@ class PayscaleTests(unittest.TestCase):
     def test_generic_payouts_keep_current_identity(self):
         for key,total,capacity in [('piggy-bank-shot',4000,95808),('fadeaway',15000,71856),('dime-time',250,2972),('quarter-jukebox',4000,19024),('and-one',20000,23781)]:
             with self.subTest(key=key):
-                profile=catalog('FanDuel')[key]
+                site='FanDuel' if key in ('piggy-bank-shot','fadeaway') else 'DraftKings'
+                profile=catalog(site)[key]
                 selected={'id':'987654','name':'A future NBA contest','entry_fee':.2}
-                result=apply_payscale(profile,selected,'2027-02-17','FanDuel',capacity)
+                result=apply_payscale(profile,selected,'2027-02-17',site,capacity)
                 self.assertEqual(result['id'],'987654')
                 self.assertEqual(result['date'],'2027-02-17')
                 self.assertEqual(result['name'],selected['name'])
@@ -25,9 +26,12 @@ class PayscaleTests(unittest.TestCase):
 
     def test_other_site_presets_not_offered(self):
         self.assertNotIn('piggy-bank-shot',catalog('DraftKings'))
+        self.assertNotIn('fadeaway',catalog('DraftKings'))
+        for key in ['dime-time','quarter-jukebox','and-one']:
+            self.assertNotIn(key,catalog('FanDuel'))
 
     def test_too_small_capacity_rejected(self):
         with self.assertRaises(ValueError):
-            apply_payscale(catalog('FanDuel')['dime-time'],{'id':'1','name':'new','entry_fee':.1},'2027-01-01','FanDuel',600)
+            apply_payscale(catalog('DraftKings')['dime-time'],{'id':'1','name':'new','entry_fee':.1},'2027-01-01','DraftKings',600)
 
 if __name__=='__main__':unittest.main()

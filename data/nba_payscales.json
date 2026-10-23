@@ -262,7 +262,7 @@
     },
     "dime-time": {
       "name": "NBA $250 Dime Time ($0.10)",
-      "platform": null,
+      "platform": "DraftKings",
       "capacity": 2972,
       "entry_fee": 0.1,
       "prize_pool": 250,
@@ -342,7 +342,7 @@
     },
     "quarter-jukebox": {
       "name": "NBA $4K Quarter Jukebox ($0.25)",
-      "platform": null,
+      "platform": "DraftKings",
       "capacity": 19024,
       "entry_fee": 0.25,
       "prize_pool": 4000,
@@ -457,7 +457,7 @@
     },
     "and-one": {
       "name": "NBA $20K And-One ($1)",
-      "platform": null,
+      "platform": "DraftKings",
       "capacity": 23781,
       "entry_fee": 1,
       "prize_pool": 20000,
