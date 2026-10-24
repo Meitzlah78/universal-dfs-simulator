@@ -6,6 +6,19 @@ from simmah_nba_role_priors import fit_position_priors,apply_position_priors
 from simmah_nba_pregame import ROLE_COLUMNS
 
 class PriorTests(unittest.TestCase):
+    def test_nullable_and_invalid_role_cells_use_sourced_prior(self):
+        model={'before':'2026-04-09','latest_game':'2026-04-08',
+               'positions':{'G':{'rates':[.4,.2,.1,.02,.01]}}}
+        p=pd.DataFrame([{'Player ID':str(i),'Position':'PG','Projection':12.,
+                         'Projected Minutes':20,'Injury Status':'Active',
+                         **{c:value for c in ROLE_COLUMNS}}
+                        for i,value in enumerate([pd.NA,None,'unavailable'])])
+        before=p.copy(deep=True)
+        out=apply_position_priors(p,model,'2026-10-23')
+        np.testing.assert_array_equal(out[ROLE_COLUMNS].to_numpy(float),np.tile(model['positions']['G']['rates'],(3,1)))
+        self.assertTrue(out['Role Rate Source'].str.startswith('Position prior').all())
+        pd.testing.assert_frame_equal(p,before)
+
     def test_zero_history_uses_prior_but_keeps_inputs_and_individual_roles(self):
         model={'before':'2026-04-09','latest_game':'2026-04-08',
                'positions':{'G':{'rates':[.4,.2,.1,.02,.01]}}}

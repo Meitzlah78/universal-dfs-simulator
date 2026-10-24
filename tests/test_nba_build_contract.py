@@ -54,7 +54,7 @@ def fixture():
 
 
 class BuildContractTests(unittest.TestCase):
-    def run_build(self,simulations,candidates,support):
+    def run_build(self,simulations,candidates,support,entries=200):
         raw,pool,rates=fixture()
         from simmah_nba_simulation_cache import CachedNBAOutcomes,clear_simulation_cache
         from simmah_nba_ownership import field_ownership_inputs
@@ -66,11 +66,11 @@ class BuildContractTests(unittest.TestCase):
         self.assertTrue(pool.groupby('Team')['Projected Minutes'].sum().eq(240).all())
         engine=CachedNBAOutcomes(PregameEngine(pool,[],rates,parallel=False))
         own=field_ownership_inputs(pool);self.assertEqual(own['mode'],'projected')
-        result=run_pipeline(pool,engine,own['weights'],own['source'],[10]+[0]*200,.10,5,
+        result=run_pipeline(pool,engine,own['weights'],own['source'],[10]+[0]*entries,.10,5,
             simulations=simulations,candidate_target=candidates,field_support_target=support,salary_min=58000)
         self.assertEqual(result['simulations_per_set'],simulations)
         self.assertEqual(result['candidates']['unique'],candidates)
-        self.assertEqual(result['field']['copies'].sum(),200)
+        self.assertEqual(result['field']['copies'].sum(),entries)
         self.assertEqual(result['report'].attrs['simulations'],simulations)
         self.assertEqual(len(result['portfolio']),5)
         self.assertEqual(len(set(result['simulation_seeds'].values())),3)
@@ -89,7 +89,7 @@ class BuildContractTests(unittest.TestCase):
 
     @unittest.skipUnless(os.environ.get('SIMMAH_NBA_FULL_SCALE')=='1','full-scale replay runs in its dedicated CI step')
     def test_full_scale_build_to_export(self):
-        result=self.run_build(10000,5000,10000)
+        result=self.run_build(10000,5000,10000,entries=20000)
         print('FULL_SCALE_NBA',json.dumps(result['timings_seconds'],sort_keys=True),flush=True)
 
     def test_preflight_lists_problems_for_multiple_teams(self):

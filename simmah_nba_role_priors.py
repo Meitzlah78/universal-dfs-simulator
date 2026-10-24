@@ -1,6 +1,7 @@
 """Explicit historical position priors for players without individual NBA history."""
 from datetime import date
 import numpy as np
+import pandas as pd
 from simmah_nba_roles import observations
 from simmah_nba_pregame import ROLE_COLUMNS
 
@@ -47,7 +48,7 @@ def apply_position_priors(pool,model,slate_day):
     if 'Minutes Source' not in result:result['Minutes Source']='Missing'
     for c in ROLE_COLUMNS:
         if c not in result:result[c]=np.nan
-        else:result[c]=result[c].astype(float)
+        else:result[c]=pd.to_numeric(result[c],errors='coerce').to_numpy(dtype=float,na_value=np.nan)
     previous_sources=result.get('Role Rate Source')
     result['Role Rate Source']='Missing'
     for i,row in result.iterrows():
@@ -71,5 +72,6 @@ def apply_position_priors(pool,model,slate_day):
         for c,value in zip(ROLE_COLUMNS,rates):result.at[i,c]=value
         result.at[i,'Role Rate Source']='Position prior ('+'/'.join(groups)+'); '+model['before']
     return result
+
 
 
