@@ -5,6 +5,7 @@ from simmah_nba_rotation_schedule import build_rotation
 from simmah_nba_markets import simulate_market_game
 from simmah_nba_engine import simulate_game
 from simmah_nba_projection_anchor import fit_player_means
+from simmah_nba_minutes import allocate_minutes
 
 ROLE_COLUMNS=['Historical '+r+' Rate' for r in ('Shot','Assist','Rebound','Steal','Block')]
 
@@ -44,7 +45,7 @@ class PregameEngine:
         if require_markets and self.missing_markets:
             raise ValueError('Every uploaded NBA game needs complete market lines')
         markets.extend({'teams':pair,'implied_points':None,'source':'Unavailable'} for pair in sorted(uploaded-supplied))
-        self.games=[];covered=set();problems=[]
+        self.games=[];covered=set();problems=[];self.rotation_reconciliation=[]
         for market in markets:
             market=dict(market)
             market['teams']=tuple(market['teams'])
@@ -61,7 +62,8 @@ class PregameEngine:
                 # Explicit provider zero-minute reserves cannot enter a rotation.
                 # Unknown minutes remain in validation below and still block.
                 rotation_minutes=np.asarray(group['Projected Minutes'],float)
-                active=group[np.isfinite(projection)&(projection>0)&~injured&(rotation_minutes!=0)]
+                rotation_only=group['Rotation Only'].eq(True) if 'Rotation Only' in group else np.zeros(len(group),bool)
+                active=group[((np.isfinite(projection)&(projection>0))|rotation_only)&~injured&(rotation_minutes!=0)]
                 minutes=np.asarray(active['Projected Minutes'],float)
                 roles=active[ROLE_COLUMNS].to_numpy(float)
                 if len(active)<5 or not np.isfinite(minutes).all() or (minutes<=0).any() or (minutes>48).any():
@@ -69,8 +71,22 @@ class PregameEngine:
                     labels=active.get('Name',active['Player ID']).astype(str)
                     detail=', '.join(labels.loc[invalid]) if invalid.any() else 'fewer than five rotation players'
                     problems.append('Complete positive projected rotation required for '+team+': '+detail)
-                if abs(minutes.sum()-240)>1e-6:
-                    problems.append(f'{team} projected rotation totals {minutes.sum():.1f} minutes; 240 required')
+                if np.isfinite(minutes).all() and abs(minutes.sum()-240)>1e-6:
+                    # Provider minutes are estimates and may not add to a full
+                    # game. Reconcile small budget discrepancies for complete
+                    # rotations only, without overwriting provider values or
+                    # player point projections. Unknown minutes still fail.
+                    total=float(minutes.sum())
+                    if (len(active)>=6 and (minutes>0).all() and (minutes<=48).all()
+                            and 228<=total<=252):
+                        adjusted=allocate_minutes(minutes[None,:])[0]
+                        self.rotation_reconciliation.append({'team':team,'provider_total':total,
+                            'simulation_total':float(adjusted.sum()),
+                            'players':[{'id':str(pid),'provider_minutes':float(a),'simulation_minutes':float(b)}
+                                for pid,a,b in zip(active['Player ID'],minutes,adjusted)]})
+                        minutes=adjusted
+                    else:
+                        problems.append(f'{team} projected rotation totals {total:.1f} minutes; 240 required')
                 missing=~np.isfinite(roles).all(axis=1)|(roles<0).any(axis=1)
                 if missing.any():
                     names=active.loc[missing,'Name'] if 'Name' in active else active.loc[missing,'Player ID']
@@ -113,7 +129,8 @@ class PregameEngine:
             rotation=np.stack(rotations,axis=1);ot=np.stack(overtime,axis=1)
             targets=np.zeros((2,size))
             for team,(ids,_,_) in enumerate(groups):
-                targets[team,:len(ids)]=self.pool.loc[ids,'Projection'].to_numpy(float)
+                projected=self.pool.loc[ids,'Projection'].to_numpy(float)
+                targets[team,:len(ids)]=np.where(np.isfinite(projected)&(projected>0),projected,0.)
             if game_index not in self.prepared:
                 pilot=min(n,1024);fit_seed=71333+game_index*97
                 if market['implied_points'] is None:

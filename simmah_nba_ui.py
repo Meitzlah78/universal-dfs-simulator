@@ -104,6 +104,10 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         pool=apply_position_priors(pool,json.loads(role_path.read_text()),day)
         slate['players']=pool
         engine=CachedNBAOutcomes(PregameEngine(pool,markets,EventRates(**model['rates']),platform=platform))
+        if engine.rotation_reconciliation:
+            with tabs[0]:st.warning('Simulation rotation budget adjusted to 240 minutes for: '+
+                ', '.join(f"{row['team']} ({row['provider_total']:g} provider minutes)" for row in engine.rotation_reconciliation)+
+                '. Source minutes and player point projections are preserved; only simulation playing-time shares are reconciled.')
         if engine.missing_markets:
             with tabs[0]:st.warning('Market lines unavailable for: '+', '.join(' vs '.join(pair) for pair in engine.missing_markets)+'. These games use external player projections and historical event rates without Vegas calibration. No totals or spreads are invented.')
 
@@ -155,7 +159,8 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
                 # A completed portfolio must serialize and pass site legality
                 # before replacing the last successful build or showing success.
                 export_portfolio(upload.getvalue(),cid,pool,built)
-                saved={'identity':identity,'result':built,'engine_reports':reports,'pool':pool.copy(),'contest_id':cid}
+                saved={'identity':identity,'result':built,'engine_reports':reports,'pool':pool.copy(),'contest_id':cid,
+                       'rotation_reconciliation':engine.rotation_reconciliation}
                 st.session_state['nba_build_result']=saved
                 bar.progress(1.);message.success('NBA build complete')
             except Exception as exc:

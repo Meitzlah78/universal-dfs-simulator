@@ -103,7 +103,7 @@ class LoadingTests(unittest.TestCase):
         self.assertEqual(sid,'123')
         self.assertEqual(values,{})
         self.assertEqual(details[('player a','NY')]['Projected Minutes'],30)
-        self.assertEqual(len(calls),4)
+        self.assertEqual(len(calls),5)
         self.assertTrue(all(0<timeout<=4 for _,timeout in calls))
 
     def test_failure_backoff_force_and_identity(self):

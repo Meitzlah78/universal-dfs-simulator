@@ -126,6 +126,25 @@ def team_key(value):
     return {'NYK':'NY','SAS':'SA','GSW':'GS','NOP':'NO','PHO':'PHX'}.get(value,value)
 
 
+def apply_rotowire_projections(pool, values, details, uploaded=None):
+    """Use one automatic NBA provider; uploads still override its points."""
+    result = apply_projections(pool, values, uploaded)
+    result.loc[result['Projection Source'].eq('DFF'), 'Projection Source'] = 'RotoWire'
+    for idx, row in result.iterrows():
+        news = details.get(player_key(row['Name'], row['Team']), {})
+        for col, value in news.items():
+            result.at[idx, col] = value
+        injury = str(news.get('RotoWire Injury', '')).upper()
+        if injury in {'Q', 'QUES', 'QUESTIONABLE'}:
+            result.at[idx, 'Injury Status'] = 'Questionable'
+        elif injury in {'D', 'DOUBT', 'DOUBTFUL'}:
+            result.at[idx, 'Injury Status'] = 'Doubtful'
+        elif injury in {'OUT', 'O', 'IR', 'SUSPENDED'}:
+            result.at[idx, 'Injury Status'] = 'Out'
+            result.at[idx, 'Eligible'] = False
+    return result
+
+
 def select_rotowire_slate(payload, day, pool, platform='FanDuel'):
     expected = {(team_key(r.Team),team_key(r.Opponent)) for r in pool.itertuples()}
     expected |= {(b,a) for a,b in expected}
@@ -225,7 +244,7 @@ def select_rotowire_minutes_slate(payload,day,pool,platform='FanDuel'):
 def download_rotowire(day, pool, platform='FanDuel'):
     import json
     from time import monotonic
-    deadline=monotonic()+10
+    deadline=monotonic()+11
     base = 'https://www.rotowire.com/daily/nba/api/'
     def get(endpoint):
         # All primary and reserve lookups share one budget. Optional calls
@@ -253,10 +272,16 @@ def download_rotowire(day, pool, platform='FanDuel'):
     # Minutes/injuries live in players.php and do not depend on access to
     # fantasy projections or ownership. Fetch independent feeds concurrently.
     from concurrent.futures import ThreadPoolExecutor
-    with ThreadPoolExecutor(max_workers=3) as executor:
+    other='DraftKings' if platform=='FanDuel' else 'FanDuel'
+    other_listing=None
+    with ThreadPoolExecutor(max_workers=4) as executor:
         players_job=executor.submit(get,'players.php?slateID='+sid)
         projection_job=executor.submit(get,'projections.php?slateID='+sid+'&projSource=RotoWire')
         ownership_job=executor.submit(get,'rostership.php?slateID='+sid+'&rstSource=RotoWire')
+        # Warm the opposite site's slate index during the primary requests.
+        # Otherwise a slow primary feed can consume the entire UI budget
+        # before the reserve fallback has a chance to look up its game.
+        other_listing_job=executor.submit(get,'slate-list.php?siteID='+('1' if other=='DraftKings' else '2')) if 'Name' in pool else None
         players=players_job.result()
         try:projections=projection_job.result()
         except (OSError,ValueError):projections=None
@@ -264,27 +289,52 @@ def download_rotowire(day, pool, platform='FanDuel'):
             projections=None
         try:ownership=ownership_job.result()
         except (OSError,ValueError):ownership=None
+        if other_listing_job is not None:
+            try:other_listing=other_listing_job.result()
+            except (OSError,ValueError):pass
     values, details = parse_rotowire(players,projections,day,pool,ownership)
-    missing=({player_key(r.Name,r.Team) for r in pool.itertuples()}-set(details)) if 'Name' in pool else set()
+    missing={player_key(r.Name,r.Team) for r in pool.itertuples()
+        if details.get(player_key(r.Name,r.Team),{}).get('Projected Minutes') is None} if 'Name' in pool else set()
     if missing:
         # The same provider can omit a reserve from one site's player feed.
         # Minutes/injuries describe the same game, unlike site scoring/ownership.
-        other='DraftKings' if platform=='FanDuel' else 'FanDuel'
         try:
-            other_listing=get('slate-list.php?siteID='+('1' if other=='DraftKings' else '2'))
-            other_slate=select_rotowire_minutes_slate(other_listing,day,pool,platform=other)
-            allowed={(team_key(r.Team),team_key(r.Opponent)) for r in pool.itertuples()}
-            other_players=[p for p in get('players.php?slateID='+str(other_slate['slateID']))
-                if str(p.get('game',{}).get('dateTime',''))[:10]==day
-                and (team_key(p.get('team',{}).get('abbr','')),team_key(p.get('opponent',{}).get('team',''))) in allowed]
-            _,other_details=parse_rotowire(other_players,None,day,pool)
-            for key in missing & set(other_details):
-                row=other_details[key]
-                row['RotoWire Projected Own %']=None
-                row['RotoWire RST % (unverified)']=None
-                if row['Projected Minutes'] is not None:
-                    row['Minutes Source']='RotoWire same-game minutes ('+other+' player feed)'
-                details[key]=row
+            if other_listing is None:raise ValueError('Opposite-site slate index unavailable')
+            # A site's main slate need not contain every game in the other
+            # site's slate. Recover missing game-level metadata one game at a
+            # time, under the existing shared refresh deadline.
+            missing_games={tuple(sorted((team_key(r.Team),team_key(r.Opponent))))
+                for r in pool.itertuples() if player_key(r.Name,r.Team) in missing}
+            other_feeds={}
+            for pair in sorted(missing_games):
+                game_pool=pool[pool['Team'].map(team_key).isin(pair)]
+                try:
+                    other_slate=select_rotowire_minutes_slate(other_listing,day,game_pool,platform=other)
+                    other_sid=str(other_slate['slateID'])
+                    if other_sid not in other_feeds:
+                        other_feeds[other_sid]=get('players.php?slateID='+other_sid)
+                    allowed={(team_key(r.Team),team_key(r.Opponent)) for r in game_pool.itertuples()}
+                    other_players=[p for p in other_feeds[other_sid]
+                        if str(p.get('game',{}).get('dateTime',''))[:10]==day
+                        and (team_key(p.get('team',{}).get('abbr','')),team_key(p.get('opponent',{}).get('team',''))) in allowed]
+                    _,other_details=parse_rotowire(other_players,None,day,game_pool)
+                    for key in missing & set(other_details):
+                        row=other_details[key]
+                        if row['Projected Minutes'] is None:continue
+                        row['Minutes Source']='RotoWire same-game minutes ('+other+' player feed)'
+                        if key not in details:
+                            row['RotoWire Projected Own %']=None
+                            row['RotoWire RST % (unverified)']=None
+                            details[key]=row
+                        else:
+                            # Keep the original site's ownership/news fields.
+                            details[key]['Projected Minutes']=row['Projected Minutes']
+                            details[key]['Minutes Source']=row['Minutes Source']
+                            for column,value in row.items():
+                                if column.startswith('Historical ') and column not in details[key]:
+                                    details[key][column]=value
+                except (ValueError,OSError):
+                    continue
         except (ValueError,OSError):
             pass  # Unknown remains unknown; never turn a feed failure into zero.
     return values, details, sid

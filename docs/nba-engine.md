@@ -2,9 +2,34 @@
 
 FanDuel NBA enters a separate route from NFL. The original nine-slot entry CSV
 supplies IDs, positions, salaries and game pairs. Historical FPPG is not a
-projection. DFF and RotoWire positive projections are averaged, uploaded CSV
+projection. RotoWire is the sole automatic NBA projection source; uploaded CSV
 values take priority (including exclusion by zero), and OUT players are ineligible.
 RotoWire supplies projected minutes with exact date/game/slate guards.
+Missing game-level minutes can be recovered from another RotoWire site's
+same-date, same-game feed, even when no one slate covers all uploaded games.
+Site scoring and ownership are never copied across platforms. Valid source
+zeros are preserved. Recovered minutes permit the existing dated historical
+position-role prior to run for players without individual history.
+If the site's point feed omits a reserve with known positive minutes, the
+reserve stays in the physical simulation rotation using historical event roles,
+marked `Rotation Only`. His external projection stays missing and he remains
+ineligible for lineups. Mean anchoring does not force untargeted reserves to
+zero points or assign an invented external forecast.
+
+For a rotation of at least six players with individually valid positive minutes,
+the simulation reconciles provider totals in the 228–252 range to the physical
+240-minute regulation budget using proportional capped allocation. Original
+provider minutes and point projections stay unchanged. The workspace displays
+the affected teams/totals, and the build archive stores each player's source
+and simulation minutes. Unknown player minutes, insufficient rotations, and
+larger budget discrepancies still block. This budget reconciliation is a
+simulation assumption, not a replacement provider forecast or proof that the
+provider rotation is complete.
+Missing RotoWire projections stay excluded rather than falling back to DFF.
+Positive projections with unavailable minutes still block simulation; missing
+minutes are never zero-filled. Setup and automatic late swap use this same
+source policy. Dedicated ownership remains subject to its existing coverage,
+range and roster-total checks; inconsistent totals remain relative popularity.
 
 ## Numerical core
 
@@ -458,7 +483,7 @@ numeric IDs and Eastern game start times; the slate date comes from Game Info,
 so DKEntries.csv does not need renaming. Team aliases and generational suffixes
 are normalized for provider matching; uploaded IDs remain unchanged.
 
-DraftKings has separate DFF/RotoWire feeds and cache identities. RotoWire's
+DraftKings has separate RotoWire feeds and cache identities. RotoWire's
 Classic slate must exactly match the uploaded date and games. DK scoring is
 applied to the shared simulated stat ledger, including made-three, double-double
 and triple-double bonuses. Market calibration still targets actual basketball
