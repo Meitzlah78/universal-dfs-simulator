@@ -1,5 +1,22 @@
 # NBA implementation status
 
+## October 24 scoring and event-allocation speed check
+
+The full-size four-team/24-player replay improved from 16.241 to 14.601 seconds
+in a paired run (about 10% less time), with peak RSS 252.2 versus 248.6 MiB.
+This is a synthetic fixture in the execution environment, not a live full-slate
+or Streamlit Cloud speed guarantee. Counts remain 10,000 scenarios per each of
+three independent phases, 5,000 candidates and 10,000 requested opponent support
+lineups. The validation contest samples 20,000 opponent entries; the live field
+still follows the selected contest's size and duplicate multiplicities.
+
+Lineup scoring uses an ordered SciPy CSR matrix without sorting or merging its
+slot indices, preserving the previous floating-point addition order. The game
+engine reuses its CDF buffer, gathers final event subsets directly, and computes
+free-throw make counts once. Frozen event-ledger regressions stay unchanged.
+Detailed scope and timings are recorded in
+`data/nba_speed_trials/2026-10-24-sparse-scoring-benchmark.json`.
+
 FanDuel NBA enters a separate route from NFL. The original nine-slot entry CSV
 supplies IDs, positions, salaries and game pairs. Historical FPPG is not a
 projection. RotoWire is the sole automatic NBA projection source; uploaded CSV
