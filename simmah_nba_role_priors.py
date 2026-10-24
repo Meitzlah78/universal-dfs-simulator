@@ -47,11 +47,16 @@ def apply_position_priors(pool,model,slate_day):
     if 'Minutes Source' not in result:result['Minutes Source']='Missing'
     for c in ROLE_COLUMNS:
         if c not in result:result[c]=np.nan
+        else:result[c]=result[c].astype(float)
+    previous_sources=result.get('Role Rate Source')
     result['Role Rate Source']='Missing'
     for i,row in result.iterrows():
         existing=np.asarray([row[c] for c in ROLE_COLUMNS],float)
-        if np.isfinite(existing).all() and (existing>=0).all():
-            result.at[i,'Role Rate Source']='Individual historical rates'
+        # All-zero event history cannot support a positive player projection.
+        # Use the existing sourced position prior instead of excluding players.
+        if np.isfinite(existing).all() and (existing>=0).all() and existing.sum()>0:
+            previous=str(previous_sources.at[i]) if previous_sources is not None else ''
+            result.at[i,'Role Rate Source']=previous if previous.startswith('Position prior (') else 'Individual historical rates'
             continue
         try:
             projection=float(row.get('Projection',np.nan))
@@ -62,8 +67,9 @@ def apply_position_priors(pool,model,slate_day):
         groups=position_groups(row['Position'])
         if any(g not in model['positions'] for g in groups):raise ValueError('Position prior is unavailable for '+str(row.get('Name',row['Player ID'])))
         rates=np.mean([model['positions'][g]['rates'] for g in groups],axis=0)
-        if rates.shape!=(5,) or not np.isfinite(rates).all() or (rates<0).any():raise ValueError('Invalid historical position prior')
+        if rates.shape!=(5,) or not np.isfinite(rates).all() or (rates<0).any() or rates.sum()<=0:raise ValueError('Invalid historical position prior')
         for c,value in zip(ROLE_COLUMNS,rates):result.at[i,c]=value
         result.at[i,'Role Rate Source']='Position prior ('+'/'.join(groups)+'); '+model['before']
     return result
+
 

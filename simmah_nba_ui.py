@@ -97,6 +97,12 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         rates_path=Path(__file__).parent/'data'/'nba_models'/'event-rates-before-2026-04-09.json'
         model=json.loads(rates_path.read_text())
         if model['before']>day:raise ValueError('Historical event baseline follows the selected slate date')
+        # Restored workspaces can contain empty event histories. Repair the
+        # actual frozen build inputs, not only an internal engine copy.
+        from simmah_nba_role_priors import apply_position_priors
+        role_path=Path(__file__).parent/'data'/'nba_models'/'position-roles-before-2026-04-09.json'
+        pool=apply_position_priors(pool,json.loads(role_path.read_text()),day)
+        slate['players']=pool
         engine=CachedNBAOutcomes(PregameEngine(pool,markets,EventRates(**model['rates']),platform=platform))
         if engine.missing_markets:
             with tabs[0]:st.warning('Market lines unavailable for: '+', '.join(' vs '.join(pair) for pair in engine.missing_markets)+'. These games use external player projections and historical event rates without Vegas calibration. No totals or spreads are invented.')
@@ -223,6 +229,7 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         st.subheader('Player exposures')
         st.dataframe(exposure[['Name','Team','Injury Status','Lineups','Exposure %']],hide_index=True,width='stretch',key='nba_exposure_table',
                      column_config={'Name':st.column_config.TextColumn('Player',pinned=True)})
+
 
 
 
