@@ -19,8 +19,9 @@ class AutoSwapTests(unittest.TestCase):
     def test_both_sites_news_and_uploaded_zero_priority(self):
         for site in ('DraftKings','FanDuel'):
             p=self.pool(site)
-            out=refresh_pool(p,self.rw,lambda *a,**kw:{('a','NY'):10.})
-            self.assertEqual(out.Projection.tolist(),[15.,0.])
+            out=refresh_pool(p,self.rw)
+            self.assertEqual(out.Projection.tolist(),[20.,0.])
+            self.assertEqual(out['Projection Source'].tolist(),['RotoWire','Uploaded CSV'])
             self.assertEqual(out['Injury Status'].tolist(),['Out','Questionable'])
             self.assertFalse(out.Eligible.any())
             self.assertEqual(p['Injury Status'].tolist(),['Active','Active'])
@@ -28,11 +29,26 @@ class AutoSwapTests(unittest.TestCase):
 
     def test_incomplete_news_blocks_export(self):
         with self.assertRaisesRegex(ValueError,'coverage'):
-            refresh_pool(self.pool(),lambda *a,**kw:({}, {}, '1'),lambda *a,**kw:{})
+            refresh_pool(self.pool(),lambda *a,**kw:({}, {}, '1'))
 
     def test_feed_failure_propagates_not_zero(self):
         def fail(*a,**kw):raise OSError('offline')
-        with self.assertRaises(OSError):refresh_pool(self.pool(),self.rw,fail)
+        with self.assertRaises(OSError):refresh_pool(self.pool(),fail)
+
+    def test_missing_rotowire_projection_stays_missing(self):
+        def fresh(*args,**kwargs):
+            return {},{('a','NY'):{'RotoWire Injury':'Active'},('b','NY'):{'RotoWire Injury':'Active'}},'123'
+        out=refresh_pool(self.pool(),fresh)
+        self.assertTrue(pd.isna(out.Projection.iloc[0]))
+        self.assertEqual(out['Projection Source'].iloc[0],'Missing')
+        self.assertFalse(out.Eligible.iloc[0])
+
+    def test_locked_inputs_are_preserved(self):
+        p=self.pool();p['Game Start']='2020-01-01T19:00:00-05:00'
+        out=refresh_pool(p,self.rw)
+        self.assertEqual(out.loc[0,'Projection'],10.)
+        self.assertEqual(out.loc[0,'Projection Source'],'DFF')
+        self.assertEqual(out.loc[0,'Injury Status'],'Active')
 
     def test_only_open_inputs_trigger_and_tipoff_changes_signature(self):
         p=self.pool();locks=np.array([True,False]);sig=input_signature(p,locks)

@@ -2,9 +2,14 @@
 
 FanDuel NBA enters a separate route from NFL. The original nine-slot entry CSV
 supplies IDs, positions, salaries and game pairs. Historical FPPG is not a
-projection. DFF and RotoWire positive projections are averaged, uploaded CSV
+projection. RotoWire is the sole automatic NBA projection source; uploaded CSV
 values take priority (including exclusion by zero), and OUT players are ineligible.
 RotoWire supplies projected minutes with exact date/game/slate guards.
+Missing RotoWire projections stay excluded rather than falling back to DFF.
+Positive projections with unavailable minutes still block simulation; missing
+minutes are never zero-filled. Setup and automatic late swap use this same
+source policy. Dedicated ownership remains subject to its existing coverage,
+range and roster-total checks; inconsistent totals remain relative popularity.
 
 ## Numerical core
 
@@ -458,7 +463,7 @@ numeric IDs and Eastern game start times; the slate date comes from Game Info,
 so DKEntries.csv does not need renaming. Team aliases and generational suffixes
 are normalized for provider matching; uploaded IDs remain unchanged.
 
-DraftKings has separate DFF/RotoWire feeds and cache identities. RotoWire's
+DraftKings has separate RotoWire feeds and cache identities. RotoWire's
 Classic slate must exactly match the uploaded date and games. DK scoring is
 applied to the shared simulated stat ledger, including made-three, double-double
 and triple-double bonuses. Market calibration still targets actual basketball

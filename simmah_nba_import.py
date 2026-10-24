@@ -86,7 +86,7 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
     if _requested_drops:
         with tabs[1]:st.caption('Excluded by request for this slate: '+', '.join(_requested_drops)+'.')
     pool.attrs['slate_date'] = day
-    from simmah_nba_projections import slate_date, download_dff, apply_projections, player_key, read_projection_upload, EntriesInProjectionUpload
+    from simmah_nba_projections import apply_rotowire_projections, read_projection_upload, EntriesInProjectionUpload
     _force_refresh=st.session_state.pop('refresh_projections_requested',False)
     if _force_refresh:
         from simmah_nba_confirmed import request_lineup_refresh
@@ -98,22 +98,19 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
         st.session_state['injury_updates_found']=False
     with tabs[1]:
         projection_file = workspace_file_uploader(st,'Optional NBA projections CSV', type=['csv'], key='nba_projection_upload_'+platform,
-            help='Player ID and Projection columns. Uploaded values override DFF, including zeros that exclude a player.')
+            help='Player ID and Projection columns. Uploaded values override RotoWire, including zeros that exclude a player.')
     from simmah_nba_source_cache import load_sources
     from simmah_nba_projections import download_rotowire
-    identity=(platform,day,tuple(sorted(zip(pool['Player ID'],pool['Team'],pool['Opponent']))),'reserve-metadata-v7')
-    def _load_dff():
-        return {'values':download_dff(day,pool,platform=platform)}
+    identity=(platform,day,tuple(sorted(zip(pool['Player ID'],pool['Team'],pool['Opponent']))),'rotowire-only-v8')
     def _load_rw():
         values,details,sid=download_rotowire(day,pool,platform=platform)
         return {'values':values,'details':details,'slate_id':sid}
     with st.spinner('Checking NBA projection sources (up to 12 seconds)…'):
         _sources=load_sources(st.session_state,identity,
-            {'nba_projection_cache':_load_dff,'nba_rotowire_cache':_load_rw},force=_force_refresh)
-    automatic=_sources['nba_projection_cache'].get('values',{})
+            {'nba_rotowire_cache':_load_rw},force=_force_refresh)
     _rw=_sources['nba_rotowire_cache']
     rw_values,rw_details=_rw.get('values',{}),_rw.get('details',{})
-    for _key,_label in [('nba_projection_cache','NBA automatic projections'),('nba_rotowire_cache','NBA minutes / RotoWire')]:
+    for _key,_label in [('nba_rotowire_cache','NBA projections / minutes / RotoWire')]:
         _source=_sources[_key]
         if _source.get('error'):
             with tabs[1]:
@@ -122,8 +119,6 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
     if rw_details and not _rw.get('error') and st.session_state.pop('nba_lineup_refresh_requested',False):
         from simmah_nba_lineups import acknowledge_lineup_refresh
         acknowledge_lineup_refresh(st.session_state)
-    keys = set(automatic) | set(rw_values)
-    combined = {key:sum(source[key] for source in (automatic,rw_values) if key in source)/sum(key in source for source in (automatic,rw_values)) for key in keys}
     uploaded = None
     if projection_file is not None:
         try:
@@ -135,19 +130,7 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
             with tabs[1]:st.error(str(exc))
             return
     try:
-        pool = apply_projections(pool, combined, uploaded)
-        for idx, row in pool.iterrows():
-            key = player_key(row["Name"], row["Team"])
-            if pool.at[idx,"Projection Source"] == "DFF":
-                pool.at[idx,"Projection Source"] = " + ".join(label for label, source in (("DFF",automatic),("RotoWire",rw_values)) if key in source)
-            for col, value in rw_details.get(key, {}).items():
-                pool.at[idx,col] = value
-            injury=str(rw_details.get(key,{}).get("RotoWire Injury","")).upper()
-            if injury in {'Q','QUES','QUESTIONABLE'}:pool.at[idx,'Injury Status']='Questionable'
-            elif injury in {'D','DOUBT','DOUBTFUL'}:pool.at[idx,'Injury Status']='Doubtful'
-            if str(rw_details.get(key,{}).get("RotoWire Injury","")).upper() in {"OUT","O","IR","SUSPENDED"}:
-                pool.at[idx,"Injury Status"] = "Out"
-                pool.at[idx,"Eligible"] = False
+        pool = apply_rotowire_projections(pool, rw_values, rw_details, uploaded)
     except ValueError as exc:
         with tabs[1]:
             st.error(str(exc))

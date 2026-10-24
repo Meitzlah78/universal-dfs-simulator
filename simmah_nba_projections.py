@@ -126,6 +126,25 @@ def team_key(value):
     return {'NYK':'NY','SAS':'SA','GSW':'GS','NOP':'NO','PHO':'PHX'}.get(value,value)
 
 
+def apply_rotowire_projections(pool, values, details, uploaded=None):
+    """Use one automatic NBA provider; uploads still override its points."""
+    result = apply_projections(pool, values, uploaded)
+    result.loc[result['Projection Source'].eq('DFF'), 'Projection Source'] = 'RotoWire'
+    for idx, row in result.iterrows():
+        news = details.get(player_key(row['Name'], row['Team']), {})
+        for col, value in news.items():
+            result.at[idx, col] = value
+        injury = str(news.get('RotoWire Injury', '')).upper()
+        if injury in {'Q', 'QUES', 'QUESTIONABLE'}:
+            result.at[idx, 'Injury Status'] = 'Questionable'
+        elif injury in {'D', 'DOUBT', 'DOUBTFUL'}:
+            result.at[idx, 'Injury Status'] = 'Doubtful'
+        elif injury in {'OUT', 'O', 'IR', 'SUSPENDED'}:
+            result.at[idx, 'Injury Status'] = 'Out'
+            result.at[idx, 'Eligible'] = False
+    return result
+
+
 def select_rotowire_slate(payload, day, pool, platform='FanDuel'):
     expected = {(team_key(r.Team),team_key(r.Opponent)) for r in pool.itertuples()}
     expected |= {(b,a) for a,b in expected}
