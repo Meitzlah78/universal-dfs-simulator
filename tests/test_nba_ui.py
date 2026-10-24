@@ -4,6 +4,31 @@ import unittest
 
 @unittest.skipUnless(importlib.util.find_spec('streamlit'),'Streamlit not installed')
 class NBAWorkspaceTests(unittest.TestCase):
+    def test_missing_minutes_are_all_reported_before_build(self):
+        from streamlit.testing.v1 import AppTest
+        at=AppTest.from_file(str(Path(__file__).with_name('nba_ui_fixture.py')))
+        at.session_state['fixture_missing_minutes']=True
+        at.run(timeout=20)
+        self.assertFalse(at.exception)
+        self.assertTrue(at.button(key='nba_build').disabled)
+        errors=' '.join(x.value for x in at.error)
+        self.assertIn('Player 0',errors);self.assertIn('Player 1',errors)
+        self.assertEqual(at.session_state['test_build_calls'],0)
+
+    def test_failed_export_never_replaces_previous_build(self):
+        from streamlit.testing.v1 import AppTest
+        at=AppTest.from_file(str(Path(__file__).with_name('nba_ui_fixture.py'))).run(timeout=20)
+        at.button(key='nba_build').click().run(timeout=20)
+        self.assertFalse(at.exception)
+        previous=at.session_state['nba_build_result']
+        previous['regression_sentinel']='preserve'
+        at.session_state['fixture_reject_export']=True
+        at.button(key='nba_build').click().run(timeout=20)
+        self.assertFalse(at.exception)
+        self.assertEqual(at.session_state['nba_build_result']['regression_sentinel'],'preserve')
+        self.assertTrue(any('Fixture export validation failed' in x.value for x in at.error))
+        self.assertFalse(any('NBA build complete' in x.value for x in at.success))
+
     def test_build_diversity_and_stale_export_without_rebuilding(self):
         from streamlit.testing.v1 import AppTest
         at=AppTest.from_file(str(Path(__file__).with_name('nba_ui_fixture.py'))).run(timeout=20)
@@ -56,4 +81,5 @@ class NBAWorkspaceTests(unittest.TestCase):
         at.slider(key='nba_exposure_diversity').set_value(100).run(timeout=20)
         self.assertFalse(at.exception)
         self.assertEqual(at.session_state['test_build_calls'],1)
-        self.assertTrue(any('UPLOAD TO DRAFTKINGS' in button.proto.label for button in at.get('download_button')))
+        self.assertTrue(any('EXPORT TO DRAFTKINGS' in button.proto.label for button in at.get('download_button')))
+

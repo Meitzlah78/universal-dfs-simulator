@@ -6,6 +6,7 @@ from simmah_nba_field import build_field,sample_popularity_field,ownership_suppo
 from simmah_nba_contest import evaluate_candidates,select_entries
 from simmah_nba_rosters import export_entries,SLOT_COLUMNS
 from simmah_nba_rules import rules_for
+from simmah_nba_pregame import validate_game_reports
 
 
 def run_pipeline(pool,outcome_factory,ownership,ownership_source,payouts,entry_fee,
@@ -39,6 +40,7 @@ def run_pipeline(pool,outcome_factory,ownership,ownership_source,payouts,entry_f
         cache_hits+=int(bool(getattr(outcome_factory,'last_cache_hit',False)))
         if array.shape!=(simulations,len(pool)) or not np.isfinite(array).all():
             raise ValueError('Engine outcomes do not match simulation count and player order')
+        validate_game_reports(getattr(outcome_factory,'last_report',[]))
         return array.copy()
     notify('Simulating candidate scenarios')
     construction=draw(seed)
@@ -106,6 +108,7 @@ def run_pipeline(pool,outcome_factory,ownership,ownership_source,payouts,entry_f
 def export_portfolio(template,contest_id,pool,result):
     lineups=result['portfolio'][list(rules_for(pool)['slots'])].astype(str).to_numpy().tolist()
     return export_entries(template,lineups,contest_id,pool,salary_cap=rules_for(pool)['salary_cap'],max_from_team=rules_for(pool)['max_from_team'])
+
 
 
 

@@ -16,7 +16,7 @@ class OwnershipTests(unittest.TestCase):
         self.assertEqual(r['mode'],'projected');self.assertAlmostEqual(r['weights'].sum(),800)
         p=self.pool();p[COLUMN]=100
         r=field_ownership_inputs(p)
-        self.assertEqual(r['mode'],'relative popularity');np.testing.assert_array_equal(r['weights'],np.ones(10))
+        self.assertEqual(r['mode'],'relative popularity');np.testing.assert_array_equal(r['weights'],p[COLUMN].to_numpy())
         self.assertIn('1000.0%',r['source'])
         p=p.drop(columns=COLUMN)
         self.assertEqual(field_ownership_inputs(p)['mode'],'relative popularity')
@@ -38,3 +38,4 @@ class OwnershipTests(unittest.TestCase):
         points,details=parse_rotowire([player],proj,'2026-10-20',pool,own)
         self.assertIsNone(details[('test player','NY')][COLUMN])
         self.assertEqual(points[('test player','NY')],40)
+

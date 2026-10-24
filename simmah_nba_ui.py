@@ -134,7 +134,7 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         diversity=st.slider('Exposure diversity',0,100,50,key='nba_exposure_diversity')
         metric=st.selectbox('Rank lineups',['Top 1%','Expected ROI (%)','Expected Prize ($)'],key='nba_rank_metric')
         clicked=workspace_button(st,'BUILD NBA LINEUPS',disabled=bool(error),key='nba_build')
-        if error:st.caption(error)
+        if error:st.error('NBA build inputs need attention: '+error)
     identity=input_identity(pool,markets,contest,salary_min,correlation,pool.iloc[excluded]['Player ID'])
     saved=st.session_state.get('nba_build_result')
     if clicked:
@@ -152,8 +152,9 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
                     salary_min=salary_min,correlation=correlation,ownership_mode=ownership['mode'],progress=progress,
                     excluded_indices=excluded)
                 reports=engine.last_report
-                if any((g['calibration'].get('applied',True) and not g['calibration']['within_four_points']) or g['unresolved_tie_fraction']>0 for g in reports):
-                    raise ValueError('NBA evaluation failed market calibration or left unresolved overtime; inspect engine validation before exporting')
+                # A completed portfolio must serialize and pass site legality
+                # before replacing the last successful build or showing success.
+                export_portfolio(upload.getvalue(),cid,pool,built)
                 saved={'identity':identity,'result':built,'engine_reports':reports,'pool':pool.copy(),'contest_id':cid}
                 st.session_state['nba_build_result']=saved
                 bar.progress(1.);message.success('NBA build complete')
@@ -229,6 +230,7 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         st.subheader('Player exposures')
         st.dataframe(exposure[['Name','Team','Injury Status','Lineups','Exposure %']],hide_index=True,width='stretch',key='nba_exposure_table',
                      column_config={'Name':st.column_config.TextColumn('Player',pinned=True)})
+
 
 
 

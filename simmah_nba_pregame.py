@@ -9,6 +9,19 @@ from simmah_nba_projection_anchor import fit_player_means
 ROLE_COLUMNS=['Historical '+r+' Rate' for r in ('Shot','Assist','Rebound','Steal','Block')]
 
 
+def validate_game_reports(reports):
+    """Reject unusable draws before candidate/field generation and scoring."""
+    problems=[]
+    for report in reports:
+        game=' vs '.join(map(str,report['teams']))
+        calibration=report['calibration']
+        if calibration.get('applied',True) and not calibration.get('within_four_points'):
+            problems.append(game+': simulation missed the market calibration check')
+        if report['unresolved_tie_fraction']>0:
+            problems.append(game+': simulation left unresolved overtime')
+    if problems:raise ValueError('; '.join(problems))
+
+
 class PregameEngine:
     def __init__(self,pool,markets,rates,max_overtimes=4,platform='FanDuel',require_markets=False,
                  parallel=True,game_index_offset=0):
@@ -31,7 +44,7 @@ class PregameEngine:
         if require_markets and self.missing_markets:
             raise ValueError('Every uploaded NBA game needs complete market lines')
         markets.extend({'teams':pair,'implied_points':None,'source':'Unavailable'} for pair in sorted(uploaded-supplied))
-        self.games=[];covered=set()
+        self.games=[];covered=set();problems=[]
         for market in markets:
             market=dict(market)
             market['teams']=tuple(market['teams'])
@@ -55,17 +68,22 @@ class PregameEngine:
                     invalid=~np.isfinite(minutes)|(minutes<=0)|(minutes>48)
                     labels=active.get('Name',active['Player ID']).astype(str)
                     detail=', '.join(labels.loc[invalid]) if invalid.any() else 'fewer than five rotation players'
-                    raise ValueError('Complete positive projected rotation required for '+team+': '+detail)
+                    problems.append('Complete positive projected rotation required for '+team+': '+detail)
                 if abs(minutes.sum()-240)>1e-6:
-                    raise ValueError(f'{team} projected rotation totals {minutes.sum():.1f} minutes; 240 required')
+                    problems.append(f'{team} projected rotation totals {minutes.sum():.1f} minutes; 240 required')
                 missing=~np.isfinite(roles).all(axis=1)|(roles<0).any(axis=1)
                 if missing.any():
                     names=active.loc[missing,'Name'] if 'Name' in active else active.loc[missing,'Player ID']
-                    raise ValueError('Missing historical player roles for '+team+': '+', '.join(names.astype(str)))
+                    problems.append('Missing historical player roles for '+team+': '+', '.join(names.astype(str)))
+                unsupported=np.isfinite(roles).all(axis=1)&(roles.sum(axis=1)<=0)
+                if unsupported.any():
+                    names=active.loc[unsupported,'Name'] if 'Name' in active else active.loc[unsupported,'Player ID']
+                    problems.append('Positive projections need supported event roles for '+team+': '+', '.join(names.astype(str)))
                 if (roles.sum(axis=0)<=0).any():
-                    raise ValueError('Unsupported historical role totals for '+team)
+                    problems.append('Unsupported historical role totals for '+team)
                 groups.append((active.index.to_numpy(),minutes,roles))
             covered.update(pair);self.games.append((market,groups))
+        if problems:raise ValueError('; '.join(problems))
         if covered!=set(self.pool['Team'].map(team_key)):
             raise ValueError('Every uploaded NBA game needs complete market lines')
         self.last_report=[]
@@ -138,5 +156,6 @@ class PregameEngine:
                             'unresolved_tie_fraction':float(result['requires_overtime'].mean())})
         self.last_report=reports
         return output
+
 
 

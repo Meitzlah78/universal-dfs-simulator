@@ -45,7 +45,7 @@ class PriorTests(unittest.TestCase):
         model={'before':'2026-04-09','latest_game':'2026-04-08','positions':{'G':{'rates':[.4,.2,.1,.02,.01]}}}
         rates=EventRates(.12,.1,.4,.53,.36,.78,.6,.25,.6,.1,13)
         # Reproduce the exact former failure before testing the repaired path.
-        with self.assertRaisesRegex(ValueError,'Positive targets require supported player roles'):
+        with self.assertRaisesRegex(ValueError,'Positive projections need supported event roles'):
             PregameEngine(p,[],rates,platform='FanDuel',parallel=False)(20,7)
         fixed=apply_position_priors(p,model,'2026-10-23')
         for markets in [[],[{'teams':('A','B'),'implied_points':(100,110)}]]:
@@ -70,3 +70,4 @@ class PriorTests(unittest.TestCase):
         with self.assertRaises(ValueError):apply_position_priors(p,model,'2026-04-01')
     def test_future_training_rejected(self):
         with self.assertRaises(ValueError):fit_position_priors([test_nba_roles.game()],'2026-04-01',1)
+

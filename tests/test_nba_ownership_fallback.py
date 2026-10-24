@@ -18,6 +18,7 @@ class FallbackTests(unittest.TestCase):
         def factory(n,seed):return np.random.default_rng(seed).random((n,10))
         failure=ValueError('Ownership targets include players absent from legal field support') if absent else None
         with patch.object(pipeline,'build_candidates',return_value={'indices':ids,'unique':3}), \
+             patch.object(pipeline,'build_opponent_support',return_value={'indices':ids}), \
              patch.object(pipeline,'build_field',side_effect=failure,return_value={'max_expected_error_pct':20}), \
              patch.object(pipeline,'ownership_support_diagnostic',return_value={'status':'inconclusive'}), \
              patch.object(pipeline,'sample_popularity_field',side_effect=sample), \
@@ -34,3 +35,4 @@ class FallbackTests(unittest.TestCase):
     def test_missing_support_preserves_source_weights(self):self.run_case(True)
 
 if __name__=='__main__':unittest.main()
+

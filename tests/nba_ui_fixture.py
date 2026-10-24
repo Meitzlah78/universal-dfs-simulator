@@ -29,6 +29,13 @@ if st.session_state.get('fixture_platform')=='DraftKings':
     upload=SimpleNamespace(name='DKEntries.csv',getvalue=template)
     slate={'players':pool,'date':'2026-10-20','contests':[{'id':'196711762','name':'Synthetic DK test','entry_fee':.25,'owned_entries':3}]}
 markets=[{'teams':('A','B'),'implied_points':(110,110)},{'teams':('C','D'),'implied_points':(110,110)}]
+if st.session_state.get('fixture_missing_minutes'):
+    pool.loc[[0,1],'Projected Minutes']=np.nan
+from simmah_nba_pipeline import export_portfolio as actual_export
+def checked_export(*args,**kwargs):
+    if st.session_state.get('fixture_reject_export'):raise ValueError('Fixture export validation failed')
+    return actual_export(*args,**kwargs)
+ui.export_portfolio=checked_export
 
 def fake_run(pool,engine,ownership,source,payouts,fee,count,**kwargs):
     st.session_state['test_build_calls']=st.session_state.get('test_build_calls',0)+1
@@ -46,17 +53,18 @@ ui.run_pipeline=fake_run
 st.session_state.setdefault('test_build_calls',0)
 import time
 import simmah_nba_lineups as lineup_module
+import simmah_nba_confirmed as confirmed_module
 pool['Expected Starter']=np.where(np.arange(len(pool))<20,'Yes','No')
 pool['Starter Confirmed']=(pool['Team']=='A') & st.session_state.get('test_applied_confirmation',False)
+pool['Game Start']=np.where(pool['Team'].isin(['A','B']),'2026-10-20 19:00:00','2026-10-20 21:30:00')
 def fake_status(sid,day,pairs):
     return {'players':{(r['Name'].casefold(),r['Team']):{
         'Game Start':'2026-10-20 19:00:00' if r['Team'] in {'A','B'} else '2026-10-20 21:30:00',
         'Expected Starter':'Yes' if i<20 else 'No',
         'Starter Confirmed':r['Team']=='A' and st.session_state.get('test_source_confirmed',False)} for i,r in pool.iterrows()},'checked_at':time.time()}
-lineup_module.download_lineup_status=fake_status
+confirmed_module.cached_confirmed_status=lambda st,day,pairs:fake_status(None,day,pairs)
 def confirm_fixture():
     st.session_state['test_source_confirmed']=True
-    st.cache_data(ttl=60,show_spinner=False,max_entries=8)(fake_status).clear()
 def refresh_fixture():
     st.session_state['test_applied_confirmation']=st.session_state.get('test_source_confirmed',False)
     lineup_module.acknowledge_lineup_refresh(st.session_state)
@@ -67,3 +75,4 @@ header=st.container()
 with header:lineup_module.render_live_strip(st,pool,markets,'29784','2026-10-20')
 tabs=st.tabs(['Contest','Roster','Build','Lineups']);controls=st.container()
 ui.render_workspace(st,slate,upload,tabs,controls,markets)
+

@@ -252,7 +252,7 @@ def run_simulated_late_swap(template,contest_id,pool,markets,contest,saved,actua
     import json
     from pathlib import Path
     from simmah_nba_sim_late_swap import simulate_swap_entries
-    from simmah_nba_pregame import PregameEngine
+    from simmah_nba_pregame import PregameEngine,validate_game_reports
     from simmah_nba_engine import EventRates
     from simmah_nba_contests import payout_vector
     from simmah_nba_projections import team_key
@@ -285,16 +285,19 @@ def run_simulated_late_swap(template,contest_id,pool,markets,contest,saved,actua
             model=json.loads((Path(__file__).parent/'data'/'nba_models'/'event-rates-before-2026-04-09.json').read_text())
             day=pool.attrs.get('slate_date')
             if day is None or model['before']>str(day):raise ValueError('Valid slate date and pregame event model required')
+            from simmah_nba_role_priors import apply_position_priors
+            role_model=json.loads((Path(__file__).parent/'data'/'nba_models'/'position-roles-before-2026-04-09.json').read_text())
+            sub=apply_position_priors(sub,role_model,str(day))
             factory_engine=PregameEngine(sub,lines,EventRates(**model['rates']),platform=rules_for(pool)['platform'])
         values=factory_engine(count,seed)
-        if any(not r['calibration']['within_four_points'] or r['unresolved_tie_fraction']>0 for r in factory_engine.last_report):
-            raise ValueError('Remaining-game simulation failed calibration or overtime checks')
+        validate_game_reports(factory_engine.last_report)
         return values
     result=simulate_swap_entries(template,contest_id,pool,factory,field,payout_vector(contest),contest['entry_fee'],
         actuals=actuals,**kwargs)
     if field.get('ownership_fit_warning'):
         result['field_warning']='Conditional ranks use an estimated opponent field: '+field['ownership_fit_warning']
     return result
+
 
 
 
