@@ -5,7 +5,7 @@ from simmah_nba_arrays import score_batches
 class NBAArrayTests(unittest.TestCase):
     def test_player_major_gathers_preserve_exact_slot_order(self):
         rng=np.random.default_rng(83)
-        for dtype in (np.float32,np.float64,np.int32):
+        for dtype in (np.float16,np.float32,np.float64,np.longdouble,np.int32):
             source=(rng.random((38,62))*80-5).astype(dtype)
             for values in (source,source[::2,::2],np.asfortranarray(source)):
                 for slots in (8,9):

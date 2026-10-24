@@ -72,15 +72,15 @@ def simulate_game(rotations, profiles, rates, seed, overtime_rotations=None, pla
     counters={k:np.zeros(n,np.int32) for k in ['field_goal_makes','field_goal_misses','free_throw_misses','credited_rebounds','credited_assists','turnovers','steals','blocks']}
     flat_weights=weights.reshape(2*size,5)
     def pick(ids,lineups,role,exclude=None):
-        w=flat_weights[lineups,role]
-        if exclude is not None:w[lineups==exclude[:,None]]=0
+        cdf=flat_weights[lineups,role]
+        if exclude is not None:cdf[lineups==exclude[:,None]]=0
         # Uniform role allocation among eligible on-court players if all supplied
         # weights are zero; a scorer is still never his own assister.
-        cdf=np.cumsum(w,axis=1)
+        np.cumsum(cdf,axis=1,out=cdf)
         empty=cdf[:,-1]<=0
         if empty.any():
-            w[empty]=1 if exclude is None else (lineups[empty]!=exclude[empty,None])
-            cdf[empty]=np.cumsum(w[empty],axis=1)
+            uniform=np.ones((int(empty.sum()),5)) if exclude is None else (lineups[empty]!=exclude[empty,None])
+            cdf[empty]=np.cumsum(uniform,axis=1)
         draw=rng.random(len(ids))*cdf[:,-1]
         # Five on-court players: the final CDF entry is the draw's upper
         # bound. Compare the first four boundaries without a row reduction.
@@ -128,23 +128,26 @@ def simulate_game(rotations, profiles, rates, seed, overtime_rotations=None, pla
                 ti=ids[turn];add(ti,shooter[turn],'TO');counters['turnovers'][ti]+=1
                 stolen=rng.random(len(ti))<r.steal_on_turnover
                 if stolen.any():
-                    si=ti[stolen];add(si,pick(si,defense[turn][stolen],3),'STL');counters['steals'][si]+=1
+                    si=ti[stolen];add(si,pick(si,defense[np.flatnonzero(turn)[stolen]],3),'STL');counters['steals'][si]+=1
                 side[ti]=1-team
             if trips.any():
                 ti=ids[trips];tp=shooter[trips]
                 made=rng.random((len(ti),2))<r.make_free_throw
-                stats[ti,tp,2]+=made.sum(axis=1)
-                team_points[ti,team]+=made.sum(axis=1)
-                counters['free_throw_misses'][ti]+=(~made).sum(axis=1)
+                made_count=made.sum(axis=1)
+                stats[ti,tp,2]+=made_count
+                team_points[ti,team]+=made_count
+                counters['free_throw_misses'][ti]+=2-made_count
                 # Only the final miss creates a live rebound opportunity.
                 last_miss=~made[:,-1]
                 side[ti]=1-team
                 if last_miss.any():
                     ri=ti[last_miss];oreb=rng.random(len(ri))<r.offensive_rebound
-                    lineup=np.where(oreb[:,None],offense[trips][last_miss],defense[trips][last_miss])
+                    rows=np.flatnonzero(trips)[last_miss]
+                    lineup=np.where(oreb[:,None],offense[rows],defense[rows])
                     add(ri,pick(ri,lineup,2),'REB');counters['credited_rebounds'][ri]+=1
                     side[ri]=np.where(oreb,team,1-team)
             if shots.any():
+                shot_rows=np.flatnonzero(shots)
                 si=ids[shots];sp=shooter[shots]
                 three=rng.random(len(si))<r.three_share
                 made=rng.random(len(si))<np.where(three,r.make_three,r.make_two)
@@ -155,16 +158,17 @@ def simulate_game(rotations, profiles, rates, seed, overtime_rotations=None, pla
                     counters['field_goal_makes'][mi]+=1
                     assisted=rng.random(len(mi))<r.assisted
                     if assisted.any():
-                        ai=mi[assisted];ap=pick(ai,offense[shots][made][assisted],1,mp[assisted])
+                        ai=mi[assisted];ap=pick(ai,offense[shot_rows[made][assisted]],1,mp[assisted])
                         add(ai,ap,'AST');counters['credited_assists'][ai]+=1
                     side[mi]=1-team
                 if (~made).any():
                     ri=si[~made];counters['field_goal_misses'][ri]+=1
                     blocked=rng.random(len(ri))<r.block_on_miss
                     if blocked.any():
-                        bi=ri[blocked];add(bi,pick(bi,defense[shots][~made][blocked],4),'BLK');counters['blocks'][bi]+=1
+                        bi=ri[blocked];add(bi,pick(bi,defense[shot_rows[~made][blocked]],4),'BLK');counters['blocks'][bi]+=1
                     oreb=rng.random(len(ri))<r.offensive_rebound
-                    lineup=np.where(oreb[:,None],offense[shots][~made],defense[shots][~made])
+                    rows=shot_rows[~made]
+                    lineup=np.where(oreb[:,None],offense[rows],defense[rows])
                     add(ri,pick(ri,lineup,2),'REB');counters['credited_rebounds'][ri]+=1
                     side[ri]=np.where(oreb,team,1-team)
         # A shot may not span a period boundary. Expired periods advance without

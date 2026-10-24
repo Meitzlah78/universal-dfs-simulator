@@ -4,6 +4,21 @@ from simmah_nba_contest import evaluate_candidates
 
 
 class RankHistogramTests(unittest.TestCase):
+    def test_batch_sizes_preserve_exact_metric_accumulation(self):
+        rng=np.random.default_rng(417)
+        for slots,ticks in ((8,4),(9,10)):
+            candidates=np.array([rng.choice(15,slots,replace=False) for _ in range(12)])
+            field=np.array([rng.choice(15,slots,replace=False) for _ in range(15)])
+            copies=rng.integers(1,5,len(field))
+            values=(rng.integers(-4,8,(257,15))/ticks).astype(np.float32)
+            values[0]=0
+            prize=np.maximum(0,20-np.arange(int(copies.sum())+1))
+            for factor in (1,2000,100000):
+                reports=[evaluate_candidates(values*factor,candidates,field,prize,1,
+                    construction_seed=1,evaluation_seed=2,field_copies=copies,
+                    score_ticks=ticks,batch_size=batch) for batch in (1,128)]
+                np.testing.assert_array_equal(reports[0].to_numpy(),reports[1].to_numpy())
+
     def test_weighted_ranks_match_expanded_field(self):
         rng=np.random.default_rng(91)
         for slots,ticks in ((8,4),(9,10)):
