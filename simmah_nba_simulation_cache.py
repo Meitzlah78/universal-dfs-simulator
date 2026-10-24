@@ -20,10 +20,12 @@ _MAX_SLATES=2
 def simulation_identity(engine):
     from simmah_nba_pregame import ROLE_COLUMNS
     columns=['Player ID','Team','Opponent','Projection','Injury Status','Projected Minutes',*ROLE_COLUMNS]
+    if 'Rotation Only' in engine.pool:columns.append('Rotation Only')
     inputs=engine.pool[columns]
     implementation=sha256()
     for name in ('simmah_nba_engine.py','simmah_nba_pregame.py','simmah_nba_markets.py',
-                 'simmah_nba_projection_anchor.py','simmah_nba_rotation_schedule.py','simmah_nba_scoring.py','simmah_nba_parallel.py'):
+                 'simmah_nba_projection_anchor.py','simmah_nba_rotation_schedule.py','simmah_nba_scoring.py','simmah_nba_parallel.py',
+                 'simmah_nba_minutes.py'):
         implementation.update(Path(__file__).with_name(name).read_bytes())
     payload={'version':1,'platform':engine.platform,'max_overtimes':engine.max_overtimes,
         'implementation':implementation.hexdigest(),

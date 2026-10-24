@@ -46,6 +46,15 @@ def apply_position_priors(pool,model,slate_day):
     # Keep unknown minutes explicit; never manufacture a playable rotation.
     if 'Projected Minutes' not in result:result['Projected Minutes']=np.nan
     if 'Minutes Source' not in result:result['Minutes Source']='Missing'
+    numeric_minutes=pd.to_numeric(result['Projected Minutes'],errors='coerce')
+    numeric_projection=pd.to_numeric(result['Projection'],errors='coerce')
+    sources=result.get('Projection Source',pd.Series('',index=result.index))
+    # A source-covered reserve still uses real rotation time even when the
+    # site's fantasy-point feed omits him. Retain him for basketball simulation
+    # only; do not manufacture a projection or make him lineup-eligible.
+    result['Rotation Only']=(numeric_projection.isna() & sources.eq('Missing') &
+        numeric_minutes.between(0,48,inclusive='right') &
+        ~result['Injury Status'].astype(str).str.upper().isin(['O','OUT','IR','SUSPENDED']))
     for c in ROLE_COLUMNS:
         if c not in result:result[c]=np.nan
         else:result[c]=pd.to_numeric(result[c],errors='coerce').to_numpy(dtype=float,na_value=np.nan)
@@ -62,7 +71,7 @@ def apply_position_priors(pool,model,slate_day):
         try:
             projection=float(row.get('Projection',np.nan))
             minutes=float(row.get('Projected Minutes',np.nan))
-            eligible=np.isfinite([projection,minutes]).all() and projection>0 and 0<minutes<=48
+            eligible=(np.isfinite(projection) and projection>0 or bool(row['Rotation Only'])) and np.isfinite(minutes) and 0<minutes<=48
         except (ValueError,TypeError):eligible=False
         if not eligible or str(row['Injury Status']).upper() in {'O','OUT','IR','SUSPENDED'}:continue
         groups=position_groups(row['Position'])

@@ -27,14 +27,17 @@ def fit_player_means(rotations,profiles,rates,targets,seed,overtime_rotations=No
         means=result['scores'].mean(axis=0,dtype=np.float64).reshape(2,size)
         if initial is None:initial=float(abs(means-desired)[active].mean())
         factor=np.clip(desired/np.maximum(means,.1),.5,2.)**.7
-        factor=np.where(active,factor,0)
+        # Untargeted rotation-only reserves retain their historical event
+        # roles. Padding already has zero weights; missing projections are
+        # not hard zero-point targets.
+        factor=np.where(active,factor,1.)
         weights*=factor[:,:,None]
         # Per-role normalization only removes irrelevant common scale.
         sums=weights.sum(axis=1,keepdims=True)
         weights=np.divide(weights,sums,out=np.zeros_like(weights),where=sums>0)
         for team in range(2):
             fg=result['stats'][:,team*size:(team+1)*size,0].sum(axis=1).mean()
-            difference=desired[team].sum()-means[team].sum()
+            difference=desired[team,active[team]].sum()-means[team,active[team]].sum()
             assisted=np.clip(models[team].assisted+difference/max(1.5*fg,1),.05,.95)
             models[team]=replace(models[team],assisted=float(assisted))
     # Separate diagnostic seed: fitted observations are not their own validation.

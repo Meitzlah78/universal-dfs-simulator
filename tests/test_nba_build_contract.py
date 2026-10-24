@@ -11,7 +11,7 @@ import pandas as pd
 
 from simmah_nba_import import read_template,SLOTS
 from simmah_nba_pregame import PregameEngine,ROLE_COLUMNS,validate_game_reports
-from simmah_nba_projections import apply_projections,parse_rotowire,player_key
+from simmah_nba_projections import apply_rotowire_projections,parse_rotowire
 from simmah_nba_role_priors import apply_position_priors
 from simmah_nba_pool_overrides import requested_pool_exclusions
 from simmah_nba_engine import EventRates
@@ -43,9 +43,7 @@ def fixture():
     pool=read_template(raw)['players'];pool.attrs['slate_date']='2026-10-23'
     values,details=parse_rotowire(players,{'access':True,'source':'RotoWire','projections':points},
         '2026-10-23',pool,{'access':True,'source':'RotoWire','rostership':ownership})
-    pool=apply_projections(pool,values)
-    for idx,row in pool.iterrows():
-        for column,value in details[player_key(row['Name'],row['Team'])].items():pool.at[idx,column]=value
+    pool=apply_rotowire_projections(pool,values,details)
     pool,_=requested_pool_exclusions(pool,'2026-10-23','FanDuel')
     model=json.loads((Path(__file__).parents[1]/'data/nba_models/position-roles-before-2026-04-09.json').read_text())
     pool=apply_position_priors(pool,model,'2026-10-23')

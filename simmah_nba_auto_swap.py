@@ -3,15 +3,14 @@ import hashlib
 import pandas as pd
 
 
-def refresh_pool(pool, fetch_rw=None, fetch_dff=None):
-    from simmah_nba_projections import download_rotowire, download_dff, player_key, positive
+def refresh_pool(pool, fetch_rw=None):
+    from simmah_nba_projections import download_rotowire, player_key, positive
     from simmah_nba_rules import rules_for
     platform=rules_for(pool)['platform'];day=pool.attrs.get('slate_date')
     if not day:raise ValueError('Slate date is required for automatic late swap')
-    # Require fresh news and both projection requests to succeed. An outage must
-    # not turn missing data into zero or silently remove a projection source.
+    # Use the same automatic provider as setup; an outage must not trigger
+    # a silent switch to another projection source.
     rw,details,_=(fetch_rw or download_rotowire)(day,pool,platform=platform)
-    dff=(fetch_dff or download_dff)(day,pool,platform=platform)
     from simmah_nba_late_swap import locked_players
     locked=locked_players(pool)
     result=pool.copy();result.attrs.update(pool.attrs)
@@ -32,9 +31,9 @@ def refresh_pool(pool, fetch_rw=None, fetch_dff=None):
         for col in ('Projected Minutes','Minutes Source','Game Start'):
             if col in news:result.at[idx,col]=news[col]
         if row.get('Projection Source')!='Uploaded CSV':
-            values=[positive(source.get(key)) for source in (dff,rw)]
-            values=[v for v in values if v is not None]
-            result.at[idx,'Projection']=sum(values)/len(values) if values else float('nan')
+            value=positive(rw.get(key))
+            result.at[idx,'Projection']=value if value is not None else float('nan')
+            result.at[idx,'Projection Source']='RotoWire' if value is not None else 'Missing'
         result.at[idx,'Eligible']=positive(result.at[idx,'Projection']) is not None and status!='Out'
     return result
 
