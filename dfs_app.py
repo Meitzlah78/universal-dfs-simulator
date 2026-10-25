@@ -4611,6 +4611,8 @@ if platform == "FanDuel":
                         errors="coerce"
                     )
                     _fd_contest_id = str(fd_selected_row[fd_id_col])
+                    from simmah_fd_contest_workspaces import activate_contest
+                    activate_contest(st.session_state, fd_entry_file.getvalue(), lineup_mode, _fd_contest_id)
                     _fd_auto_details = fetch_fanduel_contest_details(_fd_contest_id)
                     st.session_state["selected_fd_contest"] = {
                         "id": _fd_contest_id,
@@ -4632,6 +4634,7 @@ if platform == "FanDuel":
                         st.caption("Verified Hail Mary payouts: $20,000 across 28,750 paid places. ROI models the full 95,808-entry capacity; the final filled field may differ.")
                     if _fd_contest_id == "135464-281110099":
                         st.caption("Confirmed Pooch Punt payout schedule: $4,000 across 28,750 paid places. ROI models the full 95,808-entry capacity; the final filled field may differ.")
+                    st.caption("Each contest keeps its own build, settings and assigned lineups. Select another contest to build it; switch back to restore your previous results. Export each contest separately.")
                     fd_fee_text = f"${float(fd_fee):.2f}" if pd.notna(fd_fee) else "not listed"
                     st.success(
                         f"Selected: {fd_selected_row[fd_name_col]} | Contest ID: {_fd_contest_id} | "
@@ -5148,6 +5151,8 @@ if platform == "FanDuel":
             )
         _fd_show_all_columns = st.checkbox("Show all player columns", value=False,
             key="fd_show_all_player_columns_" + lineup_mode.replace(" ", "_").lower())
+        from simmah_fd_contest_workspaces import restore_player_controls, PLAYER_CONTROLS
+        fd_player_display = restore_player_controls(fd_player_display, st.session_state, lineup_mode)
         fd_player_display = injury_player_pool(fd_player_display)
         _fd_edited_pool = workspace_data_editor(st,
             fd_player_display,
@@ -5179,6 +5184,8 @@ if platform == "FanDuel":
             )
             fd_players = fd_players[~fd_players["Injury Status"].astype(str).str.casefold().eq("out")].copy()
         fd_player_display = _fd_edited_pool.copy() if isinstance(_fd_edited_pool, pd.DataFrame) else fd_player_display
+        st.session_state["fd_player_controls_" + lineup_mode] = fd_player_display[
+            ["Name"] + [c for c in PLAYER_CONTROLS if c in fd_player_display]].copy()
         with st.expander("Advanced — player scoring inputs", expanded=False):
             _fd_scoring_download_slot = st.empty()
 
