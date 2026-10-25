@@ -86,13 +86,14 @@ def latest_player_snapshot(state,format_label,contest_id):
 
 
 def render_history(st,context,key):
+    from simmah_slate_workspaces import workspace_download_button
     records=[r for r in st.session_state.get(HISTORY,[]) if r.get('format')==context.get('format') and str(r.get('contest_id',''))==str(context.get('contest_id',''))]
     if not records:return
     with st.expander('Saved exports — latest first',expanded=False):
         ordered=list(reversed(records))
         chosen=st.selectbox('Saved export',range(len(ordered)),format_func=lambda i:ordered[i]['exported_utc']+' · '+ordered[i]['kind']+' · '+ordered[i]['export_filename'],key='export_history_select_'+key)
         record=ordered[chosen]
-        st.download_button('DOWNLOAD SAVED EXPORT ARCHIVE',record['archive'],file_name='Simmah_Export_'+record['export_id']+'.zip',mime='application/zip',key='export_history_backup_'+key,on_click='ignore')
+        workspace_download_button(st,'DOWNLOAD SAVED EXPORT ARCHIVE',record['archive'],file_name='Simmah_Export_'+record['export_id']+'.zip',mime='application/zip',key='export_history_backup_'+key,on_click='ignore')
         with zipfile.ZipFile(io.BytesIO(record['archive'])) as archive:csv=archive.read('export.csv')
-        st.download_button('DOWNLOAD THIS EXACT CSV',csv,file_name=record['export_filename'],mime='text/csv',key='export_history_csv_'+key,on_click='ignore')
+        workspace_download_button(st,'DOWNLOAD THIS EXACT CSV',csv,file_name=record['export_filename'],mime='text/csv',key='export_history_csv_'+key,on_click='ignore')
         st.caption('Latest matching entries or late-swap export is used for review. Reports do not replace it. Keep an archive download as an independent backup; exports do not confirm site submission.')
