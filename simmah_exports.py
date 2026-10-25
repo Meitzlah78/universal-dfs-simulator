@@ -29,8 +29,10 @@ def build_fanduel_entry_export(template, portfolio, player_ids, contest, mode):
         used.add(idx); indices.append(idx)
     target = str(contest.get("id","")).strip()
     targets = []
+    entry_end = len(rows)
     for i,row in enumerate(rows[1:],1):
         if not row or not row[0].strip():
+            entry_end = i
             break
         if len(row)>contest_col and row[contest_col].strip()==target:
             targets.append(i)
@@ -42,7 +44,7 @@ def build_fanduel_entry_export(template, portfolio, player_ids, contest, mode):
     if len(portfolio)<len(targets):
         raise ValueError(f"Need {len(targets)} assigned lineups to fill all reserved entries.")
     prefix = target.split("-",1)[0] if "-" in target else None
-    # Keep every non-roster cell, including the embedded player reference table.
+    # Preserve selected-entry metadata and the embedded player reference table.
     for number,row_index in enumerate(targets):
         row = list(rows[row_index])
         row.extend([""]*max(0,max(indices)+1-len(row)))
@@ -61,7 +63,10 @@ def build_fanduel_entry_export(template, portfolio, player_ids, contest, mode):
             raise ValueError("A lineup contains the same player more than once.")
         rows[row_index]=row
     output=io.StringIO(newline="")
-    csv.writer(output,lineterminator="\r\n").writerows(rows)
+    # FanDuel validates every included entry. Unselected reserved entries can
+    # have blank rosters and reject the entire upload, so exclude their rows.
+    export_rows = [rows[0]] + [rows[i] for i in targets] + rows[entry_end:]
+    csv.writer(output,lineterminator="\r\n").writerows(export_rows)
     return output.getvalue().encode("utf-8"), len(targets)
 
 
