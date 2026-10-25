@@ -374,7 +374,7 @@ def render_session_tabs(st, host):
         current['title'] = state['dfs_format'] + ' · ' + current['name'].replace('.csv', '')
     metadata = [{key: row[key] for key in ('id', 'name', 'title') if key in row}
                 for row in records.values()]
-    component = components.declare_component('simmah_session_tabs_v1',
+    component = components.declare_component('simmah_session_tabs_v2',
         path=str(Path(__file__).parent / 'components' / 'session_tabs'))
     with host:
         event = component(records=metadata, active=current.get('id') if current else None,
@@ -382,6 +382,17 @@ def render_session_tabs(st, host):
     if not isinstance(event, dict) or event.get('event') == state.get('_slate_session_tabs_last'):
         return
     state['_slate_session_tabs_last'] = event.get('event')
+    closed = event.get('closed_id')
+    if closed in records:
+        records.pop(closed)
+        if (state.get('_slate_pending') or {}).get('id') == closed:
+            state.pop('_slate_pending', None)
+        if current and current['id'] == closed:
+            if records:
+                state['_slate_pending'] = next(reversed(records.values()))
+            else:
+                state['_slate_clear_active'] = True
+        st.rerun()
     selected = event.get('selected_id')
     if selected in records and (not current or selected != current['id']):
         if current:
