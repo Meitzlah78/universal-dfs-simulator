@@ -722,7 +722,7 @@ def expand_showdown_field_by_ownership(sample_field, full_field_size, seed=20261
 
 
 
-def build_dk_contest_entry_export(entry_df, selected_contest_id, lineup_ids_df, expected_slots, slate_label):
+def build_dk_contest_entry_export(entry_df, selected_contest_id, lineup_ids_df, expected_slots, slate_label, all_contests=False):
     """Replace roster slots on existing DraftKings entries; never create new contest entries."""
     if entry_df is None or not isinstance(entry_df, pd.DataFrame) or entry_df.empty:
         st.error(
@@ -736,11 +736,12 @@ def build_dk_contest_entry_export(entry_df, selected_contest_id, lineup_ids_df, 
     entries = entry_df.copy()
     entries["Contest ID"] = entries["Contest ID"].astype(str).str.replace(r"\.0$", "", regex=True).str.strip()
     target_id = str(selected_contest_id or "").strip()
-    if not target_id:
+    if not target_id and not all_contests:
         st.error("Select your contest from the uploaded DraftKings entry file before exporting.")
         return None
-    other_entry_count = int(entries["Contest ID"].ne(target_id).sum())
-    entries = entries[entries["Contest ID"] == target_id].copy().reset_index(drop=True)
+    other_entry_count = 0 if all_contests else int(entries["Contest ID"].ne(target_id).sum())
+    if not all_contests:
+        entries = entries[entries["Contest ID"] == target_id].copy().reset_index(drop=True)
     if entries.empty:
         st.error(f"No existing entries found for selected contest ID {target_id}. Choose the contest matching your entry file.")
         return None
@@ -867,7 +868,8 @@ def build_dk_contest_entry_export(entry_df, selected_contest_id, lineup_ids_df, 
                 "Build and export each other contest separately.")
     st.success(
         f"Export prepared to replace {count} existing DraftKings {slate_label} entry/entries "
-        f"in contest {target_id}. Entry IDs and contest metadata are preserved."
+        + (f"across {export_df['Contest ID'].nunique()} uploaded contests. " if all_contests else f"in contest {target_id}. ")
+        + "Entry IDs and contest metadata are preserved."
     )
     return export_df
 
@@ -4543,6 +4545,9 @@ def simulate_fd_play_by_play(players_df, rng, n=SIMULATION_COUNT, correlation_st
 
 
 if platform == "FanDuel":
+    fd_all_contests = False
+    _fd_multi_contest = False
+    fd_assignment_entries = None
     fd_slate_file = auto_slate_file
     fd_file = fd_slate_file
     fd_entry_file = fd_slate_file
@@ -4583,8 +4588,8 @@ if platform == "FanDuel":
                 fd_fee_col = next((fd_entry_lookup[k] for k in (
                     "entry fee", "entry_fee", "entryfee", "fee"
                 ) if k in fd_entry_lookup), None)
-                if fd_name_col is None or fd_id_col is None:
-                    st.error("This CSV needs Contest Name and Contest ID columns for the contest selector.")
+                if fd_name_col is None or fd_id_col is None or fd_entries_col is None:
+                    st.error("This CSV needs Entry ID, Contest Name and Contest ID columns for the contest selector.")
                 else:
                     fd_entry_df[fd_id_col] = fd_entry_df[fd_id_col].astype(str).str.replace(r"\.0$", "", regex=True)
                     fd_entry_df = remove_duplicate_entries(fd_entry_df, fd_entries_col)
@@ -4603,6 +4608,12 @@ if platform == "FanDuel":
                         lambda row: f"{row[fd_name_col]} | ID {row[fd_id_col]} | {int(row['Entries'])} of your entries",
                         axis=1
                     )
+                    fd_all_contests = st.radio(
+                        "Entries to build and export",
+                        ["All uploaded contests", "Selected contest only"],
+                        index=0, key="fanduel_entries_assignment_scope",
+                        help="All uploaded contests fills every entry in this roster-format upload and exports them together.")
+                    fd_all_contests = fd_all_contests == "All uploaded contests"
                     fd_selected_label = st.selectbox(
                         "Select the FanDuel contest to simulate against",
                         fd_contest_summary["Contest Label"].tolist(),
@@ -4616,6 +4627,9 @@ if platform == "FanDuel":
                         errors="coerce"
                     )
                     _fd_contest_id = str(fd_selected_row[fd_id_col])
+                    fd_assignment_entries = fd_entry_df if fd_all_contests else fd_entry_df[fd_entry_df[fd_id_col].astype(str).eq(_fd_contest_id)]
+                    _fd_multi_contest = fd_all_contests and fd_assignment_entries[fd_id_col].nunique() > 1
+                    st.caption(f"Building and exporting {len(fd_assignment_entries)} entries across {fd_assignment_entries[fd_id_col].nunique()} contests. The selected contest supplies the reference simulation settings.")
                     from simmah_fd_contest_workspaces import activate_contest
                     activate_contest(st.session_state, fd_entry_file.getvalue(), lineup_mode, _fd_contest_id)
                     _fd_auto_details = fetch_fanduel_contest_details(_fd_contest_id)
@@ -4639,7 +4653,7 @@ if platform == "FanDuel":
                         st.caption("Verified Hail Mary payouts: $20,000 across 28,750 paid places. ROI models the full 95,808-entry capacity; the final filled field may differ.")
                     if _fd_contest_id == "135464-281110099":
                         st.caption("Confirmed Pooch Punt payout schedule: $4,000 across 28,750 paid places. ROI models the full 95,808-entry capacity; the final filled field may differ.")
-                    st.caption("Each contest keeps its own build, settings and assigned lineups. Select another contest to build it; switch back to restore your previous results. Export each contest separately.")
+                    st.caption("All uploaded contests fills every Entry ID in one build and CSV. Selected contest only keeps separate builds and exports for individual contests.")
                     fd_fee_text = f"${float(fd_fee):.2f}" if pd.notna(fd_fee) else "not listed"
                     st.success(
                         f"Selected: {fd_selected_row[fd_name_col]} | Contest ID: {_fd_contest_id} | "
@@ -5247,6 +5261,10 @@ if platform == "FanDuel":
                 )
                 st.caption("Choose your FanDuel Full Roster stack rules before pressing BUILD.")
 
+        from simmah_nfl_game_exclusions import render_game_exclusions
+        with _build_controls:
+            _fd_excluded_names = render_game_exclusions(st, fd_players, "FanDuel", lineup_mode)
+        fd_user_pool = fd_players.loc[~fd_players["Name"].astype(str).isin(_fd_excluded_names)].copy()
         _build_controls.write("### Run")
         _fd_run_center = _build_controls.container()
         with _fd_run_center:
@@ -5365,7 +5383,7 @@ if platform == "FanDuel":
             st.session_state.pop("fd_contest_field_" + lineup_mode.replace(" ", "_").lower(), None)
             st.session_state.pop("fd_contest_field_ready_" + lineup_mode.replace(" ", "_").lower(), None)
             st.session_state.pop("fd_contest_comparison_" + lineup_mode.replace(" ", "_").lower(), None)
-            pool = fd_players.drop_duplicates("Name", keep="first").reset_index(drop=True)
+            pool = fd_user_pool.drop_duplicates("Name", keep="first").reset_index(drop=True)
             if lineup_mode == "Single Game":
                 roster = [("MVP", set())] + [(f"FLEX{i}", set()) for i in range(1, 6)]
             else:
@@ -5654,7 +5672,7 @@ if platform == "FanDuel":
 
         fd_results = st.session_state.get(fd_build_key)
         if fd_results is not None:
-            _fd_eligible_now = set(fd_players["Name"].astype(str))
+            _fd_eligible_now = set(fd_user_pool["Name"].astype(str))
             fd_results = fd_results.loc[fd_results[fd_slots].isin(_fd_eligible_now).all(axis=1)].copy()
             if fd_results.empty:
                 st.warning("No saved candidates remain eligible after player-pool changes. Run Build to generate new candidates.")
@@ -5757,7 +5775,7 @@ if platform == "FanDuel":
                 _fd_diverse_portfolio = None
                 if lineup_mode in ("Full Roster", "Single Game"):
                     from simmah_portfolio_selection import select_portfolio, put_portfolio_first
-                    _fd_owned_count = full_roster_contest_parameters(st.session_state.get("selected_fd_contest") or {}, 1)["owned"]
+                    _fd_owned_count = len(fd_assignment_entries) if fd_all_contests else full_roster_contest_parameters(st.session_state.get("selected_fd_contest") or {}, 1)["owned"]
                     try:
                         _fd_diverse_portfolio = select_portfolio(fd_all_ranked, fd_slots, _fd_owned_count, fd_rank_column,
                             controls=fd_player_display.set_index("Name").to_dict("index"), diversity=portfolio_diversity)
@@ -5769,7 +5787,7 @@ if platform == "FanDuel":
                     fd_all_ranked = put_portfolio_first(fd_all_ranked, _fd_diverse_portfolio, fd_slots)
                     st.caption(f"Lineup exposure diversity: {portfolio_diversity}%. Preferred player cap: {100 - .4 * portfolio_diversity:.0f}%. Locks and manual limits remain enforced. Candidate alternatives remain available below.")
                 with _tab_lineups:
-                    _fd_diverse_portfolio = render_editor(st, _fd_diverse_portfolio, fd_players, fd_slots,
+                    _fd_diverse_portfolio = render_editor(st, _fd_diverse_portfolio, fd_user_pool, fd_slots,
                         "FanDuel", lineup_mode, st.session_state.get("selected_fd_contest", {}),
                         validator=(lambda row: full_roster_stack_matches(row, fd_players, fd_stack_rules, secondary_stacks=fd_secondary_stack_rules)) if lineup_mode == "Full Roster" else single_stack_validator(st, "FanDuel", lineup_mode, full_roster_stack_lookup(fd_players)))
                 fd_results = fd_all_ranked.head(int(fd_rank_count)).copy()
@@ -5782,7 +5800,7 @@ if platform == "FanDuel":
                     _fd_joint_field = st.session_state.get("fd_contest_field_full_roster")
                     _fd_joint_outcomes = st.session_state.get("fd_simulation_df_full_roster")
                     _fd_context = st.session_state.get("fd_full_roster_evaluation_context")
-                    if isinstance(_fd_joint_field, pd.DataFrame) and not _fd_joint_field.empty and isinstance(_fd_joint_outcomes, pd.DataFrame) and _fd_context == _fd_selected_contest:
+                    if not _fd_multi_contest and isinstance(_fd_joint_field, pd.DataFrame) and not _fd_joint_field.empty and isinstance(_fd_joint_outcomes, pd.DataFrame) and _fd_context == _fd_selected_contest:
                         _fd_spec = full_roster_contest_parameters(_fd_selected_contest, len(_fd_joint_field))
                         with st.spinner("Evaluating assigned FanDuel entries together..."):
                             fd_export_portfolio = evaluate_full_roster_portfolio_cached(_fd_joint_outcomes, fd_export_portfolio,
@@ -5791,11 +5809,12 @@ if platform == "FanDuel":
                             fd_export_portfolio = fd_export_portfolio.drop(columns=["CashRate", "Expected Prize ($)", "Expected Net ($)", "Expected ROI (%)", "Entry Fee ($)"], errors="ignore")
                             fd_export_portfolio["ContestScore"] = fd_export_portfolio["Top1"]
                     else:
-                        st.warning("Run CONTEST SIM for the selected contest before exporting evaluated entries.")
+                        if not _fd_multi_contest:
+                            st.warning("Run CONTEST SIM for the selected contest before exporting evaluated entries.")
                         fd_export_portfolio = fd_export_portfolio.drop(columns=["CashRate", "Expected Prize ($)", "Expected Net ($)", "Expected ROI (%)", "Entry Fee ($)"], errors="ignore")
                     st.session_state["fd_full_roster_assigned_portfolio"] = fd_export_portfolio.copy()
                     st.write("### Assigned contest portfolio")
-                    st.caption(f"These {_fd_spec['owned']} entries are the source for both downloads. Additional displayed candidates are alternatives.")
+                    st.caption(f"These {len(fd_export_portfolio)} entries are the source for both downloads. Additional displayed candidates are alternatives.")
                     st.dataframe(injury_frame(st, fd_export_portfolio), use_container_width=True, hide_index=True)
                     st.caption("Candidate alternatives — the assigned portfolio above is used for your entry replacement.")
 
@@ -5804,7 +5823,7 @@ if platform == "FanDuel":
                     fd_export_portfolio = _fd_diverse_portfolio.copy()
                     _single_field = st.session_state.get("fd_contest_field_single_game")
                     _single_outcomes = st.session_state.get("fd_simulation_df_single_game")
-                    if st.session_state.get("fd_single_game_evaluation_engine") == "shared-contest-mvp-v1" and st.session_state.get("fd_single_game_evaluation_context") == dict(st.session_state.get("selected_fd_contest") or {}) and isinstance(_single_field, pd.DataFrame) and isinstance(_single_outcomes, pd.DataFrame):
+                    if not _fd_multi_contest and st.session_state.get("fd_single_game_evaluation_engine") == "shared-contest-mvp-v1" and st.session_state.get("fd_single_game_evaluation_context") == dict(st.session_state.get("selected_fd_contest") or {}) and isinstance(_single_field, pd.DataFrame) and isinstance(_single_outcomes, pd.DataFrame):
                         _single_spec = full_roster_contest_parameters(st.session_state.get("selected_fd_contest"), len(_single_field))
                         fd_export_portfolio = evaluate_full_roster_portfolio_cached(_single_outcomes, fd_export_portfolio,
                             _single_field, fd_slots, _single_spec["field_size"], _single_spec["tiers"], _single_spec["fee"],
@@ -5815,7 +5834,13 @@ if platform == "FanDuel":
                     st.caption("These lineups are used for both the portfolio report and entry replacement.")
                     st.dataframe(injury_frame(st, fd_export_portfolio), use_container_width=True, hide_index=True)
 
+                if _fd_multi_contest:
+                    fd_export_portfolio = fd_export_portfolio.drop(columns=["CashRate", "Expected Prize ($)", "Expected Net ($)", "Expected ROI (%)", "Entry Fee ($)"], errors="ignore")
+                for _source_column, _output_column in ((fd_entries_col, "Entry ID"), (fd_id_col, "Contest ID"), (fd_name_col, "Contest Name")):
+                    fd_export_portfolio[_output_column] = fd_assignment_entries[_source_column].astype(str).to_numpy()
                 st.session_state["fd_assigned_display_" + lineup_mode.replace(" ", "_").lower()] = fd_export_portfolio.copy()
+                if lineup_mode == "Full Roster":
+                    st.session_state["fd_full_roster_assigned_portfolio"] = fd_export_portfolio.copy()
                 with _tab_build:
                     st.write("### Candidate Lineups")
                     # Use the same player-by-player points layout as the DraftKings Portfolio.
@@ -5871,7 +5896,10 @@ if platform == "FanDuel":
                         hide_index=True
                     )
 
-                render_portfolio_roi_panel(fd_export_portfolio, st.session_state.get("selected_fd_contest"))
+                if _fd_multi_contest:
+                    st.caption("Assigned entries cover all uploaded contests. Shared ranking uses the reference contest; combined ROI is unavailable until every contest has its own verified payout evaluation.")
+                else:
+                    render_portfolio_roi_panel(fd_export_portfolio, st.session_state.get("selected_fd_contest"))
                 with st.expander("Analysis report (optional)", expanded=False):
                     lineup_export_download(
                         "DOWNLOAD PORTFOLIO REPORT (FOR REVIEW)",
@@ -5890,15 +5918,17 @@ if platform == "FanDuel":
                             fd_ids = dict(zip(fd_players["Name"], fd_players["FD_ID"].astype(str)))
                             fd_entry_bytes, fd_entry_count = build_fanduel_entry_export(
                                 fd_entry_file.getvalue(), fd_export_portfolio, fd_ids,
-                                st.session_state["selected_fd_contest"], lineup_mode)
+                                st.session_state["selected_fd_contest"], lineup_mode,
+                                all_contests=fd_all_contests, contest_ids=fd_assignment_entries[fd_id_col].astype(str).unique())
                             import csv as _fd_export_csv
                             import io as _fd_export_io
                             _fd_upload_rows = list(_fd_export_csv.reader(_fd_export_io.StringIO(fd_entry_bytes.decode("utf-8-sig"))))
                             _fd_upload_header = [c.strip().casefold() for c in _fd_upload_rows[0]]
                             if not set(_fd_upload_header).intersection({"entry_id", "entry id", "entryid"}) or not set(_fd_upload_header).intersection({"contest_id", "contest id", "contestid"}):
                                 raise ValueError("Export blocked: replacement CSV is missing reserved entry identifiers.")
-                            _fd_export_name = "FanDuel_" + lineup_mode.replace(" ", "_") + "_" + str(st.session_state["selected_fd_contest"]["id"]) + "_UPLOAD.csv"
+                            _fd_export_name = "FanDuel_" + lineup_mode.replace(" ", "_") + "_" + ("ALL_" + str(fd_entry_count) + "_ENTRIES" if fd_all_contests else str(st.session_state["selected_fd_contest"]["id"])) + "_UPLOAD.csv"
                             st.success(f"Ready to replace {fd_entry_count} reserved entries. Entry IDs and original template details are preserved.")
+                            st.dataframe(fd_assignment_entries.groupby([fd_id_col, fd_name_col], dropna=False).size().reset_index(name="Entries in download"), hide_index=True, use_container_width=True)
                             st.caption("FanDuel upload file: " + _fd_export_name + ". This file contains entry_id, contest_id, and roster player IDs.")
                             with st.expander("Preview FanDuel upload IDs", expanded=False):
                                 _fd_preview_text = _fd_export_io.StringIO()
@@ -5960,6 +5990,7 @@ else:
         selected_contest_name = None
         selected_contest_entry_count = 0
         selected_contest_entry_fee = None
+        dk_all_contests = False
 
         if entry_file is not None:
             try:
@@ -6107,6 +6138,16 @@ else:
                             ),
                             axis=1,
                         )
+                        dk_all_contests = False
+                        if lineup_mode == "Classic":
+                            dk_all_contests = st.radio(
+                                "Entries to build and export",
+                                ["All uploaded contests", "Selected contest only"],
+                                index=0, key="dk_classic_entry_assignment_scope",
+                                help="Build the candidates once. All uploaded contests assigns a distinct lineup to every uploaded Entry ID and exports them together.")
+                            dk_all_contests = dk_all_contests == "All uploaded contests"
+                            if dk_all_contests:
+                                st.caption(f"Assigning {len(entry_df)} entries across {len(contest_summary)} contests. Choose the simulation reference contest below; the CSV will include every contest.")
                         selected_label = st.selectbox(
                             "Contest to build and export",
                             contest_summary["Contest Label"].tolist(),
@@ -6115,7 +6156,7 @@ else:
                             key=f"dk_explicit_contest_v2_{lineup_mode.lower().replace(' ', '_')}",
                         )
                         if selected_label is None:
-                            st.info("Choose a contest above. Builds and exports apply only to that contest's Entry IDs.")
+                            st.info("Choose the simulation reference contest above. The entry assignment option determines which contests are exported.")
                             workspace_stop(st, _loaded_slate_tabs)
                         selected_row = contest_summary.loc[
                             contest_summary["Contest Label"].eq(selected_label)
@@ -7032,9 +7073,12 @@ else:
         st.session_state["control_values"] = control_values
         edited_controls = control_values.copy()
         control_map = edited_controls.set_index("Name").to_dict("index")
+        from simmah_nfl_game_exclusions import render_game_exclusions
+        with _build_controls:
+            _dk_excluded_names = render_game_exclusions(st, players_df, "DraftKings", lineup_mode)
         available_players = [
             p for p in players_df["Name"]
-            if p in control_map and not control_map[p]["Fade"]
+            if p in control_map and not control_map[p]["Fade"] and str(p) not in _dk_excluded_names
         ]
 
         # ============================================
@@ -7273,7 +7317,10 @@ else:
                         rng = np.random.default_rng()
                         sim_df = st.session_state["simulation_df"]
                         mean_scores = sim_df.mean(axis=0).to_dict()
-                        pool = classic_pool.copy()
+                        # Opponents retain games excluded from the user's candidate pool.
+                        pool = players_df.copy()
+                        pool["Eligible"] = pool["Position"].apply(classic_positions)
+                        pool = pool.loc[pool["Salary"].gt(0)].copy()
                         pool["MeanPoints"] = pool["Name"].map(mean_scores).fillna(pool["Projection"])
                         pool = attach_main_slate_ownership(pool, "draftkings")
                         ownership_columns = [c for c in ["Name", "Team", "Opponent", "Position", "Salary", "Projected Ownership", "Ownership Source", "Ownership Updated UTC", "Ownership Week", "Ownership Selection Weight"] if c in pool.columns]
@@ -7481,8 +7528,11 @@ else:
                     )
                     classic_rank_metric = PORTFOLIO_METRICS[classic_rank_label]
                     from simmah_portfolio_selection import select_portfolio, put_portfolio_first
-                    _classic_assignment_count = max(1, int((st.session_state.get("selected_dk_contest") or {}).get("your_entries") or classic_entry_count))
+                    _classic_assignment_count = len(entry_df) if dk_all_contests else max(1, int((st.session_state.get("selected_dk_contest") or {}).get("your_entries") or classic_entry_count))
+                    _classic_multi_contest = dk_all_contests and entry_df["Contest ID"].nunique() > 1
                     _classic_slots = [col for col in ["QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "FLEX", "DST"] if col in classic_portfolio_source]
+                    classic_portfolio_source = classic_portfolio_source.loc[
+                        classic_portfolio_source[_classic_slots].isin(set(classic_pool["Name"].astype(str))).all(axis=1)].copy()
                     try:
                         classic_export_portfolio = select_portfolio(classic_portfolio_source, _classic_slots,
                             _classic_assignment_count, classic_rank_metric, controls=control_map, diversity=portfolio_diversity)
@@ -7495,6 +7545,11 @@ else:
                         classic_export_portfolio = render_editor(st, classic_export_portfolio, classic_pool, _classic_slots,
                             "DraftKings", "Classic", st.session_state.get("selected_dk_contest", {}),
                             validator=lambda row: full_roster_stack_matches(row, classic_pool, dk_classic_stack_rules, secondary_stacks=dk_secondary_stack_rules))
+                    _classic_entry_rows = entry_df if dk_all_contests else entry_df[entry_df["Contest ID"].astype(str).eq(str(selected_contest_id))]
+                    for _metadata_column in ("Entry ID", "Contest ID", "Contest Name"):
+                        classic_export_portfolio[_metadata_column] = _classic_entry_rows[_metadata_column].astype(str).to_numpy()
+                    if _classic_multi_contest:
+                        classic_export_portfolio = classic_export_portfolio.drop(columns=["Expected Prize ($)", "Entry Fee ($)", "Expected Net ($)", "Expected ROI (%)", "CashRate"], errors="ignore")
                     _classic_unique_entries = classic_export_portfolio.copy()
                     classic_top_portfolio = put_portfolio_first(classic_portfolio_source, classic_export_portfolio,
                         _classic_slots).head(int(classic_portfolio_count)).copy()
@@ -7521,7 +7576,7 @@ else:
                             workspace_download_button(st,"DOWNLOAD CLASSIC PLAYER INPUTS", classic_pool.to_csv(index=False).encode("utf-8"),
                                 "DraftKings_Classic_Player_Inputs.csv", "text/csv", key="classic_player_diagnostics", on_click="ignore")
 
-                    if st.session_state.get("classic_field_context") == classic_contest_name and isinstance(_classic_portfolio_field, pd.DataFrame) and not _classic_portfolio_field.empty and isinstance(_classic_portfolio_outcomes, pd.DataFrame):
+                    if not _classic_multi_contest and st.session_state.get("classic_field_context") == classic_contest_name and isinstance(_classic_portfolio_field, pd.DataFrame) and not _classic_portfolio_field.empty and isinstance(_classic_portfolio_outcomes, pd.DataFrame):
                         with st.spinner("Evaluating the selected portfolio together..."):
                             classic_export_portfolio = evaluate_full_roster_portfolio_cached(
                                 _classic_portfolio_outcomes, classic_export_portfolio, _classic_portfolio_field,
@@ -7533,7 +7588,12 @@ else:
                         st.dataframe(injury_frame(st, classic_export_portfolio), use_container_width=True, hide_index=True)
                     else:
                         st.caption("Run CONTEST SIM for field-based portfolio metrics.")
-                    render_portfolio_roi_panel(classic_export_portfolio, classic_contest)
+                    if _classic_multi_contest:
+                        st.write("### Assigned entries — all contests")
+                        st.dataframe(injury_frame(st, classic_export_portfolio), use_container_width=True, hide_index=True)
+                        st.caption("Shared candidate ranking uses the reference contest. Combined ROI is unavailable until each contest has its own verified payout evaluation.")
+                    else:
+                        render_portfolio_roi_panel(classic_export_portfolio, classic_contest)
                     with _tab_build:
                         st.caption("Candidate alternatives — only rows marked Assigned to contest are included in your entry replacement.")
                         st.dataframe(injury_frame(st, classic_top_portfolio), use_container_width=True, hide_index=True)
@@ -7588,13 +7648,14 @@ else:
                                     selected_contest_id,
                                     lineup_ids_df,
                                     dk_upload_columns,
-                                    "Classic"
+                                    "Classic", all_contests=dk_all_contests
                                 )
                                 if export_df is not None:
+                                    st.dataframe(export_df.groupby(["Contest ID", "Contest Name"], dropna=False).size().reset_index(name="Entries in download"), hide_index=True, use_container_width=True)
                                     lineup_export_download(
-                                        label=f"DOWNLOAD {len(export_df)} DK ENTRIES — {selected_contest_name}",
+                                        label=(f"DOWNLOAD ALL {len(export_df)} DK ENTRIES — {export_df['Contest ID'].nunique()} CONTESTS" if dk_all_contests else f"DOWNLOAD {len(export_df)} DK ENTRIES — {selected_contest_name}"),
                                         data=export_df.to_csv(index=False).encode("utf-8"),
-                                        file_name=f"DraftKings_Classic_{selected_contest_id}_{len(export_df)}_ENTRIES.csv",
+                                        file_name=(f"DraftKings_Classic_ALL_{len(export_df)}_ENTRIES.csv" if dk_all_contests else f"DraftKings_Classic_{selected_contest_id}_{len(export_df)}_ENTRIES.csv"),
                                         mime="text/csv",
                                         use_container_width=True,
                                         key="dk_classic_replace_export",
@@ -7674,7 +7735,7 @@ with _tab_build:
     # Showdown SIM handler uses these lists immediately after player simulation.
     available_players = [
         p for p in players_df["Name"]
-        if p in control_map and not control_map[p].get("Fade", False)
+        if p in control_map and not control_map[p].get("Fade", False) and str(p) not in _dk_excluded_names
     ]
     locked_players = [
         p for p in available_players
@@ -9021,6 +9082,11 @@ with _tab_build:
                         st.caption(f"Comparison bundle unavailable: {_comparison_error}")
 
             if platform == "DraftKings" and lineup_mode == "Showdown":
+                _showdown_user_slots = ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"]
+                results_df = results_df.loc[~results_df[_showdown_user_slots].isin(_dk_excluded_names).any(axis=1)].copy()
+                if results_df.empty:
+                    st.info("No saved candidates remain after game exclusions. Run Build with eligible games.")
+                    workspace_stop(st, _loaded_slate_tabs)
                 render_value_leverage_finder(control_display, results_df, st.session_state.get("contest_field_df"),
                     ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"], "dk_showdown", "Captain")
             classic_mode = platform == "DraftKings" and lineup_mode == "Classic"
@@ -9108,7 +9174,7 @@ with _tab_build:
             st.session_state["portfolio_df"] = portfolio_df.copy()
             st.session_state["portfolio_metric_used"] = portfolio_metric
             with _tab_lineups:
-                portfolio_df = render_editor(st, portfolio_df, players_df, portfolio_lineup_columns,
+                portfolio_df = render_editor(st, portfolio_df, players_df.loc[~players_df["Name"].astype(str).isin(_dk_excluded_names)], portfolio_lineup_columns,
                     "DraftKings", "Showdown", st.session_state.get("selected_dk_contest", {}),
                     validator=single_stack_validator(st, "DraftKings", "Showdown", full_roster_stack_lookup(players_df)))
             portfolio_df = add_lineup_field_ownership(portfolio_df)
