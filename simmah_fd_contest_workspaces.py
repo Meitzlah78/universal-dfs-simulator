@@ -15,6 +15,7 @@ def belongs_to_contest(key):
         'fd_full_roster_', 'fd_single_game_', 'fd_build_salary_range_',
         'fd_rank_', 'fd_player_pool_editor_', 'fd_player_controls_',
         'fd_manual_injury_status_',
+        'nfl_excluded_games_FanDuel_',
         'portfolio_exposure_diversity_FanDuel_',
         'lineup_build_aggressiveness_FanDuel_',
         'confirmed_qb_role_signature_fanduel_',
