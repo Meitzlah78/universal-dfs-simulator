@@ -1453,7 +1453,7 @@
       ]
     },
     "dk:buf-lar-user-20261012": {
-      "name": "NFL Showdown — user-provided $0.10 ladder",
+      "name": "NFL Showdown \u2014 user-provided $0.10 ladder",
       "site": "DraftKings",
       "payouts": [
         [
@@ -1569,7 +1569,7 @@
       ]
     },
     "FanDuel:7000-thu-nfl-pooch-punt-20261022": {
-      "name": "$7K Thu NFL Pooch Punt — $0.05, 150 Max",
+      "name": "$7K Thu NFL Pooch Punt \u2014 $0.05, 150 Max",
       "site": "FanDuel",
       "payouts": [
         [
@@ -1721,7 +1721,7 @@
       "capacity_status": "exact user-provided capacity"
     },
     "DraftKings:60000-first-down-ne-chi-20261022": {
-      "name": "NFL Showdown $60K First Down — $1, 20 Max",
+      "name": "NFL Showdown $60K First Down \u2014 $1, 20 Max",
       "site": "DraftKings",
       "format": "DraftKings Showdown",
       "payouts": [
@@ -1879,7 +1879,7 @@
       "verified_date": "2026-10-22"
     },
     "DraftKings:1500-dime-package-pit-no": {
-      "name": "NFL Showdown $1.5K Dime Package — $0.10, 20 Max",
+      "name": "NFL Showdown $1.5K Dime Package \u2014 $0.10, 20 Max",
       "site": "DraftKings",
       "format": "DraftKings Showdown",
       "payouts": [
@@ -2002,7 +2002,7 @@
       "verified_date": "2026-10-22"
     },
     "DraftKings:1000-quarter-jukebox-sf-atl": {
-      "name": "NFL Showdown $1K Quarter Jukebox — $0.25, 20 Max",
+      "name": "NFL Showdown $1K Quarter Jukebox \u2014 $0.25, 20 Max",
       "site": "DraftKings",
       "format": "DraftKings Showdown",
       "payouts": [
@@ -2099,7 +2099,7 @@
       "verified_date": "2026-10-22"
     },
     "DraftKings:4000-quarter-jukebox-pit-no": {
-      "name": "NFL Showdown $4K Quarter Jukebox — $0.25, 20 Max",
+      "name": "NFL Showdown $4K Quarter Jukebox \u2014 $0.25, 20 Max",
       "site": "DraftKings",
       "format": "DraftKings Showdown",
       "payouts": [
@@ -2222,7 +2222,7 @@
       "verified_date": "2026-10-22"
     },
     "DraftKings:2000-first-down-den-ari": {
-      "name": "NFL Showdown $2K First Down — $1, 20 Max",
+      "name": "NFL Showdown $2K First Down \u2014 $1, 20 Max",
       "site": "DraftKings",
       "format": "DraftKings Showdown",
       "payouts": [
@@ -2319,7 +2319,7 @@
       "verified_date": "2026-10-22"
     },
     "DraftKings:1500-first-down-tb-car": {
-      "name": "NFL Showdown $1.5K First Down — $1, 20 Max",
+      "name": "NFL Showdown $1.5K First Down \u2014 $1, 20 Max",
       "site": "DraftKings",
       "format": "DraftKings Showdown",
       "payouts": [
@@ -2416,7 +2416,7 @@
       "verified_date": "2026-10-22"
     },
     "DraftKings:20000-first-down-pit-no": {
-      "name": "NFL Showdown $20K First Down — $1, 20 Max",
+      "name": "NFL Showdown $20K First Down \u2014 $1, 20 Max",
       "site": "DraftKings",
       "format": "DraftKings Showdown",
       "payouts": [
@@ -2554,7 +2554,7 @@
       "verified_date": "2026-10-22"
     },
     "FanDuel:30000-thu-nfl-dive": {
-      "name": "$30K Thu NFL Dive ($10K to 1st) — $1, 150 Max",
+      "name": "$30K Thu NFL Dive ($10K to 1st) \u2014 $1, 150 Max",
       "site": "FanDuel",
       "format": "FanDuel Single Game",
       "payouts": [
@@ -2686,7 +2686,7 @@
       "verified_date": "2026-10-22"
     },
     "FanDuel:20000-thu-nfl-hail-mary": {
-      "name": "$20K Thu NFL Hail Mary — $0.25, 150 Max",
+      "name": "$20K Thu NFL Hail Mary \u2014 $0.25, 150 Max",
       "site": "FanDuel",
       "format": "FanDuel Single Game",
       "payouts": [
@@ -3115,6 +3115,151 @@
       "source": "User-provided complete payout table and lobby metadata",
       "verified_date": "2026-10-25",
       "field_size": 11890
+    },
+    "FanDuel:5000-sun-nfl-pooch-punt-150-max": {
+      "name": "$5K Sun NFL Pooch Punt (150 Entries Max)",
+      "site": "FanDuel",
+      "format": "FanDuel Single Game",
+      "payouts": [
+        [
+          1,
+          1,
+          250
+        ],
+        [
+          2,
+          2,
+          150
+        ],
+        [
+          3,
+          3,
+          100
+        ],
+        [
+          4,
+          4,
+          75
+        ],
+        [
+          5,
+          5,
+          50
+        ],
+        [
+          6,
+          6,
+          40
+        ],
+        [
+          7,
+          7,
+          30
+        ],
+        [
+          8,
+          8,
+          20
+        ],
+        [
+          9,
+          9,
+          15
+        ],
+        [
+          10,
+          10,
+          10
+        ],
+        [
+          11,
+          12,
+          7.25
+        ],
+        [
+          13,
+          15,
+          6
+        ],
+        [
+          16,
+          20,
+          5
+        ],
+        [
+          21,
+          30,
+          4
+        ],
+        [
+          31,
+          40,
+          3
+        ],
+        [
+          41,
+          50,
+          2
+        ],
+        [
+          51,
+          100,
+          1
+        ],
+        [
+          101,
+          150,
+          0.75
+        ],
+        [
+          151,
+          200,
+          0.5
+        ],
+        [
+          201,
+          300,
+          0.4
+        ],
+        [
+          301,
+          500,
+          0.3
+        ],
+        [
+          501,
+          1000,
+          0.2
+        ],
+        [
+          1001,
+          5000,
+          0.15
+        ],
+        [
+          5001,
+          10000,
+          0.12
+        ],
+        [
+          10001,
+          36000,
+          0.1
+        ]
+      ],
+      "entry_fee": 0.05,
+      "prize_pool": 5000,
+      "verified_total_payout": 5000,
+      "paid_positions": 36000,
+      "field_size": 119760,
+      "capacity_status": "exact user-provided capacity",
+      "max_entries_per_user": 150,
+      "current_entries_at_capture": 35629,
+      "your_entries_at_capture": 50,
+      "source_entry_id": "3753953304",
+      "starts_at_eastern": "2026-10-25T20:20:00-04:00",
+      "source": "User-provided complete Prizes screenshot and lobby metadata",
+      "verified_date": "2026-10-25"
     }
   }
 }
