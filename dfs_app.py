@@ -5600,6 +5600,13 @@ if platform == "FanDuel":
                             st.session_state["fd_single_game_evaluation_engine"] = "shared-contest-mvp-v1"
                             st.caption("Candidates and opponents scored on the same independent game outcomes, including 1.5x MVP points. Cash and ROI require confirmed contest payouts.")
                         st.session_state["fd_contest_comparison_" + lineup_mode.replace(" ", "_").lower()] = compared
+                        from simmah_diagnostic_packages import capture_nfl_build
+                        capture_nfl_build(st, selected_format, fd_pool, opponent_df,
+                            st.session_state.get(fd_build_key), compared, simulation_cache_root(),
+                            extras={'evaluation_outcomes':fd_sim_df,'ownership_weights':fd_weights,
+                                'mvp_weights':fd_mvp_weights,'flex_weights':fd_flex_weights,
+                                'salary_range':fd_salary_range,'field_proposals':_fd_field_input,
+                                'field_seed':123})
                         fd_step4_progress.progress(1.0, text="Step 4 of 4 complete: FanDuel contest comparison finished.")
                         fd_step4_status.success("Step 4 of 4 complete: contest comparison finished.")
                         st.write("### FanDuel Lineups vs. Simulated Contest Field")
@@ -7312,6 +7319,12 @@ else:
                         st.session_state["classic_contest_field_ready"] = len(contest_field_df) > 0
                         st.session_state["classic_contest_comparison_df"] = user_lineups
                         st.session_state["classic_field_context"] = classic_contest_name
+                        from simmah_diagnostic_packages import capture_nfl_build
+                        capture_nfl_build(st, selected_format, pool, contest_field_df,
+                            st.session_state.get('classic_lineups'), user_lineups, simulation_cache_root(),
+                            extras={'evaluation_outcomes':sim_df,'contest_rules':classic_contest,
+                                'roster_slots':contest_slots,'salary_min':MIN_LINEUP_SALARY,
+                                'salary_max':MAX_LINEUP_SALARY})
                     if not contest_field_df.empty:
                         st.success(f"Compared your {len(user_lineups)} lineups against {len(contest_field_df):,} simulated opponent lineups.")
                         st.write("### Your Lineups vs. Contest Field")
@@ -8739,6 +8752,12 @@ with _tab_build:
                 "portfolio_control_signature",
             ):
                 st.session_state.pop(_key, None)
+        from simmah_diagnostic_packages import capture_nfl_build
+        capture_nfl_build(st, selected_format, players_df, contest_field_df, candidates_df,
+            results_df, simulation_cache_root(),extras={'evaluation_outcomes':simulation_df,
+                'payout_schedule':payout_schedule,'selection_n_sims':selection_n_sims,
+                'holdout_n_sims':holdout_n_sims,'scoring_multiplier':scoring_multiplier,
+                'estimated_full_field_size':estimated_full_field_size})
         scoring_status.success(f"Ranking complete — {len(results_df):,} lineups ranked. Loading your portfolio below.")
         _sanity=st.session_state.get("field_sanity_check")
         if isinstance(_sanity,dict):
@@ -9813,3 +9832,4 @@ with _tab_build:
 
 
 finish_workspaces(st, _loaded_slate_tabs)
+

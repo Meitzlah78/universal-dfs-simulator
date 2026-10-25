@@ -79,7 +79,7 @@ def flush_pending(st, archive):
         st.session_state.setdefault(PREFIX+'browser_outbox',{})[digest] = dict(
             digest=digest,filename=record['filename'],data=base64.b64encode(record['raw']).decode())
         try:
-            saved = archive.put(record['raw'],record['filename'])
+            saved = archive.put(record['raw'],record['filename'],metadata=record.get('metadata'))
             st.session_state.setdefault(PREFIX+'browser_outbox',{})[digest] = dict(
                 digest=digest,filename=saved['filename'],data=base64.b64encode(record['raw']).decode(),
                 saved_at=saved['saved_at'],metadata=saved['metadata'])
@@ -223,3 +223,4 @@ class _Upload:
 
     def getvalue(self):
         return self.raw
+

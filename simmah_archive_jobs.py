@@ -107,9 +107,34 @@ def _run_guarded(archive, job, identity):
         run_job(archive, job)
     except Exception as error:
         archive.set_job(job['id'],'failed',f'{type(error).__name__}: {error}')
+        attempts=sorted((archive.root/'jobs'/job['id']).glob('attempt-*'))
+        if attempts:
+            try:
+                packed=_pack_attempt(attempts[-1])
+                atomic_write(archive.root/'jobs'/job['id']/'result.zip',packed)
+                archive.put(packed,'Solver_Run_'+job['id'][:12]+'_FAILED.zip',
+                    metadata=dict(kind='calibration_report',job_id=job['id'],status='failed'))
+            except Exception as save_error:
+                archive.set_job(job['id'],'failed',f'{type(error).__name__}: {error}; solver diagnostic save failed: {save_error}')
     finally:
         with _LOCK:
             _SCHEDULED.discard(identity)
+
+
+def _pack_attempt(attempt):
+    """Retain inputs, engine sources, provenance and logs on success AND failure."""
+    buf=io.BytesIO();omitted=[];hashes={}
+    with zipfile.ZipFile(buf,'w',zipfile.ZIP_DEFLATED) as bundle:
+        for path in sorted(attempt.rglob('*')):
+            if not path.is_file():continue
+            name=path.relative_to(attempt).as_posix()
+            if path.suffix in ('.bin','.pyc','.zip') or path.name=='quad_optimizer':
+                omitted.append({'path':name,'bytes':path.stat().st_size,
+                    'reason':'Rebuildable binary state, executable or nested report archive'})
+                continue
+            raw=path.read_bytes();bundle.writestr(name,raw);hashes[name]=sha256(raw)
+        bundle.writestr('package_manifest.json',json.dumps({'schema':1,'sha256':hashes,'omitted':omitted},indent=2))
+    return buf.getvalue()
 
 
 def run_job(archive, job, timeout_seconds=1800):
@@ -166,12 +191,7 @@ def run_job(archive, job, timeout_seconds=1800):
         budget_file=out/'budget_status.json'
         if budget_file.exists():
             status=json.loads(budget_file.read_text())
-            buf=io.BytesIO()
-            with zipfile.ZipFile(buf,'w',zipfile.ZIP_DEFLATED) as bundle:
-                for path in attempt.rglob('*'):
-                    if path.is_file() and path.suffix not in ('.bin','.pyc') and path.name!='quad_optimizer':
-                        bundle.write(path,path.relative_to(attempt))
-            packed=buf.getvalue();atomic_write(archive.root/'jobs'/job['id']/'result.zip',packed)
+            packed=_pack_attempt(attempt);atomic_write(archive.root/'jobs'/job['id']/'result.zip',packed)
             archive.put(packed,'calibration-'+job['id'][:12]+'.zip',metadata=dict(kind='calibration_report',job_id=job['id'],status=status['status']))
             archive.set_job(job['id'],status['status'],status['reason'])
             return
@@ -189,7 +209,7 @@ def run_job(archive, job, timeout_seconds=1800):
                    final_float64=final,scope=result.get('scope'),
                    roster_concentration=result.get('roster_concentration'))
     atomic_write(archive.root/'jobs'/job['id']/'summary.json',json.dumps(summary,indent=2).encode())
-    packed = out.with_suffix('.zip').read_bytes()
+    packed = _pack_attempt(attempt)
     target = archive.root/'jobs'/job['id']/'result.zip'
     atomic_write(target,packed)
     # Reports receive the same browser/cloud retention as original inputs.
@@ -205,3 +225,4 @@ def run_job(archive, job, timeout_seconds=1800):
     assert sha256(archive.get(salary['digest'])) == salary['digest']
     assert sha256(archive.get(contest['digest'])) == contest['digest']
     archive.set_job(job['id'],summary['status'],json.dumps(summary))
+

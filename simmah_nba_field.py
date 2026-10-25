@@ -46,6 +46,7 @@ def build_field(lineups,ownership,entries,seed=83,source=None,max_iterations=100
             'ownership_target':target,'ownership_expected':expected,'ownership_sampled':actual,
             'max_expected_error_pct':float(abs(expected-target).max()),
             'optimizer_converged':bool(fit.success),'optimizer_message':str(fit.message),
+            'fit_state':{'indices':ids,'probabilities':probability,'theta':fit.x},
             'entries':entries,'unique_rosters':int(selected.sum()),'ownership_source':source,
             'status':'experimental marginal ownership fit on supplied legal support; inspect residuals'}
 
@@ -81,6 +82,7 @@ def sample_popularity_field(lineups,popularity,entries,seed=83,source=None,stren
             'ownership_sampled':100*(copies@incidence)/entries,
             'ownership_source':'Estimated field; relative popularity assumption: '+source,
             'entries':entries,'unique_rosters':int(keep.sum()),
+            'fit_state':{'indices':ids,'probabilities':probability},
             'effective_support':float(1/(probability@probability)),
             'largest_roster_probability':float(probability.max()),
             'popularity_strength':strength,
@@ -112,4 +114,5 @@ def ownership_support_diagnostic(lineups,ownership,tolerance=5):
         result.update(status='feasible' if error<=tolerance+1e-6 else 'support-limited',
                       minimum_max_error_pct=error)
     return result
+
 

@@ -61,6 +61,11 @@ def capture_export(st,data,filename,context,original_callback=None,callback_args
         record=make_checkpoint(data,filename,context,st.session_state)
         st.session_state[HISTORY]=[*st.session_state.get(HISTORY,[]),record]
         try:
+            from simmah_diagnostic_updates import attach_latest_export
+            attach_latest_export(st,record,context)
+        except Exception as exc:
+            st.warning('Export saved, but attaching it to the calibration/solver package failed: '+str(exc))
+        try:
             persist_checkpoint(record,Path(__file__).resolve().parent/'data'/'export_archives')
         except Exception as exc:
             st.error('Export retained in this workspace, but the server archive copy FAILED: '+str(exc))
@@ -89,6 +94,16 @@ def render_history(st,context,key):
     from simmah_slate_workspaces import workspace_download_button
     records=[r for r in st.session_state.get(HISTORY,[]) if r.get('format')==context.get('format') and str(r.get('contest_id',''))==str(context.get('contest_id',''))]
     if not records:return
+    from simmah_diagnostic_updates import matching_reference
+    from simmah_nba_diagnostics import package_bytes
+    diagnostic=matching_reference(st,context)
+    if diagnostic and diagnostic.get('latest_export_utc'):
+        raw=package_bytes(st,diagnostic)
+        if raw is not None:
+            workspace_download_button(st,'DOWNLOAD CALIBRATION & SOLVER PACKAGE',raw,
+                file_name=diagnostic['filename'],mime='application/zip',
+                key='export_history_diagnostics_'+key,on_click='ignore')
+            st.caption('Includes original build and latest exported entries/late swap: '+diagnostic['latest_export_utc'])
     with st.expander('Saved exports — latest first',expanded=False):
         ordered=list(reversed(records))
         chosen=st.selectbox('Saved export',range(len(ordered)),format_func=lambda i:ordered[i]['exported_utc']+' · '+ordered[i]['kind']+' · '+ordered[i]['export_filename'],key='export_history_select_'+key)
@@ -97,3 +112,4 @@ def render_history(st,context,key):
         with zipfile.ZipFile(io.BytesIO(record['archive'])) as archive:csv=archive.read('export.csv')
         workspace_download_button(st,'DOWNLOAD THIS EXACT CSV',csv,file_name=record['export_filename'],mime='text/csv',key='export_history_csv_'+key,on_click='ignore')
         st.caption('Latest matching entries or late-swap export is used for review. Reports do not replace it. Keep an archive download as an independent backup; exports do not confirm site submission.')
+

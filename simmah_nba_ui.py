@@ -2,6 +2,7 @@ from simmah_slate_workspaces import workspace_button
 from simmah_slate_workspaces import workspace_download_button
 """Experimental NBA workspace wiring; numerical work stays outside Streamlit."""
 import hashlib,json
+from datetime import datetime,timezone
 from pathlib import Path
 import numpy as np
 import pandas as pd
@@ -40,6 +41,17 @@ def display_lineups(pool,frame,status_pool=None):
 
 def render_exports(st,upload,cid,pool,built,portfolio,platform,stale,location,status_pool=None):
     st.subheader('Export lineups')
+    package=built.get('diagnostic_package')
+    if package:
+        from simmah_nba_diagnostics import package_bytes
+        data=package_bytes(st,package)
+        if data is not None:
+            workspace_download_button(st,'DOWNLOAD CALIBRATION & SOLVER PACKAGE',data,
+                package['filename'],'application/zip',key='nba_diagnostic_download_'+location,on_click='ignore')
+            st.caption('One file for this saved build: opponent field, player inputs, simulations, solver details and contest identity.')
+        else:st.caption('Diagnostic package is awaiting archive recovery. Check Saved files below.')
+    else:
+        st.caption('Rebuild once to capture a complete calibration and solver package.')
     st.caption('Export the selected portfolio ('+str(len(portfolio))+' lineups), not the full candidate pool.')
     with st.expander('Advanced — reports and frozen inputs'):
         workspace_download_button(st,'DOWNLOAD PORTFOLIO REPORT',display_lineups(pool,portfolio,status_pool).to_csv(index=False).encode(),
@@ -142,6 +154,7 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
     identity=input_identity(pool,markets,contest,salary_min,correlation,pool.iloc[excluded]['Player ID'])
     saved=st.session_state.get('nba_build_result')
     if clicked:
+        build_started_at=datetime.now(timezone.utc).isoformat()
         with tabs[2]:
             message=st.empty();bar=st.progress(0)
             stages={'Simulating candidate scenarios':.05,'Building independent opponent support':.35,
@@ -154,11 +167,24 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
                     ownership['source'],
                     payout_vector(contest),selected['entry_fee'],count,diversity=diversity,
                     salary_min=salary_min,correlation=correlation,ownership_mode=ownership['mode'],progress=progress,
-                    excluded_indices=excluded)
+                    excluded_indices=excluded,capture_diagnostics=True)
                 reports=engine.last_report
                 # A completed portfolio must serialize and pass site legality
                 # before replacing the last successful build or showing success.
                 export_portfolio(upload.getvalue(),cid,pool,built)
+                from simmah_nba_diagnostics import make_package,retain_package,package_reference
+                try:
+                    package=make_package(pool,built,upload.getvalue(),dict(contest,id=str(cid),date=day),markets,
+                        {'input_identity':identity,'rank_metric_at_build':'Top 1%'},started_at=build_started_at,
+                        engine_metadata={'rates':vars(engine.rates),'max_overtimes':engine.max_overtimes,
+                            'rotation_reconciliation':engine.rotation_reconciliation,
+                            'simulation_identity':engine.identity})
+                    built['diagnostic_package']=package_reference(package)
+                    retain_package(st,package)
+                    # Exact outcome arrays now live in the compressed package.
+                    built.pop('diagnostics',None)
+                except Exception as exc:
+                    st.warning('Lineups built, but diagnostic package capture failed: '+str(exc))
                 saved={'identity':identity,'result':built,'engine_reports':reports,'pool':pool.copy(),'contest_id':cid,
                        'rotation_reconciliation':engine.rotation_reconciliation}
                 st.session_state['nba_build_result']=saved
@@ -235,6 +261,7 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         st.subheader('Player exposures')
         st.dataframe(exposure[['Name','Team','Injury Status','Lineups','Exposure %']],hide_index=True,width='stretch',key='nba_exposure_table',
                      column_config={'Name':st.column_config.TextColumn('Player',pinned=True)})
+
 
 
 

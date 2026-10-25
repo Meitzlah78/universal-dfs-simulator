@@ -61,7 +61,7 @@ def transient_key(key):
     key=str(key)
     # Legacy snapshots saved these download triggers as ordinary booleans.
     # Keep actual export archives and the history selector; discard only actions.
-    if key.startswith(('export_history_backup_','export_history_csv_')):return True
+    if key.startswith(('export_history_backup_','export_history_csv_','export_history_diagnostics_')):return True
     return (key.startswith('FormSubmitter:') or (key.startswith('manual_lineups_') and key.endswith('_apply_swap')) or key.startswith(('game_lines_','fd_player_pool_editor_')) or key=='player_controls_editor' or key.endswith('_remove_restored') or key=='projection_accuracy_template_download' or (key.startswith('saved_contest_choice_') and key.endswith(('_use','_save','_restore_button','_backup','_restore'))) or key.startswith(('nba_projection_upload_','nba_minutes_snapshot_download','nba_entries_download','nba_portfolio_report_','nba_open_fanduel_','nba_open_draftkings_'))
             or key in {'nba_build','nba_field_download','nba_entries_download',
                        'nba_fast_late_swap','nba_late_swap_upload','nba_late_swap_download',
@@ -313,6 +313,8 @@ def finish_workspaces(st,host):
         end_live_build(st.session_state.get('_slate_archive_build_token',''))
     from simmah_archive_ui import render_archive
     with host:
+        from simmah_diagnostic_packages import render_nfl_package
+        render_nfl_package(st)
         render_archive(st)
     current=st.session_state.get('_slate_active')
     blob=capture(st) if current else ''
@@ -366,6 +368,7 @@ def workspace_stop(st,host):
 def workspace_rerun(st,host):
     finish_workspaces(st,host)
     st.rerun()
+
 
 
 

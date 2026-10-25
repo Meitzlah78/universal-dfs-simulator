@@ -50,6 +50,9 @@ class NBAWorkspaceTests(unittest.TestCase):
         self.assertFalse(at.exception)
         self.assertEqual(at.session_state['test_build_calls'],1)
         self.assertEqual(len(at.session_state['nba_build_result']['result']['portfolio']),5)
+        self.assertIn('diagnostic_package',at.session_state['nba_build_result']['result'])
+        self.assertTrue(any(button.proto.label=='DOWNLOAD CALIBRATION & SOLVER PACKAGE' for button in at.get('download_button')))
+        self.assertFalse(any('capture failed' in item.value for item in at.warning))
         at.slider(key='nba_exposure_diversity').set_value(100).run(timeout=20)
         self.assertFalse(at.exception)
         self.assertEqual(at.session_state['test_build_calls'],1)
@@ -82,4 +85,5 @@ class NBAWorkspaceTests(unittest.TestCase):
         self.assertFalse(at.exception)
         self.assertEqual(at.session_state['test_build_calls'],1)
         self.assertTrue(any('EXPORT TO DRAFTKINGS' in button.proto.label for button in at.get('download_button')))
+
 
