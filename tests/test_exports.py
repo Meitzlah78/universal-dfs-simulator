@@ -49,6 +49,43 @@ class FanDuelExportTest(unittest.TestCase):
         rows=list(csv.reader(io.StringIO(out.decode())))
         self.assertEqual(rows[1][4:10],[ids[p.iloc[0][s]] for s in slots])
 
+    def test_combined_fills_paid_and_blank_free_contest_preserving_ids(self):
+        raw,p,ids,original,slots=self.fixture()
+        original[2][4:4+len(slots)]=[""]*len(slots)
+        source=io.StringIO(newline="");csv.writer(source).writerows(original)
+        second=pd.DataFrame([{slot:f"Other {i}" for i,slot in enumerate(slots)}])
+        ids.update({f"Other {i}":f"111-{200+i}" for i in range(len(slots))})
+        portfolio=pd.concat([p,second],ignore_index=True)
+        out,n=build_fanduel_entry_export(source.getvalue(),portfolio,ids,{"id":"111-222"},"Full Roster",all_contests=True)
+        rows=list(csv.reader(io.StringIO(out.decode())))
+        self.assertEqual(n,2)
+        self.assertEqual([r[:4] for r in rows[1:3]],[r[:4] for r in original[1:3]])
+        self.assertEqual(rows[2][4:13],[ids[second.iloc[0][slot]] for slot in slots])
+        self.assertTrue(all(value for row in rows[1:3] for value in row[4:13]))
+        self.assertEqual(rows[3:],original[3:])
+
+    def test_combined_single_game_fills_every_contest(self):
+        raw,p,ids,_,slots=self.fixture(True)
+        out,n=build_fanduel_entry_export(raw,pd.concat([p,p]),ids,{"id":"111-222"},"Single Game",all_contests=True)
+        rows=list(csv.reader(io.StringIO(out.decode())))
+        self.assertEqual(n,2)
+        self.assertEqual(rows[2][4:10],[ids[p.iloc[0][s]] for s in slots])
+
+    def test_combined_blocks_partial_field_and_different_slates(self):
+        raw,p,ids,_,_=self.fixture()
+        with self.assertRaisesRegex(ValueError,"Need 2"):
+            build_fanduel_entry_export(raw,p,ids,{"id":"111-222"},"Full Roster",all_contests=True)
+        with self.assertRaisesRegex(ValueError,"same FanDuel slate"):
+            build_fanduel_entry_export(raw.replace(b'111-333',b'999-333'),pd.concat([p,p]),ids,{"id":"111-222"},"Full Roster",all_contests=True)
+
+    def test_combined_respects_explicit_roster_format_contest_subset(self):
+        raw,p,ids,_,_=self.fixture()
+        out,n=build_fanduel_entry_export(raw,p,ids,{"id":"111-222"},"Full Roster",all_contests=True,contest_ids=['111-222'])
+        rows=list(csv.reader(io.StringIO(out.decode())))
+        self.assertEqual(n,1)
+        self.assertEqual(rows[1][1],'111-222')
+        self.assertNotIn('111-333',[r[1] for r in rows[1:] if len(r)>1])
+
     def test_blocks_invalid_entry_and_wrong_slate_player(self):
         raw,p,ids,_,_=self.fixture()
         with self.assertRaisesRegex(ValueError,"positive integers"):
