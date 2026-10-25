@@ -3003,6 +3003,117 @@
       "current_entries_at_capture": 382572,
       "source": "User-provided complete Prizes screenshots (2026-10-25 094419 and 094432)",
       "verified_date": "2026-10-25"
+    },
+    "DraftKings:1000-nfl-dime-package-afternoon-only-20261025": {
+      "name": "NFL $1K Dime Package [Just $0.10!] (Afternoon Only)",
+      "site": "DraftKings",
+      "format": "DraftKings Classic",
+      "payouts": [
+        [
+          1,
+          1,
+          100
+        ],
+        [
+          2,
+          2,
+          50
+        ],
+        [
+          3,
+          3,
+          30
+        ],
+        [
+          4,
+          4,
+          20
+        ],
+        [
+          5,
+          5,
+          15
+        ],
+        [
+          6,
+          7,
+          10
+        ],
+        [
+          8,
+          10,
+          8
+        ],
+        [
+          11,
+          13,
+          6
+        ],
+        [
+          14,
+          16,
+          5
+        ],
+        [
+          17,
+          20,
+          4
+        ],
+        [
+          21,
+          25,
+          3
+        ],
+        [
+          26,
+          35,
+          2
+        ],
+        [
+          36,
+          45,
+          1.5
+        ],
+        [
+          46,
+          55,
+          1
+        ],
+        [
+          56,
+          85,
+          0.75
+        ],
+        [
+          86,
+          155,
+          0.5
+        ],
+        [
+          156,
+          345,
+          0.4
+        ],
+        [
+          346,
+          900,
+          0.3
+        ],
+        [
+          901,
+          2560,
+          0.2
+        ]
+      ],
+      "entry_fee": 0.1,
+      "prize_pool": 1000,
+      "verified_total_payout": 1000,
+      "paid_positions": 2560,
+      "current_entries_at_capture": 10198,
+      "capacity_display": "11.8K",
+      "capacity_status": "rounded lobby display; exact capacity unconfirmed",
+      "source": "User-provided complete payout table and lobby metadata",
+      "verified_date": "2026-10-25"
     }
   }
 }
