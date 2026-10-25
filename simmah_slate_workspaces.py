@@ -122,6 +122,8 @@ def slate_record(upload):
 
 
 def begin_workspaces(st):
+    from simmah_slate_transport import handle_browser_transfer
+    handle_browser_transfer(st)
     from simmah_archive_jobs import end_live_build
     if st.session_state.pop('_slate_archive_live_build',False):
         end_live_build(st.session_state.get('_slate_archive_build_token',''))
@@ -323,6 +325,11 @@ def accept_selected_record(records, event):
     return selected
 
 
+def slate_component():
+    import streamlit.components.v1 as components
+    return components.declare_component('simmah_loaded_slates_v3', path=str(Path(__file__).parent/'components/slate_workspaces'))
+
+
 def finish_workspaces(st,host):
     import streamlit.components.v1 as components
     from simmah_archive_jobs import end_live_build
@@ -334,7 +341,8 @@ def finish_workspaces(st,host):
         render_nfl_package(st)
         render_archive(st)
     current=st.session_state.get('_slate_active')
-    blob=capture(st) if current else ''
+    skip_transport = st.session_state.pop('_slate_skip_transport_capture', False)
+    blob=(current.get('snapshot', '') if skip_transport else capture(st)) if current else ''
     if current and st.session_state.get('dfs_format'):current['title']=st.session_state['dfs_format']+' · '+current['name'].replace('.csv','')
     records=st.session_state.setdefault('_slate_records',{})
     if current:
@@ -349,9 +357,11 @@ def finish_workspaces(st,host):
         st.session_state['_slate_reopen']=incoming['id']
         st.session_state['_slate_pending']=incoming
         st.rerun()
-    component=components.declare_component('simmah_loaded_slates_v2',path=str(Path(__file__).parent/'components/slate_workspaces'))
+    component=slate_component()
+    from simmah_slate_transport import outgoing
+    transport_args = outgoing(st.session_state, workspace_transport(current, records, blob), skip=skip_transport)
     with host:
-        event=component(**workspace_transport(current, records, blob),
+        event=component(**transport_args,
                         incoming=None,reopen=st.session_state.get('_slate_reopen'),generation=st.session_state['_slate_generation'],
                         ack=st.session_state.get('_slate_last_event'), key='loaded_slates_browser',default=None)
         if event and event.get('event') != st.session_state.get('_slate_last_event'):
@@ -387,6 +397,7 @@ def workspace_stop(st,host):
 def workspace_rerun(st,host):
     finish_workspaces(st,host)
     st.rerun()
+
 
 
 
