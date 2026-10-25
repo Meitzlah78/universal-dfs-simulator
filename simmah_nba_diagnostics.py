@@ -176,8 +176,10 @@ def retain_package(st, package):
     if digest in seen:return
     pending=st.session_state.setdefault('_slate_archive_pending',{})
     pending[digest]={'digest':digest,'filename':name,'raw':raw,'upload_key':'nba_diagnostic_package',
-        'metadata':{'kind':'nba_calibration_solver_package','contest_ids':[manifest['contest_id']],
-            'platform':manifest['platform'],'mode':'nba','captured_at':manifest['captured_at_utc']}}
+        'metadata':{'kind':manifest.get('kind','calibration_solver_package'),'contest_ids':[manifest['contest_id']],
+            'platform':manifest['platform'],'sport':manifest.get('sport','NBA'),
+            'mode':'nba' if manifest.get('sport','NBA')=='NBA' else 'nfl',
+            'captured_at':manifest['captured_at_utc']}}
     seen.add(digest)
 
 
@@ -194,3 +196,66 @@ def package_bytes(st, reference):
     if archive is None:return None
     try:return archive.get(reference['digest'])
     except (OSError,KeyError):return None
+
+
+def rotation_audit(pool):
+    """Explain the exact pregame rotation filter, including excluded minutes."""
+    rows=pool.copy()
+    projection=pd.to_numeric(rows['Projection'],errors='coerce')
+    minutes=pd.to_numeric(rows.get('Projected Minutes',pd.Series(np.nan,index=rows.index)),errors='coerce')
+    injured=rows['Injury Status'].astype(str).str.upper().isin(['OUT','O','IR','SUSPENDED'])
+    rotation_only=rows['Rotation Only'].eq(True) if 'Rotation Only' in rows else pd.Series(False,index=rows.index)
+    projected=(np.isfinite(projection)&projection.gt(0))|rotation_only
+    included=projected&~injured&~minutes.eq(0)
+    reason=np.select([injured,minutes.eq(0),~projected],
+        ['OUT / inactive','Provider minutes explicitly zero','No positive projection or rotation-only status'],
+        default='Included')
+    valid=np.isfinite(minutes)&minutes.gt(0)&minutes.le(48)
+    detail=rows[[c for c in ('Player ID','Name','Team','Opponent','Injury Status','Projection','Projection Source',
+        'Projected Minutes','Minutes Source','Eligible','Rotation Only') if c in rows]].copy()
+    detail['In Simulated Rotation']=included
+    detail['Rotation Reason']=reason
+    detail['Minutes Valid']=valid
+    summary=[]
+    for team,group in rows.groupby('Team',sort=True):
+        idx=group.index;used=included.loc[idx]
+        total=float(minutes.loc[idx][used&valid.loc[idx]].sum())
+        summary.append({'Team':team,'Rotation Players':int(used.sum()),'Known Rotation Minutes':total,
+            'Minutes Short of 240':240-total,'Invalid Rotation Minutes':int((used&~valid.loc[idx]).sum()),
+            'Excluded Known Minutes':float(minutes.loc[idx][~used&valid.loc[idx]].sum())})
+    return pd.DataFrame(summary),detail
+
+
+def make_setup_package(pool,template,contest,markets,error,*,source_root=None):
+    """Evidence for a blocked setup; never substitute a previous successful field."""
+    summary,detail=rotation_audit(pool)
+    stamp=datetime.now(timezone.utc);rules=rules_for(pool)
+    files={'inputs/original_entries_salary.csv':bytes(template),
+        'inputs/player_pool.csv':pool.to_csv(index=False).encode('utf-8-sig'),
+        'inputs/player_pool.json':_json({'rows':pool.to_dict('records'),'attrs':pool.attrs}),
+        'inputs/contest.json':_json(contest),'inputs/markets.json':_json(markets),
+        'inputs/rules.json':_json(rules),
+        'rotation_summary.csv':summary.to_csv(index=False).encode('utf-8-sig'),
+        'rotation_players.csv':detail.to_csv(index=False).encode('utf-8-sig'),
+        'setup_error.txt':str(error).encode()}
+    root=Path(source_root) if source_root is not None else Path(__file__).parent
+    for name in ('simmah_nba_pregame.py','simmah_nba_role_priors.py','simmah_nba_projections.py','simmah_nba_diagnostics.py'):
+        path=root/name
+        if path.is_file():files['implementation/'+name]=path.read_bytes()
+    manifest={'schema':1,'kind':'nba_setup_diagnostic_package','sport':'NBA','platform':rules['platform'],
+        'contest_id':str(contest['id']),'slate_date':contest.get('date'),
+        'captured_at_utc':stamp.isoformat(),'captured_at_eastern':stamp.astimezone(ZoneInfo('America/New_York')).isoformat(),
+        'build_status':'blocked_before_simulation','error':str(error),
+        'salary_template_sha256':sha256(bytes(template)).hexdigest(),
+        'missing_evidence':['No new opponent field or solver outcomes: setup validation blocked the build'],
+        'files':{name:{'sha256':sha256(raw).hexdigest(),'bytes':len(raw)} for name,raw in files.items()}}
+    files['manifest.json']=_json(manifest)
+    files['README.txt']=(
+        'SIMMAH BLOCKED NBA SETUP\nSend this entire ZIP to diagnose the current input failure.\n'
+        'rotation_summary.csv shows minutes reaching the simulator; rotation_players.csv explains every included/excluded player.\n'
+        'Projected minutes and point projections have not been adjusted. No previous build is substituted.\n').encode()
+    buffer=io.BytesIO()
+    with zipfile.ZipFile(buffer,'w',zipfile.ZIP_DEFLATED) as bundle:
+        for name,raw in files.items():bundle.writestr(name,raw)
+    cid=re.sub(r'[^A-Za-z0-9_-]','_',str(contest['id']))
+    return f'Simmah_NBA_{rules["platform"]}_{cid}_{stamp.strftime("%Y%m%dT%H%M%SZ")}_SETUP_DIAGNOSTIC.zip',buffer.getvalue(),manifest

@@ -49,6 +49,14 @@ slate snapshots; workspaces retain immutable references and recover package byte
 through the private archive. Legacy builds must be rebuilt once to capture
 evidence that was never retained.
 
+If NBA setup validation blocks a build, **Review rotation inputs and save
+diagnostic** shows each team's included minutes and every player's inclusion or
+exclusion reason. **DOWNLOAD SETUP DIAGNOSTIC PACKAGE** preserves that current
+pool, original upload, rules, markets, error and rotation audit automatically.
+It contains no substitute field from an older successful build. Large rotation
+shortfalls remain blocked until the input issue is resolved; missing player
+minutes are not invented or silently spread across teammates.
+
 Validation:
 
 ```sh

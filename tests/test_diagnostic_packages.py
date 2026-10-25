@@ -69,6 +69,29 @@ class DiagnosticPackageTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'count differs'):
             make_package(pool,result,b'x',{'id':'42'},[],{},started_at=STAMP.isoformat())
 
+    def test_blocked_bkn_rotation_preserves_215_and_identifies_excluded_25_minutes(self):
+        from simmah_nba_diagnostics import rotation_audit,make_setup_package
+        pool=pd.DataFrame([{'Player ID':str(i),'Name':'Player '+str(i),'Team':'BKN','Opponent':'A',
+            'Injury Status':'OUT' if i==10 else 'Active','Projection':25.,'Projected Minutes':25 if i==10 else 21.5}
+            for i in range(11)])
+        pool.attrs['platform']='DraftKings';before=pool.copy(deep=True)
+        summary,detail=rotation_audit(pool)
+        self.assertEqual(summary.iloc[0]['Known Rotation Minutes'],215)
+        self.assertEqual(summary.iloc[0]['Minutes Short of 240'],25)
+        self.assertEqual(summary.iloc[0]['Excluded Known Minutes'],25)
+        self.assertFalse(detail.iloc[10]['In Simulated Rotation'])
+        self.assertEqual(detail.iloc[10]['Rotation Reason'],'OUT / inactive')
+        with TemporaryDirectory() as root:
+            name,raw,manifest=make_setup_package(pool,b'current upload',{'id':'42'},[],
+                'BKN projected rotation totals 215.0 minutes; 240 required',source_root=root)
+        self.assertIn('SETUP_DIAGNOSTIC',name)
+        self.assertEqual(manifest['build_status'],'blocked_before_simulation')
+        with zipfile.ZipFile(io.BytesIO(raw)) as bundle:
+            self.assertIn('rotation_players.csv',bundle.namelist())
+            self.assertNotIn('opponent_field.csv',bundle.namelist())
+            self.assertEqual(bundle.read('inputs/original_entries_salary.csv'),b'current upload')
+        pd.testing.assert_frame_equal(pool,before)
+
     def test_nfl_all_four_formats_have_original_and_binary_evaluation(self):
         formats=['DraftKings Classic','DraftKings Showdown','FanDuel Full Roster','FanDuel Single Game']
         pool=pd.DataFrame({'Name':['A','B'],'Salary':[5000,6000],'DK_ID':['1','2']})

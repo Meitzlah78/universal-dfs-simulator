@@ -150,7 +150,28 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         diversity=st.slider('Exposure diversity',0,100,50,key='nba_exposure_diversity')
         metric=st.selectbox('Rank lineups',['Top 1%','Expected ROI (%)','Expected Prize ($)'],key='nba_rank_metric')
         clicked=workspace_button(st,'BUILD NBA LINEUPS',disabled=bool(error),key='nba_build')
-        if error:st.error('NBA build inputs need attention: '+error)
+        if error:
+            st.error('NBA build inputs need attention: '+error)
+            from simmah_nba_diagnostics import rotation_audit,make_setup_package,retain_package,package_reference,package_bytes
+            with st.expander('Review rotation inputs and save diagnostic',expanded=True):
+                summary,detail=rotation_audit(pool)
+                st.dataframe(summary,hide_index=True,width='stretch')
+                st.caption('Minutes below count only players included in the simulation. OUT players, explicit zero minutes and missing projections are shown separately. Refresh projections to retry the provider feed; no missing minutes are filled automatically.')
+                st.dataframe(detail,hide_index=True,width='stretch')
+                try:
+                    setup_identity=hashlib.sha256(upload.getvalue()+pool.to_json(orient='split').encode()+
+                        json.dumps({'contest_id':str(cid),'error':error,'markets':markets},sort_keys=True).encode()).hexdigest()
+                    setup=st.session_state.get('nba_setup_diagnostic')
+                    if not setup or setup.get('identity')!=setup_identity:
+                        package=make_setup_package(pool,upload.getvalue(),dict(contest or selected,id=str(cid),date=slate.get('date')),markets,error)
+                        retain_package(st,package)
+                        setup={**package_reference(package),'identity':setup_identity}
+                        st.session_state['nba_setup_diagnostic']=setup
+                    data=package_bytes(st,setup)
+                    if data is not None:
+                        workspace_download_button(st,'DOWNLOAD SETUP DIAGNOSTIC PACKAGE',data,
+                            setup['filename'],'application/zip',key='nba_setup_diagnostic_download',on_click='ignore')
+                except Exception as exc:st.warning('Could not save setup diagnostic: '+str(exc))
     identity=input_identity(pool,markets,contest,salary_min,correlation,pool.iloc[excluded]['Player ID'])
     saved=st.session_state.get('nba_build_result')
     if clicked:
