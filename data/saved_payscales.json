@@ -2831,6 +2831,178 @@
       "current_entries_at_capture": 26045,
       "source": "User-provided complete Prizes screenshots and contest metadata",
       "verified_date": "2026-10-22"
+    },
+    "FanDuel:35000-sun-nfl-pooch-punt-overlay": {
+      "name": "$35K Sun NFL Pooch Punt (Guaranteed Overlay!)",
+      "site": "FanDuel",
+      "format": "FanDuel Full Roster",
+      "payouts": [
+        [
+          1,
+          1,
+          1500
+        ],
+        [
+          2,
+          2,
+          750
+        ],
+        [
+          3,
+          3,
+          500
+        ],
+        [
+          4,
+          4,
+          200
+        ],
+        [
+          5,
+          5,
+          150
+        ],
+        [
+          6,
+          6,
+          125
+        ],
+        [
+          7,
+          7,
+          100
+        ],
+        [
+          8,
+          8,
+          75
+        ],
+        [
+          9,
+          10,
+          50
+        ],
+        [
+          11,
+          12,
+          30
+        ],
+        [
+          13,
+          15,
+          20
+        ],
+        [
+          16,
+          20,
+          15
+        ],
+        [
+          21,
+          25,
+          10
+        ],
+        [
+          26,
+          30,
+          6
+        ],
+        [
+          31,
+          40,
+          5
+        ],
+        [
+          41,
+          50,
+          4
+        ],
+        [
+          51,
+          75,
+          3
+        ],
+        [
+          76,
+          100,
+          2.5
+        ],
+        [
+          101,
+          150,
+          2
+        ],
+        [
+          151,
+          250,
+          1.5
+        ],
+        [
+          251,
+          400,
+          1.25
+        ],
+        [
+          401,
+          600,
+          1
+        ],
+        [
+          601,
+          1000,
+          0.75
+        ],
+        [
+          1001,
+          1500,
+          0.5
+        ],
+        [
+          1501,
+          3000,
+          0.4
+        ],
+        [
+          3001,
+          6000,
+          0.3
+        ],
+        [
+          6001,
+          10000,
+          0.25
+        ],
+        [
+          10001,
+          15000,
+          0.2
+        ],
+        [
+          15001,
+          25000,
+          0.15
+        ],
+        [
+          25001,
+          65000,
+          0.12
+        ],
+        [
+          65001,
+          265100,
+          0.1
+        ]
+      ],
+      "entry_fee": 0.05,
+      "max_entries_per_user": 150,
+      "prize_pool": 35000,
+      "verified_total_payout": 35000,
+      "paid_positions": 265100,
+      "field_size": 600000,
+      "capacity_status": "exact user-provided capacity",
+      "current_entries_at_capture": 382572,
+      "source": "User-provided complete Prizes screenshots (2026-10-25 094419 and 094432)",
+      "verified_date": "2026-10-25"
     }
   }
 }
