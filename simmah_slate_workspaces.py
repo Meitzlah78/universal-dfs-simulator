@@ -306,6 +306,23 @@ def capture(st):
     return snapshot(st.session_state,transient)
 
 
+def workspace_transport(current, records, blob):
+    """Send one current snapshot and lightweight tab metadata, never all builds."""
+    metadata = [{k: record[k] for k in ('id', 'name', 'title') if k in record}
+                for record in records.values()]
+    current_payload = None if current is None else {k: v for k, v in current.items() if k != 'snapshot'}
+    return dict(active=current['id'] if current else None, current=current_payload,
+                snapshot=blob, records=metadata)
+
+
+def accept_selected_record(records, event):
+    """A browser-only tab may be absent from server memory after a reboot."""
+    selected = event.get('selected')
+    if isinstance(selected, dict) and all(k in selected for k in ('id', 'data', 'name', 'snapshot')):
+        records[selected['id']] = selected
+    return selected
+
+
 def finish_workspaces(st,host):
     import streamlit.components.v1 as components
     from simmah_archive_jobs import end_live_build
@@ -332,11 +349,13 @@ def finish_workspaces(st,host):
         st.session_state['_slate_reopen']=incoming['id']
         st.session_state['_slate_pending']=incoming
         st.rerun()
-    component=components.declare_component('simmah_loaded_slates',path=str(Path(__file__).parent/'components/slate_workspaces'))
+    component=components.declare_component('simmah_loaded_slates_v2',path=str(Path(__file__).parent/'components/slate_workspaces'))
     with host:
-        event=component(active=current['id'] if current else None,current=current,snapshot=blob,
-                        incoming=None,reopen=st.session_state.get('_slate_reopen'),records=list(records.values()),generation=st.session_state['_slate_generation'],
-                        key='loaded_slates_browser',default=None)
+        event=component(**workspace_transport(current, records, blob),
+                        incoming=None,reopen=st.session_state.get('_slate_reopen'),generation=st.session_state['_slate_generation'],
+                        ack=st.session_state.get('_slate_last_event'), key='loaded_slates_browser',default=None)
+        if event and event.get('event') != st.session_state.get('_slate_last_event'):
+            accept_selected_record(records, event)
         if event and event.get('error'):st.warning(event['error'])
         if event and event.get('event')!=st.session_state.get('_slate_last_event') and event.get('closed'):
             closed=str(event['closed'])
