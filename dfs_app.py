@@ -4753,7 +4753,7 @@ if platform == "FanDuel":
                         return lookup[choice.lower()]
                 return None
 
-            fd_name_col = fd_find_column(
+            fd_player_name_col = fd_find_column(
                 fd_raw, ["Nickname", "Name", "Name + ID", "Player", "Player Name"]
             )
             fd_salary_col = fd_find_column(fd_raw, ["Salary"])
@@ -4765,12 +4765,12 @@ if platform == "FanDuel":
             )
             # Never use FanDuel's salary-file fantasy average as a projection.
             fd_proj_col = None
-            fd_id_col = fd_find_column(
+            fd_player_id_col = fd_find_column(
                 fd_raw, ["Id", "ID", "Player ID", "FDP_ID", "PlayerId"]
             )
 
             missing_cols = []
-            if fd_name_col is None:
+            if fd_player_name_col is None:
                 missing_cols.append("player name (Nickname or Name)")
             if fd_salary_col is None:
                 missing_cols.append("Salary")
@@ -4784,7 +4784,7 @@ if platform == "FanDuel":
                 workspace_stop(st, _loaded_slate_tabs)
 
             fd_players = pd.DataFrame()
-            fd_players["Name"] = fd_raw[fd_name_col].astype(str).str.strip()
+            fd_players["Name"] = fd_raw[fd_player_name_col].astype(str).str.strip()
             fd_players["Name"] = fd_players["Name"].str.replace(
                 r"\s*\(\d+\)\s*$", "", regex=True
             )
@@ -4815,8 +4815,8 @@ if platform == "FanDuel":
             # Do not invent projections from salary. The external-source loader below
             # fills this column with DFF/DraftEdge values or NaN if neither source matches.
             fd_players["Projection"] = np.nan
-            if fd_id_col is not None:
-                fd_players["FD_ID"] = fd_raw[fd_id_col].astype(str).str.strip()
+            if fd_player_id_col is not None:
+                fd_players["FD_ID"] = fd_raw[fd_player_id_col].astype(str).str.strip()
 
             fd_players = preserve_uploaded_ownership(fd_players, fd_raw)
             fd_players = fd_players.dropna(subset=["Salary"])
@@ -4935,7 +4935,7 @@ if platform == "FanDuel":
             if isinstance(saved_lineups, pd.DataFrame):
                 lineup_columns = [c for c in saved_lineups.columns if c not in {"Salary", "ProjectedPoints", "Score"}]
                 if any(saved_lineups[col].astype(str).isin(
-                    set(fd_raw[fd_name_col].astype(str).str.replace(r"\s*\(\d+\)\s*$", "", regex=True).str.strip()) - fd_allowed_names
+                    set(fd_raw[fd_player_name_col].astype(str).str.replace(r"\s*\(\d+\)\s*$", "", regex=True).str.strip()) - fd_allowed_names
                 ).any() for col in lineup_columns if col in saved_lineups.columns):
                     st.session_state["fd_saved_builds"].pop(saved_key, None)
 
