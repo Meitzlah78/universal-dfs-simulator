@@ -42,6 +42,7 @@ class PanelTests(unittest.TestCase):
                 return choice
             def write(self,*a,**k):pass
             def caption(self,*a,**k):pass
+            def number_input(self,*a,**k):return k['value']
             def expander(self,*a,**k):return nullcontext()
             def text_input(self,*a,**k):return ''
             def text_area(self,*a,**k):return ''
