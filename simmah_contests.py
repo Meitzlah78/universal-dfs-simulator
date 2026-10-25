@@ -41,6 +41,10 @@ def evaluate_contest(outcomes,candidates,field,slots,field_size,tiers,entry_fee,
     if not np.isfinite(entry_fee) or entry_fee<0:raise ValueError('Invalid entry fee')
     users,mult=lineup_indices(candidates,slots,outcomes.columns,multipliers)
     opponents,_=lineup_indices(field,slots,outcomes.columns,multipliers)
+    from simmah_lineup_scores import LineupScorer
+    from simmah_contest_scoring import score_insertion_bounds
+    user_scorer = LineupScorer(users, mult, values.shape[1])
+    field_scorer = LineupScorer(opponents, mult, values.shape[1])
     payouts=payout_vector(field_size,tiers);prefix=np.r_[0.,np.cumsum(payouts)]
     represented=max(0,field_size-own);scale=represented/len(field)
     n=len(candidates);prize_sum=np.zeros(n);rank_sum=np.zeros(n)
@@ -49,10 +53,10 @@ def evaluate_contest(outcomes,candidates,field,slots,field_size,tiers,entry_fee,
           'Top5':max(1,int(np.ceil(.05*field_size))),'Top10':max(1,int(np.ceil(.1*field_size)))}
     for start in range(0,len(values),batch_size):
         sample=values[start:start+batch_size]
-        opponent_scores=np.sort(score_batch(sample,opponents,mult),axis=1)
-        user_scores=score_batch(sample,users,mult)
-        for sorted_field,scores in zip(opponent_scores,user_scores):
-            left=np.searchsorted(sorted_field,scores,'left');right=np.searchsorted(sorted_field,scores,'right')
+        opponent_scores=np.sort(field_scorer(sample),axis=1)
+        user_scores=user_scorer(sample)
+        lower, upper = score_insertion_bounds(opponent_scores, user_scores)
+        for scores,left,right in zip(user_scores,lower,upper):
             better=np.rint((len(field)-right)*scale).astype(int)
             equals=np.minimum(np.rint((right-left)*scale).astype(int),represented-better)
             if joint:

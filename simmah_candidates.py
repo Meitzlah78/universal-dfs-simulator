@@ -267,11 +267,14 @@ def summarize_candidates(frame,outcomes,slots,multipliers=None):
     values=outcomes.to_numpy(np.float32)
     mult=np.ones(len(slots)) if multipliers is None else np.asarray(multipliers,np.float32)
     result=frame.copy();means=[];p95=[];p99=[]
+    from simmah_lineup_scores import LineupScorer
     for start in range(0,len(frame),128):
         chunk=frame.iloc[start:start+128]
         picks=np.array([[index[str(name)] for name in row] for row in chunk[slots].itertuples(index=False,name=None)])
-        scores=np.zeros((len(values),len(chunk)),np.float32)
-        for s in range(len(slots)):scores+=values[:,picks[:,s]]*mult[s]
+        scorer = LineupScorer(picks, mult, values.shape[1], dtype=np.float32)
+        scores=scorer(values)
+        # Scalar quantile calls retain NumPy's original float32 interpolation
+        # semantics; a vector of quantiles can silently promote interpolation.
         means.extend(scores.mean(axis=0));p95.extend(np.quantile(scores,.95,axis=0));p99.extend(np.quantile(scores,.99,axis=0))
     result['SimMean']=means;result['ProjectedPoints']=means
     result['SimP95']=p95;result['SimP99']=p99
