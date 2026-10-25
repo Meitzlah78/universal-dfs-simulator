@@ -3111,9 +3111,10 @@
       "paid_positions": 2560,
       "current_entries_at_capture": 10198,
       "capacity_display": "11.8K",
-      "capacity_status": "rounded lobby display; exact capacity unconfirmed",
+      "capacity_status": "exact user-provided capacity",
       "source": "User-provided complete payout table and lobby metadata",
-      "verified_date": "2026-10-25"
+      "verified_date": "2026-10-25",
+      "field_size": 11890
     }
   }
 }
