@@ -11,6 +11,7 @@ const context={crypto,indexedDB,Uint8Array,Promise,Error,JSON,Set,Map,console,
  window:{parent:{postMessage:m=>{assert(Buffer.byteLength(JSON.stringify(m),'utf8')<25000000,'Archive WebSocket frame exceeds enforced 25 MB limit');messages.push(m)}},addEventListener:(name,fn)=>listeners[name]=fn,dispatchEvent:e=>listeners.message(e)}};
 const html=fs.readFileSync('components/input_archive/index.html','utf8');
 vm.runInNewContext(html.split('<script>')[1].split('</script>')[0],context);
+const remount=()=>{status.textContent='Opening saved-file archive…';vm.runInNewContext(html.split('<script>')[1].split('</script>')[0],{...context,window:{...context.window}})};
 const tick=()=>new Promise(resolve=>setTimeout(resolve,30));
 const render=async args=>{await listeners.message({data:{type:'streamlit:render',args}});await tick()};
 const value=()=>messages.filter(x=>x.type==='streamlit:setComponentValue').at(-1).value;
@@ -27,15 +28,17 @@ const value=()=>messages.filter(x=>x.type==='streamlit:setComponentValue').at(-1
  const payload=JSON.stringify({current:{records:[{digest:largeDigest,filename:'large-build.zip',data:largeData}],restore:[]},snapshot:''});
  const total=Math.ceil(payload.length/1000000);
  for(let index=0;index<total;index++){
+  if(index>0)remount();
   await render({transport_only:true,download:{id:'large-file',index,total,data:payload.slice(index*1000000,(index+1)*1000000)}});
   assert.equal(value().download_ack.index,index);
  }
- await render({transport_only:true,download_done:'large-file'});
+ remount();await render({transport_only:true,download_done:'large-file'});
  assert.equal(value().download_received,'large-file');assert(value().hashes.includes(largeDigest));
  await render({current:{records:[],restore:[largeDigest]}});
  const parts=[];let current=value();
  while(current.upload_part){
   const part=current.upload_part;parts[part.index]=part.data;
+  remount();
   await render({transport_only:true,upload_ack:{id:part.id,index:part.index}});current=value();
  }
  assert(current.upload_done);

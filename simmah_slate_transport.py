@@ -97,6 +97,27 @@ def finish_upload(state, ident):
     state['_slate_skip_transport_capture'] = True
 
 
+def restart_download(state, ident):
+    """A full page refresh can lose the browser's incomplete chunk buffer."""
+    transfer = state.get('_slate_download_transfer')
+    if transfer and transfer['id'] == ident:
+        transfer['index'] = 0
+        return {'download': packet(transfer)}
+    if state.get('_slate_download_saved') == ident:
+        return {'download_done': ident}
+    raise ValueError('Saved-file transfer expired; reload the app to retry from the retained original.')
+
+
+def restart_upload(state, ident):
+    """Retry from the retained original, or consume an already complete upload."""
+    if state.get('_slate_upload_finished') == ident:
+        return True
+    transfer = state.get('_slate_upload_transfer')
+    if transfer and transfer['id'] == ident:
+        state.pop('_slate_upload_transfer', None)
+    return False
+
+
 def handle_browser_transfer(st):
     """Run before expensive app work. Partial transfers render only an ack."""
     event = st.session_state.get('loaded_slates_browser') or {}
@@ -108,6 +129,12 @@ def handle_browser_transfer(st):
             response = {'upload_ack': receive_upload(st.session_state, event['upload_part'])}
         elif event.get('download_ack'):
             response = advance_download(st.session_state, event['download_ack'])
+        elif event.get('download_restart'):
+            response = restart_download(st.session_state, event['download_restart'])
+        elif event.get('upload_restart'):
+            if restart_upload(st.session_state, event['upload_restart']):
+                finish_upload(st.session_state, event['upload_restart'])
+            st.session_state['_slate_skip_transport_capture'] = True
         elif event.get('upload_done'):
             finish_upload(st.session_state, event['upload_done'])
         elif event.get('download_received'):

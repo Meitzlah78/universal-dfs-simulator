@@ -15,12 +15,12 @@ function boot(){
   localStorage:{getItem:k=>local.get(k),setItem:(k,v)=>local.set(k,v),removeItem:k=>local.delete(k)},
   crypto:require('crypto').webcrypto,MessageEvent:class{constructor(t,o){this.data=o.data}},queueMicrotask,Map,Date,JSON};
  vm.runInNewContext(code,context);
- return {messages,elements,async render(args){await listeners.message({data:{type:'streamlit:render',args}})},
+ return {messages,elements,remount(){elements.status.textContent='Restoring loaded slates…';vm.runInNewContext(code,{...context,window:{...window}})},async render(args){await listeners.message({data:{type:'streamlit:render',args}})},
   value(){return messages.filter(x=>x.type==='streamlit:setComponentValue').at(-1)?.value}};
 }
 async function finishUpload(ui){
  const parts=[];let value=ui.value();
- while(value?.upload_part){const p=value.upload_part;parts[p.index]=p.data;await ui.render({transport_only:true,upload_ack:{id:p.id,index:p.index}});value=ui.value()}
+ while(value?.upload_part){const p=value.upload_part;parts[p.index]=p.data;ui.remount();await ui.render({transport_only:true,upload_ack:{id:p.id,index:p.index}});value=ui.value()}
  assert(value.upload_done);return JSON.parse(parts.join(''))
 }
 (async()=>{
@@ -37,11 +37,12 @@ async function finishUpload(ui){
  const payload={current:{id:'main',name:'main.csv',title:'Main',data:'CSV'},snapshot:'C'.repeat(47810117)};
  const raw=JSON.stringify(payload),total=Math.ceil(raw.length/1000000);
  for(let index=0;index<total;index++){
+  if(index>0)ui.remount();
   await ui.render({transport_only:true,download:{id:'download-main',index,total,data:raw.slice(index*1000000,(index+1)*1000000)}});
   assert.equal(ui.value().download_ack.index,index);
  }
  assert.equal(disk.get('main').snapshot,payload.snapshot);
- await ui.render({transport_only:true,download_done:'download-main'});assert.equal(ui.value().download_received,'download-main');
+ ui.remount();await ui.render({transport_only:true,download_done:'download-main'});assert.equal(ui.value().download_received,'download-main');
  await ui.render({generation:'reboot',active:'main',current:null,snapshot:'',records:[]});
  const afternoonGroup=ui.elements.tabs.children.find(g=>g.children[0].textContent==='Afternoon');
  afternoonGroup.children[0].onclick();const second=await finishUpload(ui);assert.equal(second.selected.id,'afternoon');

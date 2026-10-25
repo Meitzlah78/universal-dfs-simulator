@@ -23,11 +23,11 @@ class ArchiveTransferState:
 
 def archive_component():
     import streamlit.components.v1 as components
-    return components.declare_component('simmah_input_archive_v2', path=str(Path(__file__).parent/'components'/'input_archive'))
+    return components.declare_component('simmah_input_archive_v3', path=str(Path(__file__).parent/'components'/'input_archive'))
 
 
 def handle_archive_transfer(st):
-    from simmah_slate_transport import receive_upload, advance_download
+    from simmah_slate_transport import receive_upload, advance_download, restart_download, restart_upload
     event = st.session_state.get(PREFIX+'browser') or {}
     if not isinstance(event, dict): return
     state = ArchiveTransferState(st.session_state)
@@ -37,8 +37,13 @@ def handle_archive_transfer(st):
             response = {'upload_ack': receive_upload(state, event['upload_part'])}
         elif event.get('download_ack'):
             response = advance_download(state, event['download_ack'])
-        elif event.get('upload_done'):
-            ident = event['upload_done']
+        elif event.get('download_restart'):
+            response = restart_download(state, event['download_restart'])
+        elif event.get('upload_done') or event.get('upload_restart'):
+            ident = event.get('upload_done') or event['upload_restart']
+            if event.get('upload_restart'):
+                restart_upload(state, ident)
+                st.session_state['_slate_skip_transport_capture'] = True
             if state.get('_slate_upload_finished') == ident and state.get('_slate_upload_applied') != ident:
                 payload = state.pop('_slate_upload_event')['selected']
                 process_event(st, payload)

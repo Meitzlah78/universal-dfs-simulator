@@ -329,7 +329,7 @@ def accept_selected_record(records, event):
 
 def slate_component():
     import streamlit.components.v1 as components
-    return components.declare_component('simmah_loaded_slates_v3', path=str(Path(__file__).parent/'components/slate_workspaces'))
+    return components.declare_component('simmah_loaded_slates_v4', path=str(Path(__file__).parent/'components/slate_workspaces'))
 
 
 def finish_workspaces(st,host):

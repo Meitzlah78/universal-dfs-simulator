@@ -1,6 +1,6 @@
 import json
 import unittest
-from simmah_slate_transport import CHUNK_CHARS, outgoing, packet, receive_upload, advance_download, finish_upload
+from simmah_slate_transport import CHUNK_CHARS, outgoing, packet, receive_upload, advance_download, finish_upload, restart_download, restart_upload
 
 
 class ChunkTransportTests(unittest.TestCase):
@@ -77,6 +77,17 @@ class ChunkTransportTests(unittest.TestCase):
         self.assertEqual(app.session_state['_slate_active']['id'],'afternoon')
         self.assertEqual(app.session_state['restored_marker'],'SAVED BUILD')
         self.assertTrue(any(v.value=='MAIN APP WORK' for v in app.markdown))
+
+    def test_full_page_refresh_restarts_transfer_without_erasing_original(self):
+        state={'_slate_records':{'main':{'snapshot':'keep'}}}
+        wire=outgoing(state,dict(current={'id':'main'},snapshot='x'*(CHUNK_CHARS+20),records=[]))
+        first=wire['download']
+        advance_download(state,dict(id=first['id'],index=0))
+        self.assertEqual(restart_download(state,first['id'])['download']['index'],0)
+        receive_upload(state,dict(id='partial',index=0,total=2,data='{"selected":'))
+        self.assertFalse(restart_upload(state,'partial'))
+        self.assertNotIn('_slate_upload_transfer',state)
+        self.assertEqual(state['_slate_records']['main']['snapshot'],'keep')
 
 
 if __name__=='__main__':unittest.main()

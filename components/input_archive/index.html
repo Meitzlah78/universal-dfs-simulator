@@ -4,30 +4,31 @@
 'use strict';
 const send=(type,extra={})=>window.parent.postMessage({isStreamlitMessage:true,type,...extra},'*');
 const CHUNK_CHARS=1000000;
-let db,owner,ready=false,busy=false,queued=null,lastSignature='',lastError='',persistent=false,uploadTransfer=null,downloadTransfer=null,lastDownload=null;
+const transferState=window.parent.__simmahArchiveTransfersV1||(window.parent.__simmahArchiveTransfersV1={upload:null,download:null,lastDownload:null});
+let db,owner,ready=false,busy=false,queued=null,lastSignature='',lastError='',persistent=false;
 const request=r=>new Promise((resolve,reject)=>{r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});
 async function open(){
  const r=indexedDB.open('simmah-original-inputs-v1',1);
  r.onupgradeneeded=()=>{r.result.createObjectStore('files',{keyPath:'digest'});r.result.createObjectStore('identity')};
  db=await request(r);owner=await request(db.transaction('identity').objectStore('identity').get('owner'));
  if(!owner){owner=crypto.randomUUID().replaceAll('-','');await write('identity',owner,'owner')}
- if(navigator.storage?.persist){try{persistent=await navigator.storage.persist()}catch(_){}}
+ if(navigator.storage?.persist){try{Promise.resolve(navigator.storage.persist()).then(value=>{persistent=!!value}).catch(()=>{})}catch(_){}}
  ready=true;
 }
 function write(store,value,key){return new Promise((resolve,reject)=>{const tx=db.transaction(store,'readwrite');if(key===undefined)tx.objectStore(store).put(value);else tx.objectStore(store).put(value,key);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||Error('Storage write aborted'))})}
 async function hash(data){const binary=atob(data),bytes=new Uint8Array(binary.length);for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);const h=await crypto.subtle.digest('SHA-256',bytes);return [...new Uint8Array(h)].map(v=>v.toString(16).padStart(2,'0')).join('')}
 function emit(value){send('streamlit:setComponentValue',{value,dataType:'json'})}
 function progress(){
- if(uploadTransfer)document.getElementById('status').textContent='Restoring saved file: '+(uploadTransfer.index+1)+' / '+uploadTransfer.parts.length+' parts';
- else if(downloadTransfer)document.getElementById('status').textContent='Saving file: '+downloadTransfer.parts.length+' / '+downloadTransfer.total+' parts';
+ if(transferState.upload)document.getElementById('status').textContent='Restoring saved file: '+(transferState.upload.index+1)+' / '+transferState.upload.parts.length+' parts';
+ else if(transferState.download)document.getElementById('status').textContent='Saving file: '+transferState.download.parts.length+' / '+transferState.download.total+' parts';
 }
-function uploadPart(){const t=uploadTransfer;emit({event:t.id+':'+t.index,upload_part:{id:t.id,index:t.index,total:t.parts.length,data:t.parts[t.index]}});progress()}
+function uploadPart(){const t=transferState.upload;emit({event:t.id+':'+t.index,upload_part:{id:t.id,index:t.index,total:t.parts.length,data:t.parts[t.index]}});progress()}
 function sendArchive(value){
  const plain=JSON.stringify(value);
  if(plain.length<=CHUNK_CHARS){emit(value);return}
  const raw=JSON.stringify({event:value.event,selected:value}),parts=[];
  for(let start=0;start<raw.length;){let end=Math.min(start+CHUNK_CHARS,raw.length);const tail=raw.charCodeAt(end-1);if(end<raw.length&&tail>=0xD800&&tail<=0xDBFF)end--;parts.push(raw.slice(start,end));start=end}
- uploadTransfer={id:crypto.randomUUID(),parts,index:0};uploadPart()
+ transferState.upload={id:crypto.randomUUID(),parts,index:0};uploadPart()
 }
 async function metadata(){return {owner,hashes:await request(db.transaction('files').objectStore('files').getAllKeys()),persistent}}
 async function applyPayload(args,announce=true){
@@ -42,10 +43,10 @@ async function applyPayload(args,announce=true){
  if(announce&&(signature!==lastSignature||restored.length)){lastSignature=signature;sendArchive({event:crypto.randomUUID(),...meta,restored})}
 }
 async function receiveDownload(part){
- if(!downloadTransfer||downloadTransfer.id!==part.id){if(part.index!==0)throw Error('Archive transfer interrupted; retry loading the app');downloadTransfer={id:part.id,total:part.total,parts:[]}}
- const t=downloadTransfer;if(t.total!==part.total||part.index>t.parts.length||part.data.length>CHUNK_CHARS)throw Error('Invalid archive transfer');
+ if(!transferState.download||transferState.download.id!==part.id){if(part.index!==0){emit({event:crypto.randomUUID(),download_restart:part.id});return}transferState.download={id:part.id,total:part.total,parts:[]}}
+ const t=transferState.download;if(t.total!==part.total||part.index>t.parts.length||part.data.length>CHUNK_CHARS)throw Error('Invalid archive transfer');
  if(part.index===t.parts.length)t.parts.push(part.data);
- if(t.parts.length===t.total){const payload=JSON.parse(t.parts.join(''));await applyPayload(payload.current,false);lastDownload=t.id;downloadTransfer=null}
+ if(t.parts.length===t.total){const payload=JSON.parse(t.parts.join(''));await applyPayload(payload.current,false);transferState.lastDownload=t.id;transferState.download=null}
  emit({event:crypto.randomUUID(),download_ack:{id:part.id,index:part.index}});progress()
 }
 window.addEventListener('message',async event=>{
@@ -53,19 +54,22 @@ window.addEventListener('message',async event=>{
  if(busy){queued=event.data;return}busy=true;
  try{
   if(!ready)await open();const args=event.data.args;
-  if(args.transport_error){uploadTransfer=null;downloadTransfer=null;throw Error(args.transport_error)}
-  if(args.upload_ack&&uploadTransfer&&args.upload_ack.id===uploadTransfer.id&&args.upload_ack.index===uploadTransfer.index){
-   uploadTransfer.index++;
-   if(uploadTransfer.index<uploadTransfer.parts.length)uploadPart();
-   else{const id=uploadTransfer.id;uploadTransfer=null;emit({event:crypto.randomUUID(),upload_done:id})}
+  if(args.transport_error){transferState.upload=null;transferState.download=null;throw Error(args.transport_error)}
+  if(args.upload_ack&&!transferState.upload)emit({event:crypto.randomUUID(),upload_restart:args.upload_ack.id});
+  if(args.upload_ack&&transferState.upload&&args.upload_ack.id===transferState.upload.id&&args.upload_ack.index===transferState.upload.index){
+   transferState.upload.index++;
+   if(transferState.upload.index<transferState.upload.parts.length)uploadPart();
+   else{const id=transferState.upload.id;transferState.upload=null;emit({event:crypto.randomUUID(),upload_done:id})}
   }
   if(args.download)await receiveDownload(args.download);
-  if(args.download_done&&args.download_done===lastDownload){const id=lastDownload;lastDownload=null;emit({event:crypto.randomUUID(),download_received:id,...await metadata()})}
+  if(args.download_done&&(!transferState.lastDownload||args.download_done===transferState.lastDownload)){const id=args.download_done;transferState.lastDownload=null;emit({event:crypto.randomUUID(),download_received:id,...await metadata()})}
   if(args.transport_only){progress();return}
-  if(!args.download&&!uploadTransfer&&!downloadTransfer)await applyPayload(args.current||args);
+  if(!args.download&&!transferState.upload&&!transferState.download)await applyPayload(args.current||args);
  }catch(error){document.getElementById('status').textContent='Browser archive failed: '+error.message;if(lastError!==error.message){lastError=error.message;emit({event:crypto.randomUUID(),error:'Browser archive failed: '+error.message})}}
  finally{busy=false;send('streamlit:setFrameHeight',{height:40});if(queued){const data=queued;queued=null;window.dispatchEvent(new MessageEvent('message',{data}))}}
 });
+progress();
 send('streamlit:componentReady',{apiVersion:1});send('streamlit:setFrameHeight',{height:40});
 </script></body></html>
+
 
