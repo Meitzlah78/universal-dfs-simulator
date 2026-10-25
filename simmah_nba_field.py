@@ -5,12 +5,12 @@ from scipy.special import logsumexp
 from scipy.sparse import csr_matrix
 
 
-def build_field(lineups,ownership,entries,seed=83,source=None,max_iterations=100):
+def build_field(lineups,ownership,entries,seed=83,source=None,max_iterations=100,*,log_prior=None):
     """Fit candidate probabilities to full nine-slot ownership targets.
 
     ownership is a complete percent vector (sum 900), aligned to outcome player
     columns. Caller supplies legal rosters and verified source metadata. This
-    models marginal ownership only, not learned NBA stacking or lineup habits.
+    optionally uses a history log-prior while still fitting current marginals.
     Integer copies represent actual duplicate entries without expanding memory.
     """
     ids=np.asarray(lineups);target=np.asarray(ownership,float)
@@ -22,22 +22,24 @@ def build_field(lineups,ownership,entries,seed=83,source=None,max_iterations=100
         raise ValueError('Invalid or repeated player in opponent lineup')
     if not isinstance(entries,int) or entries<1 or not source or max_iterations<1:
         raise ValueError('Positive field size, fitting budget and ownership source required')
+    prior=_validated_prior(log_prior,len(ids))
     # Flexible-slot permutations are one roster support point, not additional
     # independent probabilities for the same lineup.
     _,unique=np.unique(np.sort(ids,axis=1),axis=0,return_index=True)
-    ids=ids[np.sort(unique)]
+    unique=np.sort(unique)
+    ids=ids[unique];prior=prior[unique]
     incidence=csr_matrix((np.ones(ids.size),(np.repeat(np.arange(len(ids)),ids.shape[1]),ids.ravel())),
                          shape=(len(ids),len(target)))
     if ((target>0)&~(np.asarray(incidence.sum(axis=0)).ravel()>0)).any():
         raise ValueError('Ownership targets include players absent from legal field support')
     desired=target/100
     def loss(theta):
-        logits=incidence@theta;normalizer=logsumexp(logits)
+        logits=incidence@theta+prior;normalizer=logsumexp(logits)
         p=np.exp(logits-normalizer)
         return normalizer-desired@theta+1e-6*(theta@theta)/2, p@incidence-desired+1e-6*theta
     fit=minimize(loss,np.zeros(len(target)),method='L-BFGS-B',jac=True,
                  options={'maxiter':max_iterations,'ftol':1e-12,'gtol':1e-7})
-    logits=incidence@fit.x;probability=np.exp(logits-logsumexp(logits))
+    logits=incidence@fit.x+prior;probability=np.exp(logits-logsumexp(logits))
     expected=100*(probability@incidence)
     copies=np.random.default_rng(seed).multinomial(entries,probability)
     actual=100*(copies@incidence)/entries
@@ -50,7 +52,7 @@ def build_field(lineups,ownership,entries,seed=83,source=None,max_iterations=100
             'status':'experimental marginal ownership fit on supplied legal support; inspect residuals'}
 
 
-def sample_popularity_field(lineups,popularity,entries,seed=83,source=None,strength=.5):
+def sample_popularity_field(lineups,popularity,entries,seed=83,source=None,strength=.5,*,log_prior=None):
     """Estimate a field from relative popularity scores, not ownership targets.
 
     A lineup's log weight is strength times summed log player popularity.
@@ -67,10 +69,12 @@ def sample_popularity_field(lineups,popularity,entries,seed=83,source=None,stren
         raise ValueError('Invalid opponent roster indices')
     if not isinstance(entries,int) or entries<1 or not source or not np.isfinite(strength) or not 0<=strength<=2:
         raise ValueError('Explicit source, field size and bounded popularity strength required')
+    prior=_validated_prior(log_prior,len(ids))
     _,unique=np.unique(np.sort(ids,axis=1),axis=0,return_index=True)
-    ids=ids[np.sort(unique)]
+    unique=np.sort(unique)
+    ids=ids[unique];prior=prior[unique]
     # A documented 0.1 floor preserves possible low-popularity combinations.
-    logits=strength*np.log(np.maximum(raw,.1))[ids].sum(axis=1)
+    logits=strength*np.log(np.maximum(raw,.1))[ids].sum(axis=1)+prior
     probability=np.exp(logits-logsumexp(logits))
     incidence=csr_matrix((np.ones(ids.size),(np.repeat(np.arange(len(ids)),ids.shape[1]),ids.ravel())),
                          shape=(len(ids),len(raw)))
@@ -113,3 +117,10 @@ def ownership_support_diagnostic(lineups,ownership,tolerance=5):
                       minimum_max_error_pct=error)
     return result
 
+
+
+def _validated_prior(log_prior,size):
+    prior=np.zeros(size) if log_prior is None else np.asarray(log_prior,float)
+    if prior.shape!=(size,) or not np.isfinite(prior).all():
+        raise ValueError('Finite log-prior aligned to original roster support required')
+    return prior

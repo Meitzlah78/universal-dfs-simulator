@@ -17,12 +17,14 @@ from simmah_nba_rules import rules_for
 from simmah_portfolio import portfolio_roi_totals
 
 
-def input_identity(pool,markets,contest,salary_min,correlation=0,excluded_player_ids=()):
+def input_identity(pool,markets,contest,salary_min,correlation=0,excluded_player_ids=(),history_profiles=()):
     from simmah_nba_pregame import ROLE_COLUMNS
     columns=[c for c in ['Player ID','Position','Salary','Team','Opponent','Projection','Injury Status',
                          'Projected Minutes','Eligible',*ROLE_COLUMNS,'RotoWire Projected Own %'] if c in pool]
     content={'pool':pool[columns].to_json(orient='split',double_precision=10),'markets':markets,
-             'contest':contest,'salary_min':salary_min,'field_model_version':5}
+             'contest':contest,'salary_min':salary_min,'field_model_version':6}
+    from simmah_nba_field_history import history_identity
+    content['contest_history']=history_identity(history_profiles)
     if correlation:content['build_correlation']=correlation
     if len(excluded_player_ids):content['excluded_player_ids']=sorted(map(str,excluded_player_ids))
     return hashlib.sha256(json.dumps(content,sort_keys=True).encode()).hexdigest()
@@ -70,11 +72,13 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
     pool=slate['players'];rules=rules_for(pool);platform=rules['platform'];slots=rules['slots'];contests={c['id']:c for c in slate['contests']}
     with tabs[0]:
         cid=st.selectbox('NBA contest',list(contests),format_func=lambda x:contests[x]['name'],key='nba_selected_contest')
-    selected=contests[cid];count=selected['owned_entries'];error=None;contest=None;engine=None
+    selected=contests[cid];count=selected['owned_entries'];error=None;contest=None;engine=None;history_profiles=[]
     from simmah_nba_ownership import field_ownership_inputs
     ownership=field_ownership_inputs(pool)
     try:
         day=slate.get('date') or pool.attrs.get('slate_date') or slate_date(upload.name)
+        from simmah_nba_field_history import eligible_profiles
+        history_profiles=eligible_profiles(pool,day,selected['entry_fee'])
         contest=saved_contest(cid,day,selected['entry_fee'],name=selected['name'],platform=platform)
         if contest is None:
             pending_path=Path(__file__).parent/'data'/'nba_contests'/'pending'/(str(cid)+'.json')
@@ -116,6 +120,9 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         if contest:
             st.caption(f"{contest['capacity']:,} contest places · ${contest['prize_pool']:,.0f} prizes · {count} reserved entries · selected payout schedule")
         st.caption(ownership['source'])
+        if history_profiles:
+            st.caption(f"Opponent habits: {len(history_profiles)} earlier DraftKings contest(s), "+
+                f"{sum(p['opponent_entries'] for p in history_profiles):,} opponent entries. Salary and team/game concentration prior; future accuracy unverified.")
         if ownership['mode']!='projected':st.warning(ownership['status'])
     with controls:
         st.write(f'{count} portfolio entries')
@@ -139,7 +146,7 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         metric=st.selectbox('Rank lineups',['Top 1%','Expected ROI (%)','Expected Prize ($)'],key='nba_rank_metric')
         clicked=workspace_button(st,'BUILD NBA LINEUPS',disabled=bool(error),key='nba_build')
         if error:st.error('NBA build inputs need attention: '+error)
-    identity=input_identity(pool,markets,contest,salary_min,correlation,pool.iloc[excluded]['Player ID'])
+    identity=input_identity(pool,markets,contest,salary_min,correlation,pool.iloc[excluded]['Player ID'],history_profiles)
     saved=st.session_state.get('nba_build_result')
     if clicked:
         with tabs[2]:
@@ -154,7 +161,7 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
                     ownership['source'],
                     payout_vector(contest),selected['entry_fee'],count,diversity=diversity,
                     salary_min=salary_min,correlation=correlation,ownership_mode=ownership['mode'],progress=progress,
-                    excluded_indices=excluded)
+                    excluded_indices=excluded,slate_day=day,history_profiles=history_profiles)
                 reports=engine.last_report
                 # A completed portfolio must serialize and pass site legality
                 # before replacing the last successful build or showing success.
@@ -212,6 +219,7 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
             with st.expander('NBA engine and ownership report'):
                 st.write(saved['engine_reports'])
                 st.caption(built['field']['ownership_source'])
+                st.write(built['field'].get('contest_history',{'status':'not applied'}))
                 report=pd.DataFrame({'Name':labeled_pool['Name'],'Estimated Field Own %':built['field']['ownership_sampled']})
                 if 'RotoWire Projected Own %' in saved_pool:
                     report['RotoWire Projected Own %']=pd.to_numeric(saved_pool['RotoWire Projected Own %'],errors='coerce')

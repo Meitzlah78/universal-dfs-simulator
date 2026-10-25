@@ -1,0 +1,61 @@
+{
+  "contest_id": "197070607",
+  "date": "2026-10-24",
+  "duplicate_entry_fraction": 0.2216969842029679,
+  "excluded_user_entries": 20,
+  "fee_bucket": "micro",
+  "game_bucket": "medium",
+  "games": 5,
+  "histograms": {
+    "max_game": {
+      "2": 2267,
+      "3": 8846,
+      "4": 4062,
+      "5": 1143,
+      "6": 307,
+      "7": 87
+    },
+    "max_team": {
+      "1": 257,
+      "2": 8312,
+      "3": 6574,
+      "4": 1382,
+      "5": 155,
+      "6": 20,
+      "7": 12
+    },
+    "salary_left": {
+      "0": 8248,
+      "1": 5864,
+      "10": 2,
+      "11": 1,
+      "12": 2,
+      "14": 1,
+      "16": 1,
+      "2": 2073,
+      "21": 1,
+      "3": 273,
+      "4": 165,
+      "5": 34,
+      "6": 26,
+      "7": 12,
+      "8": 8,
+      "9": 1
+    }
+  },
+  "largest_roster_copies": 143,
+  "limitations": [
+    "One contest; no independent future-contest validation",
+    "Duplicate statistics recorded, not separately calibrated",
+    "No individual player pairing model or ownership targets learned"
+  ],
+  "opponent_entries": 16712,
+  "platform": "DraftKings",
+  "salary_template_sha256": "6ea4388d5a5f51699f5c649c864007efe65eb1ca5111da529ecd6c11c1ddf221",
+  "schema": 1,
+  "source_sha256": "8789980f8ba7bcab47fcd78fc296ccacf9c70f4bae93f0bb4a93f80919fba52b",
+  "sport": "NBA",
+  "total_entries": 16812,
+  "unavailable_lineup_entries": 80,
+  "unique_opponent_rosters": 13007
+}

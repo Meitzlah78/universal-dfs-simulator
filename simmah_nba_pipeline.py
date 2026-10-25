@@ -13,7 +13,7 @@ def run_pipeline(pool,outcome_factory,ownership,ownership_source,payouts,entry_f
                  portfolio_count,*,simulations=10000,candidate_target=5000,
                  field_support_target=10000,seed=83,diversity=50,salary_min=0,
                  max_ownership_error=5,progress=None,ownership_mode="projected",correlation=0,
-                 excluded_indices=None):
+                 excluded_indices=None,slate_day=None,history_profiles=None):
 
     """Generate three independent scenario sets and retain scored candidates.
 
@@ -57,10 +57,21 @@ def run_pipeline(pool,outcome_factory,ownership,ownership_source,payouts,entry_f
         support=build_opponent_support(pool,field_outcomes,ownership,target=field_support_target,seed=seed+1010)
     else:
         support=build_candidates(pool,field_outcomes,target=field_support_target,seed=seed+1010)
+    from simmah_nba_field_history import eligible_profiles,history_prior
+    history=eligible_profiles(pool,slate_day or pool.attrs.get('slate_date'),entry_fee,history_profiles)
+    # One prior weight per physical lineup; slot assignments are not extra mass.
+    if history:
+        _,unique=np.unique(np.sort(support['indices'],axis=1),axis=0,return_index=True)
+        support['indices']=support['indices'][np.sort(unique)]
+        prior,history_report=history_prior(pool,support['indices'],ownership,history)
+        prior_args={'log_prior':prior}
+    else:
+        prior_args={}
+        history_report={'status':'not applied','reason':'No compatible strictly earlier contest history'}
     fallback_reason=None
     if ownership_mode=='projected':
         try:
-            field=build_field(support['indices'],ownership,len(payouts)-1,seed+1011,ownership_source)
+            field=build_field(support['indices'],ownership,len(payouts)-1,seed+1011,ownership_source,**prior_args)
             residual=field['max_expected_error_pct']
             if residual>max_ownership_error:
                 fallback_reason=f"Projected ownership fit missed by {residual:.2f} percentage points (limit {max_ownership_error:g})."
@@ -79,14 +90,15 @@ def run_pipeline(pool,outcome_factory,ownership,ownership_source,payouts,entry_f
             # inputs. Preserve their relative popularity instead of flattening
             # every legal roster to equal probability. This is NOT a fitted field.
             field=sample_popularity_field(support['indices'],ownership,len(payouts)-1,
-                seed+1011,'Validated ownership used only as relative popularity: '+ownership_source)
+                seed+1011,'Validated ownership used only as relative popularity: '+ownership_source,**prior_args)
             field['fallback_mode']='relative popularity from validated ownership'
             field['max_expected_error_pct']=float(abs(field['ownership_expected']-np.asarray(ownership,float)).max())
             field['ownership_fit_diagnostic']=diagnostic
             field['ownership_fit_warning']=fallback_reason
             field['ownership_target']=np.asarray(ownership,float).copy()
     else:
-        field=sample_popularity_field(support['indices'],ownership,len(payouts)-1,seed+1011,ownership_source)
+        field=sample_popularity_field(support['indices'],ownership,len(payouts)-1,seed+1011,ownership_source,**prior_args)
+    field['contest_history']=history_report
     timings['opponent_field']=perf_counter()-started
     notify('Scoring independent evaluation scenarios')
     evaluation=draw(seed+2017)
