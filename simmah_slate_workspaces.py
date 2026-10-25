@@ -168,6 +168,9 @@ def select_upload(st,upload):
                 if st.session_state.get('_slate_fresh_mode'):
                     # Fresh mode has no browser tab handshake. Use the uploaded
                     # CSV immediately instead of stopping for a saved-slate swap.
+                    if current:
+                        current = {**current, 'snapshot': capture(st)}
+                        st.session_state.setdefault('_slate_records', {})[current['id']] = current
                     st.session_state['_slate_active'] = incoming
                     st.session_state.setdefault('_slate_records', {})[incoming['id']] = incoming
                     st.session_state.pop('_slate_incoming', None)
@@ -344,12 +347,40 @@ def slate_component():
     return components.declare_component('simmah_loaded_slates_v4', path=str(Path(__file__).parent/'components/slate_workspaces'))
 
 
+def render_session_tabs(st, host):
+    """Small session-only tab events, with no archive or snapshot transfer."""
+    import streamlit.components.v1 as components
+    state = st.session_state
+    records = state.setdefault('_slate_records', {})
+    current = state.get('_slate_active')
+    if current and state.get('dfs_format'):
+        current['title'] = state['dfs_format'] + ' · ' + current['name'].replace('.csv', '')
+    metadata = [{key: row[key] for key in ('id', 'name', 'title') if key in row}
+                for row in records.values()]
+    component = components.declare_component('simmah_session_tabs_v1',
+        path=str(Path(__file__).parent / 'components' / 'session_tabs'))
+    with host:
+        event = component(records=metadata, active=current.get('id') if current else None,
+                          key='_slate_session_tabs', default=None)
+    if not isinstance(event, dict) or event.get('event') == state.get('_slate_session_tabs_last'):
+        return
+    state['_slate_session_tabs_last'] = event.get('event')
+    selected = event.get('selected_id')
+    if selected in records and (not current or selected != current['id']):
+        if current:
+            saved = {**current, 'snapshot': capture(st)}
+            records[current['id']] = saved
+        state['_slate_pending'] = records[selected]
+        st.rerun()
+
+
 def finish_workspaces(st,host):
     if st.session_state.get('_slate_fresh_mode'):
         incoming = st.session_state.pop('_slate_incoming', None)
         if incoming:
             st.session_state['_slate_pending'] = incoming
             st.rerun()
+        render_session_tabs(st, host)
         return
     import streamlit.components.v1 as components
     from simmah_archive_jobs import end_live_build
