@@ -51,6 +51,8 @@ async function receiveDownload(part){
 }
 window.addEventListener('message',async event=>{
  if(event.data?.type!=='streamlit:render')return;
+ if(typeof localStorage!=='undefined'&&localStorage.getItem('simmah-clean-start-date')===new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()))return;
+
  if(busy){queued=event.data;return}busy=true;
  try{
   if(!ready)await open();const args=event.data.args;

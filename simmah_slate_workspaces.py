@@ -122,10 +122,14 @@ def slate_record(upload):
 
 
 def begin_workspaces(st):
+    from simmah_saved_cleanup import render_cleanup
+    render_cleanup(st)
     from simmah_slate_transport import handle_browser_transfer
-    handle_browser_transfer(st)
+    if not st.session_state.get('_slate_fresh_mode'):
+        handle_browser_transfer(st)
     from simmah_archive_ui import handle_archive_transfer
-    handle_archive_transfer(st)
+    if not st.session_state.get('_slate_fresh_mode'):
+        handle_archive_transfer(st)
     from simmah_archive_jobs import end_live_build
     if st.session_state.pop('_slate_archive_live_build',False):
         end_live_build(st.session_state.get('_slate_archive_build_token',''))
@@ -333,6 +337,12 @@ def slate_component():
 
 
 def finish_workspaces(st,host):
+    if st.session_state.get('_slate_fresh_mode'):
+        incoming = st.session_state.pop('_slate_incoming', None)
+        if incoming:
+            st.session_state['_slate_pending'] = incoming
+            st.rerun()
+        return
     import streamlit.components.v1 as components
     from simmah_archive_jobs import end_live_build
     if st.session_state.pop('_slate_archive_live_build',False):
