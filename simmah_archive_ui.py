@@ -11,6 +11,54 @@ from simmah_input_archive import Archive, S3Backup, inspect_input, sha256
 PREFIX = '_slate_archive_'
 
 
+class ArchiveTransferState:
+    """Keep the archive's chunk buffers separate from the slate-tab buffers."""
+    def __init__(self, state): self.state = state
+    def key(self, key): return PREFIX + 'transport_' + key.removeprefix('_slate_')
+    def get(self, key, default=None): return self.state.get(self.key(key), default)
+    def __getitem__(self, key): return self.state[self.key(key)]
+    def __setitem__(self, key, value): self.state[self.key(key)] = value
+    def pop(self, key, *default): return self.state.pop(self.key(key), *default)
+
+
+def archive_component():
+    import streamlit.components.v1 as components
+    return components.declare_component('simmah_input_archive_v2', path=str(Path(__file__).parent/'components'/'input_archive'))
+
+
+def handle_archive_transfer(st):
+    from simmah_slate_transport import receive_upload, advance_download
+    event = st.session_state.get(PREFIX+'browser') or {}
+    if not isinstance(event, dict): return
+    state = ArchiveTransferState(st.session_state)
+    response = None
+    try:
+        if event.get('upload_part'):
+            response = {'upload_ack': receive_upload(state, event['upload_part'])}
+        elif event.get('download_ack'):
+            response = advance_download(state, event['download_ack'])
+        elif event.get('upload_done'):
+            ident = event['upload_done']
+            if state.get('_slate_upload_finished') == ident and state.get('_slate_upload_applied') != ident:
+                payload = state.pop('_slate_upload_event')['selected']
+                process_event(st, payload)
+                state['_slate_upload_applied'] = ident
+                st.session_state['_slate_skip_transport_capture'] = True
+        elif event.get('download_received'):
+            ident = event['download_received']
+            if state.get('_slate_download_received') != ident:
+                process_event(st, event)
+                state['_slate_download_received'] = ident
+                st.session_state['_slate_skip_transport_capture'] = True
+    except (ValueError, TypeError, KeyError) as exc:
+        response = {'transport_error': str(exc)}
+    if response is not None:
+        archive_component()(transport_only=True, **response, key=PREFIX+'browser', default=None)
+        st.stop()
+
+
+
+
 def capture_upload(st, upload, key='upload'):
     if upload is None:
         return
@@ -94,7 +142,7 @@ def render_archive(st):
     import streamlit.components.v1 as components
     from simmah_archive_jobs import queue_jobs
     state = st.session_state
-    component = components.declare_component('simmah_input_archive',path=str(Path(__file__).parent/'components'/'input_archive'))
+    component = archive_component()
     archive = None
     try:
         archive = archive_for(st)
@@ -115,19 +163,21 @@ def render_archive(st):
     ack = state.get(PREFIX+'browser_acked',set())
     outbox = state.setdefault(PREFIX+'browser_outbox',{})
     # Include newly finished reports and existing server originals after a
-    # browser reconnect. Four at a time bounds Streamlit message size.
+    # browser reconnect. Transfer one file at a time in acknowledged chunks.
     for record in files:
-        if len([h for h in outbox if h not in ack]) >= 4:
+        if len([h for h in outbox if h not in ack]) >= 1:
             break
         digest = record['digest']
         if digest not in ack and digest not in outbox:
             outbox[digest] = dict(digest=digest,filename=record['filename'],
                                   data=base64.b64encode(archive.get(digest)).decode(),
                                   metadata=record['metadata'],saved_at=record['saved_at'])
-    outgoing = [r for digest,r in outbox.items() if digest not in ack][:4]
-    need = [h for h in state.get(PREFIX+'browser_hashes',[]) if h not in hashes][:4]
+    outgoing = [r for digest,r in outbox.items() if digest not in ack][:1]
+    need = [h for h in state.get(PREFIX+'browser_hashes',[]) if h not in hashes][:1]
     with st.expander('Saved files & automatic calibration',expanded=False):
-        event = component(records=outgoing,restore=need,key=PREFIX+'browser',default=None)
+        from simmah_slate_transport import outgoing as transport_outgoing
+        wire = transport_outgoing(ArchiveTransferState(state), dict(current=dict(records=outgoing, restore=need), snapshot='', records=[]))
+        event = component(**wire,key=PREFIX+'browser',default=None)
         if process_event(st,event):
             st.rerun()
         for digest in list(outbox):
@@ -223,4 +273,5 @@ class _Upload:
 
     def getvalue(self):
         return self.raw
+
 

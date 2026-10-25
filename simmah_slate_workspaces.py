@@ -124,6 +124,8 @@ def slate_record(upload):
 def begin_workspaces(st):
     from simmah_slate_transport import handle_browser_transfer
     handle_browser_transfer(st)
+    from simmah_archive_ui import handle_archive_transfer
+    handle_archive_transfer(st)
     from simmah_archive_jobs import end_live_build
     if st.session_state.pop('_slate_archive_live_build',False):
         end_live_build(st.session_state.get('_slate_archive_build_token',''))
@@ -397,6 +399,7 @@ def workspace_stop(st,host):
 def workspace_rerun(st,host):
     finish_workspaces(st,host)
     st.rerun()
+
 
 
 
