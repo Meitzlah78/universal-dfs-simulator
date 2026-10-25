@@ -1,24 +1,13 @@
-<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;font:12px system-ui;color:#a9bed1}button{background:#62313a;color:white;border:1px solid #98545f;border-radius:5px;padding:7px 12px;cursor:pointer}#status{margin-left:9px}</style></head><body><button id="clear">Clear today's DK / FD saved data & start fresh</button><span id="status"></span><script>
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0}</style></head><body><script>
 const send=value=>window.parent.postMessage({isStreamlitMessage:true,type:'streamlit:setComponentValue',value,dataType:'json'},'*');
-const req=r=>new Promise((resolve,reject)=>{r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});
-let day,working=false,owner;
-function dayOf(r){const name=r.filename||r.name||'',match=name.match(/(20\d{2})[-_]?([01]\d)[-_]?([0-3]\d)/);if(match)return match.slice(1).join('-');const stamp=r.saved_at?Number(r.saved_at)*1000:r.updated;if(!stamp)return '';return new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(stamp))}
-function matches(r){return dayOf(r)===day&&(/DraftKings|FanDuel/i.test(r.metadata?.platform||'')||/DraftKings|FanDuel|DKEntries|\bDK\b|\bFD\b/i.test((r.filename||r.name||'')+' '+(r.title||'')))}
-async function database(name,store){const r=indexedDB.open(name);let created=false;r.onupgradeneeded=()=>{created=true;r.transaction.abort()};let db;try{db=await req(r)}catch(e){if(created)return null;throw e}if(!db.objectStoreNames.contains(store)){db.close();return null}return db}
-async function removeMatches(name,store,key){const db=await database(name,store);if(!db)return [];try{if(name==='simmah-original-inputs-v1'&&db.objectStoreNames.contains('identity'))owner=await req(db.transaction('identity').objectStore('identity').get('owner'));const rows=await req(db.transaction(store).objectStore(store).getAll());const chosen=rows.filter(matches);await new Promise((resolve,reject)=>{const tx=db.transaction(store,'readwrite');for(const row of chosen)tx.objectStore(store).delete(row[key]);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error)});return chosen.map(r=>r[key])}finally{db.close()}}
-const status=document.getElementById('status'),button=document.getElementById('clear');
-button.onclick=async()=>{if(working||!day)return;working=true;button.disabled=true;status.textContent='Clearing today’s saved data…';try{
- // Stop outstanding iframe responses from putting old snapshots back.
- const slate=window.parent.__simmahSlateTransfersV1,archive=window.parent.__simmahArchiveTransfersV1;
- if(slate){slate.upload=null;slate.download=null}if(archive){archive.upload=null;archive.download=null}
- localStorage.setItem('simmah-clean-start-date',day);
- const slates=await removeMatches('simmah-loaded-slates-v1','slates','id');
- const hashes=await removeMatches('simmah-original-inputs-v1','files','digest');
- if(slate){for(const id of slates){slate.records.delete(id);slate.closedIds.add(id)}slate.lastDownload=null;slate.lastFullEvent=null}
- if(archive)archive.lastDownload=null;
- if(slates.includes(localStorage.getItem('simmah-active-slate')))localStorage.removeItem('simmah-active-slate');
- send({event:crypto.randomUUID(),day,owner,slates,hashes,clear:true});status.textContent='Browser cleared. Starting a fresh workspace…';
- }catch(e){status.textContent='Cleanup failed: '+e.message;working=false;button.disabled=false}}
-window.addEventListener('message',event=>{if(event.data?.type!=='streamlit:render')return;day=event.data.args.day;if(event.data.args.error){status.textContent=event.data.args.error;working=false;button.disabled=false;return}if(event.data.args.fresh){status.textContent='Fresh workspace: automatic saved-state restoration is paused.';return}if(localStorage.getItem('simmah-clean-start-date')===day&&!window.parent.__simmahFreshStartAnnounced){window.parent.__simmahFreshStartAnnounced=true;send({event:crypto.randomUUID(),day,fresh:true})}});
-window.parent.postMessage({isStreamlitMessage:true,type:'streamlit:componentReady',apiVersion:1},'*');window.parent.postMessage({isStreamlitMessage:true,type:'streamlit:setFrameHeight',height:58},'*');
+window.addEventListener('message',event=>{
+ if(event.data?.type!=='streamlit:render')return;
+ const a=event.data.args;
+ if(!a.fresh&&localStorage.getItem('simmah-clean-start-date')===a.day&&!window.parent.__simmahFreshStartAnnounced){
+  window.parent.__simmahFreshStartAnnounced=true;
+  send({event:crypto.randomUUID(),day:a.day,fresh:true});
+ }
+});
+window.parent.postMessage({isStreamlitMessage:true,type:'streamlit:componentReady',apiVersion:1},'*');
+window.parent.postMessage({isStreamlitMessage:true,type:'streamlit:setFrameHeight',height:0},'*');
 </script></body></html>

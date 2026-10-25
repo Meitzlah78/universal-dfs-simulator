@@ -80,33 +80,14 @@ def reset_state(state, day, slates=(), hashes=()):
 
 
 def render_cleanup(st):
+    """Retain the existing fresh-start preference without a deletion control."""
     import streamlit.components.v1 as components
     state = st.session_state
     day = today()
-    component = components.declare_component('simmah_saved_cleanup_v1',
+    component = components.declare_component('simmah_session_preference_v1',
         path=str(Path(__file__).parent / 'components' / 'saved_cleanup'))
     event = state.get(KEY) or {}
-    error = state.get('_slate_cleanup_error')
-    if isinstance(event, dict) and event.get('event') != state.get('_slate_cleanup_last') and event.get('day') == day:
-        if event.get('clear'):
-            state.pop('_slate_cleanup_error', None)
-            # Pause restore immediately, including if deletion needs a retry.
-            state['_slate_fresh_mode'] = True
-            try:
-                from simmah_archive_ui import archive_for
-                owner = event.get('owner', '')
-                if isinstance(owner, str) and re.fullmatch('[a-f0-9]{32}', owner):
-                    state['_slate_archive_owner'] = owner
-                archive = archive_for(st)
-                if archive:
-                    clear_archive(archive, day)
-                reset_state(state, day, event.get('slates', []), event.get('hashes', []))
-                st.rerun()
-            except Exception as exc:
-                error = 'Server cleanup incomplete: ' + str(exc)
-                state['_slate_cleanup_error'] = error
-                state['_slate_cleanup_last'] = event.get('event')
-        elif event.get('fresh'):
-            state['_slate_fresh_mode'] = True
-            state['_slate_cleanup_last'] = event.get('event')
-    component(day=day, fresh=bool(state.get('_slate_fresh_mode')), error=error, key=KEY, default=None)
+    if isinstance(event, dict) and event.get('fresh') and event.get('day') == day:
+        state['_slate_fresh_mode'] = True
+        state['_slate_cleanup_last'] = event.get('event')
+    component(day=day, fresh=bool(state.get('_slate_fresh_mode')), key=KEY, default=None)
