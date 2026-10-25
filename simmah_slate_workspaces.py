@@ -165,8 +165,16 @@ def select_upload(st,upload):
             if current and current['id']==incoming['id']:
                 current.update({k:incoming[k] for k in ('data','name')})
             else:
-                st.session_state['_slate_incoming']=incoming
-                return None
+                if st.session_state.get('_slate_fresh_mode'):
+                    # Fresh mode has no browser tab handshake. Use the uploaded
+                    # CSV immediately instead of stopping for a saved-slate swap.
+                    st.session_state['_slate_active'] = incoming
+                    st.session_state.setdefault('_slate_records', {})[incoming['id']] = incoming
+                    st.session_state.pop('_slate_incoming', None)
+                    st.session_state.pop('_slate_pending', None)
+                else:
+                    st.session_state['_slate_incoming']=incoming
+                    return None
     current=st.session_state.get('_slate_active')
     return StoredUpload(base64.b64decode(current['data']),current['name']) if current else None
 
