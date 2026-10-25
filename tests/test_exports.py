@@ -18,7 +18,7 @@ class FanDuelExportTest(unittest.TestCase):
         ids={f"Player {i}":f"111-{100+i}" for i in range(len(slots))}
         return out.getvalue().encode(),portfolio,ids,rows,slots
 
-    def test_full_template_preserves_every_non_roster_cell(self):
+    def test_selected_contest_preserves_metadata_and_reference_table(self):
         raw,p,ids,original,slots=self.fixture()
         out,n=build_fanduel_entry_export(raw,p,ids,{"id":"111-222"},"Full Roster")
         rows=list(csv.reader(io.StringIO(out.decode())))
@@ -27,8 +27,21 @@ class FanDuelExportTest(unittest.TestCase):
         self.assertEqual(rows[1][:4],original[1][:4])
         self.assertEqual(rows[1][4:13],[ids[p.iloc[0][s]] for s in slots])
         self.assertEqual(rows[1][13:],original[1][13:])
-        self.assertEqual(rows[2:],original[2:])
+        self.assertEqual(rows[2:],original[3:])
+        self.assertNotIn("124",[r[0] for r in rows if r])
         self.assertIn(b"\r\n",out)
+
+    def test_blank_entries_in_other_contests_are_not_uploaded(self):
+        raw,p,ids,original,slots=self.fixture()
+        original[2][4:4+len(slots)]=[""]*len(slots)
+        source=io.StringIO(newline="")
+        csv.writer(source).writerows(original)
+        out,n=build_fanduel_entry_export(source.getvalue(),p,ids,{"id":"111-222"},"Full Roster")
+        rows=list(csv.reader(io.StringIO(out.decode())))
+        self.assertEqual(n,1)
+        self.assertEqual(rows[1][1],"111-222")
+        self.assertTrue(all(rows[1][4:13]))
+        self.assertEqual(rows[2:],original[3:])
 
     def test_single_game_maps_mvp_and_five_flex(self):
         raw,p,ids,_,slots=self.fixture(True)
