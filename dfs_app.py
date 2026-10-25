@@ -739,6 +739,7 @@ def build_dk_contest_entry_export(entry_df, selected_contest_id, lineup_ids_df, 
     if not target_id:
         st.error("Select your contest from the uploaded DraftKings entry file before exporting.")
         return None
+    other_entry_count = int(entries["Contest ID"].ne(target_id).sum())
     entries = entries[entries["Contest ID"] == target_id].copy().reset_index(drop=True)
     if entries.empty:
         st.error(f"No existing entries found for selected contest ID {target_id}. Choose the contest matching your entry file.")
@@ -860,6 +861,10 @@ def build_dk_contest_entry_export(entry_df, selected_contest_id, lineup_ids_df, 
             )
             return None
 
+    if other_entry_count:
+        st.info(f"This download updates {count} selected-contest entries only. "
+                f"The other {other_entry_count} entries in your upload are not included. "
+                "Build and export each other contest separately.")
     st.success(
         f"Export prepared to replace {count} existing DraftKings {slate_label} entry/entries "
         f"in contest {target_id}. Entry IDs and contest metadata are preserved."
@@ -6103,10 +6108,15 @@ else:
                             axis=1,
                         )
                         selected_label = st.selectbox(
-                            "Contest",
+                            "Contest to build and export",
                             contest_summary["Contest Label"].tolist(),
-                            key=f"dk_one_upload_contest_{lineup_mode.lower().replace(' ', '_')}",
+                            index=None,
+                            placeholder="Choose the contest whose entries you want to replace",
+                            key=f"dk_explicit_contest_v2_{lineup_mode.lower().replace(' ', '_')}",
                         )
+                        if selected_label is None:
+                            st.info("Choose a contest above. Builds and exports apply only to that contest's Entry IDs.")
+                            workspace_stop(st, _loaded_slate_tabs)
                         selected_row = contest_summary.loc[
                             contest_summary["Contest Label"].eq(selected_label)
                         ].iloc[0]
@@ -7582,9 +7592,9 @@ else:
                                 )
                                 if export_df is not None:
                                     lineup_export_download(
-                                        label="DOWNLOAD FILE FOR EDIT ENTRIES",
+                                        label=f"DOWNLOAD {len(export_df)} DK ENTRIES — {selected_contest_name}",
                                         data=export_df.to_csv(index=False).encode("utf-8"),
-                                        file_name="DraftKings_Classic_Contest_Entries.csv",
+                                        file_name=f"DraftKings_Classic_{selected_contest_id}_{len(export_df)}_ENTRIES.csv",
                                         mime="text/csv",
                                         use_container_width=True,
                                         key="dk_classic_replace_export",
@@ -9481,9 +9491,9 @@ with _tab_build:
                                 )
                                 if export_df is not None:
                                     lineup_export_download(
-                                        label="DOWNLOAD FILE FOR EDIT ENTRIES",
+                                        label=f"DOWNLOAD {len(export_df)} DK ENTRIES — {selected_contest_name}",
                                         data=export_df.to_csv(index=False).encode("utf-8"),
-                                        file_name="DraftKings_Showdown_Contest_Entries.csv",
+                                        file_name=f"DraftKings_Showdown_{selected_contest_id}_{len(export_df)}_ENTRIES.csv",
                                         mime="text/csv",
                                         use_container_width=True,
                                         key="dk_showdown_unified_export",
