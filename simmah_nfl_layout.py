@@ -36,20 +36,10 @@ def game_cards_html(games):
 
 def render_game_cards(st,games):
     st.markdown('''<style>
-.simmah-nfl-games{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 9px;scrollbar-width:thin}
-.simmah-nfl-card{flex:0 0 190px;padding:9px 11px;border:1px solid #28455d;border-radius:8px;background:#0b1b2b;color:#e8f1f8}
+.simmah-nfl-games{display:flex;gap:8px;overflow-x:auto;padding:3px 0 10px;scrollbar-width:thin}
+.simmah-nfl-card{flex:0 0 172px;padding:10px 12px;border:1px solid #263b4d;border-radius:9px;background:#101d2b;color:#e6edf5}
 .simmah-nfl-card strong,.simmah-nfl-card b,.simmah-nfl-card span,.simmah-nfl-card small{display:block;white-space:nowrap}
-.simmah-nfl-kickoff{font-size:12px;color:#8dd5ff;margin-bottom:4px}.simmah-nfl-card b{font-size:12px}.simmah-nfl-card span{font-size:13px;margin:4px 0}.simmah-nfl-card small{font-size:10px;color:#a8bbcc}
-.st-key-simmah_pinned_games:has(.simmah-nfl-games){position:fixed !important;top:7rem;left:50%;transform:translateX(-50%);width:calc(100% - 3rem) !important;max-width:1752px;max-height:8.5rem;overflow-y:auto;z-index:989;background:#061321;padding:4px 0;border-bottom:1px solid #293e52;box-shadow:0 4px 12px #0003;min-width:0}
-.stApp:has(.simmah-nfl-games) [data-testid="stTabs"] :is([data-baseweb="tab-list"], [role="tablist"]){top:16rem !important;z-index:988}
-.stApp:has(.simmah-nfl-games) [data-testid="stMainBlockContainer"],.stApp:has(.simmah-nfl-games) section.main>div.block-container{padding-top:19.5rem !important}
-@media(min-width:901px){.stApp:has(.simmah-nfl-games) .st-key-simmah_build_panel{top:19rem !important;height:max(8rem,calc(100dvh - 20rem)) !important}}
-@media(max-width:640px){.st-key-simmah_pinned_games:has(.simmah-nfl-games){width:calc(100% - 1rem) !important}}
-
-/* Stack fixed bars against their actual rendered edges, including mobile. */
-.st-key-simmah_pinned_games:has(.simmah-nfl-games){anchor-name:--simmah-games;margin:0 !important;border-top:0;border-radius:0}
-@supports(top:anchor(--simmah-refresh bottom)){
- .st-key-simmah_pinned_games:has(.simmah-nfl-games){top:anchor(--simmah-refresh bottom) !important}
- .stApp:has(.simmah-nfl-games) [data-testid="stTabs"] :is([data-baseweb="tab-list"], [role="tablist"]){top:anchor(--simmah-games bottom) !important;margin-top:0 !important;border-top:0}
-}
+.simmah-nfl-kickoff{font-size:11px;color:#6cddcc;margin-bottom:5px}.simmah-nfl-card b{font-size:13px}.simmah-nfl-card span{font-size:12px;margin:4px 0}.simmah-nfl-card small{font-size:10px;color:#91a9bd}
+.st-key-simmah_pinned_games:has(.simmah-nfl-games){position:relative;min-width:0;margin:.1rem 0 .65rem}
+@media(max-width:640px){.simmah-nfl-card{flex-basis:145px;padding:8px 10px}}
 </style>'''+game_cards_html(games),unsafe_allow_html=True)

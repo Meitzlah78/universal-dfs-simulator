@@ -22,39 +22,43 @@ st.set_page_config(
 )
 
 from simmah_slate_workspaces import begin_workspaces, finish_workspaces, select_upload, workspace_file_uploader, workspace_stop, workspace_rerun, workspace_download_button
+from simmah_ui import render_brand, player_columns, player_column_config, render_diversity_controls
+render_brand(st, show_logo=False)
+_app_header = st.container(key="simmah_app_header")
 _loaded_slate_tabs = begin_workspaces(st)
 from simmah_injury_display import injury_frame, injury_player_pool
 from simmah_single_stacks import render_controls as render_single_stack_controls, selected_validator as single_stack_validator
 from simmah_build_state import uploaded_slate_signature, signature_matches_upload
 from simmah_lineup_editor import render_editor
-from simmah_ui import render_brand, player_columns, player_column_config, render_diversity_controls
-render_brand(st, show_logo=False)
 st.session_state["active_game_markets"] = {}
 st.session_state["active_game_lines"] = []
 st.session_state["active_slate_identity"] = ""
 
 # Shared header stays above the three format-independent workspaces.
-_shared_header = st.container()
 _slate_games_header = st.container(key="simmah_pinned_games")
-_workspace_main, _workspace_rail = st.columns([4.3, 1.25], gap="medium")
+with st.container(key="simmah_workspace_grid"):
+    _workspace_main, _workspace_rail = st.columns([3.5, 1.1], gap="large")
 with _workspace_main:
     _tab_contests, _tab_roster, _tab_build, _tab_lineups = st.tabs(["Contests", "Roster & Projections", "Build", "Lineups"])
 with _workspace_rail:
     _build_controls = st.container(key="simmah_build_panel", border=True)
     with _build_controls:
-        st.markdown("### Build Lineups")
-        st.caption("10,000 player simulations · 5,000 candidate target")
+        st.markdown("### Build settings")
+        st.markdown('<div class="simmah-build-spec"><span>10,000 simulations</span><span>5,000 candidates</span></div>', unsafe_allow_html=True)
+        if not st.session_state.get('_slate_active'):
+            st.caption("Upload your entries in Contests to get started.")
 
 with _tab_contests:
-    st.caption("1. Upload your entries file, select a contest, and confirm its field size and payouts.")
+    st.markdown('<div class="simmah-step"><b>1</b>Set up your slate and choose which entries to fill.</div>', unsafe_allow_html=True)
+    _shared_header = st.container(key="simmah_slate_setup")
     _contest_setup = st.container()
     _contest_history = st.container()
 with _tab_roster:
-    st.caption("2. Review projections, injuries, weather and player controls for the selected slate.")
+    st.markdown('<div class="simmah-step"><b>2</b>Review your player pool, projections and exposure limits.</div>', unsafe_allow_html=True)
 with _tab_build:
-    st.caption("3. Run your build and review candidate lineups. Your selected entries and exports are in Lineups.")
+    st.markdown('<div class="simmah-step"><b>3</b>Run the simulation and build your candidate lineups.</div>', unsafe_allow_html=True)
 with _tab_lineups:
-    st.caption("4. Review your selected entries, swap individual players, check exposures and export to your contest.")
+    st.markdown('<div class="simmah-step"><b>4</b>Review your assigned entries, make swaps and export.</div>', unsafe_allow_html=True)
 
 @st.cache_data(show_spinner=False, max_entries=8)
 def leverage_opportunities_cached(outcomes, candidates):
@@ -198,12 +202,12 @@ with _contest_history:
 from datetime import datetime as _sticky_datetime
 
 # Keep the refresh control in the sticky top bar, without the projection-update warning.
-with _shared_header.container(key="sticky_projection_bar"):
+with _app_header.container(key="sticky_projection_bar"):
     _sticky_left, _sticky_right = st.columns([3, 2])
     with _sticky_left:
         render_brand(st, compact=True)
     with _sticky_right:
-        if workspace_button(st,"REFRESH PROJECTIONS + INJURY NEWS", key="sticky_refresh_projections", use_container_width=True):
+        if workspace_button(st,"Refresh projections & news", key="sticky_refresh_projections", use_container_width=True):
             # Defer cache clearing until after the cached functions have been defined.
             st.session_state["refresh_projections_requested"] = True
             workspace_rerun(st, _loaded_slate_tabs)
@@ -2986,7 +2990,7 @@ def detect_uploaded_dfs_format(uploaded_file):
 
 with _shared_header:
     st.write("### Slate Setup")
-    st.caption("Upload your DraftKings or FanDuel entries/slate CSV once. SIMMAH will choose the site and format automatically.")
+    st.caption("Upload your original DraftKings or FanDuel entries CSV. Site and format are detected automatically.")
     auto_slate_file = st.file_uploader(
         "Upload Entries / Slate CSV",
         type=["csv"],
@@ -3003,14 +3007,14 @@ with _shared_header:
                 st.session_state["dfs_format"] = detected_format
                 st.session_state["auto_detected_dfs_format"] = detected_format
                 workspace_rerun(st, _loaded_slate_tabs)
-            st.success(f"Format detected automatically: {detected_format}")
+            st.caption(f"✓ {detected_format} · {auto_slate_file.name}")
         else:
             st.error("SIMMAH could not identify this file. Upload the original DraftKings or FanDuel contest entries CSV.")
             workspace_stop(st, _loaded_slate_tabs)
 
 if auto_slate_file is None:
     with _shared_header:
-        st.info("Upload an entries/slate CSV to get started.")
+        st.caption("Next: choose your contest, review the player pool, then build.")
     workspace_stop(st, _loaded_slate_tabs)
 selected_format = detected_format
 

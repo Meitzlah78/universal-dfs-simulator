@@ -88,30 +88,20 @@ def render_game_strip(st,pool,markets,updated_at=None):
         saved='<div class="simmah-game-title">Last saved game data</div>' if game['saved_metadata'] else ''
         cards.append('<div class="simmah-game-card"><div class="simmah-game-title">'+escape(game['label'])+'<span>'+escape(game['start_time'])+'</span></div>'+''.join(teams)+saved+'</div>')
     st.markdown('''<style>
-.st-key-simmah_pinned_games{position:fixed !important;top:7rem;left:50%;transform:translateX(-50%);width:calc(100% - 3rem) !important;max-width:1752px;max-height:11rem;overflow-y:auto;z-index:989;background:var(--background-color,#0e1117);padding:4px 0;border-bottom:1px solid #293e52;box-shadow:0 4px 12px #0003;min-width:0}
-[data-testid="stTabs"] :is([data-baseweb="tab-list"], [role="tablist"]){top:18.5rem !important;z-index:988}
-[data-testid="stMainBlockContainer"],section.main>div.block-container{padding-top:22rem !important}
-@media(min-width:901px){.st-key-simmah_build_panel{top:21.5rem !important;height:max(8rem,calc(100dvh - 22.5rem)) !important}}
-@media(max-width:640px){.st-key-simmah_pinned_games{width:calc(100% - 1rem) !important}}
+.st-key-simmah_pinned_games{position:relative;min-width:0;margin:.1rem 0 .65rem}
 
-.simmah-game-strip{display:flex;flex-wrap:nowrap;gap:7px;overflow-x:scroll;overflow-y:hidden;width:100%;max-width:100%;min-width:0;box-sizing:border-box;padding:7px 7px 9px;margin:2px 0 7px;border:1px solid #293e52;border-radius:8px;scroll-snap-type:x proximity;scrollbar-width:auto;scrollbar-gutter:stable;scrollbar-color:#50728f #102337;-webkit-overflow-scrolling:touch}
+.simmah-game-strip{display:flex;flex-wrap:nowrap;gap:7px;overflow-x:scroll;overflow-y:hidden;width:100%;max-width:100%;min-width:0;box-sizing:border-box;padding:3px 0 10px;margin:2px 0 7px;border:0;border-radius:0;scroll-snap-type:x proximity;scrollbar-width:auto;scrollbar-gutter:stable;scrollbar-color:#50728f #102337;-webkit-overflow-scrolling:touch}
 .simmah-game-strip::after{content:"";flex:0 0 18px}
 .simmah-game-strip::-webkit-scrollbar{height:12px}
 .simmah-game-strip::-webkit-scrollbar-track{background:#102337;border-radius:6px}
 .simmah-game-strip::-webkit-scrollbar-thumb{background:#6f8da8;border:2px solid #102337;border-radius:6px}
-.simmah-game-card{flex:0 0 205px;box-sizing:border-box;scroll-snap-align:start;padding:6px 9px;border:1px solid #45515f;border-radius:6px;background:rgba(100,115,135,.08)}
+.simmah-game-card{flex:0 0 205px;box-sizing:border-box;scroll-snap-align:start;padding:6px 9px;border:1px solid #263b4d;border-radius:9px;background:#101d2b}
 .simmah-game-title{display:flex;justify-content:space-between;gap:8px;font-size:.65rem;opacity:.75;margin-bottom:3px;white-space:nowrap}
 .simmah-game-team{display:grid;grid-template-columns:32px 43px 1fr;align-items:center;gap:5px;padding:1px 0;font-size:.78rem;line-height:1.25}
 .simmah-game-team span{font-size:.67rem;white-space:nowrap}
 .simmah-game-strip:focus-visible{outline:2px solid #69bce5;outline-offset:2px}
 @media(max-width:440px){.simmah-game-card{flex-basis:195px}}
 
-/* Stack fixed bars against their actual rendered edges, including mobile. */
-.st-key-simmah_pinned_games{anchor-name:--simmah-games;margin:0 !important;border-top:0;border-radius:0}
-@supports(top:anchor(--simmah-refresh bottom)){
- .st-key-simmah_pinned_games{top:anchor(--simmah-refresh bottom) !important}
- [data-testid="stTabs"] :is([data-baseweb="tab-list"], [role="tablist"]){top:anchor(--simmah-games bottom) !important;margin-top:0 !important;border-top:0}
-}
 </style><div class="simmah-game-strip" role="region" aria-label="Slate games; scroll left or right" tabindex="0">'''+''.join(cards)+'</div>',unsafe_allow_html=True)
 
 
