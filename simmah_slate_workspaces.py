@@ -122,6 +122,8 @@ def slate_record(upload):
 
 
 def begin_workspaces(st):
+    from simmah_workspace_persistence import begin
+    begin(st)
     from simmah_saved_cleanup import render_cleanup
     render_cleanup(st)
     from simmah_slate_transport import handle_browser_transfer
@@ -184,6 +186,7 @@ def select_upload(st,upload):
                         restore_checkpoint(st, incoming['_session_checkpoint'])
                     else:
                         restore(st.session_state, '')
+                    st.session_state['_slate_upload_epoch'] = st.session_state.get('_slate_upload_epoch', 0)+1
                     st.session_state['_slate_active'] = incoming
                     st.session_state.setdefault('_slate_records', {})[incoming['id']] = incoming
                     st.session_state.pop('_slate_incoming', None)
@@ -409,7 +412,10 @@ def finish_workspaces(st,host):
         if incoming:
             st.session_state['_slate_pending'] = incoming
             st.rerun()
+        from simmah_workspace_persistence import schedule, render
+        schedule(st)
         render_session_tabs(st, host)
+        render(st, host)
         with host:
             from simmah_diagnostic_packages import render_nfl_package
             render_nfl_package(st)

@@ -10,3 +10,7 @@ data/simulation_cache/
 data/input_archive/
 __pycache__/
 *.pyc
+
+# Private, browser-confirmed workspace recovery files.
+static/workspace_backups/
+data/workspace_recovery/

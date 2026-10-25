@@ -7,6 +7,7 @@ textColor = "#e6edf5"
 font = "sans serif"
 
 [server]
+enableStaticServing = true
 # Legacy saved slate snapshots can exceed Community Cloud\'s 25 MB socket limit.
 # New tab messages send only the selected slate, with one snapshot copy.
 maxMessageSize = 200

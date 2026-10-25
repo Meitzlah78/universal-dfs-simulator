@@ -1,4 +1,4 @@
-"""Full session-only checkpoints without JSON/gzip or browser transfers."""
+"""Lossless in-memory checkpoints shared by tabs and restart recovery."""
 from copy import deepcopy
 
 
@@ -17,7 +17,8 @@ def checkpoint(st):
         if hasattr(value, 'getvalue') and hasattr(value, 'name'):
             continue
         values[key] = value
-    return deepcopy(dict(values=values, uploads=state.get('_slate_restored_uploads', {})))
+    return deepcopy(dict(values=values, uploads=state.get('_slate_restored_uploads', {}),
+                         artifacts=state.get('_slate_archive_pending', {})))
 
 
 def restore_checkpoint(st, saved):
@@ -27,3 +28,5 @@ def restore_checkpoint(st, saved):
     copied = deepcopy(saved)
     st.session_state.update(copied['values'])
     st.session_state['_slate_restored_uploads'] = copied.get('uploads', {})
+    st.session_state.setdefault('_slate_archive_pending', {}).update(copied.get('artifacts', {}))
+

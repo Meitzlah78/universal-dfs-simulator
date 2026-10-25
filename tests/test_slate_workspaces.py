@@ -42,7 +42,9 @@ class MultipleLoadedSlateTests(unittest.TestCase):
     def test_load_fd_after_dk_keeps_both_and_restores_each_setting(self):
         from pathlib import Path
         from streamlit.testing.v1 import AppTest
-        app=AppTest.from_file(str(Path(__file__).with_name('slate_switch_fixture.py'))).run()
+        app=AppTest.from_file(str(Path(__file__).with_name('slate_switch_fixture.py')))
+        app.session_state['_slate_backup_browser']={'event':'browser-ready','boot':{'owner':'a'*32,'records':[]}}
+        app.run()
         app.button(key='load_DK').click().run()
         self.assertFalse(app.exception)
         dk_epoch=app.session_state['_slate_upload_epoch']
