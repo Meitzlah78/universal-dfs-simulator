@@ -59,6 +59,9 @@ def private_key(key):
 
 def transient_key(key):
     key=str(key)
+    # Legacy snapshots saved these download triggers as ordinary booleans.
+    # Keep actual export archives and the history selector; discard only actions.
+    if key.startswith(('export_history_backup_','export_history_csv_')):return True
     return (key.startswith('FormSubmitter:') or (key.startswith('manual_lineups_') and key.endswith('_apply_swap')) or key.startswith(('game_lines_','fd_player_pool_editor_')) or key=='player_controls_editor' or key.endswith('_remove_restored') or key=='projection_accuracy_template_download' or (key.startswith('saved_contest_choice_') and key.endswith(('_use','_save','_restore_button','_backup','_restore'))) or key.startswith(('nba_projection_upload_','nba_minutes_snapshot_download','nba_entries_download','nba_portfolio_report_','nba_open_fanduel_','nba_open_draftkings_'))
             or key in {'nba_build','nba_field_download','nba_entries_download',
                        'nba_fast_late_swap','nba_late_swap_upload','nba_late_swap_download',
