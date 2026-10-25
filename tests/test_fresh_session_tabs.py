@@ -4,6 +4,7 @@ import unittest
 from unittest.mock import patch
 
 from simmah_slate_workspaces import render_session_tabs, restore, snapshot
+from simmah_session_workspaces import restore_checkpoint
 
 
 class SessionTabsTest(unittest.TestCase):
@@ -21,11 +22,11 @@ class SessionTabsTest(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, 'rerun'):
                 render_session_tabs(st,contextlib.nullcontext())
         self.assertEqual(state['_slate_pending']['id'],'fd')
-        self.assertTrue(state['_slate_records']['dk']['snapshot'])
+        self.assertTrue(state['_slate_records']['dk']['_session_checkpoint'])
         self.assertNotIn('snapshot',str(calls[0]['records']))
         self.assertNotIn('original-dk',str(calls))
         restore(state,state.pop('_slate_pending')['snapshot'])
         self.assertEqual(state['build'],['fd lineup'])
-        restore(state,state['_slate_records']['dk']['snapshot'])
+        restore_checkpoint(st,state['_slate_records']['dk']['_session_checkpoint'])
         self.assertEqual(state['build'],['dk lineup'])
         self.assertTrue(state['_slate_fresh_mode'])

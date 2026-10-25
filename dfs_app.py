@@ -2181,8 +2181,15 @@ def refresh_public_projection_sources(platform_names=None):
         "FanDuel Full Roster", "FanDuel Single Game"
     ))
     for platform_name in selected_platforms:
+        target = st.session_state.get('projection_refresh_targets', {}).get(platform_name)
+        if not target:
+            continue  # No speculative downloads before an uploaded slate is parsed.
         for source_name in ("DFF", "DraftEdge"):
-            values = download_public_projection_table(source_name, platform_name)
+            if source_name in target['uploaded']:
+                values = target['uploaded'][source_name]
+            else:
+                values = download_public_projection_table(source_name, platform_name,
+                    target_names=target['names'], target_teams=target['teams'])
             loaded = bool(values)
             label = f"{source_name} ({platform_name})"
             status[label] = loaded
@@ -2191,30 +2198,35 @@ def refresh_public_projection_sources(platform_names=None):
                     (str(player), round(float(points), 3))
                     for player, points in values.items()
                 ))
-            # Streamlit caches empty returns too; clear failed keys so the next
-            # rerun can retry immediately instead of preserving a failed fetch.
-            if not loaded:
-                try:
-                    download_public_projection_table.clear(source_name, platform_name)
-                except Exception:
-                    pass
+            # Keep failed lookups cached too. Explicit Refresh retries immediately;
+            # routine widget reruns must not hammer an unavailable source.
+        by_format = dict(st.session_state.get('automatic_projection_snapshots_by_format', {}))
+        by_format[platform_name] = {k: v for k, v in snapshots.items() if k.endswith('(' + platform_name + ')')}
+        st.session_state['automatic_projection_snapshots_by_format'] = by_format
     st.session_state["automatic_projection_snapshot_current"] = snapshots
     return status
 
 
-@st.fragment(run_every="30m")
+@st.fragment(run_every="15m")
 def automatic_projection_refresh(platform_name):
-    """Check only the active format at most once every 30 minutes, even across full app reruns."""
+    """Check the parsed slate every 15 minutes, reusing its targeted projection cache."""
     from datetime import datetime, timedelta
     now_dt = datetime.now(ZoneInfo("America/New_York"))
     throttle_key = "automatic_projection_last_check_" + str(platform_name).strip().casefold().replace(" ", "_")
     last_check = st.session_state.get(throttle_key)
     should_refresh = True
     if isinstance(last_check, datetime):
-        should_refresh = (now_dt - last_check) >= timedelta(minutes=30)
+        should_refresh = (now_dt - last_check) >= timedelta(minutes=15)
 
+    target = st.session_state.get('projection_refresh_targets', {}).get(platform_name, {})
+    target_scope = (tuple(target.get('names', ())), tuple(target.get('teams', ())),
+                    tuple((name, tuple(sorted(values.items()))) for name, values in sorted(target.get('uploaded', {}).items())))
+    scope_key = throttle_key + '_scope'
+    if st.session_state.get(scope_key) != target_scope:
+        should_refresh = True
     if should_refresh:
         status = refresh_public_projection_sources((platform_name,))
+        st.session_state[scope_key] = target_scope
         st.session_state[throttle_key] = now_dt
         st.session_state["automatic_projection_last_status_" + str(platform_name)] = status
     else:
@@ -2224,12 +2236,13 @@ def automatic_projection_refresh(platform_name):
 
     effective_check = st.session_state.get(throttle_key, now_dt)
     now = effective_check.strftime("%Y-%m-%d %I:%M:%S %p %Z")
-    current_snapshot = st.session_state.get("automatic_projection_snapshot_current", {})
-    previous_snapshot = st.session_state.get("automatic_projection_snapshot_previous")
+    current_snapshot = st.session_state.get('automatic_projection_snapshots_by_format', {}).get(platform_name, {})
+    snapshot_key = "automatic_projection_snapshot_previous_" + str(platform_name)
+    previous_snapshot = st.session_state.get(snapshot_key)
     if previous_snapshot is not None and current_snapshot != previous_snapshot:
         st.session_state["projection_updates_found"] = True
         st.session_state["projection_updates_found_at"] = now
-    st.session_state["automatic_projection_snapshot_previous"] = current_snapshot
+    st.session_state[snapshot_key] = current_snapshot
     st.session_state["automatic_projection_refresh_time"] = now
     st.session_state["automatic_projection_refresh_status"] = status
 
@@ -2258,7 +2271,7 @@ def automatic_projection_refresh(platform_name):
     if successful:
         st.caption("Automatic projection check: " + ", ".join(successful) + ". Last checked: " + now)
     else:
-        st.warning("Automatic projection check could not load any public projection tables. It will try again in 30 minutes.")
+        st.warning("Automatic projection check could not load any public projection tables. Use Refresh to retry now; otherwise the next check is in 15 minutes.")
 
 
 
@@ -2272,7 +2285,12 @@ def get_projection_source_data(uploaded_file, source_name, platform_name, target
 @st.cache_data(show_spinner=False, ttl=900)
 def download_rotowire_projections(platform_name, target_teams, slate_dates):
     from simmah_rotowire import download
-    return download(platform_name, target_teams, slate_dates)
+    try:
+        return download(platform_name, target_teams, slate_dates)
+    except Exception:
+        # Streamlit does not cache exceptions. Retain a failed lookup for this
+        # exact slate so every widget change does not retry the same slow host.
+        return {}, None
 
 
 def apply_external_projection_sources(players_frame, dff_file, draftedge_file, platform_name='DraftKings'):
@@ -2282,6 +2300,12 @@ def apply_external_projection_sources(players_frame, dff_file, draftedge_file, p
     target_teams = tuple(sorted(result["Team"].dropna().astype(str).str.upper().unique())) if "Team" in result.columns else ()
     dff, dff_status = get_projection_source_data(dff_file, "DFF", platform_name, target_names, target_teams)
     draftedge, draftedge_status = get_projection_source_data(draftedge_file, "DraftEdge", platform_name, target_names, target_teams)
+    refresh_targets = dict(st.session_state.get('projection_refresh_targets', {}))
+    refresh_targets[platform_name] = dict(names=target_names, teams=target_teams,
+        uploaded={name: values for name, values, upload in
+                  (('DFF', dff, dff_file), ('DraftEdge', draftedge, draftedge_file))
+                  if upload is not None})
+    st.session_state['projection_refresh_targets'] = refresh_targets
     rotowire, rotowire_status = {}, "skipped: uploaded CSV priority"
     if dff_file is None and draftedge_file is None:
         from simmah_rotowire import salary_dates
@@ -2293,7 +2317,8 @@ def apply_external_projection_sources(players_frame, dff_file, draftedge_file, p
             date_note = "; salary file undated, matching today's games only"
         try:
             rotowire, rw_slate = download_rotowire_projections(platform_name, target_teams, dates)
-            rotowire_status = "automatic download, slate " + rw_slate + date_note
+            rotowire_status = ("automatic download, slate " + str(rw_slate) + date_note
+                               if rotowire else "unavailable: no verified matching slate or download failed" + date_note)
         except Exception:
             rotowire_status = "unavailable: no verified matching slate or download failed" + date_note
     source_maps = (("DFF", dff), ("DraftEdge", draftedge), ("RotoWire", rotowire))
@@ -2559,7 +2584,11 @@ def extract_slate_games(source_df):
 @st.cache_data(ttl=300, show_spinner=False)
 def automatic_game_lines_cached(games, dates):
     from simmah_auto_game_lines import download_lines
-    return download_lines(games, dates)
+    try:
+        return download_lines(games, dates)
+    except Exception:
+        # An unavailable optional market feed must not block every rerun.
+        return {}
 
 
 def show_detected_slate_games(source_df):
@@ -2585,6 +2614,8 @@ def show_detected_slate_games(source_df):
         st.caption("Salary file is undated: automatic lines match today's games only.")
     try:
         automatic = automatic_game_lines_cached(tuple(games), dates)
+        if not automatic:
+            st.caption("Automatic pregame lines unavailable. You can enter verified pregame lines below.")
         automatic = {game: record for game, record in automatic.items()
                      if pd.Timestamp(record["kickoff"]) > pd.Timestamp.now(tz="UTC")}
     except Exception:
@@ -2762,7 +2793,6 @@ def save_automatic_pregame_snapshot(snapshot_df, format_label, correlation_pct=0
     csv_path = _pregame_snapshot_dir() / f"{game_date}_{slug}_latest.csv"
     meta_path = _pregame_snapshot_dir() / f"{game_date}_{slug}_latest.json"
     csv_text = snapshot.to_csv(index=False)
-    digest = hashlib.sha256(csv_text.encode("utf-8")).hexdigest()
     hash_key = f"auto_snapshot_hash_{slug}"
 
     payout = st.session_state.get("contest_payout_schedule")
@@ -2794,10 +2824,14 @@ def save_automatic_pregame_snapshot(snapshot_df, format_label, correlation_pct=0
             snapshot_df[[c for c in ["Name", "Team", "Opponent", "Salary"] if c in snapshot_df]].to_csv(index=False).encode()
         ).hexdigest()[:16],
     }
-    if st.session_state.get(hash_key) != digest or not csv_path.exists():
-        csv_path.write_text(csv_text, encoding="utf-8")
-        meta_path.write_text(json.dumps(meta, indent=2), encoding="utf-8")
-        st.session_state[hash_key] = digest
+    stable_csv = snapshot.drop(columns=['Snapshot Saved ET']).to_csv(index=False)
+    stable_meta = {k: v for k, v in meta.items() if k != 'saved_at_et'}
+    digest = hashlib.sha256((stable_csv + json.dumps(stable_meta, sort_keys=True)).encode()).hexdigest()
+    if st.session_state.get(hash_key) == digest and csv_path.exists() and meta_path.exists():
+        return csv_path
+    csv_path.write_text(csv_text, encoding="utf-8")
+    meta_path.write_text(json.dumps(meta, indent=2), encoding="utf-8")
+    st.session_state[hash_key] = digest
 
     st.session_state["latest_auto_pregame_snapshot"] = snapshot.copy()
     st.session_state["latest_auto_pregame_snapshot_format"] = str(format_label)
@@ -3140,9 +3174,6 @@ if st.session_state.pop("refresh_projections_requested", False):
     st.session_state["projection_updates_found"] = False
     st.session_state["injury_updates_found"] = False
     st.session_state["shared_projection_updated_at"] = _sticky_datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %I:%M:%S %p %Z")
-
-with _tab_roster:
-    automatic_projection_refresh(selected_format)
 
 # Turn the sticky refresh button red whenever new projections or injury updates are detected.
 if st.session_state.get("projection_updates_found") or st.session_state.get("injury_updates_found"):
@@ -4155,6 +4186,7 @@ def build_internal_projection_means(players_df, platform="DraftKings", include_h
     return np.asarray(blended, dtype=float)
 
 
+@st.cache_data(ttl=300, max_entries=64, show_spinner=False)
 def fetch_fanduel_contest_details(contest_id):
     """Best-effort public FanDuel contest lookup. Never requires user credentials."""
     contest_id = str(contest_id or "").strip()
@@ -4839,6 +4871,8 @@ if platform == "FanDuel":
             fd_players, fd_dff_projection_file, fd_draftedge_projection_file,
             platform_name=fd_projection_platform
         )
+        with _tab_roster:
+            automatic_projection_refresh(fd_projection_platform)
         if lineup_mode == "Full Roster":
             fd_defense_aliases = {
                 "ARI": ["Arizona Cardinals", "Cardinals", "Arizona"],
@@ -4876,11 +4910,13 @@ if platform == "FanDuel":
             }
             fd_dff_all, _ = get_projection_source_data(
                 fd_dff_projection_file, "DFF", fd_projection_platform,
-                target_names=fd_players["Name"].astype(str).tolist()
+                target_names=fd_players["Name"].astype(str).tolist(),
+                target_teams=tuple(sorted(fd_players["Team"].dropna().astype(str).str.upper().unique()))
             )
             fd_edge_all, _ = get_projection_source_data(
                 fd_draftedge_projection_file, "DraftEdge", fd_projection_platform,
-                target_names=fd_players["Name"].astype(str).tolist()
+                target_names=fd_players["Name"].astype(str).tolist(),
+                target_teams=tuple(sorted(fd_players["Team"].dropna().astype(str).str.upper().unique()))
             )
             fd_def_mask = fd_players["Position"].astype(str).str.upper().isin(["D", "DST", "DEF"])
             for fd_idx in fd_players.index[fd_def_mask]:
@@ -6151,7 +6187,7 @@ else:
                         selected_label = st.selectbox(
                             "Contest to build and export",
                             contest_summary["Contest Label"].tolist(),
-                            index=None,
+                            index=0 if len(contest_summary) == 1 else None,
                             placeholder="Choose the contest whose entries you want to replace",
                             key=f"dk_explicit_contest_v2_{lineup_mode.lower().replace(' ', '_')}",
                         )
@@ -6486,6 +6522,8 @@ else:
             draftedge_projection_file,
             platform_name=("DraftKings Showdown" if lineup_mode == "Showdown" else "DraftKings Classic"),
         )
+        with _tab_roster:
+            automatic_projection_refresh(selected_format)
         dk_valid_projection_count = int(pd.to_numeric(players_df.get("Projection"), errors="coerce").gt(0).sum())
         if dk_valid_projection_count == 0 and not players_df.empty:
             st.warning(

@@ -36,7 +36,7 @@ class RotoWireTests(unittest.TestCase):
         tree=ast.parse(Path('dfs_app.py').read_text());n=next(n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name=='apply_external_projection_sources')
         calls=[]
         def rw(*args):calls.append(args);return {'player':30.,'zero':0.},'123'
-        ns={'np':np,'pd':pd,'st':SimpleNamespace(caption=lambda *a:None),
+        ns={'np':np,'pd':pd,'st':SimpleNamespace(caption=lambda *a:None,session_state={}),
             'ZoneInfo':__import__('zoneinfo').ZoneInfo,
             'get_projection_source_data':lambda file,source,*a:({'player':10. if source=='DFF' else 20.,'zero':0.},'test'),
             'download_rotowire_projections':rw,'normalize_projection_player_name':lambda x:x.lower()}

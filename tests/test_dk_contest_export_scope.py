@@ -64,7 +64,9 @@ class DraftKingsContestExportTest(unittest.TestCase):
                      and n.args[0].value == 'Contest to build and export']
         self.assertEqual(len(selectors), 1)
         index = next(k.value for k in selectors[0].keywords if k.arg == 'index')
-        self.assertIsNone(index.value)
+        expression = compile(ast.Expression(body=index), 'selector_index', 'eval')
+        self.assertIsNone(eval(expression, {'contest_summary': [1, 2]}))
+        self.assertEqual(eval(expression, {'contest_summary': [1]}), 0)
         self.assertIn('DraftKings_Classic_{selected_contest_id}_{len(export_df)}_ENTRIES.csv', self.source)
         self.assertIn('DraftKings_Showdown_{selected_contest_id}_{len(export_df)}_ENTRIES.csv', self.source)
 

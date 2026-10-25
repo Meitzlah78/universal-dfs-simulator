@@ -142,7 +142,11 @@ def begin_workspaces(st):
     if pending:
         pending=records.get(pending['id'],pending)
         try:
-            restore(st.session_state,pending.get('snapshot',''))
+            if pending.get('_session_checkpoint') is not None:
+                from simmah_session_workspaces import restore_checkpoint
+                restore_checkpoint(st, pending['_session_checkpoint'])
+            else:
+                restore(st.session_state,pending.get('snapshot',''))
             st.session_state['_slate_active']=pending
             st.session_state['_slate_upload_epoch']=st.session_state.get('_slate_upload_epoch',0)+1
             records[pending['id']]=pending
@@ -158,7 +162,8 @@ def select_upload(st,upload):
         digest=hashlib.sha256(upload.getvalue()).hexdigest()
         scope=(st.session_state.get('_slate_active',{}).get('id','new'),st.session_state.get('_slate_upload_epoch',0))
         seen=st.session_state.setdefault('_slate_seen_uploads',{})
-        if digest!=seen.get(scope):
+        active_data = st.session_state.get('_slate_active', {}).get('data')
+        if digest!=seen.get(scope) or (active_data is not None and active_data != base64.b64encode(upload.getvalue()).decode()):
             seen[scope]=digest
             incoming=slate_record(upload)
             current=st.session_state.get('_slate_active')
@@ -169,8 +174,16 @@ def select_upload(st,upload):
                     # Fresh mode has no browser tab handshake. Use the uploaded
                     # CSV immediately instead of stopping for a saved-slate swap.
                     if current:
-                        current = {**current, 'snapshot': capture(st)}
+                        from simmah_session_workspaces import checkpoint
+                        current = {**current, '_session_checkpoint': checkpoint(st)}
                         st.session_state.setdefault('_slate_records', {})[current['id']] = current
+                    existing = st.session_state.get('_slate_records', {}).get(incoming['id'])
+                    if existing and existing.get('_session_checkpoint') is not None:
+                        from simmah_session_workspaces import restore_checkpoint
+                        incoming['_session_checkpoint'] = existing['_session_checkpoint']
+                        restore_checkpoint(st, incoming['_session_checkpoint'])
+                    else:
+                        restore(st.session_state, '')
                     st.session_state['_slate_active'] = incoming
                     st.session_state.setdefault('_slate_records', {})[incoming['id']] = incoming
                     st.session_state.pop('_slate_incoming', None)
@@ -313,7 +326,7 @@ def workspace_data_editor(st,data,*args,**kwargs):
     return result
 
 
-def capture(st):
+def transient_widget_keys(st):
     # Button triggers and uploader widget internals must never be replayed.
     from streamlit.runtime.scriptrunner import get_script_run_ctx
     transient=set()
@@ -322,14 +335,18 @@ def capture(st):
         for widget in context.session_state.get_widget_states():
             if widget.WhichOneof('value') in {'trigger_value','string_trigger_value','json_trigger_value','chat_input_value','file_uploader_state_value'}:
                 transient.update(k for k in st.session_state if widget.id.endswith('-'+str(k)))
-    return snapshot(st.session_state,transient)
+    return transient
+
+
+def capture(st):
+    return snapshot(st.session_state, transient_widget_keys(st))
 
 
 def workspace_transport(current, records, blob):
     """Send one current snapshot and lightweight tab metadata, never all builds."""
     metadata = [{k: record[k] for k in ('id', 'name', 'title') if k in record}
                 for record in records.values()]
-    current_payload = None if current is None else {k: v for k, v in current.items() if k != 'snapshot'}
+    current_payload = None if current is None else {k: v for k, v in current.items() if k != 'snapshot' and not k.startswith('_')}
     return dict(active=current['id'] if current else None, current=current_payload,
                 snapshot=blob, records=metadata)
 
@@ -368,7 +385,8 @@ def render_session_tabs(st, host):
     selected = event.get('selected_id')
     if selected in records and (not current or selected != current['id']):
         if current:
-            saved = {**current, 'snapshot': capture(st)}
+            from simmah_session_workspaces import checkpoint
+            saved = {**current, '_session_checkpoint': checkpoint(st)}
             records[current['id']] = saved
         state['_slate_pending'] = records[selected]
         st.rerun()
@@ -381,6 +399,9 @@ def finish_workspaces(st,host):
             st.session_state['_slate_pending'] = incoming
             st.rerun()
         render_session_tabs(st, host)
+        with host:
+            from simmah_diagnostic_packages import render_nfl_package
+            render_nfl_package(st)
         return
     import streamlit.components.v1 as components
     from simmah_archive_jobs import end_live_build
