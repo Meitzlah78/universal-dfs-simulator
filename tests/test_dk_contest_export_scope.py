@@ -42,6 +42,20 @@ class DraftKingsContestExportTest(unittest.TestCase):
         self.assertIsNone(result)
         self.assertIn('20 reserved entries', self.st.error.call_args[0][0])
 
+    def test_combined_export_fills_one_free_and_twenty_paid_entries(self):
+        lineups = pd.concat([self.lineups, self.lineups.iloc[:1] + '_extra'], ignore_index=True)
+        result = self.export(self.entries, '100', lineups, self.slots, 'Classic', all_contests=True)
+        self.assertEqual(len(result), 21)
+        self.assertEqual(result['Entry ID'].tolist(), self.entries['Entry ID'].tolist())
+        self.assertEqual(result['Contest ID'].value_counts().to_dict(), {'200': 20, '100': 1})
+        self.assertEqual(result.iloc[:, 4:].astype(str).values.tolist(), lineups.astype(str).values.tolist())
+        self.assertFalse(self.st.info.called)
+
+    def test_combined_export_blocks_missing_twenty_first_lineup(self):
+        result = self.export(self.entries, '100', self.lineups, self.slots, 'Classic', all_contests=True)
+        self.assertIsNone(result)
+        self.assertIn('21 reserved entries', self.st.error.call_args[0][0])
+
     def test_contest_selector_requires_explicit_choice_and_download_names_show_scope(self):
         tree = ast.parse(self.source)
         selectors = [n for n in ast.walk(tree) if isinstance(n, ast.Call)
