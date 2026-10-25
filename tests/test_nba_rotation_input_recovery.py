@@ -89,6 +89,40 @@ class RotationBudgetTests(unittest.TestCase):
         pool,rates=self.fixture(220)
         with self.assertRaisesRegex(ValueError,'240 required'):PregameEngine(pool,[],rates)
 
+    def test_stale_out_minutes_explain_215_budget_without_reactivating_player(self):
+        pool,rates=self.fixture(215)
+        injured=dict(pool.iloc[0],**{'Player ID':'out-player','Name':'Inactive Player',
+            'Projected Minutes':25.,'Projection':np.nan,'Injury Status':'Out'})
+        pool=pd.concat([pool,pd.DataFrame([injured])],ignore_index=True)
+        before=pool.copy(deep=True)
+        engine=PregameEngine(pool,[],rates,parallel=False)
+        change=engine.rotation_reconciliation[0]
+        self.assertEqual(change['basis'],'inactive-player budget reconciliation')
+        self.assertEqual(change['provider_total'],215)
+        self.assertEqual(change['provider_total_before_inactive_exclusions'],240)
+        self.assertEqual(change['excluded_inactive_minutes'],25)
+        self.assertEqual(change['excluded_inactive_players'][0]['id'],'out-player')
+        np.testing.assert_allclose(engine.games[0][1][0][1].sum(),240)
+        self.assertLessEqual(engine.games[0][1][0][1].max(),48)
+        self.assertFalse(any(20 in group[0] for _,groups in engine.games for group in groups))
+        pd.testing.assert_frame_equal(pool,before)
+        pd.testing.assert_frame_equal(engine.pool,before)
+        output=engine(8,83)
+        self.assertTrue(np.isfinite(output).all())
+        np.testing.assert_array_equal(output[:,20],np.zeros(8))
+
+    def test_out_budget_does_not_hide_missing_healthy_minutes_or_incomplete_source(self):
+        pool,rates=self.fixture(215)
+        injured=dict(pool.iloc[0],**{'Player ID':'out-player','Projected Minutes':25.,'Injury Status':'Out'})
+        pool=pd.concat([pool,pd.DataFrame([injured])],ignore_index=True)
+        pool.loc[0,'Projected Minutes']=np.nan
+        with self.assertRaisesRegex(ValueError,'Complete positive projected rotation'):
+            PregameEngine(pool,[],rates)
+        pool,rates=self.fixture(215)
+        injured['Projected Minutes']=5. # Raw total is only 220: still an unexplained gap.
+        pool=pd.concat([pool,pd.DataFrame([injured])],ignore_index=True)
+        with self.assertRaisesRegex(ValueError,'240 required'):PregameEngine(pool,[],rates)
+
     def test_complete_budgets_unchanged_and_zero_reserve_stays_out(self):
         pool,rates=self.fixture(240)
         reserve=dict(pool.iloc[0],**{'Player ID':'reserve','Projected Minutes':0.})
@@ -117,3 +151,4 @@ class RotationBudgetTests(unittest.TestCase):
 
 
 if __name__=='__main__':unittest.main()
+

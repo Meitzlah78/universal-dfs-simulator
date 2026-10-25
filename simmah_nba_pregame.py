@@ -73,15 +73,32 @@ class PregameEngine:
                     problems.append('Complete positive projected rotation required for '+team+': '+detail)
                 if np.isfinite(minutes).all() and abs(minutes.sum()-240)>1e-6:
                     # Provider minutes are estimates and may not add to a full
-                    # game. Reconcile small budget discrepancies for complete
-                    # rotations only, without overwriting provider values or
-                    # player point projections. Unknown minutes still fail.
+                    # game. Preserve source forecasts; only physical simulation
+                    # shares are normalized. A complete provider budget can also
+                    # retain stale minutes for a now-OUT player. In that bounded
+                    # case the remaining known rotation absorbs those shares.
+                    # Unknown healthy minutes and unexplained shortfalls block.
                     total=float(minutes.sum())
+                    inactive_mask=injured.to_numpy() & (rotation_minutes>0)
+                    inactive_minutes=float(rotation_minutes[inactive_mask].sum())
+                    raw_total=float(rotation_minutes.sum())
+                    injury_budget=(np.isfinite(rotation_minutes).all()
+                        and (rotation_minutes>=0).all() and (rotation_minutes<=48).all()
+                        and 192<=total<228 and 0<inactive_minutes<=48
+                        and 228<=raw_total<=252
+                        and abs(raw_total-total-inactive_minutes)<1e-6)
                     if (len(active)>=6 and (minutes>0).all() and (minutes<=48).all()
-                            and 228<=total<=252):
+                            and (228<=total<=252 or injury_budget)):
                         adjusted=allocate_minutes(minutes[None,:])[0]
                         self.rotation_reconciliation.append({'team':team,'provider_total':total,
                             'simulation_total':float(adjusted.sum()),
+                            'basis':'inactive-player budget reconciliation' if injury_budget else 'small provider budget discrepancy',
+                            'provider_total_before_inactive_exclusions':raw_total,
+                            'excluded_inactive_minutes':inactive_minutes,
+                            'excluded_inactive_players':[{'id':str(row['Player ID']),
+                                'name':str(row.get('Name',row['Player ID'])),
+                                'provider_minutes':float(row['Projected Minutes'])}
+                                for _,row in group.loc[inactive_mask].iterrows()],
                             'players':[{'id':str(pid),'provider_minutes':float(a),'simulation_minutes':float(b)}
                                 for pid,a,b in zip(active['Player ID'],minutes,adjusted)]})
                         minutes=adjusted
@@ -173,6 +190,7 @@ class PregameEngine:
                             'unresolved_tie_fraction':float(result['requires_overtime'].mean())})
         self.last_report=reports
         return output
+
 
 
 

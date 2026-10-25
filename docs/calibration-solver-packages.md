@@ -57,6 +57,16 @@ It contains no substitute field from an older successful build. Large rotation
 shortfalls remain blocked until the input issue is resolved; missing player
 minutes are not invented or silently spread across teammates.
 
+One explicit reconciliation also handles a complete provider rotation that still
+assigns positive minutes to an OUT player. When every minute value is valid,
+the raw total is 228–252, the unavailable share is at most 48, at least six
+healthy rotation players remain, and their total is at least 192, the simulator
+normalizes only the remaining players' physical shares to 240 (48-minute cap).
+This proportional injury adjustment is a modeling assumption, shown in the UI
+and diagnostic provenance. Source minutes and point projections stay unchanged;
+OUT and explicit-zero players stay excluded. Unknown healthy minutes, an
+incomplete raw budget or an otherwise unexplained large shortfall still block.
+
 Validation:
 
 ```sh

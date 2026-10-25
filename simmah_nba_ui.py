@@ -120,6 +120,12 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
             with tabs[0]:st.warning('Simulation rotation budget adjusted to 240 minutes for: '+
                 ', '.join(f"{row['team']} ({row['provider_total']:g} provider minutes)" for row in engine.rotation_reconciliation)+
                 '. Source minutes and player point projections are preserved; only simulation playing-time shares are reconciled.')
+            for row in engine.rotation_reconciliation:
+                if row.get('basis')=='inactive-player budget reconciliation':
+                    with tabs[0]:st.warning(row['team']+' provider rotation still assigned '+
+                        f"{row['excluded_inactive_minutes']:g} minutes to OUT players: "+
+                        ', '.join(player['name'] for player in row['excluded_inactive_players'])+
+                        '. They remain excluded. The simulator assumes remaining available players absorb those minutes in proportion to their provider shares, capped at 48 each. Refresh projections when updated minutes are available.')
         if engine.missing_markets:
             with tabs[0]:st.warning('Market lines unavailable for: '+', '.join(' vs '.join(pair) for pair in engine.missing_markets)+'. These games use external player projections and historical event rates without Vegas calibration. No totals or spreads are invented.')
 
