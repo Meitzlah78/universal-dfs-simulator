@@ -4,7 +4,7 @@ import io
 import re
 
 
-def build_fanduel_entry_export(template, portfolio, player_ids, contest, mode):
+def build_fanduel_entry_export(template, portfolio, player_ids, contest, mode, all_contests=False, contest_ids=None):
     text = template.decode("utf-8-sig") if isinstance(template, bytes) else template
     rows = list(csv.reader(io.StringIO(text)))
     if not rows:
@@ -28,23 +28,30 @@ def build_fanduel_entry_export(template, portfolio, player_ids, contest, mode):
             raise ValueError(f"The FanDuel template has no column for {slot}. Check the roster format.")
         used.add(idx); indices.append(idx)
     target = str(contest.get("id","")).strip()
+    allowed_contests = None if contest_ids is None else {str(value).strip() for value in contest_ids}
     targets = []
     entry_end = len(rows)
     for i,row in enumerate(rows[1:],1):
         if not row or not row[0].strip():
             entry_end = i
             break
-        if len(row)>contest_col and row[contest_col].strip()==target:
-            targets.append(i)
+        if len(row)>contest_col:
+            row_contest = row[contest_col].strip()
+            if (all_contests and (allowed_contests is None or row_contest in allowed_contests)) or (not all_contests and row_contest == target):
+                targets.append(i)
     if not targets:
         raise ValueError("No reserved entries match the selected FanDuel contest.")
+    if any(len(rows[i]) <= entry for i in targets):
+        raise ValueError("A reserved entry is missing its Entry ID.")
     identifiers = [rows[i][entry].strip() for i in targets]
     if any(not re.fullmatch(r"[1-9]\d*",v) for v in identifiers) or len(set(identifiers))!=len(identifiers):
         raise ValueError("Reserved Entry IDs must be unique positive integers.")
     if len(portfolio)<len(targets):
         raise ValueError(f"Need {len(targets)} assigned lineups to fill all reserved entries.")
     prefix = target.split("-",1)[0] if "-" in target else None
-    # Preserve selected-entry metadata and the embedded player reference table.
+    if all_contests and any(rows[i][contest_col].strip().split("-", 1)[0] != prefix for i in targets):
+        raise ValueError("Combined exports require every contest to belong to the same FanDuel slate.")
+    # Preserve entry metadata and the embedded player reference table.
     for number,row_index in enumerate(targets):
         row = list(rows[row_index])
         row.extend([""]*max(0,max(indices)+1-len(row)))
@@ -86,3 +93,4 @@ def direct_csv_download_link(data, filename, label="DIRECT FANDUEL UPLOAD DOWNLO
             'style="display:block;text-align:center;padding:0.65rem;border:1px solid #ff4b4b;'
             'border-radius:0.5rem;color:inherit;text-decoration:none;font-weight:600;">'
             + escape(label) + '</a>')
+
