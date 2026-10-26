@@ -89,3 +89,44 @@ class StaleEditorRecoveryTest(unittest.TestCase):
             def __delitem__(self,key):raise RuntimeError('real failure')
         with self.assertRaisesRegex(RuntimeError,'real failure'):
             restore(BrokenState(salary_min=48000),'')
+
+    def test_export_checkpoint_skips_retired_editor_and_earlier_archives(self):
+        from simmah_export_history import make_checkpoint,HISTORY
+        state=RetiredEditorState({'salary_min':48500,HISTORY:[{'archive':b'old archive'}],
+            'export_history_download':True,'player_control_values':{'A':{'Fade':True}}})
+        record=make_checkpoint(b'Entry ID,QB\n1,A\n','entries.csv',{'format':'DraftKings Classic','contest_id':'123'},state)
+        with zipfile.ZipFile(io.BytesIO(record['archive'])) as bundle:
+            restored={};restore(restored,bundle.read('workspace_snapshot.txt').decode())
+        self.assertEqual(restored['salary_min'],48500)
+        self.assertTrue(restored['player_control_values']['A']['Fade'])
+        self.assertNotIn('player_controls_editor',restored)
+        self.assertNotIn(HISTORY,restored)
+        self.assertNotIn('export_history_download',restored)
+
+    def test_old_error_is_not_redrawn_as_a_new_failure_after_slate_restore(self):
+        from simmah_diagnostic_packages import render_nfl_package
+        message='Calibration/solver package capture failed: st.session_state has no key "player_controls_editor"'
+        state={};restore(state,snapshot({'diagnostic_package_error':message}))
+        warnings=[];information=[]
+        app=SimpleNamespace(session_state=state,warning=warnings.append,info=information.append)
+        render_nfl_package(app);render_nfl_package(app)
+        self.assertFalse(warnings)
+        self.assertTrue(all('previous' in text and 'Run a new build' in text for text in information))
+        self.assertEqual(state['diagnostic_package_previous_error'],message)
+        self.assertNotIn('diagnostic_package_current',state)
+
+    def test_current_failures_stay_visible_and_success_clears_old_status(self):
+        from simmah_diagnostic_packages import CAPTURE_VERSION,capture_nfl_build,render_nfl_package
+        warnings=[];state={'diagnostic_package_previous_error':'old failure','portfolio_df':'keep'}
+        app=SimpleNamespace(session_state=state,warning=warnings.append,info=lambda message:None)
+        with patch('simmah_diagnostic_packages.make_nfl_package',side_effect=KeyError('st.session_state has no key "player_controls_editor"')):
+            capture_nfl_build(app,'DraftKings Classic',None,None,None,None,'.')
+        self.assertEqual(state['diagnostic_package_error_version'],CAPTURE_VERSION)
+        render_nfl_package(app)
+        self.assertIn(CAPTURE_VERSION,warnings[-1])
+        package=('evidence.zip',b'zip bytes',{'contest_id':'123','captured_at_eastern':'now'})
+        with patch('simmah_diagnostic_packages.make_nfl_package',return_value=package),patch('simmah_diagnostic_packages.retain_package'):
+            capture_nfl_build(app,'DraftKings Classic',None,None,None,None,'.')
+        self.assertNotIn('diagnostic_package_error',state)
+        self.assertNotIn('diagnostic_package_previous_error',state)
+        self.assertEqual(state['portfolio_df'],'keep')

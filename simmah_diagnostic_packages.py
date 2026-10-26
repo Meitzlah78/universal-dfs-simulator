@@ -14,6 +14,20 @@ import pandas as pd
 from simmah_nba_diagnostics import _json, retain_package, package_reference, package_bytes
 
 
+CAPTURE_VERSION = 'retired-editor-safe-v2'
+
+
+def capture_error_status(state):
+    """Migrate the known saved pre-fix warning without claiming capture succeeded."""
+    error=state.get('diagnostic_package_error')
+    if (error and not state.get('diagnostic_package_error_version')
+            and 'player_controls_editor' in error and 'has no key' in error):
+        state['diagnostic_package_previous_error']=error
+        state.pop('diagnostic_package_error',None)
+        error=None
+    return error, bool(state.get('diagnostic_package_previous_error'))
+
+
 def make_nfl_package(state, format_label, pool, field, candidates, results, cache_root,
                      *, extras=None, source_root=None, captured_at=None):
     """Capture explicit scored data, relevant controls and matching immutable cache files."""
@@ -162,15 +176,21 @@ def capture_nfl_build(st, format_label, pool, field, candidates, results, cache_
             'format':str(format_label),'contest_id':package[2]['contest_id'],'captured_at':package[2]['captured_at_eastern']}
         retain_package(st,package)
         st.session_state.pop('diagnostic_package_error',None)
+        st.session_state.pop('diagnostic_package_error_version',None)
+        st.session_state.pop('diagnostic_package_previous_error',None)
     except Exception as exc:
-        st.session_state['diagnostic_package_error']='Calibration/solver package capture failed: '+str(exc)
+        st.session_state['diagnostic_package_error_version']=CAPTURE_VERSION
+        st.session_state['diagnostic_package_error']='Calibration/solver package capture failed ['+CAPTURE_VERSION+']: '+str(exc)
         st.warning(st.session_state['diagnostic_package_error'])
 
 
 def render_nfl_package(st):
     from simmah_slate_workspaces import workspace_download_button
     saved=st.session_state.get('diagnostic_package_current')
-    if st.session_state.get('diagnostic_package_error'):st.warning(st.session_state['diagnostic_package_error'])
+    error,previous=capture_error_status(st.session_state)
+    if error:st.warning(error)
+    elif previous:
+        st.info('A previous calibration package failed because editor state was unavailable. Run a new build to retry package creation.')
     if not saved:return
     current=str(st.session_state.get('dfs_format',''))
     if current!=saved['format']:return

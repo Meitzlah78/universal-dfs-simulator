@@ -23,8 +23,10 @@ def make_checkpoint(data,filename,context,state):
                 export_filename=filename,export_sha256=hashlib.sha256(payload).hexdigest(),
                 submission_verified=False,kind=context.get('kind','entries'))
     # Never nest earlier archives inside the next archive.
-    values={k:state[k] for k in list(state) if k!=HISTORY and not str(k).startswith('export_history_')}
-    files={'export.csv':payload,'workspace_snapshot.txt':snapshot(values).encode('ascii')}
+    # Let the widget-safe codec filter before reading values. A retired editor
+    # may remain in iteration even though its Streamlit value no longer exists.
+    excluded={HISTORY}|{k for k in list(state) if str(k).startswith('export_history_')}
+    files={'export.csv':payload,'workspace_snapshot.txt':snapshot(state,excluded).encode('ascii')}
     # The existing workspace codec preserves arrays, frames, attrs and controls.
     # Its explicit omitted list is retained instead of claiming a complete build.
     for key in ('build','portfolio','late_swap'):
