@@ -17,7 +17,7 @@ from simmah_nba_diagnostics import _json, retain_package, package_reference, pac
 def make_nfl_package(state, format_label, pool, field, candidates, results, cache_root,
                      *, extras=None, source_root=None, captured_at=None):
     """Capture explicit scored data, relevant controls and matching immutable cache files."""
-    from simmah_slate_workspaces import encode, private_key
+    from simmah_slate_workspaces import encode, private_key, transient_key
     site='FanDuel' if str(format_label).startswith('FanDuel') else 'DraftKings'
     contest=dict(state.get('selected_fd_contest' if site=='FanDuel' else 'selected_dk_contest') or {})
     stamp=captured_at or datetime.now(timezone.utc)
@@ -60,12 +60,15 @@ def make_nfl_package(state, format_label, pool, field, candidates, results, cach
     values={}
     for key in list(state):
         text=str(key)
-        if text.startswith(('_','nba_','export_history_','diagnostic_')) or private_key(text):continue
+        if text.startswith(('_','nba_','export_history_','diagnostic_')) or private_key(text) or transient_key(text):continue
         if text=='simmah_export_history_v1' or 'saved_build' in text:continue
         if not any(token in text.lower() for token in tokens):continue
         if site=='FanDuel' and text.startswith(('dk_','classic_')):continue
         if site=='DraftKings' and text.startswith('fd_'):continue
-        value=state[key]
+        try:value=state[key]
+        except KeyError:
+            omitted.append('State unavailable during capture: '+text)
+            continue
         if hasattr(value,'getvalue'):continue
         if isinstance(value,pd.DataFrame) and 'simulation' in text and 'df' in text:
             # Exact active evaluation outcomes are stored as binary arrays above.

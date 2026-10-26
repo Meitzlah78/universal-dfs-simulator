@@ -101,7 +101,12 @@ def restore(state,content):
             migrated='legacy_game_line_edits_'+str(key)[len('game_lines_'):]
             values.setdefault(migrated,decode(value))
     for k in list(state):
-        if not str(k).startswith(('_slate_','$$')):del state[k]
+        if str(k).startswith(('_slate_','$$')):continue
+        try:del state[k]
+        except KeyError:
+            # Streamlit can retain a widget name after its value was removed.
+            # It is already cleared; continue restoring the saved build.
+            pass
     state.update(values)
     state['_slate_restored_uploads']={k:StoredUpload(base64.b64decode(v['data']),v['name']) for k,v in payload.get('uploads',{}).items()}
     state['_slate_widget_seen']={}
