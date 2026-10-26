@@ -44,7 +44,7 @@ with _workspace_main:
     with st.container(key="simmah_section_tabs"):
         _tab_contests, _tab_roster, _tab_build, _tab_lineups = st.tabs(["Contests", "Roster & Projections", "Build", "Lineups"])
 render_pinned_navigation(st)
-with _workspace_rail:
+with _workspace_rail.container(key="simmah_build_rail"):
     _build_controls = st.container(key="simmah_build_panel", border=True)
     with _build_controls:
         st.markdown("### Build settings")
