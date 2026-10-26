@@ -1,0 +1,41 @@
+<!doctype html><html><head><meta charset="utf-8"></head><body><script>
+// Measure the real header, including wrapping slate tabs. CSS does the pinning;
+// no React nodes are moved, cloned, or replaced and no app state is transferred.
+const root=window.parent,doc=root.document;
+const send=(type,extra={})=>root.postMessage({isStreamlitMessage:true,type,...extra},'*');
+function attach(){
+  root.__simmahPinnedNavigation?.dispose();
+  const header=doc.querySelector('.st-key-simmah_app_header');
+  const sections=doc.querySelector('.st-key-simmah_section_tabs');
+  const chrome=doc.querySelector('[data-testid="stHeader"]');
+  if(!header)return;
+  const wrapper=header.parentElement?.matches('[data-testid="stLayoutWrapper"], [data-testid="stVerticalBlockBorderWrapper"]')?header.parentElement:header;
+  const tabs=sections?.querySelector('[role="tablist"], [data-baseweb="tab-list"]');
+  const tabHost=tabs?.parentElement;
+  let frame=0;
+  function measure(){
+    frame=0;
+    const height=el=>el?Math.ceil(el.getBoundingClientRect().height):0;
+    if(tabHost && tabs){
+      const rect=tabHost.getBoundingClientRect();
+      doc.documentElement.style.setProperty('--simmah-tabs-left',rect.left+'px');
+      doc.documentElement.style.setProperty('--simmah-tabs-width',rect.width+'px');
+    }
+    for(const [name,value] of [['--simmah-chrome-height',height(chrome)],['--simmah-header-height',height(wrapper)],['--simmah-tabs-height',height(tabs)]]){
+      const px=value+'px';if(doc.documentElement.style.getPropertyValue(name)!==px)doc.documentElement.style.setProperty(name,px);
+    }
+    if(tabHost && tabs){
+      tabHost.classList.add('simmah-navigation-spacer');
+      doc.documentElement.classList.add('simmah-pinned-navigation-ready');
+    }
+  }
+  function schedule(){if(!frame)frame=root.requestAnimationFrame(measure)}
+  const observer=new root.ResizeObserver(schedule);
+  for(const el of [wrapper,chrome,tabs,tabHost])if(el)observer.observe(el);
+  root.addEventListener('resize',schedule);
+  root.__simmahPinnedNavigation={dispose(){observer.disconnect();root.removeEventListener('resize',schedule);if(frame)root.cancelAnimationFrame(frame)}};
+  schedule();
+}
+window.addEventListener('message',event=>{if(event.data?.type==='streamlit:render'){attach();send('streamlit:setFrameHeight',{height:0})}});
+send('streamlit:componentReady',{apiVersion:1});send('streamlit:setFrameHeight',{height:0});
+</script></body></html>

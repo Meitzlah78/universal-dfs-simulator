@@ -411,7 +411,7 @@ def render_session_tabs(st, host):
         st.rerun()
 
 
-def finish_workspaces(st,host):
+def finish_workspaces(st,host,tabs_host=None):
     if st.session_state.get('_slate_fresh_mode'):
         incoming = st.session_state.pop('_slate_incoming', None)
         if incoming:
@@ -419,7 +419,7 @@ def finish_workspaces(st,host):
             st.rerun()
         from simmah_workspace_persistence import schedule, render
         schedule(st)
-        render_session_tabs(st, host)
+        render_session_tabs(st, tabs_host if tabs_host is not None else host)
         render(st, host)
         with host:
             from simmah_diagnostic_packages import render_nfl_package
@@ -483,13 +483,13 @@ def finish_workspaces(st,host):
             st.rerun()
 
 
-def workspace_stop(st,host):
-    finish_workspaces(st,host)
+def workspace_stop(st,host,tabs_host=None):
+    finish_workspaces(st,host,tabs_host)
     st.stop()
 
 
-def workspace_rerun(st,host):
-    finish_workspaces(st,host)
+def workspace_rerun(st,host,tabs_host=None):
+    finish_workspaces(st,host,tabs_host)
     st.rerun()
 
 
