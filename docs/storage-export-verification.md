@@ -253,3 +253,20 @@ they are not pure CPU timings. A v2/v3 total-duration difference cannot be
 attributed solely to SHA-256 because payload entropy and physical storage work
 also change. Actual v3 digest timings and private Cloud preflight are still
 unmeasured until those deployments run.
+
+
+## Visible deployment marker and read-only Cloud preflight
+
+The `?simmah_qa=storage` entry now shows
+`QA entry build: storage-entry-v3-20261027` and reloads only the isolated diagnostic
+module on that route. The visible probe version and payload selector must also
+identify v3 before a run is recorded as randomized. This helps distinguish a
+stale Python import from an older deployed entry script without rebooting or
+clearing the user's browser storage as a diagnostic experiment.
+
+The diagnostic includes **Cloud host preflight — read only**, with an explicit
+**Check Cloud host memory** button. It reads this app host's cgroup budget,
+process RSS/VMS/USS availability and temporary disk. It never starts a worker,
+allocates the synthetic archive, or enables the private heavy-test flag. A passed
+parent preflight does not establish worker process visibility or a successful
+restore. The private QA deployment remains required for the full test.

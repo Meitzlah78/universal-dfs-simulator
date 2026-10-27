@@ -22,8 +22,12 @@ st.set_page_config(
 )
 
 if st.query_params.get('simmah_qa') == 'storage':
-    from simmah_storage_probe import render as render_storage_probe
-    render_storage_probe(st)
+    import importlib
+    import simmah_storage_probe as storage_probe
+    # Refresh this isolated diagnostic module without touching slate sessions.
+    storage_probe = importlib.reload(storage_probe)
+    st.caption('QA entry build: storage-entry-v3-20261027')
+    storage_probe.render(st)
     st.stop()
 
 from simmah_slate_workspaces import begin_workspaces, finish_workspaces, select_upload, workspace_file_uploader, workspace_stop, workspace_rerun, workspace_download_button
