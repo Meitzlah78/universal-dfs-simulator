@@ -1,0 +1,311 @@
+{
+  "schema": 1,
+  "source": "User-supplied DFF optimizer screenshots",
+  "received_date_eastern": "2026-10-27",
+  "slate_date": null,
+  "capture_timestamp_verified": false,
+  "benchmarks": [
+    {
+      "platform": "DraftKings",
+      "optimizer_line_displayed": 1,
+      "source_file": "Screenshot 2026-10-27 185034.png",
+      "source_sha256": "8e1f544e79fd78d035109cb40065dc7448c481b4b89c01b68fd3413fc1c210e2",
+      "salary_remaining_displayed": 200,
+      "salary_total": 49800,
+      "projected_points_total_displayed": 269.3,
+      "displayed_player_points_sum": 269.2,
+      "header_minus_displayed_sum": 0.1,
+      "value_displayed": 5.4,
+      "ownership_values_available": false,
+      "players": [
+        {
+          "display_order": 1,
+          "name_display": "A. Reaves",
+          "name_expanded": "Austin Reaves",
+          "team_display": "LAL",
+          "eligibility_display": [
+            "PG",
+            "SG"
+          ],
+          "assigned_slot": null,
+          "salary": 7900,
+          "projected_points_displayed": 39.6,
+          "value_displayed": 5.0
+        },
+        {
+          "display_order": 2,
+          "name_display": "D. Lillard",
+          "name_expanded": "Damian Lillard",
+          "team_display": "POR",
+          "eligibility_display": [
+            "PG",
+            "SG"
+          ],
+          "assigned_slot": null,
+          "salary": 6600,
+          "projected_points_displayed": 36.5,
+          "value_displayed": 5.5
+        },
+        {
+          "display_order": 3,
+          "name_display": "J. Hart",
+          "name_expanded": "Josh Hart",
+          "team_display": "NYK",
+          "eligibility_display": [
+            "SG",
+            "SF"
+          ],
+          "assigned_slot": null,
+          "salary": 6100,
+          "projected_points_displayed": 32.9,
+          "value_displayed": 5.4
+        },
+        {
+          "display_order": 4,
+          "name_display": "P. Achiuwa",
+          "name_expanded": "Precious Achiuwa",
+          "team_display": "SAC",
+          "eligibility_display": [
+            "PF",
+            "C"
+          ],
+          "assigned_slot": null,
+          "salary": 5000,
+          "projected_points_displayed": 28.5,
+          "value_displayed": 5.7
+        },
+        {
+          "display_order": 5,
+          "name_display": "P. Reed",
+          "name_expanded": "Paul Reed",
+          "team_display": "DET",
+          "eligibility_display": [
+            "C"
+          ],
+          "assigned_slot": null,
+          "salary": 5200,
+          "projected_points_displayed": 30.3,
+          "value_displayed": 5.8
+        },
+        {
+          "display_order": 6,
+          "name_display": "S. Castle",
+          "name_expanded": "Stephon Castle",
+          "team_display": "SAS",
+          "eligibility_display": [
+            "SG"
+          ],
+          "assigned_slot": null,
+          "salary": 7000,
+          "projected_points_displayed": 36.7,
+          "value_displayed": 5.3
+        },
+        {
+          "display_order": 7,
+          "name_display": "O. Anunoby",
+          "name_expanded": "OG Anunoby",
+          "team_display": "NYK",
+          "eligibility_display": [
+            "PF"
+          ],
+          "assigned_slot": null,
+          "salary": 5700,
+          "projected_points_displayed": 30.8,
+          "value_displayed": 5.4
+        },
+        {
+          "display_order": 8,
+          "name_display": "D. Fox",
+          "name_expanded": "De’Aaron Fox",
+          "team_display": "SAS",
+          "eligibility_display": [
+            "PG"
+          ],
+          "assigned_slot": null,
+          "salary": 6300,
+          "projected_points_displayed": 33.9,
+          "value_displayed": 5.4
+        }
+      ],
+      "checks": {
+        "salary_total_reconciles": true,
+        "player_count_matches_simmah": true,
+        "projection_rounding_compatible": true,
+        "assigned_slots_verified": false,
+        "site_player_ids_verified": false
+      },
+      "rotowire_name_overlap": {
+        "count": 3,
+        "players": [
+          "Damian Lillard",
+          "Paul Reed",
+          "Precious Achiuwa"
+        ],
+        "site_id_verified": false
+      }
+    },
+    {
+      "platform": "FanDuel",
+      "optimizer_line_displayed": 1,
+      "source_file": "Screenshot 2026-10-27 185102.png",
+      "source_sha256": "5f59425c8cc4d56085b0070131f6c46d5d2c308d5db9c1e1eed4a7b59d744457",
+      "salary_remaining_displayed": 200,
+      "salary_total": 59800,
+      "projected_points_total_displayed": 314.1,
+      "displayed_player_points_sum": 314.2,
+      "header_minus_displayed_sum": -0.1,
+      "value_displayed": 5.3,
+      "ownership_values_available": false,
+      "players": [
+        {
+          "display_order": 1,
+          "name_display": "S. Castle",
+          "name_expanded": "Stephon Castle",
+          "team_display": "SAS",
+          "eligibility_display": [
+            "SG",
+            "PG"
+          ],
+          "assigned_slot": null,
+          "salary": 6700,
+          "projected_points_displayed": 35.4,
+          "value_displayed": 5.3
+        },
+        {
+          "display_order": 2,
+          "name_display": "P. Pritchard",
+          "name_expanded": "Payton Pritchard",
+          "team_display": "BOS",
+          "eligibility_display": [
+            "PG",
+            "SG"
+          ],
+          "assigned_slot": null,
+          "salary": 5300,
+          "projected_points_displayed": 27.9,
+          "value_displayed": 5.3
+        },
+        {
+          "display_order": 3,
+          "name_display": "M. Bridges",
+          "name_expanded": "Mikal Bridges",
+          "team_display": "NYK",
+          "eligibility_display": [
+            "SF",
+            "SG"
+          ],
+          "assigned_slot": null,
+          "salary": 4200,
+          "projected_points_displayed": 25.7,
+          "value_displayed": 6.1
+        },
+        {
+          "display_order": 4,
+          "name_display": "J. Hart",
+          "name_expanded": "Josh Hart",
+          "team_display": "NYK",
+          "eligibility_display": [
+            "SF",
+            "PF"
+          ],
+          "assigned_slot": null,
+          "salary": 6300,
+          "projected_points_displayed": 32.1,
+          "value_displayed": 5.1
+        },
+        {
+          "display_order": 5,
+          "name_display": "K. Towns",
+          "name_expanded": "Karl-Anthony Towns",
+          "team_display": "NYK",
+          "eligibility_display": [
+            "C"
+          ],
+          "assigned_slot": null,
+          "salary": 8300,
+          "projected_points_displayed": 41.8,
+          "value_displayed": 5.0
+        },
+        {
+          "display_order": 6,
+          "name_display": "L. Doncic",
+          "name_expanded": "Luka Doncic",
+          "team_display": "LAL",
+          "eligibility_display": [
+            "PG"
+          ],
+          "assigned_slot": null,
+          "salary": 11600,
+          "projected_points_displayed": 55.7,
+          "value_displayed": 4.8
+        },
+        {
+          "display_order": 7,
+          "name_display": "P. Achiuwa",
+          "name_expanded": "Precious Achiuwa",
+          "team_display": "SAC",
+          "eligibility_display": [
+            "PF"
+          ],
+          "assigned_slot": null,
+          "salary": 5400,
+          "projected_points_displayed": 28.9,
+          "value_displayed": 5.4
+        },
+        {
+          "display_order": 8,
+          "name_display": "D. Fox",
+          "name_expanded": "De’Aaron Fox",
+          "team_display": "SAS",
+          "eligibility_display": [
+            "PG"
+          ],
+          "assigned_slot": null,
+          "salary": 6200,
+          "projected_points_displayed": 33.2,
+          "value_displayed": 5.4
+        },
+        {
+          "display_order": 9,
+          "name_display": "D. White",
+          "name_expanded": "Derrick White",
+          "team_display": "BOS",
+          "eligibility_display": [
+            "PG"
+          ],
+          "assigned_slot": null,
+          "salary": 5800,
+          "projected_points_displayed": 33.5,
+          "value_displayed": 5.8
+        }
+      ],
+      "checks": {
+        "salary_total_reconciles": true,
+        "player_count_matches_simmah": true,
+        "projection_rounding_compatible": true,
+        "assigned_slots_verified": false,
+        "site_player_ids_verified": false
+      },
+      "rotowire_name_overlap": {
+        "count": 6,
+        "players": [
+          "De’Aaron Fox",
+          "Derrick White",
+          "Karl-Anthony Towns",
+          "Mikal Bridges",
+          "Precious Achiuwa",
+          "Stephon Castle"
+        ],
+        "site_id_verified": false
+      }
+    }
+  ],
+  "notes": [
+    "Header projection totals are preserved; sums of rounded displayed player projections differ by 0.1 in each screenshot. Unrounded source values are unavailable.",
+    "Player initials are conventionally expanded for comparison; original screenshot labels remain authoritative until matched to site IDs.",
+    "Player list order is not an exported roster-slot assignment. Displayed eligibility is transcribed separately.",
+    "Projected ownership is not readable in these images and is not inferred.",
+    "Numbers are DFF projections, not actual results; use common inputs for a fair comparison with other optimizers.",
+    "No Simmah projection source, eligibility, scoring or portfolio settings were changed."
+  ]
+}
