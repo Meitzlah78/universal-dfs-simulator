@@ -215,3 +215,41 @@ python -m unittest discover -s tests -p test_host_restore_probe.py
 node tests/test_storage_probe.cjs
 SIMMAH_ENABLE_HOST_RESTORE_PROBE=1 streamlit run qa_workspace_restore_app.py
 ```
+
+
+## Process memory normalization and visibility gate
+
+`simmah_memory_metrics.process_memory` records psutil RSS, VMS and optional USS in
+bytes and MiB, alongside PID, process creation time and a monotonic sample time.
+USS is read at worker phase boundaries; frequent parent samples request only RSS
+and VMS. Unavailable or permission-denied USS is `null` with an explicit status,
+not a misleading zero. None of these metrics isolates Python heap allocations or
+proves a leak. VMS measures mapped address space; it is not a count of file
+descriptors. RSS and USS include more than Python-managed heap objects.
+
+Worker high-water RSS remains labeled separately from current RSS, with the
+native rusage unit/conversion recorded. Parent samples target the child PID, not
+the parent. Worker identity and usable child snapshots must reconcile before the
+memory-monitoring result can pass. On Linux the current PID is checked against
+`/proc/self/status`; an identity mismatch invalidates readings rather than
+silently accepting another process's memory.
+
+The 64 MiB local diagnostic completed exact recovery but psutil returned
+`NoSuchProcess` for the worker snapshots. This executor's process visibility is
+therefore insufficient to clear monitoring. It does not establish a Cloud
+failure or identify a leak. See `benchmarks/workspace-memory-normalized-local.json`.
+
+The final gate blocks before allocation if the parent cannot observe RSS. The
+bounded child also checks its own RSS before generating any synthetic array and
+returns a small blocked report if visibility is missing. A subsequent local
+preflight returned `blocked`; no heavy payload was allocated. See
+`benchmarks/workspace-memory-preflight-local.json`. The corresponding real-worker
+unit test is skipped when this environment fails the visibility/resource gate;
+mocked unit cases still exercise the numerical and failure behavior.
+
+The randomized browser probe now records original-chunk and restored-chunk
+SHA-256 wall times separately. These include asynchronous digest scheduling;
+they are not pure CPU timings. A v2/v3 total-duration difference cannot be
+attributed solely to SHA-256 because payload entropy and physical storage work
+also change. Actual v3 digest timings and private Cloud preflight are still
+unmeasured until those deployments run.

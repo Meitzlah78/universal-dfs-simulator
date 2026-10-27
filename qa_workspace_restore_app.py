@@ -2,6 +2,7 @@
 import os
 import streamlit as st
 from simmah_host_restore_probe import memory_snapshot, preflight, run_guarded
+from simmah_memory_metrics import process_memory
 import shutil
 import tempfile
 
@@ -10,7 +11,10 @@ st.title('Private host restore QA')
 st.caption('Synthetic data only. This tests this container, not another deployment with different resource limits.')
 snapshot=memory_snapshot()
 check=preflight(snapshot,511,shutil.disk_usage(tempfile.gettempdir()).free)
-st.json(dict(memory=snapshot,preflight=check))
+process_snapshot=process_memory()
+if process_snapshot['rss_bytes'] is None:
+    check.update(passed=False,reason='Process RSS unavailable; test blocked')
+st.json(dict(container_memory=snapshot,process_memory=process_snapshot,preflight=check))
 enabled=os.environ.get('SIMMAH_ENABLE_HOST_RESTORE_PROBE')=='1'
 if not enabled:
     st.info('Disabled. In a private QA deployment only, set SIMMAH_ENABLE_HOST_RESTORE_PROBE to the string 1.')

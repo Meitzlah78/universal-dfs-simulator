@@ -31,6 +31,15 @@ class HostProbeTest(unittest.TestCase):
                 self.assertEqual(run_guarded(enabled=True)['status'],'blocked')
             spawn.assert_not_called()
 
+    def test_unknown_process_rss_blocks_even_with_ample_container_capacity(self):
+        with patch('simmah_host_restore_probe.subprocess.Popen') as spawn, \
+             patch('simmah_host_restore_probe.process_memory',return_value={'rss_bytes':None,'error':'NoSuchProcess'}), \
+             patch('simmah_host_restore_probe.memory_snapshot',return_value=dict(limit_bytes=8*1024*MIB,current_bytes=0)):
+            report=run_guarded(enabled=True,mib=1)
+        self.assertEqual(report['status'],'blocked')
+        self.assertFalse(report['preflight']['process_monitor_available'])
+        spawn.assert_not_called()
+
     def test_real_small_worker_round_trip_reports_memory_and_exact_equality(self):
         report=run_guarded(enabled=True,mib=1,timeout=30)
         if report['status']=='blocked':self.skipTest('Executor has insufficient bounded cgroup resources')

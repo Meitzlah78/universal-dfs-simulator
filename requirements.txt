@@ -7,4 +7,5 @@ html5lib
 beautifulsoup4
 scipy>=1.11
 boto3>=1.34
+psutil>=5.9
 
