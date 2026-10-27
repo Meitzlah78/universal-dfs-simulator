@@ -105,7 +105,7 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         from simmah_nba_payscales import render_panel as render_payscales
         with tabs[0]:
             contest=render_payscales(st,contest,dict(selected,id=str(cid)),day,platform)
-        if contest is None:raise ValueError('This NBA contest needs its capacity and payout schedule before builds can run.')
+        if contest is None:raise ValueError('Open Contests → Saved payscales, choose this contest’s NBA payout schedule, and confirm Full contest capacity before building.')
         rates_path=Path(__file__).parent/'data'/'nba_models'/'event-rates-before-2026-04-09.json'
         model=json.loads(rates_path.read_text())
         if model['before']>day:raise ValueError('Historical event baseline follows the selected slate date')

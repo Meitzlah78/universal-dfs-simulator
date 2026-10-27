@@ -26,7 +26,10 @@ def render_panel(st, contest, selected, day, platform):
     choice=st.selectbox('NBA payscale',['']+list(profiles),
         format_func=lambda key:profiles[key]['name'] if key else 'Use current contest payouts',
         key='nba_payscale_'+platform+'_'+str(selected['id']))
-    if not choice:return contest
+    if not choice:
+        if contest is None:
+            st.info('Choose the matching NBA payscale above and confirm Full contest capacity. If no saved schedule matches, supply the current contest payout table.')
+        return contest
     profile=profiles[choice]
     capacity=st.number_input('Full contest capacity',min_value=profile['payout_tiers'][-1]['last'],
         max_value=1000000,value=profile['capacity'],step=1,
@@ -36,5 +39,7 @@ def render_panel(st, contest, selected, day, platform):
         return None
     result=apply_payscale(profile,selected,day,platform,int(capacity))
     result['payout_profile_id']=choice
-    st.caption(f"Reusable payout template · {profile['max_entries']} entries max in the supplied contest. Confirm capacity and entry limit for each new contest. Uploaded contest ID and entry fee are preserved.")
+    entry_limit=profile.get('max_entries')
+    limit_note=f" · {entry_limit} entries max in the supplied contest" if entry_limit is not None else ''
+    st.caption(f"Reusable payout template{limit_note}. Confirm capacity and payouts for this contest. Uploaded contest ID and entry fee are preserved.")
     return result

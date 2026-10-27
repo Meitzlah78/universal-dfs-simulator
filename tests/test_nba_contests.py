@@ -21,3 +21,17 @@ class DraftKingsContestTests(unittest.TestCase):
         self.assertEqual(contest['capacity'],7134)
         self.assertAlmostEqual(payout_vector(contest).sum(),1500)
         with self.assertRaises(ValueError):saved_contest('196711762','2026-10-20',.10)
+
+
+class SuppliedQuarterJukeboxTests(unittest.TestCase):
+    def test_exact_name_site_day_and_fee_bind_to_uploaded_id(self):
+        name='NBA $3K Quarter Jukebox [Just $0.25!]'
+        c=saved_contest('987654321','2026-10-27',.25,name=name,platform='DraftKings')
+        self.assertIsNotNone(c)
+        self.assertEqual(c['id'],'987654321')
+        self.assertEqual(c['capacity'],14268)
+        self.assertEqual(payout_vector(c).sum(),3000)
+        for day,fee,site,label in [('2026-10-28',.25,'DraftKings',name),
+                ('2026-10-27',.1,'DraftKings',name),('2026-10-27',.25,'FanDuel',name),
+                ('2026-10-27',.25,'DraftKings','Another contest')]:
+            self.assertIsNone(saved_contest('987654321',day,fee,name=label,platform=site))
