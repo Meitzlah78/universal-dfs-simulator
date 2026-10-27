@@ -121,9 +121,9 @@ def run_pipeline(pool,outcome_factory,ownership,ownership_source,payouts,entry_f
     return result
 
 
-def export_portfolio(template,contest_id,pool,result):
+def export_portfolio(template,contest_id,pool,result,*,salary_min=0):
     lineups=result['portfolio'][list(rules_for(pool)['slots'])].astype(str).to_numpy().tolist()
-    return export_entries(template,lineups,contest_id,pool,salary_cap=rules_for(pool)['salary_cap'],max_from_team=rules_for(pool)['max_from_team'])
+    return export_entries(template,lineups,contest_id,pool,salary_cap=rules_for(pool)['salary_cap'],max_from_team=rules_for(pool)['max_from_team'],salary_min=salary_min)
 
 
 

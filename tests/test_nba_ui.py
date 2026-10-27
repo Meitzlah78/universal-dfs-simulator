@@ -31,7 +31,7 @@ class NBAWorkspaceTests(unittest.TestCase):
         self.assertTrue(any('Fixture export validation failed' in x.value for x in at.error))
         self.assertFalse(any('NBA build complete' in x.value for x in at.success))
 
-    def test_build_diversity_and_stale_export_without_rebuilding(self):
+    def test_build_diversity_and_legal_stale_export_without_rebuilding(self):
         from streamlit.testing.v1 import AppTest
         at=AppTest.from_file(str(Path(__file__).with_name('nba_ui_fixture.py'))).run(timeout=20)
         self.assertFalse(at.exception)
@@ -66,7 +66,46 @@ class NBAWorkspaceTests(unittest.TestCase):
         self.assertEqual(at.session_state['test_build_calls'],1)
         exports=[x for x in at.get('download_button') if x.proto.id.endswith('-nba_entries_download')]
         self.assertEqual(len(exports),1)
-        self.assertTrue(exports[0].proto.disabled)
+        self.assertFalse(exports[0].proto.disabled)
+
+    def test_dk_legal_stale_export_and_current_out_and_salary_guards(self):
+        from streamlit.testing.v1 import AppTest
+        at=AppTest.from_file(str(Path(__file__).with_name('nba_ui_fixture.py')))
+        at.session_state['fixture_platform']='DraftKings'
+        at.run(timeout=20).button(key='nba_build').click().run(timeout=20)
+        self.assertFalse(at.exception)
+        saved=at.session_state['nba_build_result']
+        def export_disabled():
+            return next(x for x in at.get('download_button') if x.proto.id.endswith('-nba_entries_download')).proto.disabled
+        at.slider(key='nba_build_correlation').set_value(50).run(timeout=20)
+        self.assertFalse(at.exception)
+        self.assertFalse(export_disabled())
+        self.assertEqual(at.session_state['test_build_calls'],1)
+        at.number_input(key='nba_min_salary_DraftKings').set_value(48000).run(timeout=20)
+        self.assertTrue(export_disabled())
+        self.assertTrue(any('salary is outside limits' in x.value for x in at.error))
+        at.number_input(key='nba_min_salary_DraftKings').set_value(0).run(timeout=20)
+        self.assertFalse(export_disabled())
+        player_id=str(saved['result']['portfolio'].iloc[0]['PG'])
+        team=saved['pool'].set_index('Player ID').loc[player_id,'Team']
+        at.multiselect(key='nba_excluded_teams_DraftKings').set_value([team]).run(timeout=20)
+        self.assertTrue(export_disabled())
+        self.assertTrue(any('excluded player' in x.value for x in at.error))
+        at.multiselect(key='nba_excluded_teams_DraftKings').set_value([]).run(timeout=20)
+        self.assertFalse(export_disabled())
+        saved['contest_id']='not-the-selected-contest'
+        at.session_state['nba_build_result']=saved
+        at.run(timeout=20)
+        self.assertTrue(export_disabled())
+        self.assertTrue(any('contest used for this saved build' in x.value for x in at.error))
+        saved['contest_id']='196711762'
+        at.session_state['nba_build_result']=saved
+        at.session_state['fixture_out_id']=str(saved['result']['portfolio'].iloc[0]['PG'])
+        at.run(timeout=20)
+        self.assertFalse(at.exception)
+        self.assertTrue(export_disabled())
+        self.assertTrue(any('OUT player' in x.value for x in at.error))
+        self.assertEqual(at.session_state['test_build_calls'],1)
 
     def test_draftkings_uses_same_workspace_with_eight_slots(self):
         import sys

@@ -49,7 +49,7 @@ def validate_lineup(pool, player_ids, *, salary_cap, max_from_team, salary_min=0
     return salary
 
 
-def export_entries(template, lineups, contest_id, pool, *, salary_cap, max_from_team):
+def export_entries(template, lineups, contest_id, pool, *, salary_cap, max_from_team, salary_min=0):
     """Replace only the selected contest's roster cells, preserving other bytes' values.
 
     Lineups contain the original composite FanDuel IDs, never player names or
@@ -68,7 +68,7 @@ def export_entries(template, lineups, contest_id, pool, *, salary_cap, max_from_
     for i,lineup in zip(targets,lineups):
         ids=list(map(str,lineup))
         if any(pid not in template_ids for pid in ids):raise ValueError('NBA export player is from another slate')
-        validate_lineup(pool,ids,salary_cap=salary_cap,max_from_team=max_from_team)
+        validate_lineup(pool,ids,salary_cap=salary_cap,max_from_team=max_from_team,salary_min=salary_min)
         canonical=tuple(sorted(ids))
         if canonical in seen:raise ValueError('Duplicate NBA portfolio lineup')
         seen.add(canonical)

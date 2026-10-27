@@ -24,7 +24,7 @@ def validate_game_reports(reports):
 
 
 class PregameEngine:
-    def __init__(self,pool,markets,rates,max_overtimes=4,platform='FanDuel',require_markets=False,
+    def __init__(self,pool,markets,rates,max_overtimes=10,platform='FanDuel',require_markets=False,
                  parallel=True,game_index_offset=0):
         if not isinstance(max_overtimes,int) or not 1<=max_overtimes<=10:raise ValueError("Explicit bounded overtime count required")
         self.platform=platform

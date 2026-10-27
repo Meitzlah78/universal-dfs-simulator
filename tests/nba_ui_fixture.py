@@ -73,6 +73,11 @@ with st.container(key='sticky_projection_bar'):
     st.button('REFRESH',key='test_refresh',on_click=refresh_fixture)
 header=st.container()
 with header:lineup_module.render_live_strip(st,pool,markets,'29784','2026-10-20')
+# Synthetic flat salaries spend 40k/45k; use zero floor for UI-flow tests.
+st.session_state.setdefault('nba_min_salary',0)
+st.session_state.setdefault('nba_min_salary_DraftKings',0)
+if st.session_state.get('fixture_out_id'):
+    pool.loc[pool['Player ID'].eq(st.session_state['fixture_out_id']),'Injury Status']='Out'
 tabs=st.tabs(['Contest','Roster','Build','Lineups']);controls=st.container()
 ui.render_workspace(st,slate,upload,tabs,controls,markets)
 

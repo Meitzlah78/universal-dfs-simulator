@@ -33,7 +33,7 @@ FIXED={
  'support_diagnostic':dict(method='highs',time_limit_seconds=5,feasibility_epsilon_pp=1e-6),
  'evaluation':dict(batch_size=128,histogram_max_span=65536,histogram_max_entries=2**53,field_weighting='integer_copies',payout_mode='marginal_candidate_exact_tie_split',top_one_percent_rule='max(1, ceil(contest_entries * .01))'),
  'selection':dict(metric='Top 1%',controls=None,stable_sort=True,canonical_dedup=True,strength_rule='diversity / 100',cap_rule='100 - 40 * strength',overlap_multiplier=.7,urgency_multiplier=2,repair_seconds=5,repair_relative_gap=.05,repair_cap_step=5,repair_start_rule='int(default_max)',repair_tiebreak=1e-10),
- 'engine':dict(max_overtimes=4,require_markets=False,parallel=True,game_index_offset=0,output_dtype='float32',rotation_minutes=48,overtime_minutes=5,minutes_tolerance=1e-6,rotation_remainder_noise=1e-10,rotation_capacity_noise=.01,event_gamma_shape=4,action_limit_per_period_budget=5000),
+ 'engine':dict(max_overtimes=10,require_markets=False,parallel=True,game_index_offset=0,output_dtype='float32',rotation_minutes=48,overtime_minutes=5,minutes_tolerance=1e-6,rotation_remainder_noise=1e-10,rotation_capacity_noise=.01,event_gamma_shape=4,action_limit_per_period_budget=5000),
  'parallel':dict(max_workers=2,start_method='spawn',minimum_games=2,minimum_scenarios=512,fallback_exceptions=['OSError','BrokenProcessPool']),
  'calibration':dict(pilot_limit=1024,market_iterations=4,market_factor_clip=[.8,1.2],make_two_clip=[.15,.85],make_three_clip=[.1,.75],team_score_tolerance=4,anchor_iterations=5,anchor_floor=.1,anchor_ratio_clip=[.5,2],anchor_exponent=.7,assist_clip=[.05,.95]),
  'cache':dict(enabled=True,identity_version=1,max_slates=2,construction_seed=83,draw_order=['construction','field','evaluation']),

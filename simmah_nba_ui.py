@@ -23,7 +23,7 @@ def input_identity(pool,markets,contest,salary_min,correlation=0,excluded_player
     columns=[c for c in ['Player ID','Position','Salary','Team','Opponent','Projection','Injury Status',
                          'Projected Minutes','Eligible',*ROLE_COLUMNS,'RotoWire Projected Own %'] if c in pool]
     content={'pool':pool[columns].to_json(orient='split',double_precision=10),'markets':markets,
-             'contest':contest,'salary_min':salary_min,'field_model_version':5}
+             'contest':contest,'salary_min':salary_min,'field_model_version':5,'overtime_period_limit':10}
     if correlation:content['build_correlation']=correlation
     if len(excluded_player_ids):content['excluded_player_ids']=sorted(map(str,excluded_player_ids))
     return hashlib.sha256(json.dumps(content,sort_keys=True).encode()).hexdigest()
@@ -39,7 +39,7 @@ def display_lineups(pool,frame,status_pool=None):
 
 
 
-def render_exports(st,upload,cid,pool,built,portfolio,platform,stale,location,status_pool=None):
+def render_exports(st,upload,cid,pool,built,portfolio,platform,stale,location,status_pool=None,*,current_pool=None,salary_min=0,saved_contest_id=None):
     st.subheader('Export lineups')
     package=built.get('diagnostic_package')
     if package:
@@ -62,15 +62,20 @@ def render_exports(st,upload,cid,pool,built,portfolio,platform,stale,location,st
             key='nba_build_player_pool_'+location,on_click='ignore',
             help='Frozen player inputs used by this saved build, including RotoWire RST values. Use this file to compare with its opponent field.')
     data=b'';export_error=None
-    if not stale:
-        try:data=export_portfolio(upload.getvalue(),cid,pool,built)
-        except (ValueError,KeyError,IndexError) as exc:export_error=str(exc)
+    validation_pool=current_pool if current_pool is not None else pool
+    try:
+        if saved_contest_id is not None and str(saved_contest_id)!=str(cid):
+            raise ValueError('Select the contest used for this saved build before exporting.')
+        data=export_portfolio(upload.getvalue(),cid,validation_pool,built,salary_min=salary_min)
+    except (ValueError,KeyError,IndexError) as exc:export_error=str(exc)
     workspace_download_button(st,'EXPORT TO '+platform.upper()+' — EDIT ENTRIES CSV',data,
         'Simmah_NBA_'+platform+'_Edit_Entries.csv','text/csv',
-        disabled=stale or bool(export_error),key='nba_entries_download' if location=='lineups' else 'nba_entries_download_build',on_click='ignore',
+        disabled=bool(export_error),key='nba_entries_download' if location=='lineups' else 'nba_entries_download_build',on_click='ignore',
         export_checkpoint={'format':platform+' NBA','contest_id':str(cid),'kind':'entries',
-            'player_pool':pool.copy(deep=True),'original_entries':upload.getvalue(),'build':built,'portfolio':portfolio.copy(deep=True)})
-    if stale:st.caption('Inputs changed. Rebuild before downloading a site upload file.')
+            'player_pool':pool.copy(deep=True),'estimates_stale':bool(stale),
+            'original_entries':upload.getvalue(),
+            'build':{**built,'export_validation_pool':validation_pool.copy(deep=True)},'portfolio':portfolio.copy(deep=True)})
+    if stale:st.caption('Inputs changed; rebuild to update estimates and selection. This saved portfolio can still export when it passes current player, salary and entry checks.')
     if export_error:st.error('Entries export unavailable: '+export_error)
     if platform=='FanDuel':st.link_button('OPEN FANDUEL / EDIT ENTRIES','https://www.fanduel.com/upcoming',key='nba_open_fanduel_'+location)
     elif platform=='DraftKings':
@@ -239,13 +244,17 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
     except ValueError as exc:
         with tabs[3]:st.error(str(exc))
         return
+    export_pool=pool.copy(deep=True)
+    if 'Eligible' not in export_pool:export_pool['Eligible']=True
+    if len(excluded):
+        export_pool.loc[export_pool['Player ID'].isin(pool.iloc[excluded]['Player ID']),'Eligible']=False
     with tabs[2]:
-        if stale:st.info('Inputs or build settings changed. Previous results remain visible; rebuild before exporting.')
+        if stale:st.info('Inputs or build settings changed. Previous estimates remain visible; rebuild to update them. Export checks the saved lineups against current inputs.')
         if built.get('timings_seconds'):
             _timing=built['timings_seconds']
             st.caption('Build timing · '+ ' · '.join(label+f" {_timing[key]:.1f}s" for key,label in [('game_scenarios','Game scenarios'),('candidates','Candidates'),('opponent_field','Opponents'),('contest_scoring','Scoring')])+
                 f" · {built.get('scenario_cache_hits',0)}/3 scenario sets reused")
-        render_exports(st,upload,cid,saved_pool,built,portfolio,platform,stale,'build',status_pool=pool)
+        render_exports(st,upload,cid,saved_pool,built,portfolio,platform,stale,'build',status_pool=pool,current_pool=export_pool,salary_min=salary_min,saved_contest_id=saved.get('contest_id',''))
         st.subheader('Candidate lineups')
         st.caption(f"{built['candidates']['unique']:,} unique candidates · {built['field']['entries']:,} modeled opponents · {built['field']['unique_rosters']:,} unique opponent rosters. Ownership and ROI are estimates.")
         candidate_rows=built['report'].copy()
@@ -278,7 +287,7 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         for col,label,value in zip(cols,['Entries','Fees','Estimated winnings','Estimated ROI'],
                                    [str(totals['entries']),f"${totals['fees']:.2f}",f"${totals['winnings']:.2f}",f"{totals['roi']:.1f}%"]):col.metric(label,value)
         st.caption('Experimental model estimates; totals sum marginal lineup estimates against the modeled field.')
-        render_exports(st,upload,cid,saved_pool,built,portfolio,platform,stale,'lineups',status_pool=pool)
+        render_exports(st,upload,cid,saved_pool,built,portfolio,platform,stale,'lineups',status_pool=pool,current_pool=export_pool,salary_min=salary_min,saved_contest_id=saved.get('contest_id',''))
         st.subheader('My lineups')
         st.dataframe(display_lineups(saved_pool,portfolio,status_pool=pool),hide_index=True,width="stretch")
         exposure=portfolio[list(slots)].stack().value_counts().rename('Lineups')
