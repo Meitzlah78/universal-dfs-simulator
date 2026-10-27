@@ -37,7 +37,7 @@ def locked_players(pool, now=None):
 
 
 def entry_rows(template, contest_id, pool):
-    slate = read_template(template)
+    slate = read_template(template, game_context_pool=pool)
     if rules_for(slate['players'])['platform']!=rules_for(pool)['platform'] or set(slate['players']['Player ID']) != set(pool['Player ID']):
         raise ValueError('Late-swap entries must match the current NBA salary slate')
     entries = [r for r in slate['entries'] if r[1] == str(contest_id)]

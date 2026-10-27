@@ -18,7 +18,7 @@ def player_id(value):
     return result
 
 
-def read_draftkings(data):
+def read_draftkings(data, *, game_context_pool=None):
     rows=list(csv.reader(io.StringIO(data.decode('utf-8-sig'))))
     if not rows or tuple(rows[0][:4])!=('Entry ID','Contest Name','Contest ID','Entry Fee') or tuple(rows[0][4:12])!=DK_SLOTS:
         raise ValueError('Expected DraftKings NBA Classic eight-slot entries CSV')
@@ -42,10 +42,25 @@ def read_draftkings(data):
             raise ValueError('Invalid DraftKings NBA salary player')
         game=cell(r,'Game Info')
         match=re.fullmatch(r'(\w+)@(\w+)\s+(\d{2}/\d{2}/\d{4})\s+(\d{2}:\d{2}[AP]M)\s+ET',game)
-        if not match:raise ValueError('Dated NBA game start required in DraftKings Game Info')
-        away,home=map(team_key,match.group(1,2));team=team_key(cell(r,'TeamAbbrev'))
-        if team not in {away,home}:raise ValueError('NBA salary team differs from game')
-        stamp=datetime.strptime(match[3]+' '+match[4],'%m/%d/%Y %I:%M%p').replace(tzinfo=ZoneInfo('America/New_York'))
+        team=team_key(cell(r,'TeamAbbrev'))
+        if match:
+            away,home=map(team_key,match.group(1,2))
+            if team not in {away,home}:raise ValueError('NBA salary team differs from game')
+            stamp=datetime.strptime(match[3]+' '+match[4],'%m/%d/%Y %I:%M%p').replace(tzinfo=ZoneInfo('America/New_York'))
+        elif game.casefold()=='in progress' and game_context_pool is not None:
+            prior=game_context_pool.loc[game_context_pool['Player ID'].astype(str).eq(pid)]
+            if len(prior)!=1:raise ValueError('Started DK player is missing from the current slate')
+            old=prior.iloc[0]
+            if team_key(old['Team'])!=team or int(old['Salary'])!=int(salary):
+                raise ValueError('Started DK player differs from the current salary slate')
+            stamp=pd.Timestamp(old.get('Game Start'))
+            if pd.isna(stamp) or stamp.tzinfo is None:
+                raise ValueError('Confirmed saved start time required for started DK players')
+            if stamp>pd.Timestamp.now(tz='UTC'):
+                raise ValueError('DK reports a started game but saved tipoff is in the future')
+            stamp=stamp.tz_convert('America/New_York')
+            away,home=team,team_key(old['Opponent'])
+        else:raise ValueError('Upload current DK entries in Lineups → NBA LATE SWAP; started-game details use the existing slate')
         days.add(stamp.date().isoformat())
         players.append({'Player ID':pid,'Name':name,'Position':pos,'Salary':int(salary),'Team':team,
                         'Opponent':home if team==away else away,'Game':away+'@'+home,

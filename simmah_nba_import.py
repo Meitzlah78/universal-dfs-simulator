@@ -9,10 +9,10 @@ import pandas as pd
 SLOTS = ('PG', 'SG', 'SF', 'PF', 'C', 'G/F', 'F/C', 'UTIL', 'UTIL')
 
 
-def read_template(data):
+def read_template(data, *, game_context_pool=None):
     if data.decode('utf-8-sig').startswith('Entry ID,Contest Name,Contest ID,Entry Fee,PG,SG,SF,PF,C,G,F,UTIL'):
         from simmah_nba_dk_import import read_draftkings
-        return read_draftkings(data)
+        return read_draftkings(data, game_context_pool=game_context_pool)
     rows = list(csv.reader(io.StringIO(data.decode('utf-8-sig'))))
     if not rows or tuple(rows[0][4:13]) != SLOTS or rows[0][:2] != ['entry_id', 'contest_id']:
         raise ValueError('Expected a FanDuel NBA nine-slot entries template')

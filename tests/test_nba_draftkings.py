@@ -22,6 +22,16 @@ def template():
     f=io.StringIO();csv.writer(f).writerows(rows);return f.getvalue().encode()
 
 class DraftKingsNBATests(unittest.TestCase):
+    def test_started_game_entries_use_existing_slate_context(self):
+        from simmah_nba_late_swap import entry_rows
+        data=template().replace(b'PHI@NYK 10/20/2026 07:00PM ET',b'In Progress')
+        data=data.replace(b'$0.25,,,,,,,,,',b'$0.25,Player (1000) (LOCKED),1001,1002,1003,1004,1005,1006,1007,',1)
+        slate=read_template(data,game_context_pool=self.pool)
+        self.assertEqual(slate['entries'][0][4], '1000')
+        self.assertEqual(slate['players'].loc[0,'Game Start'], self.pool.loc[0,'Game Start'])
+        with self.assertRaises(ValueError):read_template(data)
+        wrong=self.pool.copy();wrong.loc[0,'Salary']=6000
+        with self.assertRaises(ValueError):read_template(data,game_context_pool=wrong)
     def test_locked_entry_player_ids(self):
         from simmah_nba_dk_import import player_id
         self.assertEqual(player_id('Neemias Queta (44670178) (LOCKED)'), '44670178')
