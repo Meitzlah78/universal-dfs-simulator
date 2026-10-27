@@ -5,7 +5,7 @@ from pathlib import Path
 def render(st):
     import streamlit.components.v1 as components
     st.title('Workspace storage verification')
-    st.caption('Probe version: storage-probe-v2-latency')
+    st.caption('Probe version: storage-probe-v3-random')
     st.caption('This tests this browser and origin only. It does not prove every browser has 512 MiB available, or test the full ZIP/server restore pipeline.')
     probe=components.declare_component('simmah_storage_capacity_probe_v1',
         path=str(Path(__file__).parent/'components'/'storage_probe'))

@@ -1,0 +1,48 @@
+{
+  "schema": 1,
+  "source_mib": 511,
+  "preflight": {
+    "passed": true,
+    "reason": null,
+    "available_memory_bytes": 6206881792,
+    "required_memory_headroom_bytes": 3751804928,
+    "temporary_disk_free_bytes": 29869748224
+  },
+  "memory_before": {
+    "limit_bytes": 8589934592,
+    "current_bytes": 2383052800,
+    "oom": 0,
+    "oom_kill": 0
+  },
+  "status": "completed_with_telemetry_warning",
+  "exit_code": 0,
+  "elapsed_seconds": 17.003375082000275,
+  "peak_sampled_worker_rss_bytes": 466944,
+  "additional_address_space_budget": 5670010880,
+  "worker_report": {
+    "schema": 1,
+    "environment": "guarded host QA",
+    "synthetic_array_bytes": 535822336,
+    "zip_bytes": 535985895,
+    "zip_mib": 511.1559820175171,
+    "configured_zip_cap_bytes": 536870912,
+    "recovery_frames": 715,
+    "exact_full_array_equal": true,
+    "archive_hash_verified": true,
+    "seconds": 16.60998857499999,
+    "peak_process_rss_bytes": 3864756224,
+    "additional_address_space_budget": 5670010880
+  },
+  "memory_after": {
+    "limit_bytes": 8589934592,
+    "current_bytes": 2383712256,
+    "oom": 0,
+    "oom_kill": 0
+  },
+  "oom_event_delta": 0,
+  "oom_kill_event_delta": 0,
+  "execution_environment": "local executor; not Streamlit Cloud",
+  "rss_telemetry_consistent": false,
+  "telemetry_warning": "Sampled parent-side worker RSS is much smaller than child-reported peak; memory monitoring is not verified in this environment",
+  "preflight_policy_at_run": "6 * source bytes + 512 MiB; subsequently increased to 8 * source bytes + 512 MiB after observing peak RSS"
+}

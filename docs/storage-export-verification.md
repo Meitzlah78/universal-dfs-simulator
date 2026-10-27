@@ -27,11 +27,14 @@ The app's explicit `?simmah_qa=storage` route renders an isolated diagnostic bef
 slate initialization. Open it in a separate tab. Normal app loads allocate nothing
 for this diagnostic. Pressing **Run 512 MiB test**:
 
-1. Creates a synthetic 536,870,912-byte ArrayBuffer and fills every byte with a
-   known per-chunk pattern, yielding periodically to keep progress visible.
+1. Creates a synthetic 536,870,912-byte ArrayBuffer. Version 3 defaults to
+   cryptographically random bytes in 64 KiB fills and records SHA-256 hashes per
+   1 MiB chunk. The older repeated-pattern mode is an explicit comparison option.
+   Generation yields periodically to keep progress visible.
 2. Commits it to IndexedDB database `simmah-storage-capacity-probe-v1` in one
    transaction, releases the original reference, closes and reopens the database.
-3. Reads the stored buffer, verifies exact size/type and every byte, and records
+3. Reads the stored buffer, verifies exact size/type and each chunk hash (or every
+   byte in repeated-pattern mode), and records
    phase timings, event-loop delay, available browser long-task measurements,
    origin, user agent and quota estimates. It flags observed stalls over three
    seconds; timer/long-task measurements are diagnostic proxies, not a guarantee
@@ -73,7 +76,7 @@ this is not zero-lag operation. See `benchmarks/workspace-browser-capacity.json`
 The synthetic per-chunk constant pattern is highly compressible. IndexedDB's
 reported usage rose only to approximately 24 MiB, so this verifies a 512 MiB
 logical ArrayBuffer round trip but does not prove sufficient physical quota for
-an incompressible 512 MiB ZIP. An incompressible payload is needed for that claim.
+an incompressible 512 MiB ZIP. Version 3 adds that incompressible payload, but its live run is not yet claimed.
 The timing/usage estimates also do not prove durable storage across a browser
 process crash or storage eviction.
 
@@ -160,3 +163,55 @@ python scripts/audit_saved_entry_exports.py \
 Remaining gates are incompressible browser quota testing, a complete ZIP/slate
 reboot recovery in Streamlit Cloud under actual resource limits, final site
 upload acceptance, and independent confirmation of the FD payout ladder.
+
+
+## Follow-up diagnostic setup
+
+`storage-probe-v3-random` defaults to random bytes rather than the highly
+compressible pattern. It retains before/after origin storage estimates, per-phase
+timings, event-loop delay and long-task measurements. SHA-256 chunk checks allow
+verification after releasing the original 512 MiB buffer, without retaining a
+second complete expected payload. Browser quota estimates are approximate; even
+random-data success in one browser is not a guarantee against eviction elsewhere.
+
+`qa_workspace_restore_app.py` is a separate **private QA deployment entry point**.
+It is never imported or exposed by the public Simmah application. The activation
+environment flag `SIMMAH_ENABLE_HOST_RESTORE_PROBE=1` is an explicit diagnostic
+switch, not an authentication mechanism; the deployment itself must be private.
+
+Before allocating a large payload, the runner requires a finite cgroup memory
+limit, sufficient unused memory and temporary disk. Its conservative memory
+headroom requirement is eight times the source bytes plus 512 MiB (4,600 MiB for
+the 511 MiB test). Insufficient or unknown capacity returns `blocked`, with no
+large payload or subprocess allocated. A block is neither a successful restore
+nor proof that extraction alone is impossible; the bound covers the entire
+synthetic generation/packing/recovery benchmark.
+
+An enabled run acquires a container-wide lease and starts an isolated child using
+the existing lossless benchmark. The child has an additional address-space budget;
+the parent samples RSS and cgroup availability every 50 ms, stops on a 256 MiB
+headroom guard or timeout, and cleans up its temporary data. Reports include the
+exit status, peak RSS, exact array equality, archive hash verification and OOM
+event deltas when available. These guards reduce risk; they do not establish
+that unrelated concurrent allocations cannot exhaust a host. A controlled QA
+container is required, rather than deliberately testing for a crash in an active
+production session.
+
+Small tests cover disabled/blocked behavior without spawning, unknown/low memory,
+low disk, and a real guarded one-MiB worker restore. A 511 MiB guarded run completed with exact array equality and is recorded in
+`benchmarks/workspace-guarded-local.json`. The child reported a peak RSS of
+3,864,756,224 bytes (about 3.60 GiB) over the whole generation/packing/recovery
+benchmark. This is not an extraction-only peak and must not be presented as the
+minimum RAM required by ZIP extraction alone.
+Parent-side RSS sampling was inconsistent with that high-water report in the
+local executor, so its telemetry is flagged and is not accepted as verified
+memory monitoring. It is local executor evidence, not a Cloud result. The browser randomized run
+and private Cloud host run remain pending until executed on their deployments.
+
+Example commands in an isolated Linux QA environment:
+
+```bash
+python -m unittest discover -s tests -p test_host_restore_probe.py
+node tests/test_storage_probe.cjs
+SIMMAH_ENABLE_HOST_RESTORE_PROBE=1 streamlit run qa_workspace_restore_app.py
+```
