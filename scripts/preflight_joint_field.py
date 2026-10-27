@@ -23,7 +23,7 @@ def sha(path):
     with Path(path).open('rb') as stream:return hashlib.file_digest(stream,'sha256').hexdigest()
 
 
-def audit(package,standings_path,username,*,top_players=15,tolerance=.005):
+def audit(package,standings_path,username,*,top_players=15,tolerance=.005,inactive_players=()):
     if type(top_players) is not int or top_players<2 or not np.isfinite(tolerance) or not 0<tolerance<1:
         raise ValueError('Positive player count and probability tolerance required')
     with zipfile.ZipFile(package) as z:
@@ -70,6 +70,9 @@ def audit(package,standings_path,username,*,top_players=15,tolerance=.005):
         actual=int(round(100*(1.5*score_map[special]+sum(score_map[p] for p in flex))))
         if actual!=points:raise ValueError('Special-role score reconciliation failed')
         counts[key]+=1
+    inactive_names={name_key(p) for p in inactive_players}
+    inactive_counts={key:count for key,count in counts.items() if inactive_names.intersection((key[0],*key[1]))}
+    inactive_entries=sum(inactive_counts.values())
     n=sum(counts.values())
     if not n:raise ValueError('No complete scored opponents')
     ownership=Counter()
@@ -84,6 +87,9 @@ def audit(package,standings_path,username,*,top_players=15,tolerance=.005):
     actual_keys=list(counts)
     actual_features=single_game_features(picks(actual_keys),len(names),pairs)
     target=np.asarray(actual_features@(np.array(list(counts.values()))/n)).ravel()
+    active_n=n-inactive_entries
+    active_weights=np.array([0 if key in inactive_counts else count for key,count in counts.items()])/max(active_n,1)
+    active_target=np.asarray(actual_features@active_weights).ravel()
     bins=[];exact_min=0;relaxed_min=0
     for low,high in DUPLICATE_BANDS:
         matches=[count for count in counts.values() if low<=count<=(n if high is None else high)]
@@ -115,7 +121,21 @@ def audit(package,standings_path,username,*,top_players=15,tolerance=.005):
         unsupported_roles=[dict(player=display_names.get(names[i%len(names)],names[i%len(names)]),role='special' if i<len(names) else 'flex',
             actual_fraction=float(target[i]),support_min=float(lower[i]),support_max=float(upper[i]))
             for i in range(2*len(names)) if target[i]<lower[i]-tolerance or target[i]>upper[i]+tolerance]
-        reports[label]=dict(rows=len(keys),unique_lineups=len(unique),all_support_salary_team_legal=all(legal(k) for k in unique),
+        active_checks=None
+        if inactive_names and active_n:
+            checks={}
+            for check_name,features,targets in [('roles',roles,active_target[:2*len(names)]),
+                                                ('roles_and_pairs',x,active_target)]:
+                result=linprog(np.zeros(len(unique)),A_ub=sparse.vstack([features,-features]),
+                    b_ub=np.r_[targets+tolerance,-targets+tolerance],
+                    A_eq=sparse.csr_matrix(np.ones((1,len(unique)))),b_eq=[1.],bounds=(0,None),
+                    method='highs',options={'time_limit':20})
+                checks[check_name]='feasible' if result.status==0 else 'infeasible' if result.status==2 else 'unknown'
+            active_checks=dict(opponent_entries=active_n,excluded_inactive_entries=inactive_entries,
+                target_scope='Conditional on no explicitly declared inactive players; not the full field',**checks)
+        for row in unsupported_roles:
+            row['declared_inactive']=name_key(row['player']) in inactive_names
+        reports[label]=dict(conditional_inactive_free_checks=active_checks,rows=len(keys),unique_lineups=len(unique),all_support_salary_team_legal=all(legal(k) for k in unique),
             observed_chalk_pairs=len(pairs),pairs_present=int(np.count_nonzero(pair_counts)),
             unsupported_positive_pairs=unsupported,minimum_pair_support_rows=int(pair_counts.min()),
             role_only_linear_feasibility=role_status,unsupported_role_targets=unsupported_roles,
@@ -142,6 +162,10 @@ def audit(package,standings_path,username,*,top_players=15,tolerance=.005):
         duplicate_band_exact_minimum_unique_lineups=exact_min,
         duplicate_band_minimum_expected_unique_at_tolerance=relaxed_min,
         pair_selection=f'top {top_players} actual overall ownership players; retrospective development only',
+        declared_inactive_players=list(inactive_players),inactive_status_source='User-reported; not inferred from zero points',
+        inactive_roster_opponent_entries=inactive_entries,inactive_roster_distinct_lineups=len(inactive_counts),
+        inactive_players_published_points={p:score_map.get(name_key(p)) for p in inactive_players},
+        full_field_target_scope='All complete scored opponents, including inactive-player rosters',
         support=reports,fd_payouts_still_provisional=not dk,
         limitations=['Previously inspected slate, not untouched validation.',
           'Excluded incomplete opponents are reported separately; preserve them in subsequent payout ranks.',
@@ -156,7 +180,8 @@ def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--package',required=True);p.add_argument('--standings',required=True)
     p.add_argument('--username',default='meitzlah78');p.add_argument('--output',required=True)
-    args=p.parse_args();report=audit(args.package,args.standings,args.username)
+    p.add_argument('--inactive-player',action='append',default=[])
+    args=p.parse_args();report=audit(args.package,args.standings,args.username,inactive_players=args.inactive_player)
     Path(args.output).write_text(json.dumps(report,indent=2)+'\n')
     print(json.dumps(report,indent=2))
 

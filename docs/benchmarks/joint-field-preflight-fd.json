@@ -57,8 +57,25 @@
   "duplicate_band_exact_minimum_unique_lineups": 13446,
   "duplicate_band_minimum_expected_unique_at_tolerance": 12464.788588598203,
   "pair_selection": "top 15 actual overall ownership players; retrospective development only",
+  "declared_inactive_players": [
+    "Zach Ertz"
+  ],
+  "inactive_status_source": "User-reported; not inferred from zero points",
+  "inactive_roster_opponent_entries": 2876,
+  "inactive_roster_distinct_lineups": 770,
+  "inactive_players_published_points": {
+    "Zach Ertz": 0.0
+  },
+  "full_field_target_scope": "All complete scored opponents, including inactive-player rosters",
   "support": {
     "candidate_pool": {
+      "conditional_inactive_free_checks": {
+        "opponent_entries": 135629,
+        "excluded_inactive_entries": 2876,
+        "target_scope": "Conditional on no explicitly declared inactive players; not the full field",
+        "roles": "infeasible",
+        "roles_and_pairs": "infeasible"
+      },
       "rows": 5000,
       "unique_lineups": 5000,
       "all_support_salary_team_legal": true,
@@ -73,14 +90,16 @@
           "role": "flex",
           "actual_fraction": 0.012541063499512591,
           "support_min": 0.0,
-          "support_max": 0.0
+          "support_max": 0.0,
+          "declared_inactive": false
         },
         {
           "player": "Zach Ertz (135830-29780)",
           "role": "flex",
           "actual_fraction": 0.020519114833399802,
           "support_min": 0.0,
-          "support_max": 0.0
+          "support_max": 0.0,
+          "declared_inactive": true
         }
       ],
       "role_and_pair_linear_feasibility": "infeasible",
@@ -91,6 +110,13 @@
       "actual_lineup_entry_coverage": 0.3331648676943071
     },
     "frozen_opponent_support": {
+      "conditional_inactive_free_checks": {
+        "opponent_entries": 135629,
+        "excluded_inactive_entries": 2876,
+        "target_scope": "Conditional on no explicitly declared inactive players; not the full field",
+        "roles": "infeasible",
+        "roles_and_pairs": "infeasible"
+      },
       "rows": 10000,
       "unique_lineups": 5411,
       "all_support_salary_team_legal": true,
@@ -105,14 +131,16 @@
           "role": "flex",
           "actual_fraction": 0.012541063499512591,
           "support_min": 0.0,
-          "support_max": 0.0
+          "support_max": 0.0,
+          "declared_inactive": false
         },
         {
           "player": "Zach Ertz (135830-29780)",
           "role": "flex",
           "actual_fraction": 0.020519114833399802,
           "support_min": 0.0,
-          "support_max": 0.0
+          "support_max": 0.0,
+          "declared_inactive": true
         }
       ],
       "role_and_pair_linear_feasibility": "infeasible",

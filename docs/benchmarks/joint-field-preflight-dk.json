@@ -57,8 +57,25 @@
   "duplicate_band_exact_minimum_unique_lineups": 7591,
   "duplicate_band_minimum_expected_unique_at_tolerance": 7255.107078104078,
   "pair_selection": "top 15 actual overall ownership players; retrospective development only",
+  "declared_inactive_players": [
+    "Zach Ertz"
+  ],
+  "inactive_status_source": "User-reported; not inferred from zero points",
+  "inactive_roster_opponent_entries": 1069,
+  "inactive_roster_distinct_lineups": 419,
+  "inactive_players_published_points": {
+    "Zach Ertz": 0.0
+  },
+  "full_field_target_scope": "All complete scored opponents, including inactive-player rosters",
   "support": {
     "candidate_pool": {
+      "conditional_inactive_free_checks": {
+        "opponent_entries": 45982,
+        "excluded_inactive_entries": 1069,
+        "target_scope": "Conditional on no explicitly declared inactive players; not the full field",
+        "roles": "feasible",
+        "roles_and_pairs": "feasible"
+      },
       "rows": 5000,
       "unique_lineups": 5000,
       "all_support_salary_team_legal": true,
@@ -73,7 +90,8 @@
           "role": "flex",
           "actual_fraction": 0.021551082867526633,
           "support_min": 0.0,
-          "support_max": 0.0
+          "support_max": 0.0,
+          "declared_inactive": true
         }
       ],
       "role_and_pair_linear_feasibility": "infeasible",
@@ -84,6 +102,13 @@
       "actual_lineup_entry_coverage": 0.42260525812416316
     },
     "frozen_opponent_support": {
+      "conditional_inactive_free_checks": {
+        "opponent_entries": 45982,
+        "excluded_inactive_entries": 1069,
+        "target_scope": "Conditional on no explicitly declared inactive players; not the full field",
+        "roles": "feasible",
+        "roles_and_pairs": "feasible"
+      },
       "rows": 47542,
       "unique_lineups": 10000,
       "all_support_salary_team_legal": true,
@@ -98,7 +123,8 @@
           "role": "flex",
           "actual_fraction": 0.021551082867526633,
           "support_min": 0.0,
-          "support_max": 0.0
+          "support_max": 0.0,
+          "declared_inactive": true
         }
       ],
       "role_and_pair_linear_feasibility": "infeasible",

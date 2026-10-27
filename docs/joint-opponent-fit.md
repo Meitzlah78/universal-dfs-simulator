@@ -103,7 +103,7 @@ players. The least-represented pair appears in nine DK candidates and 38 FD
 candidates. Nevertheless, sparse LP feasibility checks on role ownership alone,
 and on role ownership plus those pairs, both fail at ±0.005 probability
 (0.5 percentage points per feature) on both platforms. Presence is not joint
-feasibility. Explicit missing FLEX support:
+feasibility. The original full-field check found the following absent FLEX support (classification corrected below):
 
 - DK: Zach Ertz, 2.1551% observed, zero support.
 - FD: Zach Ertz, 2.0519%, and Jaydon Blue, 1.2541%, both zero support.
@@ -128,6 +128,38 @@ is incomplete: some opponent players are absent from the captured build pool
 (1,474 DK / 5,982 FD entries affected). Known-salary entries also include 884 DK
 and 708 FD below the captured own-build salary minimum. These complete scored
 rosters remain in concentration targets; they are not silently discarded to
-make support appear feasible. Broader opponent proposals and explicit modeling
-of players absent from the own-build pool are prerequisites. This does not
-require expanding the user's 5,000-lineup portfolio candidate build.
+make support appear feasible. Full-field modeling must distinguish declared inactive-player rosters from the
+playable-player population. Do not add inactive players to the user's build
+pool to satisfy historical full-field ownership. More opponent support may still
+be needed for concentration targets. This does not require expanding the user's
+5,000-lineup portfolio candidate build.
+
+
+### Correction: Ertz inactive for this game
+
+The user clarified that Zach Ertz was not activated. The audit now accepts explicit
+`--inactive-player` declarations, records their provenance as user-reported, and
+keeps those rosters in full-field concentration counts. Zero published points
+alone do not establish inactivity. Ertz's published FPTS is 0.0 on both sites.
+No build pool, scoring covariance, or live opponent generator was modified.
+
+There are 1,069 DK opponent entries across 419 unique rosters containing Ertz,
+and 2,876 FD entries across 770 unique rosters. This includes both special and
+FLEX roles, so it is larger than the earlier FLEX-only counts. These entries must
+remain in ranks and payout calculations; they are not missing playable-player
+coverage to solve by activating Ertz. Their full scores still include the other
+five players' points.
+
+A second feasibility check conditions only on **Ertz-free** opponents (not a
+claim that every remaining player was active). At the same 0.5-percentage-point
+feature tolerance, DK role-only and role-plus-pair targets are now feasible on
+both the 5,000-candidate pool and the 10,000-roster opponent support. The original
+full-field rejection therefore must not be described as a proven DK active-player
+pair-coverage failure. FD remains infeasible after this correction; other missing
+player support needs status review before any recommendation to broaden eligibility.
+The full-field duplicate bands and bounds are unchanged; conditional duplication
+targets have not been fitted. Full-field calibration needs separate accounting
+for inactive-player rosters rather than silently removing them from the contest.
+
+Reproduce by adding `--inactive-player 'Zach Ertz'` to the preflight command.
+The JSON reports retain both full-field and conditional checks with denominators.
