@@ -1,12 +1,11 @@
 """Browser-confirmed autosaves; large backups bypass Streamlit's WebSocket."""
 import base64
-import hashlib
 import os
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from simmah_workspace_backup import pack, unpack, digest, write_backup, load_backup, path_for, stage_backup, unstage_backup, MAX_BYTES, RECOVERY_CHUNK_BYTES
+from simmah_workspace_backup import pack, unpack, unpack_file, digest, write_backup, load_backup, path_for, stage_backup, unstage_backup, MAX_BYTES, RECOVERY_CHUNK_BYTES
 
 _POOL = ThreadPoolExecutor(max_workers=2, thread_name_prefix='workspace-backup')
 KEY = '_slate_backup_browser'
@@ -62,11 +61,8 @@ def receive_backup_part(state, part):
             stream.seek(index * RECOVERY_CHUNK_BYTES)
             stream.write(decoded)
         if index == total - 1:
-            with temporary.open('rb') as stream:
-                actual = hashlib.file_digest(stream, 'sha256').hexdigest()
-            if temporary.stat().st_size != ref['bytes'] or actual != ref['digest']:
-                raise ValueError('Restored backup failed verification')
-            payload = unpack(temporary.read_bytes())
+            payload = unpack_file(temporary, expected_digest=ref['digest'],
+                                  expected_bytes=ref['bytes'])
             if not all(k in payload['record'] for k in ('id', 'name', 'data')):
                 raise ValueError('Backup is missing the original slate upload')
             if payload['record']['id'] != ref['id']:

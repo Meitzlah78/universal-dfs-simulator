@@ -22,6 +22,7 @@ MAX_BYTES = 512 * 1024 * 1024
 # Larger frames avoid hundreds of app reruns after a host reboot.
 RECOVERY_CHUNK_BYTES = 6000000
 MAX_EXPANDED = 1024 * 1024 * 1024
+RESTORE_READ_BYTES = 1024 * 1024
 
 
 def digest(raw):
@@ -83,9 +84,24 @@ def pack(payload):
     return raw
 
 
-def _unpack(raw):
-    if len(raw)>MAX_BYTES: raise ValueError('Workspace exceeds the backup limit')
-    with zipfile.ZipFile(io.BytesIO(raw)) as bundle:
+class _HashedReader:
+    """Hash the exact NPY header and data consumed without retaining attachments."""
+    def __init__(self, stream):
+        self.stream = stream
+        self.hash = hashlib.sha256()
+
+    def read(self, size=-1):
+        data = self.stream.read(size)
+        self.hash.update(data)
+        return data
+
+    def tell(self):
+        return self.stream.tell()
+
+
+def _unpack(source, size):
+    if size>MAX_BYTES: raise ValueError('Workspace exceeds the backup limit')
+    with zipfile.ZipFile(source) as bundle:
         if len(bundle.infolist())>20000 or sum(i.file_size for i in bundle.infolist())>MAX_EXPANDED:
             raise ValueError('Workspace expands beyond the supported limit')
         manifest=json.loads(bundle.read('manifest.json'))
@@ -105,15 +121,32 @@ def _unpack(raw):
             if kind=='nat': return pd.NaT
             if kind=='float': return float(node['v'])
             if kind=='array':
-                content=attachment(node['file']);stream=io.BytesIO(content)
-                version=np.lib.format.read_magic(stream)
-                if version==(1,0): shape,order,dtype=np.lib.format.read_array_header_1_0(stream)
-                elif version==(2,0): shape,order,dtype=np.lib.format.read_array_header_2_0(stream)
-                else: raise ValueError('Unsupported workspace array version')
-                size=math.prod(shape)*dtype.itemsize
-                if dtype.hasobject or size>MAX_EXPANDED or size!=len(content)-stream.tell():
-                    raise ValueError('Invalid workspace array dimensions')
-                return np.load(io.BytesIO(content),allow_pickle=False)
+                name=node['file']
+                if not re.fullmatch(r'[a-f0-9]{64}\.npy',name):
+                    raise ValueError('Invalid workspace attachment')
+                # Allocate only the final array. The NPY attachment is never cached
+                # as bytes alongside it; ZipExtFile decompresses bounded reads.
+                with bundle.open(name) as compressed:
+                    stream=_HashedReader(compressed)
+                    version=np.lib.format.read_magic(stream)
+                    if version==(1,0): shape,order,dtype=np.lib.format.read_array_header_1_0(stream)
+                    elif version==(2,0): shape,order,dtype=np.lib.format.read_array_header_2_0(stream)
+                    else: raise ValueError('Unsupported workspace array version')
+                    array_bytes=math.prod(shape)*dtype.itemsize
+                    if (dtype.hasobject or array_bytes>MAX_EXPANDED
+                            or array_bytes!=bundle.getinfo(name).file_size-stream.tell()):
+                        raise ValueError('Invalid workspace array dimensions')
+                    result=np.empty(shape,dtype=dtype,order='F' if order else 'C')
+                    target=result.ravel(order='K').view(np.uint8)
+                    offset=0
+                    while offset<array_bytes:
+                        block=stream.read(min(RESTORE_READ_BYTES,array_bytes-offset))
+                        if not block: raise ValueError('Truncated workspace array')
+                        target[offset:offset+len(block)]=np.frombuffer(block,dtype=np.uint8)
+                        offset+=len(block)
+                    if stream.read(1) or stream.hash.hexdigest()!=name.split('.')[0]:
+                        raise ValueError('Workspace attachment failed verification')
+                return result
             if kind=='bytes': return attachment(node['file'])
             if kind=='objects':
                 shape=node['shape']
@@ -160,7 +193,28 @@ def _unpack(raw):
 
 def unpack(raw):
     try:
-        return _unpack(raw)
+        return _unpack(io.BytesIO(raw),len(raw))
+    except (zipfile.BadZipFile, UnicodeError, json.JSONDecodeError, EOFError) as exc:
+        raise ValueError('Invalid or damaged workspace backup') from exc
+
+
+def unpack_file(path, *, expected_digest=None, expected_bytes=None):
+    """Restore an existing ZIP in place; verify the same open file before decoding.
+
+    Arrays are filled from bounded reads. Final arrays, byte values, and DataFrame
+    construction still consume RAM; this is not an out-of-core workspace.
+    """
+    try:
+        with Path(path).open('rb') as stream:
+            size=os.fstat(stream.fileno()).st_size
+            if size>MAX_BYTES: raise ValueError('Workspace exceeds the backup limit')
+            if expected_bytes is not None and size!=expected_bytes:
+                raise ValueError('Workspace backup failed verification')
+            if expected_digest is not None:
+                if hashlib.file_digest(stream,'sha256').hexdigest()!=expected_digest:
+                    raise ValueError('Workspace backup failed verification')
+                stream.seek(0)
+            return _unpack(stream,size)
     except (zipfile.BadZipFile, UnicodeError, json.JSONDecodeError, EOFError) as exc:
         raise ValueError('Invalid or damaged workspace backup') from exc
 
@@ -179,9 +233,8 @@ def write_backup(owner, raw, root=None, token=None):
 
 
 def load_backup(owner, reference, root=None):
-    raw=path_for(owner,reference['token'],root).read_bytes()
-    if digest(raw)!=reference['digest']: raise ValueError('Workspace backup failed verification')
-    return unpack(raw)
+    return unpack_file(path_for(owner,reference['token'],root),
+        expected_digest=reference['digest'],expected_bytes=reference.get('bytes'))
 
 
 def stage_backup(owner, reference):

@@ -301,3 +301,40 @@ Validation: eight persistence tests passed, including incompressible 13 MB
 recovery with exact bytes across three frames and no early application of the
 checkpoint. Browser component tests passed 22 MB/four-frame recovery, iframe
 remounts, save failures, and retained closed-slate backups.
+
+
+## Disk-backed ZIP restoration — October 27
+
+`unpack_file` now opens the ZIP directly from disk and checks the expected size
+and SHA-256 against that same open file before decoding. Host-cache restoration
+and the final browser recovery frame use this path; neither calls `read_bytes`
+on the full archive. Existing byte-buffer imports remain supported and share the
+new array decoder. The ZIP schema is unchanged, including all previous backups.
+
+NPY headers are validated against the declared ZIP member length and the existing
+expanded-size limit before allocating an array. The decoder fills the final
+mutable NumPy array using reads of at most 1 MiB, hashes the header and data,
+and checks the attachment hash before returning the payload. It no longer caches
+full decompressed NPY byte strings. C/Fortran order, endianness, structured dtypes,
+scalars, empty arrays, and independent repeated-array copies are retained.
+No live checkpoint is applied until all referenced data verifies.
+
+This removes two sources of duplicate memory; it does not eliminate final arrays,
+DataFrame construction costs, byte-valued artifacts, or ZIP metadata. No numerical
+Cloud memory reduction or end-to-end speedup has been measured for this change.
+
+The private QA entry point now defaults to a 32 MiB synthetic source, with
+64/128/256/511 MiB opt-in sizes. It verifies its own host metrics and retains the
+same fail-closed process identity, finite cgroup budget, headroom allowance,
+concurrency lease, and child-process guards. The source-size test measures the
+full generation/packing/recovery pipeline, not extraction-only peak RSS.
+No public heavy-test route was added. No private deployment URL is available in
+this session; a private Cloud run remains pending. The local guarded 32 MiB
+attempt remained blocked before allocating a payload (see
+`benchmarks/workspace-disk-restore-32-local.json`), so it supplies no memory baseline.
+
+Validation: six disk-reader tests, five existing backup tests, eight persistence
+tests, and four host-guard tests passed. One real-worker test skipped because
+local process visibility is unavailable. New tests forbid whole-archive and
+whole-NPY reads, compare exact values/layouts, and reject archive hash/size errors,
+valid-CRC attachment corruption, and forged array dimensions.

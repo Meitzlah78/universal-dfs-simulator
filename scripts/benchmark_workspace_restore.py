@@ -60,7 +60,8 @@ def main():
         restored=state['_slate_pending']['_session_checkpoint']['values']['outcomes']
         if not np.array_equal(restored,original):raise ValueError('Restored array differs')
         samples.append(dict(stage='after_restore',**process_memory()))
-    report=dict(schema=1,environment=args.environment,synthetic_array_bytes=original.nbytes,
+    report=dict(schema=1,environment=args.environment,restore_reader='disk ZIP with bounded NPY reads',
+                restore_array_read_bytes=backup.RESTORE_READ_BYTES,synthetic_array_bytes=original.nbytes,
                 zip_bytes=len(raw),zip_mib=len(raw)/1024**2,configured_zip_cap_bytes=backup.MAX_BYTES,
                 recovery_frames=total,exact_full_array_equal=True,archive_hash_verified=True,seconds=time.monotonic()-start,
                 peak_process_rss_bytes=(int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)*(1024 if sys.platform.startswith('linux') else 1) if resource else None),
