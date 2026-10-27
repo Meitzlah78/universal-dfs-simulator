@@ -9,7 +9,9 @@ from simmah_nba_rules import DK_SLOTS
 
 
 def player_id(value):
-    value=str(value).strip()
+    # DK's current-entry downloads annotate started players after the ID.
+    # This is display text; late swap enforces locks using game start times.
+    value=re.sub(r'\s*\(LOCKED\)\s*$', '', str(value).strip(), flags=re.IGNORECASE).strip()
     match=re.search(r'\((\d+)\)$',value)
     result=match[1] if match else value
     if not result.isdigit():raise ValueError('Numeric DraftKings player ID required')

@@ -22,6 +22,15 @@ def template():
     f=io.StringIO();csv.writer(f).writerows(rows);return f.getvalue().encode()
 
 class DraftKingsNBATests(unittest.TestCase):
+    def test_locked_entry_player_ids(self):
+        from simmah_nba_dk_import import player_id
+        self.assertEqual(player_id('Neemias Queta (44670178) (LOCKED)'), '44670178')
+        self.assertEqual(player_id('44670178 (LOCKED)'), '44670178')
+        self.assertEqual(player_id('Player (123) (locked)  '), '123')
+        for invalid in ['Player (LOCKED)', 'Player (123) garbage', '(LOCKED)']:
+            with self.assertRaises(ValueError):player_id(invalid)
+        data=template().replace(b'$0.25,,,,,,,,,', b'$0.25,Player 0 (1000) (LOCKED),,,,,,,,', 1)
+        self.assertEqual(read_template(data)['entries'][0][4], '1000')
     def setUp(self):
         self.data=template();self.slate=read_template(self.data);self.pool=self.slate['players'];self.pool['Projection']=30.;self.pool['Eligible']=True
     def test_site_date_ids_and_bonus_scoring(self):
