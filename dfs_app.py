@@ -21,6 +21,11 @@ st.set_page_config(
     layout="wide"
 )
 
+if st.query_params.get('simmah_qa') == 'storage':
+    from simmah_storage_probe import render as render_storage_probe
+    render_storage_probe(st)
+    st.stop()
+
 from simmah_slate_workspaces import begin_workspaces, finish_workspaces, select_upload, workspace_file_uploader, workspace_stop, workspace_rerun, workspace_download_button
 from simmah_ui import render_brand, render_pinned_navigation, player_columns, player_column_config, render_diversity_controls
 render_brand(st, show_logo=False)

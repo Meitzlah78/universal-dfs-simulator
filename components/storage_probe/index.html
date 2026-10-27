@@ -1,0 +1,39 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+body{font:14px system-ui;color:#e6edf5;background:#101b28;padding:18px;margin:0}button{padding:10px 16px;margin-right:8px;cursor:pointer}pre{white-space:pre-wrap;line-height:1.5}.note{color:#a8bbcd}
+</style></head><body><h3>Isolated IndexedDB capacity test</h3>
+<p class="note">Writes synthetic data to a separate test database, closes and reopens it, verifies every byte, then removes the test data. Run in a separate tab. No slate backups are read or changed.</p>
+<button id="start">Run 512 MiB test</button><button id="clean">Remove interrupted test data</button>
+<pre id="status" role="status" aria-live="polite">Ready. Nothing is allocated until you press Run.</pre>
+<script>
+const DB='simmah-storage-capacity-probe-v1',BYTES=512*1024*1024,CHUNK=1024*1024;
+const send=(type,extra={})=>parent.postMessage({isStreamlitMessage:true,type,...extra},'*');
+const label=document.getElementById('status'),start=document.getElementById('start'),clean=document.getElementById('clean');
+function status(text){label.textContent=text;send('streamlit:setFrameHeight',{height:Math.max(280,document.body.scrollHeight+20)})}
+const tick=()=>new Promise(r=>setTimeout(r,0));
+const request=r=>new Promise((resolve,reject)=>{r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});
+const complete=t=>new Promise((resolve,reject)=>{t.oncomplete=resolve;t.onabort=()=>reject(t.error||new Error('Transaction aborted'));t.onerror=()=>reject(t.error)});
+function open(){return new Promise((resolve,reject)=>{const r=indexedDB.open(DB,1);r.onupgradeneeded=()=>r.result.createObjectStore('synthetic');r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)})}
+function remove(){return new Promise((resolve,reject)=>{const r=indexedDB.deleteDatabase(DB);r.onsuccess=resolve;r.onerror=()=>reject(r.error);r.onblocked=()=>reject(new Error('Test database is open in another tab; close that test tab before cleanup'))})}
+clean.onclick=async()=>{try{await remove();status('Interrupted test data removed. Slate backups were not accessed.')}catch(e){status(e.name+': '+e.message)}};
+start.onclick=async()=>{
+ start.disabled=true;clean.disabled=true;let db,raw,restored;const started=performance.now();let report={schema:1,requested_bytes:BYTES,origin:location.origin,user_agent:navigator.userAgent,started_at:new Date().toISOString(),passed:false};
+ try{
+  report.storage_before=navigator.storage?.estimate?await navigator.storage.estimate():null;
+  await remove();status('Allocating and filling 512 MiB synthetic ArrayBuffer…');raw=new ArrayBuffer(BYTES);
+  for(let offset=0;offset<BYTES;offset+=CHUNK){new Uint8Array(raw,offset,CHUNK).fill(((offset/CHUNK)*31+17)&255);if(offset%(16*CHUNK)===0){status('Filling synthetic bytes: '+Math.round(100*offset/BYTES)+'%');await tick()}}
+  db=await open();status('Writing synthetic ArrayBuffer to IndexedDB…');let tx=db.transaction('synthetic','readwrite'),done=complete(tx);tx.objectStore('synthetic').put(raw,'payload');await done;raw=null;
+  db.close();db=null;await tick();db=await open();status('Reading after database close/reopen…');tx=db.transaction('synthetic','readonly');restored=await request(tx.objectStore('synthetic').get('payload'));
+  if(!(restored instanceof ArrayBuffer)||restored.byteLength!==BYTES)throw new Error('Restored size or type mismatch');
+  for(let offset=0;offset<BYTES;offset+=CHUNK){const byte=((offset/CHUNK)*31+17)&255,word=(byte*0x01010101)>>>0,view=new Uint32Array(restored,offset,CHUNK/4);for(let i=0;i<view.length;i++)if(view[i]!==word)throw new Error('Byte verification failed at '+(offset+i*4));if(offset%(16*CHUNK)===0){status('Verifying restored bytes: '+Math.round(100*offset/BYTES)+'%');await tick()}}
+  report.storage_after=navigator.storage?.estimate?await navigator.storage.estimate():null;report.verified_bytes=BYTES;report.database_reopened=true;report.passed=true;
+ }catch(e){report.error_name=e.name;report.error=e.message}
+ finally{
+  raw=null;restored=null;if(db)db.close();
+  try{await remove();report.test_data_removed=true}catch(e){report.test_data_removed=false;report.cleanup_error=e.message}
+  report.elapsed_seconds=(performance.now()-started)/1000;start.disabled=false;clean.disabled=false;
+  status((report.passed?'PASS — all 536,870,912 bytes survived write/read/reopen.':'FAIL — '+report.error_name+': '+report.error)+'\n'+JSON.stringify(report,null,2));
+  send('streamlit:setComponentValue',{value:report,dataType:'json'});
+ }
+};
+send('streamlit:componentReady',{apiVersion:1});send('streamlit:setFrameHeight',{height:300});
+</script></body></html>
