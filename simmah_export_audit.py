@@ -31,6 +31,8 @@ def _rows(value):
     entries=[];end=len(rows)
     for i,row in enumerate(rows[1:],1):
         if not row or not row[0].strip():
+            if row and len(row)>contest and row[contest].strip():
+                raise ValueError('Reserved entry has a blank Entry ID')
             end=i;break
         if len(row)<=max(entry,contest) or not re.fullmatch(r'[1-9]\d*',row[entry].strip()):
             raise ValueError('Entry ID must be an exact positive integer string')
@@ -79,6 +81,8 @@ def verify_entry_export(original_csv, exported_csv, players, site, mode,
     actual={r[entry].strip():r for r in after}
     if not wanted or set(actual)!=set(wanted):
         raise ValueError('Export dropped or introduced scoped Entry IDs')
+    if expected_assignments is not None and set(expected_assignments)!=set(wanted):
+        raise ValueError('Expected assignments do not cover exactly the scoped entries')
     if single:
         aliases=([{'cpt'},{'flex'},{'flex'},{'flex'},{'flex'},{'flex'}] if site=='DraftKings' else
                  [{'mvp','mvp - 1.5x points'},{'anyflex','flex'},{'anyflex','flex'},{'anyflex','flex'},{'anyflex','flex'},{'anyflex','flex'}])
