@@ -51,9 +51,35 @@ failure, including cleanup and isolation from a real-backup sentinel. These are
 unit fixtures, not evidence of a live 512 MiB browser pass. The route also passes
 Streamlit AppTest without initializing active-slate state.
 
-At initial publication, the live site was still serving its previous app script;
-the actual 512 MiB browser run therefore remained unverified. Do not reboot a
-user's active workspace merely to force this diagnostic deployment.
+After the owner's reboot, probe version `storage-probe-v2-latency` was visibly
+available on the deployed app and the real cloud Chrome browser run completed:
+
+| Metric | Measured result |
+|---|---:|
+| Logical buffer verified after database close/reopen | 536,870,912 bytes |
+| Write | 0.5872 seconds |
+| Read | 0.7606 seconds |
+| Verification | 0.2504 seconds |
+| Total | 1.9343 seconds |
+| Maximum timer-based event-loop delay | 712.6 ms |
+| Maximum observed long task | 753 ms |
+| Observed stall over three seconds | No |
+| Synthetic test data removed | Yes |
+
+No quota exception occurred. The result applies to the dedicated cloud Chrome
+browser, not the user's Windows browser or Safari. A sub-second pause was measured;
+this is not zero-lag operation. See `benchmarks/workspace-browser-capacity.json`.
+
+The synthetic per-chunk constant pattern is highly compressible. IndexedDB's
+reported usage rose only to approximately 24 MiB, so this verifies a 512 MiB
+logical ArrayBuffer round trip but does not prove sufficient physical quota for
+an incompressible 512 MiB ZIP. An incompressible payload is needed for that claim.
+The timing/usage estimates also do not prove durable storage across a browser
+process crash or storage eviction.
+
+This browser run sends only its small telemetry report to Streamlit; it does not
+perform the heavy ZIP restore in the Cloud container. That host-memory test
+remains unverified. Do not reboot an active workspace merely to rerun a diagnostic.
 
 ## Near-limit ZIP/server recovery
 
@@ -131,6 +157,6 @@ python scripts/audit_saved_entry_exports.py \
   --output docs/benchmarks/export-acceptance-2026-10-26.json
 ```
 
-Remaining gates are live browser capacity on the deployed diagnostic, a complete
-ZIP/slate reboot recovery in Streamlit Cloud under actual resource limits, final
-site upload acceptance, and independent confirmation of the FD payout ladder.
+Remaining gates are incompressible browser quota testing, a complete ZIP/slate
+reboot recovery in Streamlit Cloud under actual resource limits, final site
+upload acceptance, and independent confirmation of the FD payout ladder.
