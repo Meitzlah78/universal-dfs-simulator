@@ -22,6 +22,13 @@ def template():
     f=io.StringIO();csv.writer(f).writerows(rows);return f.getvalue().encode()
 
 class DraftKingsNBATests(unittest.TestCase):
+    def test_late_swap_recovers_missing_clocks_from_original_upload(self):
+        from simmah_nba_late_swap import restore_late_swap_clocks,locked_players
+        current=self.pool.copy();current['Game Start']=None
+        restored=restore_late_swap_clocks(current,self.data)
+        self.assertEqual(restored['Game Start'].tolist(),self.pool['Game Start'].tolist())
+        self.assertTrue(current['Game Start'].isna().all())
+        self.assertTrue(locked_players(restored,pd.Timestamp('2026-10-22T00:00:00Z')).all())
     def test_started_game_entries_use_existing_slate_context(self):
         from simmah_nba_late_swap import entry_rows
         data=template().replace(b'PHI@NYK 10/20/2026 07:00PM ET',b'In Progress')

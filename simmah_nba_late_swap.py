@@ -169,7 +169,21 @@ def revalidate_current_locks(pool,result,now=None):
     return updated
 
 
-def render_late_swap(st,pool,contest_id,salary_min,diversity,markets=None,contest=None):
+def restore_late_swap_clocks(pool, original_template=None, saved_pool=None):
+    """Recover missing clocks from this slate's original upload or saved build."""
+    from simmah_nba_game_context import restore_saved_game_metadata
+    sources=[]
+    if original_template is not None:
+        try:sources.append(read_template(original_template)['players'])
+        except ValueError:pass
+    if saved_pool is not None:sources.append(saved_pool)
+    for source in sources:
+        day=source.attrs.get('slate_date') or pool.attrs.get('slate_date')
+        if day:pool=restore_saved_game_metadata(pool,source,day)
+    return pool
+
+
+def render_late_swap(st,pool,contest_id,salary_min,diversity,markets=None,contest=None,original_template=None):
     rules=rules_for(pool);platform=rules['platform']
     with st.expander('NBA LATE SWAP — fast',expanded=False):
         from simmah_nba_swap_recovery import before_swap_csv
@@ -198,6 +212,9 @@ def render_late_swap(st,pool,contest_id,salary_min,diversity,markets=None,contes
         upload=workspace_file_uploader(st,'Current '+platform+' NBA entries',type=['csv'],key='nba_late_swap_upload')
         if upload is None:return
         try:
+            saved_build=st.session_state.get('nba_build_result')
+            pool=restore_late_swap_clocks(pool,original_template,
+                saved_build.get('pool') if saved_build else None)
             data=upload.getvalue();entry_rows(data,contest_id,pool)
             locked=locked_players(pool)
             st.caption(f'{int(locked.sum())} slate players locked by scheduled tipoff. Refresh projections for latest injury and starting-lineup news.')

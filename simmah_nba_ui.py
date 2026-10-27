@@ -225,7 +225,7 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
                 st.error(f'NBA build stopped: {exc}')
     with tabs[3]:
         from simmah_nba_late_swap import render_late_swap
-        render_late_swap(st,pool,cid,salary_min,diversity,markets=markets,contest=contest)
+        render_late_swap(st,pool,cid,salary_min,diversity,markets=markets,contest=contest,original_template=upload.getvalue())
     if not saved:
         with tabs[2]:st.info('Ready to build when the contest, projections, rotations and market lines are complete.')
         with tabs[3]:st.info('Your NBA portfolio will appear here after BUILD NBA LINEUPS.')
