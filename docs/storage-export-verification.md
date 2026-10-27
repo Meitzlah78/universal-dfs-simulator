@@ -32,7 +32,10 @@ for this diagnostic. Pressing **Run 512 MiB test**:
 2. Commits it to IndexedDB database `simmah-storage-capacity-probe-v1` in one
    transaction, releases the original reference, closes and reopens the database.
 3. Reads the stored buffer, verifies exact size/type and every byte, and records
-   elapsed time, origin, user agent and available quota estimates.
+   phase timings, event-loop delay, available browser long-task measurements,
+   origin, user agent and quota estimates. It flags observed stalls over three
+   seconds; timer/long-task measurements are diagnostic proxies, not a guarantee
+   of smooth rendering.
 4. Removes the synthetic database in success and failure paths. An explicit
    cleanup button handles interrupted probes. It never opens or deletes the real
    `simmah-workspace-backups-v1` database.

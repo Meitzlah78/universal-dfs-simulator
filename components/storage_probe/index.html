@@ -16,20 +16,27 @@ function open(){return new Promise((resolve,reject)=>{const r=indexedDB.open(DB,
 function remove(){return new Promise((resolve,reject)=>{const r=indexedDB.deleteDatabase(DB);r.onsuccess=resolve;r.onerror=()=>reject(r.error);r.onblocked=()=>reject(new Error('Test database is open in another tab; close that test tab before cleanup'))})}
 clean.onclick=async()=>{try{await remove();status('Interrupted test data removed. Slate backups were not accessed.')}catch(e){status(e.name+': '+e.message)}};
 start.onclick=async()=>{
- start.disabled=true;clean.disabled=true;let db,raw,restored;const started=performance.now();let report={schema:1,requested_bytes:BYTES,origin:location.origin,user_agent:navigator.userAgent,started_at:new Date().toISOString(),passed:false};
+ start.disabled=true;clean.disabled=true;let db,raw,restored,observer;const started=performance.now();let lastTick=started,maxDelay=0,maxLongTask=0;
+ const captureLag=()=>{const now=performance.now();maxDelay=Math.max(maxDelay,now-lastTick-100);lastTick=now};const heartbeat=setInterval(captureLag,100);
+ const captureTasks=entries=>{for(const entry of entries)maxLongTask=Math.max(maxLongTask,entry.duration)};
+ if(typeof PerformanceObserver!=='undefined'&&PerformanceObserver.supportedEntryTypes?.includes('longtask')){try{observer=new PerformanceObserver(list=>captureTasks(list.getEntries()));observer.observe({entryTypes:['longtask']})}catch(e){observer=null}}
+ let phase=started;let report={schema:1,probe_version:'storage-probe-v2-latency',requested_bytes:BYTES,origin:location.origin,user_agent:navigator.userAgent,started_at:new Date().toISOString(),passed:false};
  try{
   report.storage_before=navigator.storage?.estimate?await navigator.storage.estimate():null;
   await remove();status('Allocating and filling 512 MiB synthetic ArrayBuffer…');raw=new ArrayBuffer(BYTES);
   for(let offset=0;offset<BYTES;offset+=CHUNK){new Uint8Array(raw,offset,CHUNK).fill(((offset/CHUNK)*31+17)&255);if(offset%(16*CHUNK)===0){status('Filling synthetic bytes: '+Math.round(100*offset/BYTES)+'%');await tick()}}
-  db=await open();status('Writing synthetic ArrayBuffer to IndexedDB…');let tx=db.transaction('synthetic','readwrite'),done=complete(tx);tx.objectStore('synthetic').put(raw,'payload');await done;raw=null;
-  db.close();db=null;await tick();db=await open();status('Reading after database close/reopen…');tx=db.transaction('synthetic','readonly');restored=await request(tx.objectStore('synthetic').get('payload'));
+  report.fill_seconds=(performance.now()-phase)/1000;db=await open();phase=performance.now();status('Writing synthetic ArrayBuffer to IndexedDB…');let tx=db.transaction('synthetic','readwrite'),done=complete(tx);tx.objectStore('synthetic').put(raw,'payload');await done;report.write_seconds=(performance.now()-phase)/1000;raw=null;
+  db.close();db=null;await tick();db=await open();phase=performance.now();status('Reading after database close/reopen…');tx=db.transaction('synthetic','readonly');restored=await request(tx.objectStore('synthetic').get('payload'));
+  report.read_seconds=(performance.now()-phase)/1000;phase=performance.now();
   if(!(restored instanceof ArrayBuffer)||restored.byteLength!==BYTES)throw new Error('Restored size or type mismatch');
   for(let offset=0;offset<BYTES;offset+=CHUNK){const byte=((offset/CHUNK)*31+17)&255,word=(byte*0x01010101)>>>0,view=new Uint32Array(restored,offset,CHUNK/4);for(let i=0;i<view.length;i++)if(view[i]!==word)throw new Error('Byte verification failed at '+(offset+i*4));if(offset%(16*CHUNK)===0){status('Verifying restored bytes: '+Math.round(100*offset/BYTES)+'%');await tick()}}
-  report.storage_after=navigator.storage?.estimate?await navigator.storage.estimate():null;report.verified_bytes=BYTES;report.database_reopened=true;report.passed=true;
+  report.verification_seconds=(performance.now()-phase)/1000;report.storage_after=navigator.storage?.estimate?await navigator.storage.estimate():null;report.verified_bytes=BYTES;report.database_reopened=true;report.passed=true;
  }catch(e){report.error_name=e.name;report.error=e.message}
  finally{
   raw=null;restored=null;if(db)db.close();
   try{await remove();report.test_data_removed=true}catch(e){report.test_data_removed=false;report.cleanup_error=e.message}
+  captureLag();clearInterval(heartbeat);if(observer){captureTasks(observer.takeRecords());observer.disconnect()}
+  report.max_event_loop_delay_ms=Math.max(0,maxDelay);report.max_observed_long_task_ms=observer?maxLongTask:null;report.event_loop_stall_over_3s=maxDelay>3000||maxLongTask>3000;
   report.elapsed_seconds=(performance.now()-started)/1000;start.disabled=false;clean.disabled=false;
   status((report.passed?'PASS — all 536,870,912 bytes survived write/read/reopen.':'FAIL — '+report.error_name+': '+report.error)+'\n'+JSON.stringify(report,null,2));
   send('streamlit:setComponentValue',{value:report,dataType:'json'});
