@@ -23,10 +23,13 @@ Superseded host revisions are removed only after the new browser commit is
 acknowledged. Unchanged checkpoints reuse their file instead of growing storage.
 
 After a host filesystem wipe, recovery uploads the verified browser copy in
-acknowledged 1,000,000-character parts before restoring app widgets. These reruns
+acknowledged parts of at most 750,000 binary bytes (1,000,000 base64 characters) before restoring app widgets. These reruns
 happen during recovery only. Normal autosaves use a polling fragment and never
-stop or rerun the main model/page. Archives are limited to 180 MiB so the full
-base64 recovery fits within the existing 256-part transport bound. Oversized or
+stop or rerun the main model/page. Archives support up to 512 MiB. Recovery encodes only the current part in the
+browser and writes each decoded part to a temporary server file, rather than
+building a second, archive-sized base64 string on either side. Final size, hash,
+and payload validation complete before atomic installation or widget restoration.
+The legacy slate transport retains its separate 256-part bound. Oversized or
 unsupported saves produce an explicit error. The previous confirmed copy remains
 intact. Save errors offer a download of the last host backup; an empty workspace
 or save error also exposes a recovery ZIP importer.

@@ -85,3 +85,41 @@ class PersistenceTest(unittest.TestCase):
         args=persistence.args_for(state)
         self.assertLess(len(json.dumps(args)),1000)
         self.assertNotIn('outcomes',json.dumps(args));self.assertNotIn('data',args['records'][0])
+
+    def test_binary_recovery_spools_over_256_parts_and_restores_only_after_verification(self):
+        raw=backup.pack(self.payload())
+        chunk=max(1,len(raw)//270)
+        ref=dict(token='b'*32,digest=backup.digest(raw),bytes=len(raw),id='dk')
+        state={'_slate_backup_owner':'a'*32,'_slate_backup_restore':ref}
+        with tempfile.TemporaryDirectory() as folder,patch.multiple(backup,ROOT=Path(folder)/'cache'),patch.object(persistence,'RECOVERY_CHUNK_BYTES',chunk):
+            parts=[raw[i:i+chunk] for i in range(0,len(raw),chunk)]
+            self.assertGreater(len(parts),256)
+            for i,data in enumerate(parts):
+                packet=dict(id='binary',index=i,total=len(parts),data=base64.b64encode(data).decode())
+                persistence.receive_backup_part(state,packet)
+                if i<len(parts)-1:
+                    self.assertNotIn('_slate_pending',state)
+                    self.assertFalse(backup.path_for('a'*32,ref['token']).exists())
+                    self.assertNotIn('parts',state['_slate_backup_transfer'])
+                    persistence.receive_backup_part(state,packet)  # Duplicate ACK retry is idempotent.
+            persistence.receive_backup_part(state,packet)  # Late final frame is harmless.
+            self.assertEqual(state['_slate_pending']['id'],'dk')
+            np.testing.assert_array_equal(state['_slate_pending']['_session_checkpoint']['values']['outcomes'],self.payload()['checkpoint']['values']['outcomes'])
+            self.assertEqual(backup.path_for('a'*32,ref['token']).read_bytes(),raw)
+
+    def test_binary_recovery_rejects_corruption_and_order_without_replacing_backup(self):
+        raw=backup.pack(dict(record=dict(id='dk'),checkpoint=dict(values=dict(salary=49000))))
+        ref=dict(token='b'*32,digest='0'*64,bytes=len(raw),id='dk')
+        state={'_slate_backup_owner':'a'*32,'_slate_backup_restore':ref}
+        with tempfile.TemporaryDirectory() as folder,patch.object(backup,'ROOT',Path(folder)),patch.object(persistence,'RECOVERY_CHUNK_BYTES',len(raw)):
+            path=backup.path_for('a'*32,ref['token']);path.parent.mkdir(parents=True);path.write_bytes(b'previous')
+            with self.assertRaisesRegex(ValueError,'verification'):
+                persistence.receive_backup_part(state,dict(id='binary',index=0,total=1,data=base64.b64encode(raw).decode()))
+            self.assertEqual(path.read_bytes(),b'previous')
+            self.assertNotIn('_slate_pending',state)
+            with patch.object(persistence,'RECOVERY_CHUNK_BYTES',1):
+                with self.assertRaisesRegex(ValueError,'out of order'):
+                    persistence.receive_backup_part(state,dict(id='binary',index=1,total=len(raw),data=base64.b64encode(raw[1:2]).decode()))
+        state={'_slate_backup_restore':dict(ref,bytes=backup.MAX_BYTES+1)}
+        with self.assertRaisesRegex(ValueError,'reference'):
+            persistence.receive_backup_part(state,dict(id='bad',index=0,total=1,data=''))

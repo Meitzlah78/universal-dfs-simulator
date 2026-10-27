@@ -1,10 +1,12 @@
 """Browser-confirmed autosaves; large backups bypass Streamlit's WebSocket."""
 import base64
+import hashlib
+import os
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from simmah_workspace_backup import pack, unpack, digest, write_backup, load_backup, path_for, stage_backup, unstage_backup
+from simmah_workspace_backup import pack, unpack, digest, write_backup, load_backup, path_for, stage_backup, unstage_backup, MAX_BYTES, RECOVERY_CHUNK_BYTES
 
 _POOL = ThreadPoolExecutor(max_workers=2, thread_name_prefix='workspace-backup')
 KEY = '_slate_backup_browser'
@@ -23,6 +25,59 @@ def apply_payload(state, payload):
     row['_session_checkpoint'] = payload['checkpoint']
     state.setdefault('_slate_records', {})[row['id']] = row
     state['_slate_pending'] = row
+
+
+def receive_backup_part(state, part):
+    """Decode only one bounded frame; spool a verified archive to disk before restore."""
+    if state.get('_slate_backup_restored') and part.get('id') == state['_slate_backup_restored']:
+        return
+    ref = state.get('_slate_backup_restore')
+    if not ref or type(ref.get('bytes')) is not int or not 0 < ref['bytes'] <= MAX_BYTES:
+        raise ValueError('Invalid backup recovery reference')
+    ident, index, total, data = (part.get(k) for k in ('id', 'index', 'total', 'data'))
+    expected = (ref['bytes'] + RECOVERY_CHUNK_BYTES - 1) // RECOVERY_CHUNK_BYTES
+    if (not isinstance(ident, str) or not 1 <= len(ident) <= 128
+            or type(index) is not int or type(total) is not int or total != expected
+            or not 0 <= index < total or not isinstance(data, str) or len(data) > 1000000):
+        raise ValueError('Invalid backup recovery part')
+    decoded = base64.b64decode(data, validate=True)
+    size = min(RECOVERY_CHUNK_BYTES, ref['bytes'] - index * RECOVERY_CHUNK_BYTES)
+    if len(decoded) != size:
+        raise ValueError('Incomplete backup recovery part')
+    path = path_for(state['_slate_backup_owner'], ref['token'])
+    temporary = path.with_suffix('.restore')
+    transfer = state.get('_slate_backup_transfer')
+    if not transfer or transfer['id'] != ident or transfer['token'] != ref['token']:
+        if index != 0:
+            raise ValueError('Backup recovery interrupted; retry from the first part')
+        path.parent.mkdir(parents=True, exist_ok=True)
+        temporary.write_bytes(b'')
+        transfer = dict(id=ident, token=ref['token'], index=0)
+        state['_slate_backup_transfer'] = transfer
+    if index > transfer['index']:
+        raise ValueError('Backup recovery parts arrived out of order')
+    if index == transfer['index']:
+        with temporary.open('r+b') as stream:
+            stream.seek(index * RECOVERY_CHUNK_BYTES)
+            stream.write(decoded)
+        if index == total - 1:
+            with temporary.open('rb') as stream:
+                actual = hashlib.file_digest(stream, 'sha256').hexdigest()
+            if temporary.stat().st_size != ref['bytes'] or actual != ref['digest']:
+                raise ValueError('Restored backup failed verification')
+            payload = unpack(temporary.read_bytes())
+            if not all(k in payload['record'] for k in ('id', 'name', 'data')):
+                raise ValueError('Backup is missing the original slate upload')
+            if payload['record']['id'] != ref['id']:
+                raise ValueError('Restored slate does not match the requested backup')
+            os.replace(temporary, path)
+            apply_payload(state, payload)
+            state.pop('_slate_backup_restore', None)
+            state.pop('_slate_backup_transfer', None)
+            state['_slate_backup_restored'] = ident
+        else:
+            transfer['index'] += 1
+    state['_slate_backup_ack'] = dict(id=ident, index=index)
 
 
 def consume(st):
@@ -60,6 +115,8 @@ def consume(st):
                 if old['token'] != ref['token']:
                     path_for(state['_slate_backup_owner'], old['token']).unlink(missing_ok=True)
                     unstage_backup(state['_slate_backup_owner'], old['token'])
+    if event.get('backup_part'):
+        receive_backup_part(state, event['backup_part'])
     part = event.get('upload_part')
     if part:
         from simmah_slate_transport import receive_upload
@@ -85,7 +142,8 @@ def args_for(state):
     records = state.get('_slate_records', {})
     active = state.get('_slate_active') or {}
     refs = state.get('_slate_backup_refs', {})
-    return dict(generation=state['_slate_generation'], ready=bool(state.get('_slate_backup_booted')),
+    return dict(max_backup_bytes=MAX_BYTES, recovery_chunk_bytes=RECOVERY_CHUNK_BYTES,
+        generation=state['_slate_generation'], ready=bool(state.get('_slate_backup_booted')),
         owner=state.get('_slate_backup_owner'), active=active.get('id'),
         records=[dict(id=r['id'],name=r['name'],title=r.get('title',r['name'])) for r in records.values()],
         backups=[{**ref, 'id':sid, 'name':records[sid]['name'], 'title':records[sid].get('title',records[sid]['name']),
@@ -189,7 +247,7 @@ def render(st, host):
     def status():
         state = st.session_state
         event = state.get(KEY) or {}
-        if isinstance(event,dict) and (event.get('boot') or event.get('upload_part')) and event.get('event') != state.get('_slate_backup_event'):
+        if isinstance(event,dict) and (event.get('boot') or event.get('upload_part') or event.get('backup_part')) and event.get('event') != state.get('_slate_backup_event'):
             st.rerun(scope='app')
         consume(st)
         advance(state)

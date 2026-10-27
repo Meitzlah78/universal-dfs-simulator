@@ -17,7 +17,8 @@ import pandas as pd
 
 ROOT = Path(__file__).parent / 'data' / 'workspace_recovery'
 STAGING = Path(__file__).parent / 'static' / 'workspace_backups'
-MAX_BYTES = 180 * 1024 * 1024
+MAX_BYTES = 512 * 1024 * 1024
+RECOVERY_CHUNK_BYTES = 750000
 MAX_EXPANDED = 1024 * 1024 * 1024
 
 
@@ -68,13 +69,15 @@ def pack(payload):
         raise TypeError('Unsupported workspace value: '+type(value).__name__)
     tree=enc(payload)
     manifest=json.dumps(dict(schema=1,payload=tree),separators=(',',':'),allow_nan=False).encode()
+    if len(manifest) + sum(map(len, files.values())) > MAX_EXPANDED:
+        raise ValueError('Workspace expands beyond the supported limit')
     out=io.BytesIO()
     with zipfile.ZipFile(out,'w',compression=zipfile.ZIP_DEFLATED,compresslevel=1) as bundle:
         for name,raw in [('manifest.json',manifest),*sorted(files.items())]:
             info=zipfile.ZipInfo(name,date_time=(1980,1,1,0,0,0));info.compress_type=zipfile.ZIP_DEFLATED
             bundle.writestr(info,raw,compresslevel=1)
     raw=out.getvalue()
-    if len(raw)>MAX_BYTES: raise ValueError('Workspace exceeds the 180 MiB backup limit')
+    if len(raw)>MAX_BYTES: raise ValueError(f'Workspace exceeds the {MAX_BYTES // (1024 * 1024)} MiB backup limit')
     return raw
 
 
