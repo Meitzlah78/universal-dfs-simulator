@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "probe_version": "storage-probe-v3-random",
+  "payload_kind": "crypto-random",
+  "requested_bytes": 536870912,
+  "origin": "https://universal-dfs-simulator-7bhlq8fvkrzkvfdfsokhan.streamlit.app",
+  "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+  "started_at": "2026-10-27T16:30:36.233Z",
+  "passed": true,
+  "storage_before": {
+    "quota": 10737418240,
+    "usage": 0,
+    "usageDetails": {}
+  },
+  "fill_seconds": 1.4956999999999534,
+  "write_seconds": 1.876600000000093,
+  "read_seconds": 0.7529000000000233,
+  "verification_seconds": 0.9266999999999534,
+  "storage_after": {
+    "quota": 11274291464,
+    "usage": 536873224,
+    "usageDetails": {
+      "indexedDB": 536873224
+    }
+  },
+  "original_chunk_hash_wall_seconds": 0.9053999999987423,
+  "restored_chunk_hash_wall_seconds": 0.7719999999998828,
+  "sha256_chunks_verified": 512,
+  "estimated_usage_delta_bytes": 536873224,
+  "verified_bytes": 536870912,
+  "database_reopened": true,
+  "test_data_removed": true,
+  "max_event_loop_delay_ms": 558.1000000000931,
+  "max_observed_long_task_ms": 646,
+  "event_loop_stall_over_3s": false,
+  "elapsed_seconds": 5.119699999999954
+}

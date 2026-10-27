@@ -270,3 +270,34 @@ process RSS/VMS/USS availability and temporary disk. It never starts a worker,
 allocates the synthetic archive, or enables the private heavy-test flag. A passed
 parent preflight does not establish worker process visibility or a successful
 restore. The private QA deployment remains required for the full test.
+
+
+## Live v3 results and recovery transfer improvement — October 27
+
+The live `storage-entry-v3-20261027` route was observed directly. The randomized
+512 MiB browser round trip passed, reopening the database and verifying all
+512 SHA-256 chunks. Synthetic storage was removed. Raw telemetry is in
+`benchmarks/workspace-browser-random-cloud.json`. Total duration was 5.1197 s;
+write 1.8766 s, read 0.7529 s, original hashing 0.9054 s and restored hashing
+0.7720 s (1.6774 s combined async wall time, not pure CPU). Maximum observed
+event-loop delay was 558.1 ms, longest task 646 ms; no >3 s flag or quota error.
+The origin storage usage estimate increased by 536,873,224 bytes. This is
+evidence for this Chrome profile, not every browser or server ZIP recovery.
+
+The read-only Cloud preflight reports working RSS/VMS/USS/peak RSS visibility,
+but fails the memory-headroom gate: 3 GiB container limit, 959,012,864 bytes
+available vs 4,823,449,600 required for the full generation/pack/restore benchmark.
+No heavy worker ran and worker visibility remains unverified. See
+`benchmarks/workspace-host-preflight-cloud.json`.
+
+Recovery previously sent 750,000 decoded bytes per acknowledged app rerun.
+It now negotiates 6,000,000 decoded bytes (8,000,000 base64 characters, below
+the observed 25,000,000-byte socket ceiling). A maximum 512 MiB archive takes
+90 frames instead of 716. This reduces round trips, not archive fidelity or
+integrity checks; the archive schema and existing browser backups are unchanged.
+Actual end-to-end speed on a user's saved workspace has not been measured.
+
+Validation: eight persistence tests passed, including incompressible 13 MB
+recovery with exact bytes across three frames and no early application of the
+checkpoint. Browser component tests passed 22 MB/four-frame recovery, iframe
+remounts, save failures, and retained closed-slate backups.

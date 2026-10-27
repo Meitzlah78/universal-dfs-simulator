@@ -107,6 +107,26 @@ class PersistenceTest(unittest.TestCase):
             np.testing.assert_array_equal(state['_slate_pending']['_session_checkpoint']['values']['outcomes'],self.payload()['checkpoint']['values']['outcomes'])
             self.assertEqual(backup.path_for('a'*32,ref['token']).read_bytes(),raw)
 
+    def test_large_frames_recover_exact_random_bytes_below_socket_limit(self):
+        # Incompressible input exercises full negotiated frames, including the tail.
+        data=np.random.default_rng(83).bytes(13_000_000)
+        raw=backup.pack(dict(record=dict(id='dk',name='dk.csv',data='original'),
+            checkpoint=dict(values=dict(random=data))))
+        ref=dict(token='b'*32,digest=backup.digest(raw),bytes=len(raw),id='dk')
+        state={'_slate_backup_owner':'a'*32,'_slate_backup_restore':ref}
+        chunk=backup.RECOVERY_CHUNK_BYTES
+        parts=[raw[i:i+chunk] for i in range(0,len(raw),chunk)]
+        self.assertEqual(len(parts),3)
+        with tempfile.TemporaryDirectory() as folder,patch.object(backup,'ROOT',Path(folder)):
+            for i,part in enumerate(parts):
+                packet=dict(id='large',index=i,total=len(parts),data=base64.b64encode(part).decode())
+                self.assertLess(len(json.dumps(packet)),25_000_000)
+                persistence.receive_backup_part(state,packet)
+                if i<len(parts)-1:
+                    self.assertNotIn('_slate_pending',state)
+            self.assertEqual(state['_slate_pending']['_session_checkpoint']['values']['random'],data)
+            self.assertEqual(backup.path_for('a'*32,ref['token']).read_bytes(),raw)
+
     def test_binary_recovery_rejects_corruption_and_order_without_replacing_backup(self):
         raw=backup.pack(dict(record=dict(id='dk'),checkpoint=dict(values=dict(salary=49000))))
         ref=dict(token='b'*32,digest='0'*64,bytes=len(raw),id='dk')

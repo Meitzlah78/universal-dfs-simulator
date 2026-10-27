@@ -38,7 +38,8 @@ def receive_backup_part(state, part):
     expected = (ref['bytes'] + RECOVERY_CHUNK_BYTES - 1) // RECOVERY_CHUNK_BYTES
     if (not isinstance(ident, str) or not 1 <= len(ident) <= 128
             or type(index) is not int or type(total) is not int or total != expected
-            or not 0 <= index < total or not isinstance(data, str) or len(data) > 1000000):
+            or not 0 <= index < total or not isinstance(data, str)
+            or len(data) > 4 * ((RECOVERY_CHUNK_BYTES + 2) // 3)):
         raise ValueError('Invalid backup recovery part')
     decoded = base64.b64decode(data, validate=True)
     size = min(RECOVERY_CHUNK_BYTES, ref['bytes'] - index * RECOVERY_CHUNK_BYTES)

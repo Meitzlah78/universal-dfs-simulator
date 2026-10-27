@@ -18,7 +18,9 @@ import pandas as pd
 ROOT = Path(__file__).parent / 'data' / 'workspace_recovery'
 STAGING = Path(__file__).parent / 'static' / 'workspace_backups'
 MAX_BYTES = 512 * 1024 * 1024
-RECOVERY_CHUNK_BYTES = 750000
+# Each encoded recovery frame is 8 MB, below the observed 25 MB socket limit.
+# Larger frames avoid hundreds of app reruns after a host reboot.
+RECOVERY_CHUNK_BYTES = 6000000
 MAX_EXPANDED = 1024 * 1024 * 1024
 
 
