@@ -1,0 +1,133 @@
+{
+  "schema": 1,
+  "development_only": true,
+  "contest_id": "135830-281254012",
+  "format": "FanDuel Single Game",
+  "package_sha256": "4bbbba71e7ea66c767ee82050b2d62ee2bb78f22ee7bedd97bb618d5974fad33",
+  "standings_sha256": "2252337b0fd94b420720c09eacf45634afd8c2f83afd0c20634d96dff17f6a6e",
+  "total_entries": 139605,
+  "excluded_user_entries": 60,
+  "unparsed_or_empty_opponents": 1040,
+  "captured_build_minimum_salary": 50000.0,
+  "actual_below_captured_build_minimum_entries": 708,
+  "actual_above_site_cap_entries": 0,
+  "actual_unknown_salary_entries": 5982,
+  "complete_scored_opponents": 138505,
+  "distinct_opponent_lineups": 16435,
+  "maximum_lineup_copies": 3230,
+  "occupied_duplicate_bands": 6,
+  "duplicate_bands": [
+    {
+      "band": "1",
+      "unique_lineups": 8267,
+      "entries": 8267,
+      "entry_fraction": 0.05968737590700697
+    },
+    {
+      "band": "2\u20134",
+      "unique_lineups": 4043,
+      "entries": 10727,
+      "entry_fraction": 0.07744846756434785
+    },
+    {
+      "band": "5\u20139",
+      "unique_lineups": 1715,
+      "entries": 11129,
+      "entry_fraction": 0.08035088985957185
+    },
+    {
+      "band": "10\u201324",
+      "unique_lineups": 1430,
+      "entries": 21722,
+      "entry_fraction": 0.1568318833255117
+    },
+    {
+      "band": "25\u201399",
+      "unique_lineups": 796,
+      "entries": 34896,
+      "entry_fraction": 0.25194758311974297
+    },
+    {
+      "band": "100\u2013+",
+      "unique_lineups": 184,
+      "entries": 51764,
+      "entry_fraction": 0.37373380022381864
+    }
+  ],
+  "duplicate_band_exact_minimum_unique_lineups": 13446,
+  "duplicate_band_minimum_expected_unique_at_tolerance": 12464.788588598203,
+  "pair_selection": "top 15 actual overall ownership players; retrospective development only",
+  "support": {
+    "candidate_pool": {
+      "rows": 5000,
+      "unique_lineups": 5000,
+      "all_support_salary_team_legal": true,
+      "observed_chalk_pairs": 105,
+      "pairs_present": 105,
+      "unsupported_positive_pairs": [],
+      "minimum_pair_support_rows": 38,
+      "role_only_linear_feasibility": "infeasible",
+      "unsupported_role_targets": [
+        {
+          "player": "Jaydon Blue (135830-166801)",
+          "role": "flex",
+          "actual_fraction": 0.012541063499512591,
+          "support_min": 0.0,
+          "support_max": 0.0
+        },
+        {
+          "player": "Zach Ertz (135830-29780)",
+          "role": "flex",
+          "actual_fraction": 0.020519114833399802,
+          "support_min": 0.0,
+          "support_max": 0.0
+        }
+      ],
+      "role_and_pair_linear_feasibility": "infeasible",
+      "linear_solver_message": "The problem is infeasible. (HiGHS Status 8: model_status is Infeasible; primal_status is None)",
+      "tolerance_probability": 0.005,
+      "exact_empirical_distinct_count_representable": false,
+      "band_unique_lower_bound_exceeds_support": true,
+      "actual_lineup_entry_coverage": 0.3331648676943071
+    },
+    "frozen_opponent_support": {
+      "rows": 10000,
+      "unique_lineups": 5411,
+      "all_support_salary_team_legal": true,
+      "observed_chalk_pairs": 105,
+      "pairs_present": 105,
+      "unsupported_positive_pairs": [],
+      "minimum_pair_support_rows": 73,
+      "role_only_linear_feasibility": "infeasible",
+      "unsupported_role_targets": [
+        {
+          "player": "Jaydon Blue (135830-166801)",
+          "role": "flex",
+          "actual_fraction": 0.012541063499512591,
+          "support_min": 0.0,
+          "support_max": 0.0
+        },
+        {
+          "player": "Zach Ertz (135830-29780)",
+          "role": "flex",
+          "actual_fraction": 0.020519114833399802,
+          "support_min": 0.0,
+          "support_max": 0.0
+        }
+      ],
+      "role_and_pair_linear_feasibility": "infeasible",
+      "linear_solver_message": "The problem is infeasible. (HiGHS Status 8: model_status is Infeasible; primal_status is None)",
+      "tolerance_probability": 0.005,
+      "exact_empirical_distinct_count_representable": false,
+      "band_unique_lower_bound_exceeds_support": true,
+      "actual_lineup_entry_coverage": 0.6084545684271326
+    }
+  },
+  "fd_payouts_still_provisional": true,
+  "limitations": [
+    "Previously inspected slate, not untouched validation.",
+    "Excluded incomplete opponents are reported separately; preserve them in subsequent payout ranks.",
+    "Pair presence and linear feasibility do not establish nonlinear joint-fit convergence.",
+    "FD finality is not machine-verified: no TimeRemaining column."
+  ]
+}

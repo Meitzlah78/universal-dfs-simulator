@@ -72,3 +72,62 @@ report support coverage, baseline/fit residuals, and equal-N duplicate curves.
 Train/select parameters only on development slates. Freeze before evaluating
 later untouched slates. FD payout-ladder confirmation and platform CSV upload
 acceptance remain independent checks. No claim of improved ROI is established.
+
+## October 26 DAL–PHI historical support preflight
+
+Reproducible adapter: `scripts/preflight_joint_field.py`. Aggregate evidence:
+`benchmarks/joint-field-preflight-dk.json` and
+`benchmarks/joint-field-preflight-fd.json`. Source hashes match the previously
+verified replay inputs. Relevant package members are independently hash-checked.
+This is retrospective development data, not untouched validation.
+
+| Duplicate copies per roster | DK entry fraction | FD entry fraction |
+|---|---:|---:|
+| 1 | 9.90% | 5.97% |
+| 2–4 | 14.13% | 7.74% |
+| 5–9 | 13.64% | 8.04% |
+| 10–24 | 21.60% | 15.68% |
+| 25–99 | 27.59% | 25.19% |
+| 100+ | 13.15% | 37.37% |
+
+All six bands are populated on both sites. Denominators are complete scored
+opponents only: DK 47,051 entries / 9,188 distinct lineups, FD 138,505 / 16,435.
+Own entries (20 DK / 60 FD) and unparsed or empty opponents (491 DK / 1,040 FD)
+are separately reconciled to the full contest row counts. Parsed roster scores
+reconcile to published player points, including the special-role multiplier.
+FD finality remains unverified because its CSV has no TimeRemaining column.
+These concentration diagnostics do not require or verify a payout ladder.
+
+Each 5,000-candidate pool contains all 105 pairs among the 15 most-owned actual
+players. The least-represented pair appears in nine DK candidates and 38 FD
+candidates. Nevertheless, sparse LP feasibility checks on role ownership alone,
+and on role ownership plus those pairs, both fail at ±0.005 probability
+(0.5 percentage points per feature) on both platforms. Presence is not joint
+feasibility. Explicit missing FLEX support:
+
+- DK: Zach Ertz, 2.1551% observed, zero support.
+- FD: Zach Ertz, 2.0519%, and Jaydon Blue, 1.2541%, both zero support.
+
+The existing opponent supports have the same missing-role issue. DK has 10,000
+unique opponent rosters; FD has 5,411. All their top-15 pairs also occur, but their
+role/pair LP checks still fail. No nonlinear joint fit was attempted after these
+necessary conditions failed.
+
+A separate support-size bound follows from the duplicate bands: entry mass in
+a band with at most b copies requires at least mass*N/b expected unique rosters.
+Summing across bands, allowing 0.5 percentage points of error per band, gives
+lower bounds of 7,255.11 DK and 12,464.79 FD expected unique rosters. A support
+with 5,000 rows cannot meet those band tolerances regardless of weighting. At
+least 7,256 DK / 12,465 FD support rows are necessary under that bound, not
+sufficient. Exact empirical entry-count bands imply at least 7,591 / 13,446
+unique rosters. Matching the exact empirical distinct count would require at
+least 9,188 / 16,435, a stronger requirement than the band objective alone.
+
+Candidate support passes captured salary/team checks. Actual salary validation
+is incomplete: some opponent players are absent from the captured build pool
+(1,474 DK / 5,982 FD entries affected). Known-salary entries also include 884 DK
+and 708 FD below the captured own-build salary minimum. These complete scored
+rosters remain in concentration targets; they are not silently discarded to
+make support appear feasible. Broader opponent proposals and explicit modeling
+of players absent from the own-build pool are prerequisites. This does not
+require expanding the user's 5,000-lineup portfolio candidate build.
