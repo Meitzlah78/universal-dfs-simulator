@@ -186,3 +186,31 @@ classifying his entries as inactive-player lineups or playable missing support.
 Aggregate sensitivity evidence is in
 `benchmarks/fd-support-blue-sensitivity.json`. The full-field FD payout ladder
 and platform upload acceptance remain unverified.
+
+
+### Blue availability resolved from official chronology
+
+The prior activation-unverified status is superseded by official transaction
+evidence: Blue was signed to the active roster October 17, waived October 20,
+and signed to the practice squad October 22. The October 26 team elevations
+name Elijah Mitchell and Keyshawn James-Newby, not Blue. Blue is absent from
+the official gamebook roster/participation lists. Together these support the
+assessment that Blue was a practice-squad player not elevated for DAL–PHI.
+This conclusion is not based on his zero fantasy points or absence from the
+standard inactive list, which alone would not establish game eligibility.
+
+Sources and exact URLs: `benchmarks/blue-availability-2026-10-26.json`. Blue
+rosters can therefore be categorized separately from playable-player support
+for this historical development audit, with their full scores retained in
+full-field ranks and ties. This changes the status evidence, not live eligibility
+or opponent generation. Nonlinear duplicate-band convergence remains untested.
+
+Live platform entry review was attempted in the available browser. DraftKings
+and FanDuel both returned Site Unavailable, including one reload each. No
+account entry screens were accessible and no live CSV upload or slot mapping
+was verified. Earlier 20-DK/60-FD historical roster reproduction and offline
+structural export checks remain separate evidence.
+
+Official sources:
+- https://www.philadelphiaeagles.com/team/transactions/
+- https://www.nflgsis.com/2026/REG/07/60284/Gamebook.pdf

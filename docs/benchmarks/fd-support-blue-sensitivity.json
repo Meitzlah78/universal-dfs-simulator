@@ -12,7 +12,7 @@
   ],
   "availability_evidence": {
     "Zach Ertz": "Inactive per user; published FPTS 0.0",
-    "Jaydon Blue": "Activation unverified; salary-reference Position RB, blank injury fields, published FPTS 0.0. Zero points do not prove inactivity."
+    "Jaydon Blue": "Official chronology: active October 17, waived October 20, practice squad October 22; no October 26 elevation, absent from gamebook. Assessed not elevated, not inferred from zero FPTS."
   },
   "complete_scored_opponents": 138505,
   "diagnostic_removed_opponents": 4586,
@@ -28,5 +28,25 @@
   "build_eligibility_changed": false,
   "duplicate_fit_executed": false,
   "fd_payout_ladder_verified": false,
-  "reproducibility": "Call scripts.preflight_joint_field.audit with both names in inactive_players as a hypothetical exclusion experiment ONLY; no claim Blue is inactive. Returned full-field counts remain intact. This report overrides the helper's generic inactive wording for Blue."
+  "reproducibility": "Call scripts.preflight_joint_field.audit with Zach Ertz and Jaydon Blue as excluded names. Full-field counts remain intact. Blue availability assessment is documented in blue-availability-2026-10-26.json.",
+  "availability_evidence_sources": [
+    {
+      "url": "https://www.philadelphiaeagles.com/team/transactions/",
+      "kind": "Official team transaction history",
+      "facts": [
+        "Blue signed to active roster October 17, 2026",
+        "Blue waived from active roster October 20, 2026",
+        "Blue signed to practice squad October 22, 2026",
+        "October 26 elevations name Elijah Mitchell and Keyshawn James-Newby, not Blue"
+      ]
+    },
+    {
+      "url": "https://www.nflgsis.com/2026/REG/07/60284/Gamebook.pdf",
+      "kind": "Official gamebook linked by Eagles game-day page",
+      "facts": [
+        "Dallas at Philadelphia, October 26, 2026",
+        "Blue absent from roster/participation lists and text search"
+      ]
+    }
+  ]
 }

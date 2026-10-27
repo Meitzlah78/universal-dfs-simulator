@@ -1,0 +1,34 @@
+{
+  "schema": 1,
+  "game_date": "2026-10-26",
+  "player": "Jaydon Blue",
+  "assessment": "Practice squad, not elevated for this game",
+  "assessment_type": "Inference from official transaction chronology corroborated by gamebook absence; not inferred from zero fantasy points",
+  "sources": [
+    {
+      "url": "https://www.philadelphiaeagles.com/team/transactions/",
+      "kind": "Official team transaction history",
+      "facts": [
+        "Blue signed to active roster October 17, 2026",
+        "Blue waived from active roster October 20, 2026",
+        "Blue signed to practice squad October 22, 2026",
+        "October 26 elevations name Elijah Mitchell and Keyshawn James-Newby, not Blue"
+      ]
+    },
+    {
+      "url": "https://www.nflgsis.com/2026/REG/07/60284/Gamebook.pdf",
+      "kind": "Official gamebook linked by Eagles game-day page",
+      "facts": [
+        "Dallas at Philadelphia, October 26, 2026",
+        "Blue absent from roster/participation lists and text search"
+      ]
+    }
+  ],
+  "live_eligibility_changed": false,
+  "full_field_entries_retained": true,
+  "platform_live_entry_checks": {
+    "DraftKings": "Site Unavailable in the available browser, including one reload",
+    "FanDuel": "Site Unavailable in the available browser, including one reload"
+  },
+  "live_slot_mapping_verified": false
+}
