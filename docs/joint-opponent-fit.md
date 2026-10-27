@@ -214,3 +214,68 @@ structural export checks remain separate evidence.
 Official sources:
 - https://www.philadelphiaeagles.com/team/transactions/
 - https://www.nflgsis.com/2026/REG/07/60284/Gamebook.pdf
+
+
+## Executed DK duplicate-band trial
+
+`run_joint_field_trial.py` executed both captured supports with the same seed
+83, 500-iteration limit, and 0.005 probability tolerance for every feature and
+duplication band. The candidate prior is uniform; the opponent-support prior
+is proportional to its saved entry counts. No target or tolerance was relaxed.
+Both runs were rejected after reaching the iteration limit.
+
+The population is 45,932 complete scored opponents containing neither Ertz nor
+Blue. Their 1,119 inactive-player opponent entries are retained as a separate
+historical stratum, alongside 491 incomplete/unparsed opponents and 20 user
+entries: 45,932 + 1,119 + 491 + 20 = 47,562. Matching the conditional histogram
+at 47,562 would mix populations. The background counts reconcile, but this
+trial does not recompute payouts or establish a prospective inactive-entry model.
+
+| Support | Max feature error | Max duplicate-band error | Duration | Accepted |
+|---|---:|---:|---:|---|
+| 5,000 candidate rosters | 2.47 pp | 8.23 pp | 8.73 s | No |
+| 10,000 opponent rosters | 3.12 pp | 3.18 pp | 15.40 s | No |
+
+The simultaneous soft objective trades off feature and band residuals. Its
+nonconvergence is not a claim that role/pair targets alone are infeasible.
+Expected entry fractions at the final iterates:
+
+| Copies | Actual | 5,000 support | 10,000 support |
+|---|---:|---:|---:|
+| 1 | 9.50% | 1.27% | 6.32% |
+| 2–4 | 13.82% | 14.14% | 14.31% |
+| 5–9 | 13.47% | 14.86% | 13.84% |
+| 10–24 | 21.62% | 23.57% | 22.27% |
+| 25–99 | 28.13% | 30.39% | 28.92% |
+| 100+ | 13.47% | 15.77% | 14.34% |
+
+A necessary IID singleton bound independently certifies that neither support
+size can meet the singleton target within tolerance. For any roster probability
+p, its expected singleton entry fraction is p*(1-p)^(N-1), maximized at p=1/N.
+Summing this bound over J support rosters gives at most
+J*(1/N)*(1-1/N)^(N-1). At this N the upper bounds are 4.00% for J=5,000 and
+8.01% for J=10,000, while the observed target is 9.50% (minimum accepted 9.00%).
+At least 11,233 unique support rosters are necessary under this bound, not
+sufficient for a simultaneous fit. This is a restriction of the current IID
+expected-count model; it is not proof of missing chalk pairs or infeasibility
+for every possible field generator. More iterations cannot defeat this bound.
+
+The next development step is broader **opponent** support or an explicitly
+justified alternative entry-count model. The user's 5,000 lineup build is not
+being expanded or changed by this audit. No accepted field, production change,
+improved ROI result, or untouched-slate validation was produced. Evidence:
+`benchmarks/joint-field-trial-dk.json`.
+
+Reproduce:
+
+```bash
+OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 python scripts/run_joint_field_trial.py \
+  --package /path/to/DK_Calibration_Solver.zip \
+  --standings /path/to/contest-standings-197055079.zip \
+  --exclude-player 'Zach Ertz' --exclude-player 'Jaydon Blue' \
+  --output /path/to/joint-field-trial-dk.json
+```
+
+Existing joint-model tests: six passed again after the trial. Source hashes
+and the full-field stratum totals reconcile; each expected duplicate curve sums
+to one. The JSON report is written atomically after each support completes.
