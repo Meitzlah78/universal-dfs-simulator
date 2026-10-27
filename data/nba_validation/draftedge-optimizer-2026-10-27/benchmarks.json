@@ -1,0 +1,260 @@
+{
+  "schema": 1,
+  "source": "User-supplied DraftEdge optimizer screenshots",
+  "received_date_eastern": "2026-10-27",
+  "slate_date": null,
+  "capture_timestamp_verified": false,
+  "benchmarks": [
+    {
+      "platform": "DraftKings",
+      "optimizer_rank_displayed": 1,
+      "source_file": "Screenshot 2026-10-27 185404.png",
+      "source_sha256": "6cb4bb56f9089312b4df94360b9ecacdd608b2a4478d4610e6e58d2f51c22bbc",
+      "projected_points_total_displayed": 276.7,
+      "salary_total": 50000,
+      "salary_remaining_displayed": 0,
+      "value_displayed": 5.53,
+      "stack_pattern_displayed": "2-2-2",
+      "ownership_values_available": false,
+      "players": [
+        {
+          "display_order": 1,
+          "slot_displayed": "PG",
+          "name_displayed": "Lillard",
+          "name_expanded": "Damian Lillard",
+          "team_displayed": "POR",
+          "salary": 6600,
+          "projected_points_displayed": 40.5
+        },
+        {
+          "display_order": 2,
+          "slot_displayed": "SG",
+          "name_displayed": "George",
+          "name_expanded": null,
+          "team_displayed": "BOS",
+          "salary": 6700,
+          "projected_points_displayed": 35.6
+        },
+        {
+          "display_order": 3,
+          "slot_displayed": "SF",
+          "name_displayed": "Hart",
+          "name_expanded": "Josh Hart",
+          "team_displayed": "NYK",
+          "salary": 6100,
+          "projected_points_displayed": 31.6
+        },
+        {
+          "display_order": 4,
+          "slot_displayed": "PF",
+          "name_displayed": "Johnson",
+          "name_expanded": null,
+          "team_displayed": "SAS",
+          "salary": 4300,
+          "projected_points_displayed": 23.1
+        },
+        {
+          "display_order": 5,
+          "slot_displayed": "C",
+          "name_displayed": "Achiuwa",
+          "name_expanded": "Precious Achiuwa",
+          "team_displayed": "SAC",
+          "salary": 5000,
+          "projected_points_displayed": 28.3
+        },
+        {
+          "display_order": 6,
+          "slot_displayed": "G",
+          "name_displayed": "Castle",
+          "name_expanded": "Stephon Castle",
+          "team_displayed": "SAS",
+          "salary": 7000,
+          "projected_points_displayed": 36.6
+        },
+        {
+          "display_order": 7,
+          "slot_displayed": "F",
+          "name_displayed": "LaVine",
+          "name_expanded": "Zach LaVine",
+          "team_displayed": "SAC",
+          "salary": 6500,
+          "projected_points_displayed": 38.1
+        },
+        {
+          "display_order": 8,
+          "slot_displayed": "UTIL",
+          "name_displayed": "Avdija",
+          "name_expanded": "Deni Avdija",
+          "team_displayed": "POR",
+          "salary": 7800,
+          "projected_points_displayed": 42.9
+        }
+      ],
+      "checks": {
+        "salary_total_reconciles": true,
+        "projected_points_total_reconciles": true,
+        "player_count_matches_simmah": true,
+        "original_slot_layout_matches_simmah": true,
+        "individual_site_ids_and_eligibility_verified": false
+      }
+    },
+    {
+      "platform": "FanDuel",
+      "optimizer_rank_displayed": 1,
+      "source_file": "Screenshot 2026-10-27 185502.png",
+      "source_sha256": "3e91bf890cb917be5e0dfa70a8f62f6c4a4ef40c32d7622ac7b85b46d5c9061f",
+      "projected_points_total_displayed": 315.7,
+      "salary_total": 60000,
+      "salary_remaining_displayed": 0,
+      "value_displayed": 5.26,
+      "stack_pattern_displayed": "3-2-2",
+      "ownership_values_available": false,
+      "players": [
+        {
+          "display_order": 1,
+          "slot_displayed": "PG",
+          "name_displayed": "Acuff Jr.",
+          "name_expanded": null,
+          "team_displayed": "SAC",
+          "salary": 6800,
+          "projected_points_displayed": 38.3
+        },
+        {
+          "display_order": 2,
+          "slot_displayed": "PG",
+          "name_displayed": "Fox",
+          "name_expanded": "De’Aaron Fox",
+          "team_displayed": "SAS",
+          "salary": 6200,
+          "projected_points_displayed": 32.7
+        },
+        {
+          "display_order": 3,
+          "slot_displayed": "SG",
+          "name_displayed": "Castle",
+          "name_expanded": "Stephon Castle",
+          "team_displayed": "SAS",
+          "salary": 6700,
+          "projected_points_displayed": 36.6
+        },
+        {
+          "display_order": 4,
+          "slot_displayed": "SG",
+          "name_displayed": "Lillard",
+          "name_expanded": "Damian Lillard",
+          "team_displayed": "POR",
+          "salary": 7500,
+          "projected_points_displayed": 40.5
+        },
+        {
+          "display_order": 5,
+          "slot_displayed": "SF",
+          "name_displayed": "Thompson",
+          "name_expanded": null,
+          "team_displayed": "DET",
+          "salary": 6000,
+          "projected_points_displayed": 28.1
+        },
+        {
+          "display_order": 6,
+          "slot_displayed": "SF",
+          "name_displayed": "Vassell",
+          "name_expanded": "Devin Vassell",
+          "team_displayed": "SAS",
+          "salary": 4700,
+          "projected_points_displayed": 24.9
+        },
+        {
+          "display_order": 7,
+          "slot_displayed": "PF",
+          "name_displayed": "Avdija",
+          "name_expanded": "Deni Avdija",
+          "team_displayed": "POR",
+          "salary": 8100,
+          "projected_points_displayed": 42.9
+        },
+        {
+          "display_order": 8,
+          "slot_displayed": "PF",
+          "name_displayed": "Tatum",
+          "name_expanded": "Jayson Tatum",
+          "team_displayed": "BOS",
+          "salary": 10000,
+          "projected_points_displayed": 53.0
+        },
+        {
+          "display_order": 9,
+          "slot_displayed": "C",
+          "name_displayed": "Robinson",
+          "name_expanded": "Mitchell Robinson",
+          "team_displayed": "BOS",
+          "salary": 4000,
+          "projected_points_displayed": 18.7
+        }
+      ],
+      "checks": {
+        "salary_total_reconciles": true,
+        "projected_points_total_reconciles": true,
+        "player_count_matches_simmah": true,
+        "original_slot_layout_matches_simmah": false,
+        "individual_site_ids_and_eligibility_verified": false,
+        "remapping_exists_using_displayed_primary_positions": true
+      },
+      "provisional_current_slot_assignment": [
+        {
+          "slot": "PG",
+          "source_display_order": 1,
+          "name_displayed": "Acuff Jr."
+        },
+        {
+          "slot": "SG",
+          "source_display_order": 3,
+          "name_displayed": "Castle"
+        },
+        {
+          "slot": "SF",
+          "source_display_order": 5,
+          "name_displayed": "Thompson"
+        },
+        {
+          "slot": "PF",
+          "source_display_order": 7,
+          "name_displayed": "Avdija"
+        },
+        {
+          "slot": "C",
+          "source_display_order": 9,
+          "name_displayed": "Robinson"
+        },
+        {
+          "slot": "GF",
+          "source_display_order": 2,
+          "name_displayed": "Fox"
+        },
+        {
+          "slot": "FC",
+          "source_display_order": 6,
+          "name_displayed": "Vassell"
+        },
+        {
+          "slot": "UTIL1",
+          "source_display_order": 4,
+          "name_displayed": "Lillard"
+        },
+        {
+          "slot": "UTIL2",
+          "source_display_order": 8,
+          "name_displayed": "Tatum"
+        }
+      ]
+    }
+  ],
+  "notes": [
+    "Projection totals are DraftEdge forecasts, not actual results.",
+    "FD screenshot assigns 2 PG, 2 SG, 2 SF, 2 PF, 1 C, unlike the supplied RotoWire screenshot and Simmah FD hybrid slot layout.",
+    "An FD remapping exists using displayed primary positions; actual platform IDs/eligibility and optimizer configuration remain unverified.",
+    "Unexpanded surnames (George, Johnson, Acuff Jr., Thompson) require source-player-ID matching; no first names were guessed for them.",
+    "Ownership was not shown and is not inferred.",
+    "No live eligibility, projections or build settings were changed."
+  ]
+}
