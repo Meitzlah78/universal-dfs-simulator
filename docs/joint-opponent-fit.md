@@ -163,3 +163,26 @@ for inactive-player rosters rather than silently removing them from the contest.
 
 Reproduce by adding `--inactive-player 'Zach Ertz'` to the preflight command.
 The JSON reports retain both full-field and conditional checks with denominators.
+
+
+### FD remaining gap: Jaydon Blue sensitivity check
+
+The FD original entry-template salary reference lists Jaydon Blue as RB, with
+blank injury fields. He is absent from the captured build and opponent pools;
+published FPTS is 0.0. Neither a blank injury field nor zero points establishes
+activation status. The user's inactivity clarification applies to Ertz, not Blue.
+
+A hypothetical exclusion check removes both players' rosters **only from the
+conditional target population**, retaining all full-field accounting. There are
+4,586 such opponents, leaving 133,919 complete scored opponents. At ±0.5 percentage
+points, role-only and role-plus-the-same-105-pair targets are feasible on both the
+5,000-candidate pool and 5,411-roster opponent support. Thus Blue's unsupported
+role is sufficient to explain the remaining necessary-condition failure after
+the Ertz correction; there is no evidence here requiring scoring covariance or
+stack-rule changes. This does not establish nonlinear duplication convergence.
+
+No eligibility was changed. Blue's game availability needs confirmation before
+classifying his entries as inactive-player lineups or playable missing support.
+Aggregate sensitivity evidence is in
+`benchmarks/fd-support-blue-sensitivity.json`. The full-field FD payout ladder
+and platform upload acceptance remain unverified.

@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "development_only": true,
+  "sensitivity_only": true,
+  "contest_id": "135830-281254012",
+  "baseline_commit": "b85f43ebff9be2f2def88c514605fcf20843e31a",
+  "package_sha256": "4bbbba71e7ea66c767ee82050b2d62ee2bb78f22ee7bedd97bb618d5974fad33",
+  "standings_sha256": "2252337b0fd94b420720c09eacf45634afd8c2f83afd0c20634d96dff17f6a6e",
+  "diagnostic_excluded_players": [
+    "Zach Ertz",
+    "Jaydon Blue"
+  ],
+  "availability_evidence": {
+    "Zach Ertz": "Inactive per user; published FPTS 0.0",
+    "Jaydon Blue": "Activation unverified; salary-reference Position RB, blank injury fields, published FPTS 0.0. Zero points do not prove inactivity."
+  },
+  "complete_scored_opponents": 138505,
+  "diagnostic_removed_opponents": 4586,
+  "conditional_opponents": 133919,
+  "tolerance_probability": 0.005,
+  "conditional_candidate_roles": "feasible",
+  "conditional_candidate_roles_and_pairs": "feasible",
+  "conditional_opponent_support_roles": "feasible",
+  "conditional_opponent_support_roles_and_pairs": "feasible",
+  "pairs": "Same 105 top-15 overall-ownership pairs as full-field preflight; conditional rates recalculated",
+  "full_field_entries_dropped": false,
+  "live_model_changed": false,
+  "build_eligibility_changed": false,
+  "duplicate_fit_executed": false,
+  "fd_payout_ladder_verified": false,
+  "reproducibility": "Call scripts.preflight_joint_field.audit with both names in inactive_players as a hypothetical exclusion experiment ONLY; no claim Blue is inactive. Returned full-field counts remain intact. This report overrides the helper's generic inactive wording for Blue."
+}
