@@ -18,6 +18,15 @@ const v1=new Uint8Array([1,2,3]),v2=new Uint8Array([4,5,6]);const h1=Buffer.from
 const serial=page(async url=>{orderedFetches++;if(url.href.includes('c'.repeat(32)))await new Promise(r=>release=r);return {ok:true,arrayBuffer:async()=>url.href.includes('c'.repeat(32))?v1.buffer:v2.buffer}});
 const r1={...ref,token:'c'.repeat(32),digest:h1,bytes:3,revision:2,url:'app/static/'+'c'.repeat(32)+'.zip'},r2={...ref,token:'d'.repeat(32),digest:h2,bytes:3,revision:3,url:'app/static/'+'d'.repeat(32)+'.zip'};
 serial.render({...a,backups:[r1]});await tick();serial.render({...a,backups:[r2]});await tick();assert.equal(orderedFetches,1,'one in-flight revision per slate');release();await tick();await tick();serial.render({...a,backups:[r2]});await tick();await tick();assert.equal(stores.metadata.get('dk').digest,h2);assert.equal(orderedFetches,2);
+// A verified cloud checkpoint stores only its reference in IndexedDB.
+let cloudFetches=0;const cloudPage=page(async()=>{cloudFetches++;throw Error('cloud checkpoint must not fetch a ZIP')});
+const cloudRef={...ref,token:'f'.repeat(32),digest:'8'.repeat(64),revision:9,cloud_ok:true,cloud_key:'workspaces/index/test.json',cloud_digest:'7'.repeat(64)};
+cloudPage.render({...a,backups:[cloudRef]});await tick();await tick();
+assert.equal(cloudFetches,0);assert.equal(stores.metadata.get('dk').cloud_ok,true);
+assert.match(cloudPage.label.textContent,/Saved to private cloud/);
+assert(!stores.archives.has(cloudRef.token));assert(stores.archives.has(r2.token),'previous browser fallback bytes are retained');
+// Restore for the remaining browser-only tests.
+stores.metadata.set('dk',{...r2,open:true});
 // Closing a tab retains its recoverable archive but prevents automatic reopening.
 p.render({...a,records:[],backups:[],active:null});await tick();assert.equal(stores.metadata.get('dk').open,false);assert(stores.archives.has(r2.token));
 // A stalled HTTP request must time out and retain the previous good browser copy.

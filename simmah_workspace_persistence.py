@@ -146,7 +146,7 @@ def args_for(state):
     owner = state.get('_slate_backup_owner')
     for sid, ref in refs.items():
         ack = confirmed.get(sid, {})
-        if (owner and sid in records
+        if (not ref.get('cloud_ok') and owner and sid in records
                 and (ack.get('token'), ack.get('revision')) != (ref['token'], ref['revision'])
                 and path_for(owner, ref['token']).exists()):
             stage_backup(owner, ref)
@@ -166,6 +166,8 @@ def begin(st):
     state = st.session_state
     state['_slate_fresh_mode'] = True
     state.setdefault('_slate_generation', uuid.uuid4().hex)
+    from simmah_workspace_cloud import configuration
+    state['_slate_cloud_config'] = configuration(st)
     try:
         consume(st)
         pending = state.get('_slate_pending')
@@ -175,12 +177,47 @@ def begin(st):
                 payload = load_backup(state['_slate_backup_owner'], ref)
                 apply_payload(state, payload)
             except (FileNotFoundError, ValueError):
-                state['_slate_backup_restore'] = ref
-                state.pop('_slate_pending', None)
+                config = state.get('_slate_cloud_config')
+                if config and ref.get('cloud_ok'):
+                    try:
+                        from simmah_workspace_cloud import restore as restore_cloud
+                        with st.spinner('Restoring workspace from private cloud…'):
+                            apply_payload(state, restore_cloud(config, state['_slate_backup_owner'], ref))
+                        state['_slate_cloud_restored'] = True
+                        state.pop('_slate_backup_restore', None)
+                        state.pop('_slate_backup_error', None)
+                    except Exception:
+                        state['_slate_backup_error'] = 'Cloud workspace recovery failed. Check the storage connection and retry; the cloud backup has not been deleted.'
+                        state['_slate_backup_restore'] = ref
+                        state.pop('_slate_pending', None)
+                else:
+                    state['_slate_backup_restore'] = ref
+                    state.pop('_slate_pending', None)
     except (ValueError, KeyError, TypeError, OSError) as exc:
         state['_slate_backup_error'] = 'Recovery needs attention: '+str(exc)
     if not state.get('_slate_backup_booted') or state.get('_slate_backup_restore'):
         component()(**args_for(state), key=KEY, default=None)
+        config = state.get('_slate_cloud_config')
+        if config and state.get('_slate_backup_owner'):
+            with st.expander('Cloud storage connection'):
+                st.caption('Private S3 workspace backups configured. Unchanged simulation segments are reused.')
+                if st.button('Test cloud storage connection', key='_slate_cloud_test'):
+                    from simmah_workspace_cloud import probe
+                    try:
+                        probe(config, state['_slate_backup_owner'])
+                        st.success('S3 read/write test passed.')
+                        for ref in state.get('_slate_backup_refs', {}).values():
+                            ref.pop('cloud_error', None)
+                        schedule(st)
+                        if state.get('_slate_backup_restore'):
+                            sid = state['_slate_backup_restore']['id']
+                            state['_slate_pending'] = state['_slate_records'][sid]
+                            st.rerun(scope='app')
+                    except Exception:
+                        st.error('S3 read/write test failed. Check the bucket, region and IAM policy in Settings → Secrets.')
+                for ref in state.get('_slate_backup_refs', {}).values():
+                    if ref.get('cloud_error'):
+                        st.warning(ref['cloud_error'])
         if state.get('_slate_backup_error'):
             st.error(state['_slate_backup_error'])
             if st.button('Continue without restoring', key='_slate_backup_continue'):
@@ -192,13 +229,21 @@ def begin(st):
         st.stop()
 
 
-def save_job(owner, payload, previous, revision):
+def save_job(owner, payload, previous, revision, config=None):
     raw = pack(payload)
     if previous and digest(raw) == previous['digest']:
         reference = {**previous, 'revision':revision}
     else:
         reference = {**write_backup(owner, raw), 'revision':revision}
-    stage_backup(owner, reference)
+    if config and not reference.get('cloud_ok'):
+        try:
+            from simmah_workspace_cloud import save as save_cloud
+            reference = save_cloud(config, owner, raw, reference)
+        except Exception:
+            # Keep the existing browser recovery path if cloud storage fails.
+            reference['cloud_error'] = 'Cloud backup failed; using browser recovery. Test the storage connection.'
+    if not reference.get('cloud_ok'):
+        stage_backup(owner, reference)
     return reference
 
 
@@ -221,7 +266,7 @@ def advance(state):
         payload, revision = queue.pop(sid)
         state['_slate_backup_saving'] = sid
         state['_slate_backup_future'] = _POOL.submit(save_job, state['_slate_backup_owner'], payload,
-            state.get('_slate_backup_refs', {}).get(sid), revision)
+            state.get('_slate_backup_refs', {}).get(sid), revision, state.get('_slate_cloud_config'))
 
 
 def schedule(st):
@@ -247,6 +292,11 @@ def schedule(st):
             state['_slate_backup_error'] = 'Changes are not saved: '+str(exc)
             return
     for sid, row in state.get('_slate_records', {}).items():
+        ref = state.get('_slate_backup_refs', {}).get(sid, {})
+        if (state.get('_slate_cloud_config') and ref and not ref.get('cloud_ok')
+                and not ref.get('cloud_error') and not state.get('_slate_backup_future')
+                and sid not in state.get('_slate_backup_queue', {})):
+            state.setdefault('_slate_backup_captured', {}).pop(sid, None)
         cp = row.get('_session_checkpoint')
         if cp is None or state.setdefault('_slate_backup_captured', {}).get(sid) is cp:
             continue
@@ -273,6 +323,27 @@ def render(st, host):
             schedule(st)
         advance(state)
         component()(**args_for(state), key=KEY, default=None)
+        config = state.get('_slate_cloud_config')
+        if config and state.get('_slate_backup_owner'):
+            with st.expander('Cloud storage connection'):
+                st.caption('Private S3 workspace backups configured. Unchanged simulation segments are reused.')
+                if st.button('Test cloud storage connection', key='_slate_cloud_test'):
+                    from simmah_workspace_cloud import probe
+                    try:
+                        probe(config, state['_slate_backup_owner'])
+                        st.success('S3 read/write test passed.')
+                        for ref in state.get('_slate_backup_refs', {}).values():
+                            ref.pop('cloud_error', None)
+                        schedule(st)
+                        if state.get('_slate_backup_restore'):
+                            sid = state['_slate_backup_restore']['id']
+                            state['_slate_pending'] = state['_slate_records'][sid]
+                            st.rerun(scope='app')
+                    except Exception:
+                        st.error('S3 read/write test failed. Check the bucket, region and IAM policy in Settings → Secrets.')
+                for ref in state.get('_slate_backup_refs', {}).values():
+                    if ref.get('cloud_error'):
+                        st.warning(ref['cloud_error'])
         if state.get('_slate_backup_error'):
             for sid, ref in state.get('_slate_backup_refs', {}).items():
                 path = path_for(state['_slate_backup_owner'], ref['token'])
