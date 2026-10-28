@@ -23,9 +23,9 @@ st.set_page_config(
 
 import importlib
 import simmah_runtime_release as runtime_release
-if getattr(runtime_release, '_active_release', None) != 'nba-refresh-alert-20261028-r1':
+if getattr(runtime_release, '_active_release', None) != 'storage-sidebar-20261028-r1':
     runtime_release = importlib.reload(runtime_release)
-runtime_release.activate_nba_release('nba-refresh-alert-20261028-r1')
+runtime_release.activate_nba_release('storage-sidebar-20261028-r1')
 
 if st.query_params.get('simmah_qa') == 'storage':
     import importlib
@@ -47,8 +47,8 @@ def render_cloud_storage_header(st, host):
     from simmah_workspace_cloud import configuration, probe
     import uuid
     config = configuration(st)
-    with host.expander('Cloud storage connection', expanded=True):
-        st.caption('Storage controls: cloud-header-1')
+    with host.expander('Cloud storage settings', expanded=False):
+        st.checkbox('Show detailed storage diagnostics', key='_slate_show_storage_details')
         if not config:
             st.warning('S3 settings not detected in this app. Check Settings → Secrets for [input_archive] and bucket.')
         else:
@@ -78,7 +78,7 @@ def render_cloud_storage_header(st, host):
             st.error('S3 read/write test failed: '+str(result)+'. Check bucket, region, keys and IAM permissions.')
 
 
-render_cloud_storage_header(st, _app_header)
+render_cloud_storage_header(st, st.sidebar)
 
 _loaded_slate_tabs = begin_workspaces(st)
 from simmah_injury_display import injury_frame, injury_player_pool

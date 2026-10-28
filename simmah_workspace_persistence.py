@@ -206,7 +206,7 @@ def begin(st):
     if not state.get('_slate_backup_booted') or state.get('_slate_backup_restore'):
         component()(**args_for(state), key=KEY, default=None)
         config = state.get('_slate_cloud_config')
-        if state.get('_slate_backup_owner'):
+        if state.get('_slate_backup_owner') and state.get('_slate_show_storage_details', False):
             with st.expander('Cloud storage connection', expanded=not bool(config)):
                 st.caption('Storage check version: cloud-status-4')
                 timing = state.get('_slate_cloud_restore_metrics')
@@ -373,7 +373,7 @@ def render(st, host):
         advance(state)
         component()(**args_for(state), key=KEY, default=None)
         config = state.get('_slate_cloud_config')
-        if state.get('_slate_backup_owner'):
+        if state.get('_slate_backup_owner') and state.get('_slate_show_storage_details', False):
             with st.expander('Cloud storage connection', expanded=not bool(config)):
                 st.caption('Storage check version: cloud-status-4')
                 timing = state.get('_slate_cloud_restore_metrics')
