@@ -73,9 +73,17 @@ def download_lineup_page(day):
     date.fromisoformat(day)
     request=Request('https://www.rotowire.com/basketball/nba-lineups.php?date='+day,
                     headers={'User-Agent':'Mozilla/5.0','Accept':'text/html'})
-    with urlopen(request,timeout=8) as response:
-        html=response.read().decode('utf-8')
-    return {'html':html,'checked_at':time.time()}
+    # Retry a transient read/connect timeout once in the background worker.
+    # HTTP errors (including 403) are not retried or bypassed.
+    from urllib.error import URLError
+    for attempt in range(2):
+        try:
+            with urlopen(request,timeout=8) as response:
+                html=response.read().decode('utf-8')
+            return {'html':html,'checked_at':time.time()}
+        except (TimeoutError,URLError) as exc:
+            timed_out=isinstance(exc,TimeoutError) or isinstance(getattr(exc,'reason',None),TimeoutError)
+            if not timed_out or attempt:raise
 
 
 def cached_confirmed_status(st,day,pairs):
@@ -138,28 +146,36 @@ def current_confirmed_pool(st,pool,day,pairs):
     scope=(day,tuple(sorted({tuple(sorted(map(team_key,p))) for p in pairs})))
     saved=st.session_state.get('nba_confirmed_last_good',{})
     stale=False;issue='';pending=False
+    response=saved.get('response',{}) if saved.get('scope')==scope else {}
     try:
-        response=cached_confirmed_status(st,day,pairs)
-        pending=bool(response.get('pending'));stale=pending or bool(response.get('stale'))
-        issue=response.get('issue','')
-        st.session_state['nba_confirmed_last_good']={'scope':scope,'response':response}
+        primary=cached_confirmed_status(st,day,pairs)
+        pending=bool(primary.get('pending'));stale=pending or bool(primary.get('stale'))
+        issue=primary.get('issue','')
+        # Do not overwrite newer saved fallback data with an older stale page.
+        if not stale or primary.get('checked_at',0)>=response.get('checked_at',0):
+            response=primary
     except (ValueError,OSError,KeyError,TypeError) as exc:
         issue=str(exc);pending=isinstance(exc,LineupFetchPending)
         stale=True
-        response=saved.get('response',{}) if saved.get('scope')==scope else {}
+    if stale:
         try:
             fallback=cached_player_lineups(st,day,pairs)
-            response=fallback;pending=bool(fallback.get('pending'))
-            stale=pending or bool(fallback.get('stale'));issue=fallback.get('issue','')
-            st.session_state['nba_confirmed_last_good']={'scope':scope,'response':response}
+            fallback_pending=bool(fallback.get('pending'))
+            fallback_stale=fallback_pending or bool(fallback.get('stale'))
+            if not fallback_stale or fallback.get('checked_at',0)>=response.get('checked_at',0):
+                response=fallback
+                pending=fallback_pending;stale=fallback_stale
+                issue=fallback.get('issue','')
         except LineupFetchPending:
             pending=True
         except (ValueError,OSError,KeyError,TypeError) as fallback_error:
             issue+='; player-data fallback: '+str(fallback_error)
-        if not response and pool.attrs.get('slate_date')!=day:
-            pool=pool.copy()
-            pool['Expected Starter']=False
-            pool['Starter Confirmed']=False
+    if response.get('players'):
+        st.session_state['nba_confirmed_last_good']={'scope':scope,'response':response}
+    if not response and pool.attrs.get('slate_date')!=day:
+        pool=pool.copy()
+        pool['Expected Starter']=False
+        pool['Starter Confirmed']=False
     view=apply_confirmed_status(pool,response.get('players',{}))
     view.attrs['lineup_status_pending']=pending
     if stale:view['Lineup Status Stale']=True

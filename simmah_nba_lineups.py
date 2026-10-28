@@ -1,6 +1,6 @@
 """Lightweight NBA starting-five status refresh, independent of point projections."""
 import json
-from urllib.request import urlopen
+from urllib.request import Request,urlopen
 from simmah_nba_projections import team_key, player_key
 from simmah_nba_game_strip import explicit_true
 
@@ -23,7 +23,9 @@ def parse_lineup_status(players,day,pairs):
 
 def download_lineup_status(slate_id,day,pairs):
     if not str(slate_id).isdigit():raise ValueError('Numeric RotoWire slate ID required')
-    with urlopen('https://www.rotowire.com/daily/nba/api/players.php?slateID='+str(slate_id),timeout=8) as response:
+    request=Request('https://www.rotowire.com/daily/nba/api/players.php?slateID='+str(slate_id),
+                    headers={'User-Agent':'Mozilla/5.0','Accept':'application/json'})
+    with urlopen(request,timeout=8) as response:
         players=json.load(response)
     import time
     return {'players':parse_lineup_status(players,day,pairs),'checked_at':time.time()}
