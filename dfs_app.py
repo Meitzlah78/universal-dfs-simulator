@@ -23,9 +23,9 @@ st.set_page_config(
 
 import importlib
 import simmah_runtime_release as runtime_release
-if getattr(runtime_release, '_active_release', None) != 'workspace-private-cloud-20261028-r2':
+if getattr(runtime_release, '_active_release', None) != 'workspace-private-cloud-20261028-r3':
     runtime_release = importlib.reload(runtime_release)
-runtime_release.activate_nba_release('workspace-private-cloud-20261028-r2')
+runtime_release.activate_nba_release('workspace-private-cloud-20261028-r3')
 
 if st.query_params.get('simmah_qa') == 'storage':
     import importlib
@@ -42,6 +42,37 @@ render_brand(st, show_logo=False)
 _app_header = st.container(key="simmah_app_header")
 _refresh_header = _app_header.container(key="sticky_projection_bar")
 _pinned_slates = _app_header.container(key="simmah_pinned_slates")
+
+def render_cloud_storage_header(st, host):
+    from simmah_workspace_cloud import configuration, probe
+    import uuid
+    config = configuration(st)
+    with host.expander('Cloud storage connection', expanded=True):
+        st.caption('Storage controls: cloud-header-1')
+        if not config:
+            st.warning('S3 settings not detected in this app. Check Settings → Secrets for [input_archive] and bucket.')
+        else:
+            st.caption('Private S3 configuration detected. Test it before relying on cloud recovery.')
+        if st.button('Test cloud storage connection', key='_slate_cloud_header_test', disabled=not bool(config)):
+            owner = st.session_state.get('_slate_backup_owner')
+            if not owner:
+                owner = st.session_state.setdefault('_slate_cloud_probe_owner', uuid.uuid4().hex)
+            try:
+                with st.spinner('Checking private S3 read/write access…'):
+                    probe(config, owner)
+                st.session_state['_slate_cloud_header_result'] = True
+            except Exception as exc:
+                code = getattr(exc, 'response', {}).get('Error', {}).get('Code', type(exc).__name__)
+                st.session_state['_slate_cloud_header_result'] = str(code)
+        result = st.session_state.get('_slate_cloud_header_result')
+        if result is True:
+            st.success('S3 read/write test passed.')
+        elif result:
+            st.error('S3 read/write test failed: '+str(result)+'. Check bucket, region, keys and IAM permissions.')
+
+
+render_cloud_storage_header(st, _app_header)
+
 _loaded_slate_tabs = begin_workspaces(st)
 from simmah_injury_display import injury_frame, injury_player_pool
 from simmah_single_stacks import render_controls as render_single_stack_controls, selected_validator as single_stack_validator
