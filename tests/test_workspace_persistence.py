@@ -143,3 +143,17 @@ class PersistenceTest(unittest.TestCase):
         state={'_slate_backup_restore':dict(ref,bytes=backup.MAX_BYTES+1)}
         with self.assertRaisesRegex(ValueError,'reference'):
             persistence.receive_backup_part(state,dict(id='bad',index=0,total=1,data=''))
+
+    def test_outstanding_static_download_is_recreated_before_advertising(self):
+        with tempfile.TemporaryDirectory() as folder, patch.multiple(backup, ROOT=Path(folder)/'cache', STAGING=Path(folder)/'static'):
+            ref = persistence.save_job('a'*32, self.payload(), None, 1)
+            backup.unstage_backup('a'*32, ref['token'])
+            state = {'_slate_generation':'g', '_slate_backup_owner':'a'*32,
+                     '_slate_records':{'dk':self.payload()['record']},
+                     '_slate_backup_refs':{'dk':ref}}
+            persistence.args_for(state)
+            self.assertTrue(backup.path_for('a'*32,ref['token'],backup.STAGING).exists())
+            backup.unstage_backup('a'*32,ref['token'])
+            state['_slate_backup_confirmed'] = {'dk':ref}
+            persistence.args_for(state)
+            self.assertFalse(backup.path_for('a'*32,ref['token'],backup.STAGING).exists())
