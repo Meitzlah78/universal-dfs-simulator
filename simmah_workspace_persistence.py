@@ -139,6 +139,17 @@ def args_for(state):
     records = state.get('_slate_records', {})
     active = state.get('_slate_active') or {}
     refs = state.get('_slate_backup_refs', {})
+    # Static files are temporary and may disappear after a restart or an ACK
+    # from another render. Recreate outstanding download capabilities from the
+    # verified private host copy before advertising their URLs again.
+    confirmed = state.get('_slate_backup_confirmed', {})
+    owner = state.get('_slate_backup_owner')
+    for sid, ref in refs.items():
+        ack = confirmed.get(sid, {})
+        if (owner and sid in records
+                and (ack.get('token'), ack.get('revision')) != (ref['token'], ref['revision'])
+                and path_for(owner, ref['token']).exists()):
+            stage_backup(owner, ref)
     return dict(max_backup_bytes=MAX_BYTES, recovery_chunk_bytes=RECOVERY_CHUNK_BYTES,
         generation=state['_slate_generation'], ready=bool(state.get('_slate_backup_booted')),
         owner=state.get('_slate_backup_owner'), active=active.get('id'),
