@@ -198,10 +198,14 @@ def begin(st):
     if not state.get('_slate_backup_booted') or state.get('_slate_backup_restore'):
         component()(**args_for(state), key=KEY, default=None)
         config = state.get('_slate_cloud_config')
-        if config and state.get('_slate_backup_owner'):
-            with st.expander('Cloud storage connection'):
-                st.caption('Private S3 workspace backups configured. Unchanged simulation segments are reused.')
-                if st.button('Test cloud storage connection', key='_slate_cloud_test'):
+        if state.get('_slate_backup_owner'):
+            with st.expander('Cloud storage connection', expanded=not bool(config)):
+                st.caption('Storage check version: cloud-status-2')
+                if config:
+                    st.caption('Private S3 workspace backups configured. Unchanged simulation segments are reused.')
+                else:
+                    st.warning('S3 configuration not detected in this app. Add [input_archive] with a bucket value in this app’s Settings → Secrets.')
+                if st.button('Test cloud storage connection', key='_slate_cloud_test', disabled=not bool(config)):
                     from simmah_workspace_cloud import probe
                     try:
                         probe(config, state['_slate_backup_owner'])
@@ -324,10 +328,14 @@ def render(st, host):
         advance(state)
         component()(**args_for(state), key=KEY, default=None)
         config = state.get('_slate_cloud_config')
-        if config and state.get('_slate_backup_owner'):
-            with st.expander('Cloud storage connection'):
-                st.caption('Private S3 workspace backups configured. Unchanged simulation segments are reused.')
-                if st.button('Test cloud storage connection', key='_slate_cloud_test'):
+        if state.get('_slate_backup_owner'):
+            with st.expander('Cloud storage connection', expanded=not bool(config)):
+                st.caption('Storage check version: cloud-status-2')
+                if config:
+                    st.caption('Private S3 workspace backups configured. Unchanged simulation segments are reused.')
+                else:
+                    st.warning('S3 configuration not detected in this app. Add [input_archive] with a bucket value in this app’s Settings → Secrets.')
+                if st.button('Test cloud storage connection', key='_slate_cloud_test', disabled=not bool(config)):
                     from simmah_workspace_cloud import probe
                     try:
                         probe(config, state['_slate_backup_owner'])
