@@ -1,5 +1,6 @@
 """DraftKings NBA eight-slot entries with embedded salary table and dated games."""
-import csv,io,re
+import csv,io,re,json
+from pathlib import Path
 from decimal import Decimal
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -28,6 +29,19 @@ def read_draftkings(data, *, game_context_pool=None):
             entries.append([r[0],r[2],r[1],r[3].replace('$','').replace(',',''),
                             *[player_id(v) if v.strip() else '' for v in r[4:12]]])
     if not entries or len({r[0] for r in entries})!=len(entries):raise ValueError('NBA entry IDs must be unique')
+    if game_context_pool is None:
+        # Explicit, provenance-backed recovery for known contest salary files.
+        # This path also works after the browser/server has lost session state.
+        cids={r[1] for r in entries}
+        contexts=[]
+        for cid in cids:
+            path=Path(__file__).parent/'data'/'nba_contests'/'game_context'/(cid+'.json')
+            if path.exists():
+                saved=json.loads(path.read_text())
+                if saved.get('contest_id')!=cid:raise ValueError('Saved DK clock contest mismatch')
+                contexts.append(pd.DataFrame(saved['players']))
+        if contexts:
+            game_context_pool=pd.concat(contexts,ignore_index=True).drop_duplicates()
     start=next((i for i,r in enumerate(rows) if {'Name','ID','Salary','Game Info','TeamAbbrev','Roster Position'}<=set(r)),None)
     if start is None:raise ValueError('DraftKings NBA salary table is missing')
     header=rows[start];players=[];days=set()

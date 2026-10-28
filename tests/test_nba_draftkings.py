@@ -22,6 +22,16 @@ def template():
     f=io.StringIO();csv.writer(f).writerows(rows);return f.getvalue().encode()
 
 class DraftKingsNBATests(unittest.TestCase):
+    def test_persisted_contest_clock_recovery_without_session(self):
+        from unittest.mock import patch
+        from pathlib import Path
+        import json
+        data=template().replace(b'PHI@NYK 10/20/2026 07:00PM ET',b'In Progress')
+        saved={'contest_id':'196711762','players':self.pool[['Player ID','Team','Opponent','Game Start','Salary']].to_dict('records')}
+        with patch.object(Path,'exists',return_value=True),patch.object(Path,'read_text',return_value=json.dumps(saved)):
+            parsed=read_template(data)
+        self.assertEqual(len(parsed['entries']),3)
+        self.assertEqual(parsed['players'].loc[0,'Game Start'],self.pool.loc[0,'Game Start'])
     def test_late_swap_recovers_missing_clocks_from_original_upload(self):
         from simmah_nba_late_swap import restore_late_swap_clocks,locked_players
         current=self.pool.copy();current['Game Start']=None
