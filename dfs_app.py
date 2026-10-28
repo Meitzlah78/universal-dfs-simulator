@@ -23,9 +23,9 @@ st.set_page_config(
 
 import importlib
 import simmah_runtime_release as runtime_release
-if getattr(runtime_release, '_active_release', None) != 'nba-candidate-calibration-20261028-r1':
+if getattr(runtime_release, '_active_release', None) != 'nba-refresh-alert-20261028-r1':
     runtime_release = importlib.reload(runtime_release)
-runtime_release.activate_nba_release('nba-candidate-calibration-20261028-r1')
+runtime_release.activate_nba_release('nba-refresh-alert-20261028-r1')
 
 if st.query_params.get('simmah_qa') == 'storage':
     import importlib

@@ -55,3 +55,23 @@ class GameStripTests(unittest.TestCase):
         self.assertEqual(start_time_label(['2026-10-20 19:00:00','2026-10-20 20:00:00']),'Time TBD')
         p=self.pool();p['Game Start']='2026-10-20 19:00:00'
         self.assertEqual(game_records(p,[])[0]['start_time'],'7:00 PM ET')
+
+    def test_refresh_clears_alert_against_actual_applied_pool(self):
+        from simmah_nba_lineups import observe_lineup_change,refresh_button_style
+        state={}
+        expected=(('NY','Expected',('a','b','c','d','e')),)
+        confirmed=(('NY','Confirmed',('a','b','c','d','e')),)
+        changed=(('NY','Confirmed',('a','b','c','d','replacement')),)
+        self.assertFalse(observe_lineup_change(state,'slate',expected,expected))
+        self.assertTrue(observe_lineup_change(state,'slate',confirmed,expected))
+        # Refresh applied the new lineup without a separate acknowledgment.
+        self.assertFalse(observe_lineup_change(state,'slate',confirmed,confirmed))
+        self.assertFalse(state['nba_lineup_updates_found'])
+        self.assertTrue(observe_lineup_change(state,'slate',changed,confirmed))
+        # An unsuccessful refresh leaves the still-unapplied change visible.
+        self.assertTrue(observe_lineup_change(state,'slate',changed,confirmed))
+        self.assertFalse(observe_lineup_change(state,'slate',changed,changed))
+        css=refresh_button_style(False)
+        self.assertNotIn('#d62828',css)
+        self.assertIn('button:hover',css)
+        self.assertIn('button:focus',css)

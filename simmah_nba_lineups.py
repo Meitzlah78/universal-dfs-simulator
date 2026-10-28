@@ -62,7 +62,13 @@ def observe_lineup_change(state,scope,snapshot,applied_snapshot=None):
     if not record or record['scope']!=scope:
         record={'scope':scope,'applied':snapshot if applied_snapshot is None else applied_snapshot,'pending':False}
     record['latest']=snapshot
-    record['pending']=record['pending'] or snapshot!=record['applied']
+    if applied_snapshot is not None:
+        # A full app rerun may already have applied the monitored lineup.
+        # Compare with that current pool instead of latching an old alert.
+        record['applied']=applied_snapshot
+        record['pending']=snapshot!=applied_snapshot
+    else:
+        record['pending']=record['pending'] or snapshot!=record['applied']
     state['nba_lineup_monitor']=record
     state['nba_lineup_updates_found']=record['pending']
     return record['pending']
@@ -76,7 +82,9 @@ def acknowledge_lineup_refresh(state):
 def refresh_button_style(pending):
     background='#d62828' if pending else '#0b2034'
     border='#d62828' if pending else '#24516b'
-    return ('<style>.st-key-sticky_projection_bar button {'
+    return ('<style>.st-key-sticky_projection_bar button, '
+            '.st-key-sticky_projection_bar button:hover, '
+            '.st-key-sticky_projection_bar button:focus {'
             f'background-color:{background} !important;border-color:{border} !important;color:#ffffff !important;'
             '}</style>')
 
