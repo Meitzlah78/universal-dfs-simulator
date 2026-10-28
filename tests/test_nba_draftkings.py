@@ -36,6 +36,9 @@ class DraftKingsNBATests(unittest.TestCase):
         slate=read_template(data,game_context_pool=self.pool)
         self.assertEqual(slate['entries'][0][4], '1000')
         self.assertEqual(slate['players'].loc[0,'Game Start'], self.pool.loc[0,'Game Start'])
+        legacy=self.pool.copy()
+        legacy['Game Start']=legacy['Game Start'].map(lambda x:pd.Timestamp(x).tz_localize(None).isoformat())
+        self.assertEqual(read_template(data,game_context_pool=legacy)['entries'][0][4], '1000')
         with self.assertRaises(ValueError):read_template(data)
         wrong=self.pool.copy();wrong.loc[0,'Salary']=6000
         with self.assertRaises(ValueError):read_template(data,game_context_pool=wrong)

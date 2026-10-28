@@ -59,7 +59,14 @@ def read_template(data, *, game_context_pool=None):
 
 def render_setup(st, uploaded_file, tabs, controls, game_header=None):
     try:
-        slate = read_template(uploaded_file.getvalue())
+        saved_build=st.session_state.get('nba_build_result')
+        context=st.session_state.get('nba_import_game_context')
+        if context is None and saved_build:context=saved_build.get('pool')
+        slate = read_template(uploaded_file.getvalue(),game_context_pool=context)
+        # Retain the salary-file clocks before projection feeds replace them.
+        # The DK parser checks each recovered player's ID, team and salary.
+        if slate.get('platform')=='DraftKings':
+            st.session_state['nba_import_game_context']=slate['players'].copy(deep=True)
     except (ValueError, ArithmeticError) as exc:
         st.error(str(exc))
         return

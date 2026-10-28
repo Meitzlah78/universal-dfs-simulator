@@ -54,8 +54,11 @@ def read_draftkings(data, *, game_context_pool=None):
             if team_key(old['Team'])!=team or int(old['Salary'])!=int(salary):
                 raise ValueError('Started DK player differs from the current salary slate')
             stamp=pd.Timestamp(old.get('Game Start'))
-            if pd.isna(stamp) or stamp.tzinfo is None:
+            if pd.isna(stamp):
                 raise ValueError('Confirmed saved start time required for started DK players')
+            # Existing projection pools store Eastern wall times without an
+            # offset; this is the same convention used by locked_players.
+            if stamp.tzinfo is None:stamp=stamp.tz_localize('America/New_York')
             if stamp>pd.Timestamp.now(tz='UTC'):
                 raise ValueError('DK reports a started game but saved tipoff is in the future')
             stamp=stamp.tz_convert('America/New_York')
