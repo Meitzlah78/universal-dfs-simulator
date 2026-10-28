@@ -18,6 +18,8 @@ def component():
 
 
 def apply_payload(state, payload):
+    if payload.get('_restore_metrics'):
+        state['_slate_cloud_restore_metrics'] = payload['_restore_metrics']
     row = payload['record']
     if not all(k in row for k in ('id', 'name', 'data')):
         raise ValueError('Backup is missing the original slate upload')
@@ -182,7 +184,13 @@ def begin(st):
                     try:
                         from simmah_workspace_cloud import restore as restore_cloud
                         with st.spinner('Restoring workspace from private cloud…'):
-                            apply_payload(state, restore_cloud(config, state['_slate_backup_owner'], ref))
+                            bar = st.progress(0., text='Connecting to private cloud…')
+                            try:
+                                payload = restore_cloud(config, state['_slate_backup_owner'], ref,
+                                    progress=lambda fraction, text: bar.progress(fraction, text=text))
+                                apply_payload(state, payload)
+                            finally:
+                                bar.empty()
                         state['_slate_cloud_restored'] = True
                         state.pop('_slate_backup_restore', None)
                         state.pop('_slate_backup_error', None)
@@ -200,7 +208,10 @@ def begin(st):
         config = state.get('_slate_cloud_config')
         if state.get('_slate_backup_owner'):
             with st.expander('Cloud storage connection', expanded=not bool(config)):
-                st.caption('Storage check version: cloud-status-3')
+                st.caption('Storage check version: cloud-status-4')
+                timing = state.get('_slate_cloud_restore_metrics')
+                if timing:
+                    st.caption(f"Last cloud restore: {timing['bytes']/(1024*1024):.0f} MB · download {timing['download_seconds']:.1f}s · verification and decoding {timing['verify_decode_seconds']:.1f}s")
                 for sid, row in state.get('_slate_records', {}).items():
                     reference = state.get('_slate_backup_refs', {}).get(sid, {})
                     location = 'Private cloud verified' if reference.get('cloud_ok') else 'Browser backup only'
@@ -364,7 +375,10 @@ def render(st, host):
         config = state.get('_slate_cloud_config')
         if state.get('_slate_backup_owner'):
             with st.expander('Cloud storage connection', expanded=not bool(config)):
-                st.caption('Storage check version: cloud-status-3')
+                st.caption('Storage check version: cloud-status-4')
+                timing = state.get('_slate_cloud_restore_metrics')
+                if timing:
+                    st.caption(f"Last cloud restore: {timing['bytes']/(1024*1024):.0f} MB · download {timing['download_seconds']:.1f}s · verification and decoding {timing['verify_decode_seconds']:.1f}s")
                 for sid, row in state.get('_slate_records', {}).items():
                     reference = state.get('_slate_backup_refs', {}).get(sid, {})
                     location = 'Private cloud verified' if reference.get('cloud_ok') else 'Browser backup only'

@@ -24,6 +24,9 @@ class FakeS3:
     def put(self, owner, key, raw):
         self.objects[f'{self.prefix}/{owner}/{key}'] = bytes(raw)
         self.puts.append((key,len(raw)))
+    def get_object(self, Bucket, Key, Range):
+        start, end = map(int, Range.removeprefix('bytes=').split('-'))
+        return {'Body':io.BytesIO(self.objects[Key][start:end+1])}
     def get(self, owner, key):
         return self.objects[f'{self.prefix}/{owner}/{key}']
 
@@ -63,7 +66,7 @@ class CloudWorkspaceTests(unittest.TestCase):
         FakeS3.objects[key] = original
         part = next(k for k in FakeS3.objects if '/parts/' in k)
         FakeS3.objects[part] = b'bad'
-        with self.assertRaisesRegex(ValueError,'segment failed'):
+        with self.assertRaisesRegex(ValueError,'verification'):
             cloud.restore({},self.owner,ref)
     def test_server_wipe_recovers_from_cloud_without_browser_upload(self):
         payload = self.payload()
@@ -71,7 +74,7 @@ class CloudWorkspaceTests(unittest.TestCase):
         ref = cloud.save({},self.owner,raw,self.ref(raw))
         row = {**ref,'name':'entries.csv','open':True}
         state = {persistence.KEY:dict(event='boot',boot=dict(owner=self.owner,records=[row],active='dk'))}
-        app = SimpleNamespace(spinner=lambda *_a,**_k:nullcontext(),session_state=state,secrets={'input_archive':{'bucket':'test'}})
+        app = SimpleNamespace(spinner=lambda *_a,**_k:nullcontext(),progress=lambda *_a,**_k:SimpleNamespace(progress=lambda *_a,**_k:None,empty=lambda:None),session_state=state,secrets={'input_archive':{'bucket':'test'}})
         with tempfile.TemporaryDirectory() as folder, patch.object(backup,'ROOT',Path(folder)):
             persistence.begin(app)
             self.assertTrue(state['_slate_cloud_restored'])
@@ -117,3 +120,26 @@ class CloudWorkspaceTests(unittest.TestCase):
             self.assertTrue(state['_slate_backup_refs']['dk']['cloud_ok'])
             self.assertNotIn('_session_checkpoint',state['_slate_records']['dk'])
             self.assertNotIn('_slate_backup_future',state)
+
+    def test_parallel_ranges_preserve_bytes_and_report_progress(self):
+        import threading
+        from concurrent.futures import ThreadPoolExecutor
+        raw = backup.pack(self.payload())
+        ref = cloud.save({},self.owner,raw,self.ref(raw))
+        calls = []
+        barrier = threading.Barrier(2)
+        old = FakeS3.get_object
+        def ranged(client, **kwargs):
+            calls.append((kwargs['Range'],threading.current_thread().name))
+            if len(calls) <= 2:
+                barrier.wait(timeout=5)
+            return old(client,**kwargs)
+        reports = []
+        with tempfile.TemporaryDirectory() as folder, patch.object(backup,'ROOT',Path(folder)), patch.object(FakeS3,'get_object',ranged):
+            result = cloud.restore({},self.owner,ref,progress=lambda fraction,text:reports.append((fraction,text)))
+            np.testing.assert_array_equal(result['checkpoint']['values']['outcomes'],self.payload()['checkpoint']['values']['outcomes'])
+            self.assertTrue(calls)
+            self.assertTrue(all(int(r.split('-')[1])-int(r.split('=')[1].split('-')[0])+1 <= 4*1024*1024 for r,_ in calls))
+            self.assertEqual(backup.path_for(self.owner,ref['token']).read_bytes(),raw)
+            self.assertEqual(reports[-1][0],1.)
+            self.assertIn('_restore_metrics',result)

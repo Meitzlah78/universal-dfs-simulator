@@ -23,9 +23,9 @@ st.set_page_config(
 
 import importlib
 import simmah_runtime_release as runtime_release
-if getattr(runtime_release, '_active_release', None) != 'workspace-private-cloud-20261028-r4':
+if getattr(runtime_release, '_active_release', None) != 'workspace-private-cloud-20261028-r5':
     runtime_release = importlib.reload(runtime_release)
-runtime_release.activate_nba_release('workspace-private-cloud-20261028-r4')
+runtime_release.activate_nba_release('workspace-private-cloud-20261028-r5')
 
 if st.query_params.get('simmah_qa') == 'storage':
     import importlib
