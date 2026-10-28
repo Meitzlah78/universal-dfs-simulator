@@ -21,7 +21,7 @@ class Stop(Exception): pass
 
 class PersistenceTest(unittest.TestCase):
     def app(self,state):
-        return SimpleNamespace(session_state=state,stop=lambda:(_ for _ in ()).throw(Stop()),error=lambda text:None,button=lambda *a,**k:False)
+        return SimpleNamespace(expander=lambda *a,**k:contextlib.nullcontext(),caption=lambda *a,**k:None,warning=lambda *a,**k:None,session_state=state,stop=lambda:(_ for _ in ()).throw(Stop()),error=lambda text:None,button=lambda *a,**k:False)
 
     def payload(self,ident='dk'):
         return dict(record=dict(id=ident,name=ident+'.csv',data=base64.b64encode(b'original csv').decode()),

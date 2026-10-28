@@ -104,3 +104,16 @@ class CloudWorkspaceTests(unittest.TestCase):
             state['_slate_backup_refs']['dk']['cloud_ok'] = True
             persistence.schedule(app)
             self.assertFalse(state['_slate_backup_queue'])
+
+    def test_inactive_disk_checkpoint_promotes_without_ui_restore(self):
+        raw = backup.pack(self.payload())
+        with tempfile.TemporaryDirectory() as folder, patch.object(backup,'ROOT',Path(folder)):
+            ref = dict(backup.write_backup(self.owner,raw),revision=1)
+            state = {'_slate_backup_owner':self.owner,'_slate_cloud_config':{'bucket':'test'},
+                     '_slate_records':{'dk':{'id':'dk','name':'entries.csv'}},'_slate_backup_refs':{'dk':ref}}
+            persistence.advance(state)
+            state['_slate_backup_future'].result(timeout=10)
+            persistence.advance(state)
+            self.assertTrue(state['_slate_backup_refs']['dk']['cloud_ok'])
+            self.assertNotIn('_session_checkpoint',state['_slate_records']['dk'])
+            self.assertNotIn('_slate_backup_future',state)

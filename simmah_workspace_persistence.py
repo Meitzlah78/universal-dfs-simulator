@@ -200,7 +200,13 @@ def begin(st):
         config = state.get('_slate_cloud_config')
         if state.get('_slate_backup_owner'):
             with st.expander('Cloud storage connection', expanded=not bool(config)):
-                st.caption('Storage check version: cloud-status-2')
+                st.caption('Storage check version: cloud-status-3')
+                for sid, row in state.get('_slate_records', {}).items():
+                    reference = state.get('_slate_backup_refs', {}).get(sid, {})
+                    location = 'Private cloud verified' if reference.get('cloud_ok') else 'Browser backup only'
+                    if state.get('_slate_backup_saving') == sid and state.get('_slate_backup_future'):
+                        location = 'Uploading workspace to private cloud…' if config else 'Saving browser backup…'
+                    st.caption(str(row.get('title', row.get('name', sid)))+' — '+location)
                 if config:
                     st.caption('Private S3 workspace backups configured. Unchanged simulation segments are reused.')
                 else:
@@ -251,6 +257,21 @@ def save_job(owner, payload, previous, revision, config=None):
     return reference
 
 
+def promote_job(owner, reference, revision, config):
+    """Migrate an inactive disk backup without restoring it into the UI session."""
+    result = dict(reference, revision=revision)
+    try:
+        raw = path_for(owner, reference['token']).read_bytes()
+        if len(raw) != reference['bytes'] or digest(raw) != reference['digest']:
+            raise ValueError('Disk backup verification failed')
+        from simmah_workspace_cloud import save
+        result = save(config, owner, raw, result)
+    except Exception as exc:
+        code = getattr(exc, 'response', {}).get('Error', {}).get('Code', type(exc).__name__)
+        result['cloud_error'] = 'Cloud migration failed: '+str(code)+'. Browser backup retained.'
+    return result
+
+
 def advance(state):
     future = state.get('_slate_backup_future')
     if future and future.done():
@@ -271,6 +292,19 @@ def advance(state):
         state['_slate_backup_saving'] = sid
         state['_slate_backup_future'] = _POOL.submit(save_job, state['_slate_backup_owner'], payload,
             state.get('_slate_backup_refs', {}).get(sid), revision, state.get('_slate_cloud_config'))
+    if not state.get('_slate_backup_future') and not queue and state.get('_slate_cloud_config'):
+        owner = state['_slate_backup_owner']
+        for sid, reference in state.get('_slate_backup_refs', {}).items():
+            row = state.get('_slate_records', {}).get(sid)
+            if (row is not None and row.get('_session_checkpoint') is None
+                    and not reference.get('cloud_ok') and not reference.get('cloud_error')
+                    and path_for(owner, reference['token']).exists()):
+                revision = max(state.get('_slate_backup_revision', 0), reference.get('revision', 0)) + 1
+                state['_slate_backup_revision'] = revision
+                state['_slate_backup_saving'] = sid
+                state['_slate_backup_future'] = _POOL.submit(promote_job, owner, dict(reference), revision, state['_slate_cloud_config'])
+                break
+
 
 
 def schedule(st):
@@ -330,7 +364,13 @@ def render(st, host):
         config = state.get('_slate_cloud_config')
         if state.get('_slate_backup_owner'):
             with st.expander('Cloud storage connection', expanded=not bool(config)):
-                st.caption('Storage check version: cloud-status-2')
+                st.caption('Storage check version: cloud-status-3')
+                for sid, row in state.get('_slate_records', {}).items():
+                    reference = state.get('_slate_backup_refs', {}).get(sid, {})
+                    location = 'Private cloud verified' if reference.get('cloud_ok') else 'Browser backup only'
+                    if state.get('_slate_backup_saving') == sid and state.get('_slate_backup_future'):
+                        location = 'Uploading workspace to private cloud…' if config else 'Saving browser backup…'
+                    st.caption(str(row.get('title', row.get('name', sid)))+' — '+location)
                 if config:
                     st.caption('Private S3 workspace backups configured. Unchanged simulation segments are reused.')
                 else:
