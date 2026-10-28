@@ -82,8 +82,9 @@ class WeatherTest(unittest.TestCase):
             if 'scoreboard' in url:return schedule()
             if '/points/' in url:return {'properties':{'forecastHourly':'https://api.weather.gov/gridpoints/test/forecast/hourly'}}
             return {'properties':{'periods':periods(kickoff)}}
-        ns={'pd':pd,'np':np,'ZoneInfo':ZoneInfo,'ThreadPoolExecutor':ThreadPoolExecutor,
-            'fetch_game_weather_json':fetch,'st':SimpleNamespace(expander=lambda *a,**k:nullcontext(),dataframe=Mock(),caption=Mock())}
+        from simmah_injury_display import injury_frame
+        ns={'pd':pd,'np':np,'ZoneInfo':ZoneInfo,'ThreadPoolExecutor':ThreadPoolExecutor, 'injury_frame':injury_frame,
+            'fetch_game_weather_json':fetch,'st':SimpleNamespace(session_state={},expander=lambda *a,**k:nullcontext(),dataframe=Mock(),caption=Mock())}
         exec(compile(ast.Module(body=[fn],type_ignores=[]),'dfs_app.py','exec'),ns)
         frame=pd.DataFrame({'Name':['Dak','Love'],'Team':['DAL','GB'],'Opponent':['GB','DAL'],'Projection':[20.,21.]})
         raw=pd.DataFrame({'Game Info':['DAL@GB 10/18/2026 08:20PM ET']})

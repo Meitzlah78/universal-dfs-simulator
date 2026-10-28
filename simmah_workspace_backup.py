@@ -8,6 +8,7 @@ import re
 import shutil
 import uuid
 import zipfile
+import zlib
 from datetime import date, datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -77,7 +78,15 @@ def pack(payload):
     out=io.BytesIO()
     with zipfile.ZipFile(out,'w',compression=zipfile.ZIP_DEFLATED,compresslevel=1) as bundle:
         for name,raw in [('manifest.json',manifest),*sorted(files.items())]:
-            info=zipfile.ZipInfo(name,date_time=(1980,1,1,0,0,0));info.compress_type=zipfile.ZIP_DEFLATED
+            # Random simulation matrices and existing ZIPs barely compress. Sample
+            # across the attachment before spending CPU deflating the entire file.
+            method = zipfile.ZIP_DEFLATED
+            if len(raw) >= 1024 * 1024:
+                step = max(1, (len(raw) - 16384) // 7)
+                sample = b''.join(raw[i:i+16384] for i in range(0, len(raw)-16383, step))
+                if len(zlib.compress(sample, 1)) >= len(sample) * .90:
+                    method = zipfile.ZIP_STORED
+            info=zipfile.ZipInfo(name,date_time=(1980,1,1,0,0,0));info.compress_type=method
             bundle.writestr(info,raw,compresslevel=1)
     raw=out.getvalue()
     if len(raw)>MAX_BYTES: raise ValueError(f'Workspace exceeds the {MAX_BYTES // (1024 * 1024)} MiB backup limit')

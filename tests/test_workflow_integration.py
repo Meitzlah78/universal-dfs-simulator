@@ -35,7 +35,7 @@ class WorkflowIntegrationTest(unittest.TestCase):
 
     def test_candidate_helper_uses_separate_construction_and_evaluation(self):
         tree=ast.parse(Path('dfs_app.py').read_text())
-        wanted={'FULL_ROSTER_STACK_OPTIONS','SECONDARY_STACK_OPTIONS','full_roster_stack_lookup','full_roster_stack_matches','build_joint_candidate_pool'}
+        wanted={'ANY_STACK_OPTION','NO_STACK_OPTION','FULL_ROSTER_STACK_OPTIONS','SECONDARY_STACK_OPTIONS','full_roster_stack_patterns','full_roster_stack_lookup','full_roster_stack_matches','build_joint_candidate_pool'}
         nodes=[n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name in wanted or isinstance(n,ast.Assign) and any(isinstance(t,ast.Name) and t.id in wanted for t in n.targets)]
         progress=SimpleNamespace(progress=Mock())
         state={'simulation_cap_hit_pct':{'original':1}}
@@ -124,12 +124,13 @@ class WorkflowIntegrationTest(unittest.TestCase):
         for n in sorted((n for n in ast.walk(tree) if isinstance(n,ast.Assign) and isinstance(n.targets[0],ast.Name)),key=lambda n:n.lineno):
             name=n.targets[0].id
             if name=='_fd_owned_count':nodes.append(n)
-            if name=='_fd_diverse_portfolio' and isinstance(n.value,ast.Call):nodes.append(n)
+            if (name=='_fd_diverse_portfolio' and isinstance(n.value,ast.Call)
+                    and isinstance(n.value.func,ast.Name) and n.value.func.id=='select_portfolio'):nodes.append(n)
             if name=='fd_export_portfolio' and isinstance(n.value,ast.Call) and ast.unparse(n.value)=='_fd_diverse_portfolio.copy()':nodes.append(n)
         pool,frame,slots=self.portfolio_fixture()
         for shown in [3,100]:
             ns={'np':np,'pd':pd,'select_portfolio':select_portfolio,'fd_all_ranked':frame,
-                'fd_slots':slots,'fd_rank_column':'Top1','fd_rank_count':shown,
+                'fd_slots':slots,'fd_rank_column':'Top1','fd_rank_count':shown,'fd_all_contests':False,'portfolio_diversity':0,
                 'fd_player_display':pool,'st':SimpleNamespace(session_state={'selected_fd_contest':{'your_entries':20}}),
                 'full_roster_contest_parameters':lambda *args:{'owned':20}}
             exec(compile(ast.Module(body=nodes,type_ignores=[]),'app','exec'),ns)
@@ -151,7 +152,7 @@ class WorkflowIntegrationTest(unittest.TestCase):
         for displayed,owned in [(3,20),(100,20)]:
             ns={'np':np,'select_portfolio':select_portfolio,
                 'st':SimpleNamespace(session_state={'selected_dk_contest':{'your_entries':owned}}),
-                'classic_entry_count':owned,'classic_top_portfolio':frame.head(displayed),
+                'classic_entry_count':owned,'classic_top_portfolio':frame.head(displayed),'dk_all_contests':False,'portfolio_diversity':0,
                 'classic_portfolio_source':frame,'classic_rank_metric':'Top1','control_map':{}}
             exec(compile(ast.Module(body=first,type_ignores=[]),'dfs_app.py','exec'),ns)
             assigned=ns['classic_export_portfolio']

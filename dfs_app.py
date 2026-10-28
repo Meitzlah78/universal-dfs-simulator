@@ -21,8 +21,11 @@ st.set_page_config(
     layout="wide"
 )
 
-from simmah_runtime_release import activate_nba_release
-activate_nba_release('nba-entry-import-20261028-r2')
+import importlib
+import simmah_runtime_release as runtime_release
+if getattr(runtime_release, '_active_release', None) != 'downloads-workspace-saving-20261028-r1':
+    runtime_release = importlib.reload(runtime_release)
+runtime_release.activate_nba_release('downloads-workspace-saving-20261028-r1')
 
 if st.query_params.get('simmah_qa') == 'storage':
     import importlib

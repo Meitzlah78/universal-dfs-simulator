@@ -7,6 +7,8 @@ _lock=threading.RLock()
 _active_release=None
 # Reload dependency order, including modules that bind functions with `from`.
 _NBA_MODULES=(
+    'simmah_workspace_backup','simmah_session_workspaces','simmah_export_history',
+    'simmah_workspace_persistence','simmah_slate_workspaces',
     'simmah_nba_projections','simmah_nba_dk_import','simmah_nba_import',
     'simmah_nba_rosters','simmah_nba_pipeline','simmah_nba_late_swap',
     'simmah_nba_sim_late_swap','simmah_nba_auto_swap','simmah_nba_ui',
