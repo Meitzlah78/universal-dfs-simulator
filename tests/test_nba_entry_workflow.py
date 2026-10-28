@@ -4,6 +4,7 @@ import io
 import subprocess
 import sys
 import unittest
+from pathlib import Path
 from contextlib import nullcontext
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -100,5 +101,6 @@ before=reader.read_template
 activate_nba_release('test-new-release')
 assert reader.read_template is before
 """
+        code = 'import sys; sys.path.insert(0, '+repr(str(Path(__file__).resolve().parent))+')\n'+code
         result=subprocess.run([sys.executable,'-c',code],capture_output=True,text=True)
         self.assertEqual(result.returncode,0,result.stderr)
