@@ -61,11 +61,18 @@ def render_cloud_storage_header(st, host):
                 with st.spinner('Checking private S3 read/write access…'):
                     probe(config, owner)
                 st.session_state['_slate_cloud_header_result'] = True
+                st.session_state['_slate_cloud_header_retry_v1'] = False
             except Exception as exc:
                 code = getattr(exc, 'response', {}).get('Error', {}).get('Code', type(exc).__name__)
                 st.session_state['_slate_cloud_header_result'] = str(code)
         result = st.session_state.get('_slate_cloud_header_result')
         if result is True:
+            if not st.session_state.get('_slate_cloud_header_retry_v1'):
+                for sid, reference in st.session_state.get('_slate_backup_refs', {}).items():
+                    if not reference.get('cloud_ok'):
+                        reference.pop('cloud_error', None)
+                        st.session_state.setdefault('_slate_backup_captured', {}).pop(sid, None)
+                st.session_state['_slate_cloud_header_retry_v1'] = True
             st.success('S3 read/write test passed.')
         elif result:
             st.error('S3 read/write test failed: '+str(result)+'. Check bucket, region, keys and IAM permissions.')
