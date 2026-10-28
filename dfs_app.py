@@ -22,7 +22,7 @@ st.set_page_config(
 )
 
 from simmah_runtime_release import activate_nba_release
-activate_nba_release('nba-entry-import-20261028-r1')
+activate_nba_release('nba-entry-import-20261028-r2')
 
 if st.query_params.get('simmah_qa') == 'storage':
     import importlib

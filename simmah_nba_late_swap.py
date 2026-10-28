@@ -117,6 +117,10 @@ def validate_swap(pool, original, candidate, locked, salary_min=0):
     # Started players may now be OUT or have no remaining projection.
     check=pool.copy()
     check.loc[locked,'Injury Status']='Active'; check.loc[locked,'Projection']=1.
+    # Eligibility/minutes rules constrain new selections, not immutable entries
+    # from games that have already started. These are validation-only sentinels.
+    if 'Eligible' in check:check.loc[locked,'Eligible']=True
+    if 'Projected Minutes' in check:check.loc[locked,'Projected Minutes']=1.
     rules=rules_for(pool)
     validate_lineup(check,check.iloc[candidate]['Player ID'].tolist(),salary_cap=rules['salary_cap'],max_from_team=rules['max_from_team'],salary_min=salary_min)
 
@@ -192,7 +196,7 @@ def restore_late_swap_clocks(pool, original_template=None, saved_pool=None):
 def render_late_swap(st,pool,contest_id,salary_min,diversity,markets=None,contest=None,original_template=None):
     rules=rules_for(pool);platform=rules['platform']
     with st.expander('NBA LATE SWAP — fast',expanded=False):
-        st.caption('Current entries support DK pregame, In Progress and Final downloads. Import revision: 2026-10-28.')
+        st.caption('Current entries support DK pregame, In Progress and Final downloads. Import revision: 2026-10-28 r2.')
         from simmah_nba_swap_recovery import before_swap_csv
         recovered=before_swap_csv(st.session_state.get('nba_late_swap_result'),contest_id,rules['slots'])
         if recovered is not None:

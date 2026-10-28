@@ -8,6 +8,18 @@ from simmah_nba_late_swap import swap_entries, export_swaps, locked_players, val
 
 
 class LateSwapTests(unittest.TestCase):
+    def test_started_zero_minutes_and_excluded_status_do_not_block_open_swaps(self):
+        locked=locked_players(self.pool,self.now)
+        self.pool['Eligible']=True;self.pool['Projected Minutes']=24.
+        self.pool.loc[locked,'Eligible']=False
+        self.pool.loc[locked,'Projected Minutes']=0.
+        self.pool.loc[locked,'Injury Status']='Out'
+        self.pool.loc[locked,'Projection']=0.
+        original=np.arange(9)
+        validate_swap(self.pool,original,original,locked)
+        # An open player still has to meet current eligibility and projections.
+        self.pool.loc[1,'Eligible']=False
+        with self.assertRaises(ValueError):validate_swap(self.pool,original,original,locked)
     def setUp(self):
         self.pool=pd.DataFrame([{'Player ID':f'42-{i+1}','Name':f'Player {i}','Salary':5000,
             'Position':p,'Team':['A','B','C'][i%3],'Opponent':'D','Game':'A@D',

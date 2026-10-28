@@ -1,6 +1,6 @@
 # NBA current-entry import and late-swap release
 
-Release: `nba-entry-import-20261028-r1`.
+Release: `nba-entry-import-20261028-r2`.
 
 ## Behavior
 
@@ -21,7 +21,7 @@ The entrypoint activates this explicit release once in a long-lived Python
 process, refreshing preloaded NBA dependencies and function aliases in dependency
 order. It does not clear session data or outcomes. Bump the entrypoint release
 identifier when deploying coordinated NBA module changes. The late-swap panel
-shows import revision `2026-10-28` to identify the new UI.
+shows import revision `2026-10-28 r2` to identify the new UI.
 
 ## Verification
 
@@ -44,3 +44,8 @@ repaired metadata copy passed live main import. A later browser upload approval
 was declined, so further file-upload testing in that browser must not be retried
 without renewed authorization. Live read-only revision checks remain separate
 from the local and AppTest results.
+
+Started players may now have zero minutes, OUT status or an ineligible feed flag.
+Late-swap validation preserves these immutable roster spots while continuing to
+enforce current eligibility on all open selections. These overrides are made on
+a validation copy only, never on the simulation or projection inputs.
