@@ -36,7 +36,7 @@ def extract_markets(pool):
     return output
 
 
-def simulate_market_game(rotations,profiles,rates,targets,seed,pilot_n=1024,iterations=4,overtime_rotations=None,platform='FanDuel'):
+def simulate_market_game(rotations,profiles,rates,targets,seed,pilot_n=1024,iterations=4,overtime_rotations=None,platform='FanDuel',*,calibration_only=False):
     """Adjust shooting event probabilities, never multiply fantasy-score output.
 
     Markets specify the expected scoring environment; they are not guaranteed
@@ -60,6 +60,11 @@ def simulate_market_game(rotations,profiles,rates,targets,seed,pilot_n=1024,iter
             factor=np.clip(targets[t]/means[t],.8,1.2)
             fitted[t]=replace(fitted[t],make_two=float(np.clip(fitted[t].make_two*factor,.15,.85)),
                               make_three=float(np.clip(fitted[t].make_three*factor,.1,.75)))
+    if calibration_only:
+        # Pregame preparation needs fitted parameters, not another pilot game.
+        # Every fitting iteration and random seed above remains unchanged.
+        return {'calibrated_rates':tuple(fitted),
+                'market_calibration':{'baseline_pilot_means':baseline}}
     result=run(rotations,fitted,seed)
     means=result['team_points'].mean(axis=0)
     result['calibrated_rates']=tuple(fitted)

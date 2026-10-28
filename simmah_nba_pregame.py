@@ -156,11 +156,11 @@ class PregameEngine:
                     self.prepared[game_index]=(fitted_profiles,fitted_rates,anchor,None)
                 else:
                     baseline=simulate_market_game(rotation[:pilot],profiles,[self.rates]*2,
-                        market['implied_points'],fit_seed,overtime_rotations=ot[:pilot],platform=self.platform)
+                        market['implied_points'],fit_seed,overtime_rotations=ot[:pilot],platform=self.platform,calibration_only=True)
                     fitted_profiles,fitted_rates,anchor=fit_player_means(rotation[:pilot],profiles,
                         baseline['calibrated_rates'],targets,fit_seed+17,overtime_rotations=ot[:pilot],platform=self.platform)
                     final=simulate_market_game(rotation[:pilot],fitted_profiles,fitted_rates,
-                        market['implied_points'],fit_seed+31,overtime_rotations=ot[:pilot],platform=self.platform)
+                        market['implied_points'],fit_seed+31,overtime_rotations=ot[:pilot],platform=self.platform,calibration_only=True)
                     self.prepared[game_index]=(fitted_profiles,final['calibrated_rates'],anchor,
                         baseline['market_calibration']['baseline_pilot_means'])
             fitted_profiles,fitted_rates,anchor,initial=self.prepared[game_index]

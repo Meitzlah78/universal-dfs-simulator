@@ -1,0 +1,16 @@
+{
+  "scope": "Local single-game cold candidate draw; not live Streamlit Cloud timing",
+  "platform": "FanDuel",
+  "games": 1,
+  "simulations": 10000,
+  "before_seconds": 9.042,
+  "after_seconds": 7.491,
+  "reduction_percent": 17.15,
+  "seed": 83,
+  "removed_discarded_pilot_draws_per_priced_game": 2,
+  "market_fit_iterations_unchanged": true,
+  "player_fit_iterations_unchanged": true,
+  "exact_outcome_parity": true,
+  "candidate_target_unchanged": 5000,
+  "construction_field_evaluation_seeds_unchanged": true
+}
