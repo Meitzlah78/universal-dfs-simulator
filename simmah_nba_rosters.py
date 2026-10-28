@@ -56,7 +56,7 @@ def export_entries(template, lineups, contest_id, pool, *, salary_cap, max_from_
     reformatted floats. CSV serialization may change quoting; all non-roster cell
     values and the embedded player table are preserved.
     """
-    slate=read_template(template)
+    slate=read_template(template,game_context_pool=pool)
     rows=list(csv.reader(io.StringIO(template.decode('utf-8-sig'))))
     dk=rules_for(pool)['platform']=='DraftKings';size=len(rules_for(pool)['slots']);cid_col=2 if dk else 1
     targets=[i for i,r in enumerate(rows[1:],1) if len(r)>=4+size and r[0].isdigit() and r[cid_col]==str(contest_id)]

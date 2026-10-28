@@ -57,16 +57,37 @@ def read_template(data, *, game_context_pool=None):
     return {'entries':entries, 'players':pool, 'contests':contests, 'slots':SLOTS}
 
 
+def read_workspace_template(st, uploaded_file, contest_tab):
+    """Read current entries with saved clocks, or recover in the same screen."""
+    from simmah_nba_dk_import import MissingDKGameContext
+    state=st.session_state
+    sources=[state.get('nba_import_game_context'),(state.get('nba_build_result') or {}).get('pool'),
+             (state.get('nba_imported_slate') or {}).get('players'),None]
+    missing=None
+    for context in sources:
+        try:
+            slate=read_template(uploaded_file.getvalue(),game_context_pool=context)
+            break
+        except MissingDKGameContext as exc:missing=exc
+    else:
+        with contest_tab:
+            st.warning(str(missing)+'. Your current entry rosters have not been changed.')
+            recovery=workspace_file_uploader(st,'Original pregame DraftKings entries CSV',type=['csv'],
+                key='nba_original_game_context_DraftKings',
+                help='Used only to recover game times. Current uploaded entries supply every roster and entry ID.')
+        if recovery is None:return None
+        original=read_template(recovery.getvalue())
+        if original.get('platform')!='DraftKings':raise ValueError('Choose the original DraftKings NBA entries file for this slate')
+        slate=read_template(uploaded_file.getvalue(),game_context_pool=original['players'])
+    if slate.get('platform')=='DraftKings':
+        state['nba_import_game_context']=slate['players'].copy(deep=True)
+    return slate
+
+
 def render_setup(st, uploaded_file, tabs, controls, game_header=None):
     try:
-        saved_build=st.session_state.get('nba_build_result')
-        context=st.session_state.get('nba_import_game_context')
-        if context is None and saved_build:context=saved_build.get('pool')
-        slate = read_template(uploaded_file.getvalue(),game_context_pool=context)
-        # Retain the salary-file clocks before projection feeds replace them.
-        # The DK parser checks each recovered player's ID, team and salary.
-        if slate.get('platform')=='DraftKings':
-            st.session_state['nba_import_game_context']=slate['players'].copy(deep=True)
+        slate = read_workspace_template(st,uploaded_file,tabs[0])
+        if slate is None:return
     except (ValueError, ArithmeticError) as exc:
         st.error(str(exc))
         return
@@ -148,7 +169,7 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
     from simmah_nba_minutes_recovery import restore_saved_minutes,restore_verified_zero_snapshot
     _previous_slate=st.session_state.get('nba_imported_slate',{})
     _previous_build=st.session_state.get('nba_build_result',{})
-    for _previous_pool in (_previous_slate.get('players'),_previous_build.get('pool')):
+    for _previous_pool in (st.session_state.get('nba_import_game_context'),_previous_slate.get('players'),_previous_build.get('pool')):
         pool=restore_saved_game_metadata(pool,_previous_pool,day)
         pool=restore_saved_minutes(pool,_previous_pool,day)
     pool=restore_verified_zero_snapshot(pool,day)

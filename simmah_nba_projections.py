@@ -133,6 +133,10 @@ def apply_rotowire_projections(pool, values, details, uploaded=None):
     for idx, row in result.iterrows():
         news = details.get(player_key(row['Name'], row['Team']), {})
         for col, value in news.items():
+            if col=='Game Start' and str(row['Player ID']) in pool.attrs.get('salary_game_starts',{}):
+                # Dated site-salary clocks survive missing/changed news metadata.
+                result.at[idx,col]=pool.attrs['salary_game_starts'][str(row['Player ID'])]
+                continue
             result.at[idx, col] = value
         injury = str(news.get('RotoWire Injury', '')).upper()
         if injury in {'Q', 'QUES', 'QUESTIONABLE'}:

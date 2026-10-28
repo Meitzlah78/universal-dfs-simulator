@@ -21,6 +21,9 @@ st.set_page_config(
     layout="wide"
 )
 
+from simmah_runtime_release import activate_nba_release
+activate_nba_release('nba-entry-import-20261028-r1')
+
 if st.query_params.get('simmah_qa') == 'storage':
     import importlib
     import simmah_storage_probe as storage_probe

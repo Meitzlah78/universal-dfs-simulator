@@ -9,6 +9,10 @@ from simmah_nba_projections import team_key
 from simmah_nba_rules import DK_SLOTS
 
 
+class MissingDKGameContext(ValueError):
+    """A post-lock download needs the original slate's dated game details."""
+
+
 def player_id(value):
     # DK's current-entry downloads annotate started players after the ID.
     # This is display text; late swap enforces locks using game start times.
@@ -61,15 +65,16 @@ def read_draftkings(data, *, game_context_pool=None):
             away,home=map(team_key,match.group(1,2))
             if team not in {away,home}:raise ValueError('NBA salary team differs from game')
             stamp=datetime.strptime(match[3]+' '+match[4],'%m/%d/%Y %I:%M%p').replace(tzinfo=ZoneInfo('America/New_York'))
-        elif game.casefold()=='in progress' and game_context_pool is not None:
+        elif game.casefold() in {'in progress','final'} and game_context_pool is not None:
             prior=game_context_pool.loc[game_context_pool['Player ID'].astype(str).eq(pid)]
-            if len(prior)!=1:raise ValueError('Started DK player is missing from the current slate')
+            if len(prior)!=1:raise MissingDKGameContext('Original slate game details are needed for started DK players')
             old=prior.iloc[0]
             if team_key(old['Team'])!=team or int(old['Salary'])!=int(salary):
                 raise ValueError('Started DK player differs from the current salary slate')
-            stamp=pd.Timestamp(old.get('Game Start'))
+            saved_clocks=game_context_pool.attrs.get('salary_game_starts',{})
+            stamp=pd.Timestamp(saved_clocks.get(pid,old.get('Game Start')))
             if pd.isna(stamp):
-                raise ValueError('Confirmed saved start time required for started DK players')
+                raise MissingDKGameContext('Original slate game details are needed for started DK players')
             # Existing projection pools store Eastern wall times without an
             # offset; this is the same convention used by locked_players.
             if stamp.tzinfo is None:stamp=stamp.tz_localize('America/New_York')
@@ -77,7 +82,9 @@ def read_draftkings(data, *, game_context_pool=None):
                 raise ValueError('DK reports a started game but saved tipoff is in the future')
             stamp=stamp.tz_convert('America/New_York')
             away,home=team,team_key(old['Opponent'])
-        else:raise ValueError('Upload current DK entries in Lineups → NBA LATE SWAP; started-game details use the existing slate')
+        elif game.casefold() in {'in progress','final'}:
+            raise MissingDKGameContext('DK replaced started-game times with status labels; restore the original slate game details')
+        else:raise ValueError('Unrecognized DraftKings Game Info: '+game)
         days.add(stamp.date().isoformat())
         players.append({'Player ID':pid,'Name':name,'Position':pos,'Salary':int(salary),'Team':team,
                         'Opponent':home if team==away else away,'Game':away+'@'+home,
@@ -88,6 +95,7 @@ def read_draftkings(data, *, game_context_pool=None):
     known=set(pool['Player ID'])
     if any(v and v not in known for r in entries for v in r[4:12]):raise ValueError('Entry player is not in this NBA salary slate')
     pool.attrs['platform']='DraftKings';pool.attrs['slate_date']=next(iter(days))
+    pool.attrs['salary_game_starts']=dict(zip(pool['Player ID'],pool['Game Start']))
     contests=[]
     for cid in dict.fromkeys(r[1] for r in entries):
         owned=[r for r in entries if r[1]==cid]

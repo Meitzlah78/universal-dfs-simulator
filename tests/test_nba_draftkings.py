@@ -49,6 +49,8 @@ class DraftKingsNBATests(unittest.TestCase):
         legacy=self.pool.copy()
         legacy['Game Start']=legacy['Game Start'].map(lambda x:pd.Timestamp(x).tz_localize(None).isoformat())
         self.assertEqual(read_template(data,game_context_pool=legacy)['entries'][0][4], '1000')
+        final_data=data.replace(b'In Progress',b'Final')
+        self.assertEqual(read_template(final_data,game_context_pool=legacy)['entries'][0][4], '1000')
         with self.assertRaises(ValueError):read_template(data)
         wrong=self.pool.copy();wrong.loc[0,'Salary']=6000
         with self.assertRaises(ValueError):read_template(data,game_context_pool=wrong)
