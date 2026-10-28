@@ -7,11 +7,16 @@ import hashlib,io,json,uuid,zipfile,os,tempfile
 from datetime import datetime,timezone
 from pathlib import Path
 import pandas as pd
+from concurrent.futures import ThreadPoolExecutor
+from copy import deepcopy
+from types import SimpleNamespace
+
+_POOL = ThreadPoolExecutor(max_workers=1, thread_name_prefix="export-audit")
 
 HISTORY='simmah_export_history_v1'
 
 
-def make_checkpoint(data,filename,context,state):
+def make_checkpoint(data,filename,context,state, metadata=None):
     from simmah_slate_workspaces import snapshot,encode
     payload=data.encode('utf-8') if isinstance(data,str) else bytes(data)
     export_id=uuid.uuid4().hex
@@ -22,6 +27,8 @@ def make_checkpoint(data,filename,context,state):
     meta.update(export_id=export_id,exported_utc=datetime.now(timezone.utc).isoformat(),
                 export_filename=filename,export_sha256=hashlib.sha256(payload).hexdigest(),
                 submission_verified=False,kind=context.get('kind','entries'))
+    if metadata is not None:
+        meta.update(metadata)
     # Never nest earlier archives inside the next archive.
     # Let the widget-safe codec filter before reading values. A retired editor
     # may remain in iteration even though its Streamlit value no longer exists.
@@ -77,6 +84,99 @@ def capture_export(st,data,filename,context,original_callback=None,callback_args
     if callable(original_callback):original_callback(*callback_args,**(callback_kwargs or {}))
 
 
+
+def _archive_job(data, filename, context, state, metadata):
+    record = make_checkpoint(data, filename, context, state, metadata)
+    try:
+        persist_checkpoint(record, Path(__file__).resolve().parent/'data'/'export_archives')
+        error = None
+    except Exception as exc:
+        error = 'Export retained in this workspace, but the server archive copy FAILED: '+str(exc)
+    return record, error
+
+
+def queue_export(st, data, filename, context, original_callback=None,
+                 callback_args=(), callback_kwargs=None):
+    """Freeze click-time values; archive encoding/compression runs off the UI thread."""
+    from simmah_session_workspaces import checkpoint
+    state = st.session_state
+    try:
+        sid = (state.get('_slate_active') or {}).get('id')
+        jobs = state.setdefault('_slate_export_jobs', [])
+        parent = latest_record(state, context.get('format'), context.get('contest_id',''))
+        for job in jobs:
+            if (job['sid'] == sid and job['format'] == context.get('format')
+                    and str(job['contest_id']) == str(context.get('contest_id',''))
+                    and job['kind'] in {'entries','late_swap'}):
+                parent = job['metadata']
+        metadata = dict(export_id=uuid.uuid4().hex,
+                        exported_utc=datetime.now(timezone.utc).isoformat(),
+                        parent_export_id=parent.get('export_id') if parent else None)
+        # Prior audit ZIPs are excluded before copying, just as in make_checkpoint.
+        view = checkpoint(st, copy=False)
+        view['values'] = {k:v for k,v in view['values'].items()
+                          if k != HISTORY and not str(k).startswith('export_history_')}
+        frozen, frozen_context = deepcopy((view, context))
+        frozen_state = frozen['values']
+        frozen_state['_slate_restored_uploads'] = frozen.get('uploads', {})
+        future = _POOL.submit(_archive_job, data, filename, frozen_context, frozen_state, metadata)
+        jobs.append(dict(sid=sid, format=context.get('format'), contest_id=context.get('contest_id',''),
+                         kind=context.get('kind','entries'), metadata=metadata,
+                         context={k:v for k,v in context.items() if k in {'format','contest_id','kind'}},
+                         future=future))
+        st.toast('Download ready · Saving export history…')
+    except Exception as exc:
+        st.error('Export download is available, but its audit archive FAILED: '+str(exc))
+    if callable(original_callback):
+        original_callback(*callback_args, **(callback_kwargs or {}))
+
+
+def finish_exports(st):
+    """Publish completed jobs on the session thread, including inactive slates."""
+    state = st.session_state
+    jobs = state.get('_slate_export_jobs', [])
+    remaining = []
+    changed = False
+    for job in jobs:
+        if not job['future'].done():
+            remaining.append(job)
+            continue
+        sid = job['sid']
+        target = st
+        row = None
+        if sid != (state.get('_slate_active') or {}).get('id'):
+            row = state.get('_slate_records', {}).get(sid)
+            if row is None:
+                # The disk archive remains available if its slate was closed.
+                continue
+            saved = row.get('_session_checkpoint')
+            if saved is None:
+                remaining.append(job)
+                continue
+            saved = dict(saved, values=dict(saved['values']), artifacts=dict(saved.get('artifacts', {})))
+            row['_session_checkpoint'] = saved
+            target = SimpleNamespace(session_state=saved['values'], warning=st.warning,
+                                     error=st.error, toast=st.toast)
+            target.session_state['_slate_archive_pending'] = saved['artifacts']
+        try:
+            record, error = job['future'].result()
+            target.session_state[HISTORY] = [*target.session_state.get(HISTORY, []), record]
+            try:
+                from simmah_diagnostic_updates import attach_latest_export
+                attach_latest_export(target, record, job['context'])
+            except Exception as exc:
+                st.warning('Export saved, but attaching it to the calibration/solver package failed: '+str(exc))
+            if error:
+                st.error(error)
+            changed = True
+        except Exception as exc:
+            st.error('Export download is available, but its audit archive FAILED: '+str(exc))
+        finally:
+            if row is not None:
+                target.session_state.pop('_slate_archive_pending', None)
+    state['_slate_export_jobs'] = remaining
+    return changed
+
 def latest_record(state,format_label,contest_id):
     # Never substitute a report, another format, or another contest.
     matches=[r for r in state.get(HISTORY,[]) if r.get('format')==format_label
@@ -93,6 +193,18 @@ def latest_player_snapshot(state,format_label,contest_id):
 
 
 def render_history(st,context,key):
+    @st.fragment(run_every=1)
+    def history():
+        if finish_exports(st):
+            from simmah_workspace_persistence import schedule
+            schedule(st)
+        if st.session_state.get('_slate_export_jobs'):
+            st.caption('Saving export history…')
+        _render_history(st, context, key)
+    history()
+
+
+def _render_history(st,context,key):
     from simmah_slate_workspaces import workspace_download_button
     records=[r for r in st.session_state.get(HISTORY,[]) if r.get('format')==context.get('format') and str(r.get('contest_id',''))==str(context.get('contest_id',''))]
     if not records:return

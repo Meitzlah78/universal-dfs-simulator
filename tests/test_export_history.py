@@ -72,6 +72,9 @@ class ExportHistoryTests(unittest.TestCase):
                 on_click=lambda x:calls.append(x),args=(4,))
         self.assertNotIn('export_checkpoint',bound)
         bound['on_click'](*bound['args'])
+        from simmah_export_history import finish_exports
+        self.st.session_state['_slate_export_jobs'][0]['future'].result(timeout=30)
+        finish_exports(self.st)
         self.assertEqual(calls,[4]);self.assertEqual(len(self.st.session_state[HISTORY]),1)
 
     def test_existing_callback_preserved(self):

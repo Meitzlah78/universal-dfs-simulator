@@ -146,7 +146,7 @@ def args_for(state):
         backups=[{**ref, 'id':sid, 'name':records[sid]['name'], 'title':records[sid].get('title',records[sid]['name']),
                   'url':'app/static/workspace_backups/'+state['_slate_backup_owner']+'/'+ref['token']+'.zip'}
                  for sid,ref in refs.items() if sid in records],
-        busy=bool(state.get('_slate_backup_future') or state.get('_slate_backup_queue')),
+        busy=bool(state.get('_slate_backup_future') or state.get('_slate_backup_queue') or state.get('_slate_export_jobs')),
         error=state.get('_slate_backup_error'), restore=state.get('_slate_backup_restore'),
         upload_ack=state.get('_slate_backup_ack'), restored=state.get('_slate_backup_restored'))
 
@@ -214,14 +214,24 @@ def advance(state):
 
 
 def schedule(st):
-    from simmah_session_workspaces import checkpoint
+    from simmah_session_workspaces import checkpoint, fingerprint
     state = st.session_state
     if not state.get('_slate_backup_owner'):
         return
     current = state.get('_slate_active')
     if current:
         try:
-            current['_session_checkpoint'] = checkpoint(st)
+            view = checkpoint(st, copy=False)
+            signature = fingerprint(view)
+            signatures = state.setdefault('_slate_backup_signatures', {})
+            if current['id'] not in signatures and current.get('_session_checkpoint') is not None:
+                signatures[current['id']] = fingerprint(current['_session_checkpoint'])
+                if (signatures[current['id']] == signature
+                        and current['id'] in state.get('_slate_backup_refs', {})):
+                    state.setdefault('_slate_backup_captured', {})[current['id']] = current['_session_checkpoint']
+            if signatures.get(current['id']) != signature:
+                current['_session_checkpoint'] = checkpoint(st)
+                signatures[current['id']] = signature
         except Exception as exc:
             state['_slate_backup_error'] = 'Changes are not saved: '+str(exc)
             return
@@ -247,13 +257,16 @@ def render(st, host):
         if isinstance(event,dict) and (event.get('boot') or event.get('upload_part') or event.get('backup_part')) and event.get('event') != state.get('_slate_backup_event'):
             st.rerun(scope='app')
         consume(st)
+        from simmah_export_history import finish_exports
+        if finish_exports(st):
+            schedule(st)
         advance(state)
         component()(**args_for(state), key=KEY, default=None)
         if state.get('_slate_backup_error'):
             for sid, ref in state.get('_slate_backup_refs', {}).items():
                 path = path_for(state['_slate_backup_owner'], ref['token'])
                 if path.exists():
-                    st.download_button('Download last recovery backup', path.read_bytes(),
+                    st.download_button('Download last recovery backup', path.read_bytes(), on_click='ignore',
                         file_name='simmah-workspace-'+sid+'.zip', mime='application/zip',
                         key='_slate_backup_download_'+sid)
         if not state.get('_slate_records') or state.get('_slate_backup_error'):
