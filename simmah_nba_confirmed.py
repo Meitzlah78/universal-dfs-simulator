@@ -110,6 +110,8 @@ _lineup_cache=LineupPageCache(download_lineup_page_result)
 
 
 def request_lineup_refresh(day):
+    from simmah_nba_official_lineups import request_refresh
+    request_refresh(day)
     return _lineup_cache.get(day,force=True)
 
 
@@ -170,6 +172,19 @@ def current_confirmed_pool(st,pool,day,pairs):
             pending=True
         except (ValueError,OSError,KeyError,TypeError) as fallback_error:
             issue+='; player-data fallback: '+str(fallback_error)
+    if stale:
+        from simmah_nba_official_lineups import cached_lineups
+        try:
+            official=cached_lineups(day,pairs)
+            official_pending=bool(official.get('pending'))
+            official_stale=official_pending or bool(official.get('stale'))
+            if official.get('players') and (not official_stale or official.get('checked_at',0)>=response.get('checked_at',0)):
+                response=official;pending=official_pending;stale=official_stale
+                issue=official.get('issue','')
+            elif official_pending:
+                pending=True
+        except (ValueError,OSError,KeyError,TypeError) as official_error:
+            issue+='; NBA.com fallback: '+str(official_error)
     if response.get('players'):
         st.session_state['nba_confirmed_last_good']={'scope':scope,'response':response}
     if not response and pool.attrs.get('slate_date')!=day:

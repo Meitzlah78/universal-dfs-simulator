@@ -40,8 +40,9 @@ def render_live_strip(st,pool,markets,slate_id,day,fallback_time=None):
     def draw():
         view,response=current_confirmed_pool(st,pool,day,pairs)
         checked=response.get('checked_at',fallback_time);source_ok=not response['stale']
-        if response.get('pending'):st.caption('Checking RotoWire starting lineups…')
-        elif response.get('issue'):st.caption('RotoWire lineup check: '+response['issue'])
+        if response.get('pending'):st.caption('Checking starting lineups…')
+        elif response.get('issue'):st.caption('Lineup check: '+response['issue'])
+        if response.get('source'):st.caption('Lineup source: '+response['source'])
         scope=(day,pairs)
         if source_ok:
             observe_lineup_change(st.session_state,scope,lineup_snapshot(view),lineup_snapshot(pool))
