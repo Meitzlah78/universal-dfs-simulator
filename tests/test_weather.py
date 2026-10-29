@@ -85,14 +85,25 @@ class WeatherTest(unittest.TestCase):
         from simmah_injury_display import injury_frame
         ns={'pd':pd,'np':np,'ZoneInfo':ZoneInfo,'ThreadPoolExecutor':ThreadPoolExecutor, 'injury_frame':injury_frame,
             'fetch_game_weather_json':fetch,'st':SimpleNamespace(session_state={},expander=lambda *a,**k:nullcontext(),dataframe=Mock(),caption=Mock())}
-        exec(compile(ast.Module(body=[fn],type_ignores=[]),'dfs_app.py','exec'),ns)
+        opponent_fn=next(n for n in ast.parse(source).body if isinstance(n,ast.FunctionDef) and n.name=='build_opponent_map')
+        exec(compile(ast.Module(body=[opponent_fn,fn],type_ignores=[]),'dfs_app.py','exec'),ns)
         frame=pd.DataFrame({'Name':['Dak','Love'],'Team':['DAL','GB'],'Opponent':['GB','DAL'],'Projection':[20.,21.]})
         raw=pd.DataFrame({'Game Info':['DAL@GB 10/18/2026 08:20PM ET']})
         annotated=ns['apply_game_weather_context'](frame,raw)
         pd.testing.assert_series_equal(frame['Projection'],annotated['Projection'])
         self.assertEqual(annotated['Weather Venue'].tolist(),['Lambeau Field']*2)
         self.assertEqual(annotated['Wind MPH'].tolist(),[20.]*2)
-        self.assertEqual(sum('/points/' in url for url in calls),1)
+        # DK has no Opponent column yet at this call site; FD may have blanks.
+        for missing in (frame.drop(columns="Opponent"), frame.assign(Opponent="—")):
+            recovered=ns['apply_game_weather_context'](missing,raw)
+            self.assertEqual(recovered['Opponent'].tolist(),['GB','DAL'])
+            self.assertEqual(recovered['Weather Status'].tolist(),['Available']*2)
+            self.assertEqual(recovered['Weather Venue'].tolist(),['Lambeau Field']*2)
+            pd.testing.assert_series_equal(frame['Projection'],recovered['Projection'])
+        # FD single-game uploads can omit Game Info entirely.
+        recovered=ns['apply_game_weather_context'](frame.drop(columns="Opponent"),pd.DataFrame())
+        self.assertEqual(recovered['Opponent'].tolist(),['GB','DAL'])
+        self.assertEqual(sum('/points/' in url for url in calls),3)
         self.assertIn('44.5013,-88.0622',next(url for url in calls if '/points/' in url))
 
     def test_weather_changes_engine_events_with_neutral_fallback(self):
