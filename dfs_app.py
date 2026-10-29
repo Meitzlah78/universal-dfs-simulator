@@ -4368,6 +4368,12 @@ def apply_game_weather_context(players_frame, source_frame=None):
     frame = players_frame.copy()
     now = datetime.now(timezone.utc)
     source = source_frame if isinstance(source_frame, pd.DataFrame) else frame
+    # DK calls weather before its later opponent annotation. Resolve missing
+    # opponents here too, using salary-file matchups or an exact two-team slate.
+    opponent_map = build_opponent_map(source, frame["Team"])
+    existing = frame.get("Opponent", pd.Series("", index=frame.index)).map(team_key)
+    valid = existing.ne("") & ~existing.isin(["NAN", "NONE", "—", "-", "<NA>"])
+    frame["Opponent"] = existing.where(valid, frame["Team"].astype(str).str.strip().str.upper().map(opponent_map)).fillna("—")
     hints = kickoff_hints(source.to_dict("records"))
     dates = [value.date() for value in hints.values()]
     start = min(dates) if dates else now.astimezone(ZoneInfo("America/New_York")).date()
