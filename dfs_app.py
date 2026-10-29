@@ -4364,7 +4364,7 @@ def build_joint_candidate_pool(pool, platform_name, mode_name, evaluation_outcom
 def apply_game_weather_context(players_frame, source_frame=None):
     """Resolve actual game venues/kickoffs and annotate weather without changing projections."""
     from datetime import datetime, timedelta, timezone
-    from simmah_weather import kickoff_hints, schedule_games, select_game, venue_location, forecast_for_game, team_key
+    from simmah_weather import kickoff_hints, schedule_games, resolve_game, venue_location, forecast_for_game, team_key
     frame = players_frame.copy()
     now = datetime.now(timezone.utc)
     source = source_frame if isinstance(source_frame, pd.DataFrame) else frame
@@ -4395,7 +4395,7 @@ def apply_game_weather_context(players_frame, source_frame=None):
 
     def fetch_pair(item):
         pair, (team, opponent) = item
-        game = select_game(games, team, opponent, now, hints.get(pair))
+        game = resolve_game(games, team, opponent, now, hints.get(pair), fetch_game_weather_json)
         if game is None:
             return pair, {"status": "Unavailable: game/kickoff not verified"}
         venue = game["venue"]
