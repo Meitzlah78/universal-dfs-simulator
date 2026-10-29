@@ -163,3 +163,23 @@ def weather_factors(weather):
     if weather.get('heavy_snow'):
         completion *= .95; yards *= .95; rush += .02; kick *= .92
     return dict(completion=completion,pass_yards=yards,rush_share=rush,kick_accuracy=kick)
+
+
+def resolve_game(games, team, opponent, now, hint, fetch):
+    """Verify against alternate ESPN schedule routes if the range feed misses."""
+    game = select_game(games, team, opponent, now, hint)
+    if game is not None:
+        return game
+    day = (hint or now).astimezone(ET).date()
+    urls = [
+        f"https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates={day:%Y%m%d}",
+        f"https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/{team_key(team).lower()}/schedule?season={day.year}&seasontype=2",
+    ]
+    for url in urls:
+        try:
+            game = select_game(schedule_games(fetch(url)), team, opponent, now, hint)
+        except Exception:
+            continue
+        if game is not None:
+            return game
+    return None
