@@ -10,7 +10,7 @@ from zoneinfo import ZoneInfo
 import numpy as np
 import pandas as pd
 from simmah_weather import (parse_wind_mph,kickoff_hints,schedule_games,select_game,
-                            venue_location,forecast_for_game,weather_factors)
+                            venue_location,forecast_for_game,weather_factors,resolve_game)
 from simmah_nfl_engine import simulate_stat_lines
 
 
@@ -30,6 +30,23 @@ def periods(kickoff):
 
 
 class WeatherTest(unittest.TestCase):
+    def test_schedule_fallback_verifies_game_without_guessing_venue(self):
+        now=datetime(2026,10,18,12,tzinfo=timezone.utc)
+        hint=now
+        calls=[]
+        def fetch(url):
+            calls.append(url)
+            if 'scoreboard' in url:
+                raise OSError('range/daily feed unavailable')
+            return schedule()
+        game=resolve_game([], 'DAL', 'GB', now, hint, fetch)
+        self.assertEqual(game['venue']['fullName'],'Lambeau Field')
+        self.assertEqual(len(calls),2)
+        self.assertIn('/teams/dal/schedule?',calls[-1])
+        self.assertIsNone(resolve_game([], 'CAR', 'GB', now, hint, fetch))
+        self.assertIsNone(resolve_game([], 'DAL', 'GB', now, hint,
+            lambda url: {'events':[]}))
+
     def test_wind_parser(self):
         self.assertEqual(parse_wind_mph('15 to 20 mph'),20)
         self.assertEqual(parse_wind_mph('7.5 mph'),7.5)
