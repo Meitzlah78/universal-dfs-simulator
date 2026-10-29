@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 
 
-def select_portfolio(candidates, slots, count, metric, controls=None, default_max=80, diversity=None):
+def select_portfolio(candidates, slots, count, metric, controls=None, default_max=80, diversity=None, hard_max_exposure=None):
     count=int(count);controls=controls or {}
     strength=.5 if diversity is None else float(np.clip(diversity,0,100))/100
     if diversity is not None:default_max=100-40*strength
@@ -45,6 +45,13 @@ def select_portfolio(candidates, slots, count, metric, controls=None, default_ma
         hard_upper[i]=0 if manual_max<=0 else max(1,math.floor(count*manual_max/100+1e-9))
         lower[i]=math.ceil(count*minimum/100-1e-9)
         upper[i]=0 if maximum<=0 else max(1,math.floor(count*maximum/100+1e-9))
+        if hard_max_exposure is not None and name in hard_max_exposure:
+            cap=float(hard_max_exposure[name])
+            if not np.isfinite(cap) or not 0<=cap<=100:
+                raise ValueError(f'Invalid portfolio ownership cap for {name}')
+            limit=math.floor(count*cap/100+1e-9)
+            hard_upper[i]=min(hard_upper[i],limit)
+            upper[i]=min(upper[i],limit)
         if lower[i]>upper[i]:raise ValueError(f'Conflicting portfolio exposure limits for {name}')
     # Special-role exposure is an additional hard constraint, not part of the
     # automatic overall cap. Keep explicit CPT/MVP limits authoritative.
@@ -88,7 +95,7 @@ def select_portfolio(candidates, slots, count, metric, controls=None, default_ma
         best=int(np.argmax(score))
         if not np.isfinite(score[best]):
             chosen,effective_auto_cap=_repair_portfolio(incidence,lower,upper,hard_upper,automatic,
-                count,utility,finite,default_max)
+                count,utility,finite,default_max,time_limit=30. if hard_max_exposure is not None else 5.)
             selection_method="integer repair"
             counts=incidence[chosen].sum(axis=0)
             break
@@ -97,7 +104,7 @@ def select_portfolio(candidates, slots, count, metric, controls=None, default_ma
         overlap=np.maximum(overlap,shared)
     if (counts<lower).any():
         chosen,effective_auto_cap=_repair_portfolio(incidence,lower,upper,hard_upper,automatic,
-            count,utility,finite,default_max)
+            count,utility,finite,default_max,time_limit=30. if hard_max_exposure is not None else 5.)
         selection_method="integer repair"
     result=ranked.iloc[chosen].copy().reset_index(drop=True)
     result.attrs['portfolio_selection']='quality-overlap-exposure-v1'
@@ -108,7 +115,7 @@ def select_portfolio(candidates, slots, count, metric, controls=None, default_ma
     return result
 
 
-def _repair_portfolio(incidence,lower,upper,hard_upper,automatic,count,utility,finite,default_max):
+def _repair_portfolio(incidence,lower,upper,hard_upper,automatic,count,utility,finite,default_max,time_limit=5.):
     """Reconsider all early choices with a sparse integer feasibility solve.
 
     Automatic diversification is a preference. Only after proven infeasibility
@@ -127,7 +134,7 @@ def _repair_portfolio(incidence,lower,upper,hard_upper,automatic,count,utility,f
         current[automatic]=np.minimum(hard_upper[automatic],max(1,math.floor(count*cap/100+1e-9)))
         solution=milp(objective,integrality=np.ones(len(incidence)),bounds=bounds,
             constraints=LinearConstraint(matrix,np.r_[count,lower],np.r_[count,current]),
-            options={'time_limit':5.,'mip_rel_gap':.05})
+            options={'time_limit':time_limit,'mip_rel_gap':.05})
         if solution.x is not None:
             chosen=np.flatnonzero(solution.x>.5)
             counts=incidence[chosen].sum(axis=0)
