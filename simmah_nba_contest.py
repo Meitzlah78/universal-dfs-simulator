@@ -80,7 +80,19 @@ def select_entries(pool,candidates,report,count,diversity=50,controls=None,metri
     rows=report.reset_index(drop=True).copy()
     for slot,column in enumerate(rules_for(pool)['slots']):
         rows[column]=pool.iloc[indices[:,slot]]['Player ID'].astype(str).to_numpy()
-    return select_portfolio(rows,list(rules_for(pool)['slots']),count,metric,
-                            controls=controls,diversity=diversity)
+    # Ownership plus five percentage points is a portfolio maximum, not a
+    # target. Keep the raw provider values and floor whole-lineup limits.
+    column='RotoWire Projected Own %'
+    if column not in pool:
+        raise ValueError('Portfolio RST + 5 cap requires RotoWire ownership values')
+    ownership=pd.to_numeric(pool[column],errors='coerce').to_numpy(float)
+    used=np.unique(indices)
+    if not np.isfinite(ownership[used]).all() or ((ownership[used]<0)|(ownership[used]>100)).any():
+        raise ValueError('Portfolio RST + 5 cap requires valid ownership for every candidate player')
+    caps={str(pool.iloc[i]['Player ID']):min(100.,ownership[i]+5.) for i in used}
+    result=select_portfolio(rows,list(rules_for(pool)['slots']),count,metric,
+                            controls=controls,diversity=diversity,hard_max_exposure=caps)
+    result.attrs['ownership_cap_rule']='RotoWire RST + 5 percentage points; whole lineups rounded down'
+    return result
 
 
