@@ -67,6 +67,17 @@ def run_pipeline(pool,outcome_factory,ownership,ownership_source,payouts,entry_f
         try:
             field=build_field(support['indices'],ownership,len(payouts)-1,seed+1011,ownership_source)
             residual=field['max_expected_error_pct']
+            # An iteration-limited fit is not evidence that the supplied
+            # ownership targets need to be replaced with popularity weights.
+            # Retry on the same pregame support before accepting a fallback.
+            for budget in (500,2000):
+                if residual<=max_ownership_error:break
+                notify('Refining opponent ownership fit')
+                retry=build_field(support['indices'],ownership,len(payouts)-1,
+                    seed+1011,ownership_source,max_iterations=budget)
+                if retry['max_expected_error_pct']<residual:
+                    field=retry
+                    residual=field['max_expected_error_pct']
             if residual>max_ownership_error:
                 fallback_reason=f"Projected ownership fit missed by {residual:.2f} percentage points (limit {max_ownership_error:g})."
         except ValueError as exc:
