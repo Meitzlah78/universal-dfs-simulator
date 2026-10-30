@@ -6,6 +6,7 @@ class MissingReserveTests(unittest.TestCase):
     def test_cross_site_metadata_preserves_zero_without_borrowing_scores(self):
         pool=pd.DataFrame([{'Name':'Sergio De Larrea','Team':'DAL','Opponent':'HOU'}])
         def get(url,timeout):
+            url=getattr(url,"full_url",url)
             if 'slate-list' in url:
                 dk='siteID=1' in url
                 data={'slates':[{'slateID':1 if dk else 2,'contestType':'Classic' if dk else 'Full Roster','startDateOnly':'2026-10-21','games':[1]}],

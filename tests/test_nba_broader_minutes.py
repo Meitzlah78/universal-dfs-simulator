@@ -17,6 +17,7 @@ class BroaderSlateMinutesTests(unittest.TestCase):
     def test_minutes_only_filters_games_and_does_not_borrow_ownership_or_points(self):
         pool,listing,players=self.fixture();calls=[]
         def get(url,timeout):
+            url=getattr(url,"full_url",url)
             calls.append(url)
             self.assertFalse('projections.php' in url or 'rostership.php' in url)
             return io.BytesIO(json.dumps(listing if 'slate-list' in url else players).encode())

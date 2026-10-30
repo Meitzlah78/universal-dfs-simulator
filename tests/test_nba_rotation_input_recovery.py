@@ -19,6 +19,7 @@ class GameScopedMinutesTests(unittest.TestCase):
             return {'firstName':first,'lastName':last,'slateID':pid,'minutes':minutes,
                     'team':{'abbr':team},'opponent':{'team':opp},'game':{'dateTime':'2026-10-24 19:30:00'}}
         def get(url,timeout):
+            url=getattr(url,"full_url",url)
             if 'slate-list' in url:
                 dk='siteID=1' in url
                 data={'slates':[{'slateID':1 if dk else 2,'contestType':'Classic' if dk else 'Full Roster',

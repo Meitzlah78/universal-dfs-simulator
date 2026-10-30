@@ -12,6 +12,11 @@ class IndependentMinutesTests(unittest.TestCase):
             'opponent':{'team':'ORL'},'game':{'dateTime':'2026-10-21 19:00:00'},'minutes':35}
         calls=[]
         def get(url,timeout):
+            self.assertEqual(url.get_header('Accept'),'application/json')
+            self.assertIn('Simmah/',url.get_header('User-agent'))
+            self.assertIn('site=FanDuel',url.get_header('Referer'))
+            self.assertLessEqual(timeout,4)
+            url=url.full_url
             calls.append(url)
             if 'projections.php' in url:raise TimeoutError('temporary outage')
             if 'players.php' in url:

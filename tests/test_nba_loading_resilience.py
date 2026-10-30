@@ -94,6 +94,7 @@ class LoadingTests(unittest.TestCase):
             'team':{'abbr':'NY'},'opponent':{'team':'PHI'},'game':{'dateTime':'2026-10-21 19:00:00'}}]
         calls=[]
         def fetch(url,timeout):
+            url=getattr(url,"full_url",url)
             calls.append((url,timeout))
             if 'slate-list' in url:return io.BytesIO(json.dumps(listing).encode())
             if 'players.php' in url:return io.BytesIO(json.dumps(players).encode())

@@ -255,7 +255,12 @@ def download_rotowire(day, pool, platform='FanDuel'):
         # cannot each add another retry cycle to a projection refresh.
         remaining=deadline-monotonic()
         if remaining<=0:raise TimeoutError('RotoWire refresh budget exhausted')
-        with urlopen(base+endpoint,timeout=min(4,remaining)) as response:
+        request = Request(base+endpoint, headers={
+            'User-Agent': 'Simmah/1.0 (github.com/Meitzlah78/universal-dfs-simulator)',
+            'Accept': 'application/json',
+            'Referer': 'https://www.rotowire.com/daily/nba/optimizer.php?site='+platform,
+        })
+        with urlopen(request,timeout=min(4,remaining)) as response:
             return json.load(response)
     listing=get('slate-list.php?siteID='+('1' if platform=='DraftKings' else '2'))
     try:slate=select_rotowire_slate(listing,day,pool,platform=platform)
