@@ -185,6 +185,7 @@ class PregameEngine:
                             'player_anchor':anchor,
                             'evaluation_player_mean_mae':float(error.mean()),
                             'evaluation_player_mean_max_error':float(error.max()),
+                            'blowout_rotation_fraction_by_team':result['blowout_rotation_applied'].mean(axis=0).tolist(),
                             'overtime_fraction':float((result['overtime_periods']>0).mean()),
                             'max_overtimes_supplied':self.max_overtimes,
                             'unresolved_tie_fraction':float(result['requires_overtime'].mean())})

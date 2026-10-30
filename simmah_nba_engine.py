@@ -1,4 +1,4 @@
-"""Experimental NumPy NBA possession core; not connected to live builds.
+"""NumPy NBA possession core with experimental score-driven late rotations.
 
 Callers must supply calibrated event rates and on-court rotations. No normal
 fantasy-point draws are used. Quarter boundaries are respected. Overtime requires explicit five-player
@@ -32,8 +32,8 @@ class EventRates:
             raise ValueError('Turnover and free throw probabilities exceed one')
 
 
-def simulate_game(rotations, profiles, rates, seed, overtime_rotations=None, platform='FanDuel'):
-    """Simulate regulation from a fixed, explicit rotation per scenario.
+def simulate_game(rotations, profiles, rates, seed, overtime_rotations=None, platform='FanDuel', blowouts=True):
+    """Simulate an explicit rotation with score-driven garbage-time substitutions.
 
     rotations: integer (scenarios, 2 teams, 48 minutes, 5 players), global player
     indices. profiles: (2 teams, players per team, 5 role weights), roles ordered
@@ -63,6 +63,9 @@ def simulate_game(rotations, profiles, rates, seed, overtime_rotations=None, pla
             selected=overtime[:,team]
             if (selected<team*size).any() or (selected>=(team+1)*size).any() or np.any(np.diff(np.sort(selected,axis=-1),axis=-1)==0):
                 raise ValueError('Overtime rotation has wrong-team or duplicate players')
+    from simmah_nba_blowouts import planned_minutes, garbage_time_court
+    planned=[planned_minutes(rotation[:,t]-t*size,size) for t in (0,1)] if blowouts else None
+    blowout_seen=np.zeros((n,2),bool)
     rng=np.random.default_rng(seed)
     stats=np.zeros((n,2*size,len(STAT_NAMES)),np.int32)
     team_points=np.zeros((n,2),np.int32)
@@ -119,6 +122,12 @@ def simulate_game(rotations, profiles, rates, seed, overtime_rotations=None, pla
                 om=np.clip(((elapsed[oi]-2880-op*300)/60).astype(int),0,4)
                 offense[in_ot]=overtime[oi,team,op,om]
                 defense[in_ot]=overtime[oi,1-team,op,om]
+            if blowouts:
+                margin=team_points[ids,0]-team_points[ids,1]
+                offense,changed=garbage_time_court(offense-team*size,planned[team][ids],elapsed[ids],margin)
+                offense+=team*size;blowout_seen[ids,team]|=changed
+                defense,changed=garbage_time_court(defense-(1-team)*size,planned[1-team][ids],elapsed[ids],margin)
+                defense+=(1-team)*size;blowout_seen[ids,1-team]|=changed
             shooter=pick(ids,offense,0)
             choice=rng.random(len(ids))
             turn=choice<r.turnover
@@ -189,6 +198,7 @@ def simulate_game(rotations, profiles, rates, seed, overtime_rotations=None, pla
     scores=score_nba(platform,fgm=fgm,threes=threes,ftm=ftm,rebounds=reb,assists=ast,steals=stl,blocks=blk,turnovers=to)
     return {'scores':scores.astype(np.float32),'stats':stats,'team_points':team_points,
         'requires_overtime':team_points[:,0]==team_points[:,1], 'overtime_periods':overtime_count, 'elapsed_seconds':elapsed, 'counters':counters,
-        'engine':'experimental-nba-possession-v2-explicit-overtime'}
+        'blowout_rotation_applied':blowout_seen,
+        'engine':'experimental-nba-possession-v3-score-driven-blowouts'}
 
 
