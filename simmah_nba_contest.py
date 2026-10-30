@@ -80,7 +80,12 @@ def select_entries(pool,candidates,report,count,diversity=50,controls=None,metri
     rows=report.reset_index(drop=True).copy()
     for slot,column in enumerate(rules_for(pool)['slots']):
         rows[column]=pool.iloc[indices[:,slot]]['Player ID'].astype(str).to_numpy()
-    return select_portfolio(rows,list(rules_for(pool)['slots']),count,metric,
-                            controls=controls,diversity=diversity)
+    from simmah_nba_portfolio_limits import portfolio_limits, validate_portfolio_limits
+    limits=portfolio_limits(pool,controls)
+    selected=select_portfolio(rows,list(rules_for(pool)['slots']),count,metric,
+                            controls=limits,diversity=diversity)
+    validate_portfolio_limits(selected,rules_for(pool)['slots'],limits)
+    selected.attrs['nba_hard_exposure_limits']=limits
+    return selected
 
 

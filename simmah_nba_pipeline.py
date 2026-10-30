@@ -122,6 +122,10 @@ def run_pipeline(pool,outcome_factory,ownership,ownership_source,payouts,entry_f
 
 
 def export_portfolio(template,contest_id,pool,result,*,salary_min=0):
+    from simmah_nba_portfolio_limits import portfolio_limits, validate_portfolio_limits
+    limits=result['portfolio'].attrs.get('nba_hard_exposure_limits')
+    if limits is None:limits=portfolio_limits(pool)
+    validate_portfolio_limits(result['portfolio'],rules_for(pool)['slots'],limits)
     lineups=result['portfolio'][list(rules_for(pool)['slots'])].astype(str).to_numpy().tolist()
     return export_entries(template,lineups,contest_id,pool,salary_cap=rules_for(pool)['salary_cap'],max_from_team=rules_for(pool)['max_from_team'],salary_min=salary_min)
 
