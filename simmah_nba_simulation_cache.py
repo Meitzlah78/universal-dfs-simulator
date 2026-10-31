@@ -25,7 +25,7 @@ def simulation_identity(engine):
     implementation=sha256()
     for name in ('simmah_nba_engine.py','simmah_nba_pregame.py','simmah_nba_markets.py',
                  'simmah_nba_projection_anchor.py','simmah_nba_rotation_schedule.py','simmah_nba_scoring.py','simmah_nba_parallel.py',
-                 'simmah_nba_minutes.py','simmah_nba_blowouts.py'):
+                 'simmah_nba_minutes.py'):
         implementation.update(Path(__file__).with_name(name).read_bytes())
     payload={'version':2,'platform':engine.platform,'max_overtimes':engine.max_overtimes,
         'implementation':implementation.hexdigest(),

@@ -166,7 +166,6 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         correlation=st.slider('Build correlation',0,100,0,key='nba_build_correlation',
             help='Extra preference for positively correlated player combinations measured from the shared game simulations. 0 = no extra bonus; 100 = strongest bonus. Game simulations remain correlated at every setting.')
         diversity=st.slider('Exposure diversity',0,100,50,key='nba_exposure_diversity')
-        st.caption('Experimental blowout rotations: simulated leads of 20+ in the final six minutes, or 15+ in the final three, can rest high-minute players for active reserves on both teams. Overtime keeps its normal rotations.')
         st.caption('Hard portfolio caps: 60% overall; verified projected ownership + 5 percentage points where lower; below 16 projected minutes: 15%. Small portfolios round positive caps up to at least one entry. Caps never relax; selection/export stops if they cannot be met.')
         metric=st.selectbox('Rank lineups',['Top 1%','Expected ROI (%)','Expected Prize ($)'],key='nba_rank_metric')
         clicked=workspace_button(st,'BUILD NBA LINEUPS',disabled=bool(error),key='nba_build')
