@@ -9,14 +9,14 @@ def game(day,eid,shots=10):
     return {'event_id':str(eid),'date':day,'boxscore':{'players':[{'statistics':[{
         'names':['MIN','FG','AST','REB','STL','BLK'],
         'athletes':[{'athlete':{'id':str(i),'displayName':'Player '+str(i),'position':{'abbreviation':'PG'}},
-                     'stats':['20',f'2-{shots}','2','4','1','1']} for i in range(60)]}]}]}}
+                     'stats':['20',f'2-{shots}','2','4','1','1']} for i in range(120)]}]}]}}
 
 class LearningTests(unittest.TestCase):
     def baseline(self):
         return {'before':'2026-04-09','positions':{'G':{'rates':[1.,.2,.3,.1,.1]}}}
     def fit(self):
         games=[game('2026-10-0'+str(i),i) for i in range(1,7)]
-        return train_and_validate(games,'2026-10-07',self.baseline(),minimum_training=1,minimum_validation=3)
+        return train_and_validate(games,'2026-10-07',self.baseline(),minimum_training=1,minimum_validation=2)
     def install(self,root,model):
         p=Path(root)/'learned_roles';p.mkdir()
         data=json.dumps(model).encode();file='learned_roles/test.json'
@@ -28,11 +28,11 @@ class LearningTests(unittest.TestCase):
         report=self.fit();self.assertEqual(report['status'],'approved')
         self.assertFalse(set(report['training_ids'])&set(report['validation_ids']))
         self.assertEqual(report['model']['latest_game'],'2026-10-03')
-        self.assertEqual(report['observations'],180)
+        self.assertEqual(report['observations'],240)
     def test_worse_candidate_rejected(self):
         baseline=self.baseline();baseline['positions']['G']['rates']=[.5,.1,.2,.05,.05]
         games=[game('2026-10-0'+str(i),i,shots=100 if i<=3 else 10) for i in range(1,7)]
-        report=train_and_validate(games,'2026-10-07',baseline,minimum_training=1,minimum_validation=3)
+        report=train_and_validate(games,'2026-10-07',baseline,minimum_training=1,minimum_validation=2)
         self.assertEqual(report['status'],'rejected');self.assertNotIn('model',report)
     def test_duplicate_future_and_small_sample_guards(self):
         g=game('2026-10-01',1)
@@ -106,3 +106,54 @@ class LearningTests(unittest.TestCase):
             with patch('scripts.learn_nba_roles.train_and_validate',return_value={'status':'rejected'}),contextlib.redirect_stdout(io.StringIO()):
                 run(archive,models,'2026-10-08')
             self.assertEqual(load_approved('2026-10-08',models)['version'],active['version'])
+
+    def test_partial_acceptance_keeps_failed_stats_and_survives_reload(self):
+        baseline=self.baseline()
+        baseline['positions']['G']['rates']=[1.,.2,.2,.05,.1]
+        games=[game('2026-10-0'+str(i),i) for i in range(1,7)]
+        # Training overstates steals, but shots, assists and blocks improve.
+        for g in games[:3]:
+            for row in g['boxscore']['players'][0]['statistics'][0]['athletes']:
+                row['stats'][4]='4'
+        report=train_and_validate(games,'2026-10-07',baseline,minimum_training=1,minimum_validation=2)
+        self.assertEqual(report['accepted_roles'],['shot','assist','block'])
+        self.assertEqual(report['preserved_roles'],['rebound','steal'])
+        self.assertEqual(report['retained_mae']['steal'],report['incumbent_mae']['steal'])
+        self.assertFalse(set(report['selection_ids'])&set(report['validation_ids']))
+        self.assertFalse(set(report['selection_ids'])&set(report['training_ids']))
+        with tempfile.TemporaryDirectory() as root:
+            self.install(root,report['model'])
+            pool=pd.DataFrame({'Name':['Player 0'],'Role Rate Source':['Position prior (G)'],
+                               **{c:[v] for c,v in zip(ROLE_COLUMNS,[1.,.2,.2,.05,.1])}})
+            result=apply_learned_roles(pool,'2026-10-07',root)
+            np.testing.assert_allclose(result.loc[0,ROLE_COLUMNS].to_numpy(float),[.5,.1,.2,.05,.05])
+            # A later update must compare against, and retain, this version.
+            from simmah_nba_learning import baseline_rates
+            old=baseline_rates('0',{'0':'player0'},{'0':'PG'},load_approved('2026-10-08',root),baseline)
+            np.testing.assert_allclose(old,[.5,.1,.2,.05,.05])
+
+    def test_selection_winner_that_fails_later_confirmation_is_not_kept(self):
+        baseline=self.baseline();baseline['positions']['G']['rates']=[1.,.1,.2,.05,.05]
+        games=[game('2026-10-0'+str(i),i,shots=10 if i<=4 else 20) for i in range(1,7)]
+        result=train_and_validate(games,'2026-10-07',baseline,minimum_training=1,minimum_validation=2)
+        self.assertLess(result['selection_error_ratio']['shot'],.99)
+        self.assertEqual(result['status'],'rejected')
+        self.assertNotIn('model',result)
+
+    def test_later_promotion_preserves_earlier_winners(self):
+        from copy import deepcopy
+        incumbent=self.fit()['model'];snapshot=deepcopy(incumbent)
+        baseline=self.baseline()
+        games=[game('2026-10-'+str(i).zfill(2),i) for i in range(1,10)]
+        # Only assists improve on the next selection and confirmation dates.
+        for g in games:
+            for row in g['boxscore']['players'][0]['statistics'][0]['athletes']:
+                row['stats'][2]='3'
+        result=train_and_validate(games,'2026-10-10',baseline,incumbent,minimum_training=1,minimum_validation=2)
+        self.assertEqual(result['accepted_roles'],['assist'])
+        self.assertEqual(incumbent,snapshot)
+        old=incumbent['players_by_name']['player0']['rates']
+        new=result['model']['players_by_name']['player0']['rates']
+        self.assertEqual([new[i] for i in [0,2,3,4]],[old[i] for i in [0,2,3,4]])
+        self.assertGreater(new[1],old[1])
+        self.assertTrue(all(g['date']>incumbent['validation_through'] for g in games if g['event_id'] in result['selection_ids']+result['validation_ids']))

@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "versions": [
+    {
+      "version": "2026-10-31-c296a5a2aaf8",
+      "activation_date": "2026-10-31",
+      "file": "learned_roles/2026-10-31-c296a5a2aaf8.json",
+      "sha256": "6c3b19d516eb4749f4b99b9213cfdf5f05f67b6cf8cbf0514f6b8ac188647f14"
+    }
+  ]
+}

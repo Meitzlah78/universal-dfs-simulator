@@ -1,0 +1,5971 @@
+{
+  "activation_date": "2026-10-31",
+  "approved": true,
+  "before": "2026-10-28",
+  "latest_game": "2026-10-27",
+  "players_by_name": {
+    "aarongordon": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3064290",
+      "minutes": 153.0,
+      "rates": [
+        0.3917431220128523,
+        0.0810947294463778,
+        0.0,
+        0.0,
+        0.013084151945290808
+      ]
+    },
+    "aaronnesmith": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4396909",
+      "minutes": 96.0,
+      "rates": [
+        0.4025271866180957,
+        0.10249472749472749,
+        0.0,
+        0.0,
+        0.01653691426418699
+      ]
+    },
+    "aaronwiggins": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4397183",
+      "minutes": 187.0,
+      "rates": [
+        0.3939604961221781,
+        0.08514287015915681,
+        0.0,
+        0.0,
+        0.018149750752652734
+      ]
+    },
+    "acebailey": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4873138",
+      "minutes": 201.0,
+      "rates": [
+        0.3643173592196532,
+        0.09700579794037738,
+        0.0,
+        0.0,
+        0.03604976162325355
+      ]
+    },
+    "adaymara": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5174983",
+      "minutes": 155.0,
+      "rates": [
+        0.3161668083982134,
+        0.10595949505040414,
+        0.0,
+        0.0,
+        0.0638980853856887
+      ]
+    },
+    "ajaymitchell": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4900671",
+      "minutes": 133.0,
+      "rates": [
+        0.39109040438540976,
+        0.13098364086506378,
+        0.0,
+        0.0,
+        0.018071041427131975
+      ]
+    },
+    "ajdybantsa": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5142718",
+      "minutes": 86.0,
+      "rates": [
+        0.4123586034442169,
+        0.09776146183913174,
+        0.0,
+        0.0,
+        0.022194046024584416
+      ]
+    },
+    "ajgreen": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4397475",
+      "minutes": 135.0,
+      "rates": [
+        0.33312106788042617,
+        0.09074063191710251,
+        0.0,
+        0.0,
+        0.010086170513978001
+      ]
+    },
+    "alexcaruso": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "2991350",
+      "minutes": 115.0,
+      "rates": [
+        0.3274292438702497,
+        0.128250472931324,
+        0.0,
+        0.0,
+        0.023710525451337828
+      ]
+    },
+    "alexkaraban": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4917149",
+      "minutes": 79.0,
+      "rates": [
+        0.28616016235934005,
+        0.10120030723045798,
+        0.0,
+        0.0,
+        0.01794961548273563
+      ]
+    },
+    "alexmorales": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4593034",
+      "minutes": 68.0,
+      "rates": [
+        0.3029035761144078,
+        0.09648330393011244,
+        0.0,
+        0.0,
+        0.018999858941831864
+      ]
+    },
+    "alexsarr": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5160992",
+      "minutes": 167.0,
+      "rates": [
+        0.3203688930644901,
+        0.08410753010056146,
+        0.0,
+        0.0,
+        0.03335182397583411
+      ]
+    },
+    "alhorford": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3213",
+      "minutes": 90.0,
+      "rates": [
+        0.35212320147385084,
+        0.08637552923267208,
+        0.0,
+        0.0,
+        0.026533207052687573
+      ]
+    },
+    "allengraves": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5149115",
+      "minutes": 83.0,
+      "rates": [
+        0.3790437059581708,
+        0.09428010413232088,
+        0.0,
+        0.0,
+        0.042226470350070884
+      ]
+    },
+    "alperensengun": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4871144",
+      "minutes": 182.0,
+      "rates": [
+        0.4170393122831413,
+        0.18589026867172562,
+        0.0,
+        0.0,
+        0.021761501592928445
+      ]
+    },
+    "alphadiallo": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4065813",
+      "minutes": 105.0,
+      "rates": [
+        0.29309276582003857,
+        0.09839493839493839,
+        0.0,
+        0.0,
+        0.011430993249175068
+      ]
+    },
+    "amenthompson": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4684740",
+      "minutes": 212.0,
+      "rates": [
+        0.3733309406912912,
+        0.12391223234596728,
+        0.0,
+        0.0,
+        0.022807149039350574
+      ]
+    },
+    "andredrummond": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "6585",
+      "minutes": 111.0,
+      "rates": [
+        0.3850470662749293,
+        0.12614225601238588,
+        0.0,
+        0.0,
+        0.05009512329465104
+      ]
+    },
+    "andrewnembhard": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4395712",
+      "minutes": 154.0,
+      "rates": [
+        0.3319192420055061,
+        0.1537914640104421,
+        0.0,
+        0.0,
+        0.009386764529432082
+      ]
+    },
+    "andrewwiggins": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3059319",
+      "minutes": 136.0,
+      "rates": [
+        0.40994481370901825,
+        0.07476117632367632,
+        0.0,
+        0.0,
+        0.021765521410407773
+      ]
+    },
+    "anferneesimons": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4351851",
+      "minutes": 89.0,
+      "rates": [
+        0.358592690476118,
+        0.08678880927684755,
+        0.0,
+        0.0,
+        0.021875471201265023
+      ]
+    },
+    "anthonydavis": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "6583",
+      "minutes": 199.0,
+      "rates": [
+        0.47631934893262906,
+        0.09134439228483116,
+        0.0,
+        0.0,
+        0.03314098269926141
+      ]
+    },
+    "anthonyedwards": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4594268",
+      "minutes": 185.0,
+      "rates": [
+        0.5506422042934711,
+        0.10537331520938079,
+        0.0,
+        0.0,
+        0.018268765511686526
+      ]
+    },
+    "asanewell": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4873201",
+      "minutes": 96.0,
+      "rates": [
+        0.4071568162477253,
+        0.08397620897620897,
+        0.0,
+        0.0,
+        0.03042580315307588
+      ]
+    },
+    "ausarthompson": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4684742",
+      "minutes": 150.0,
+      "rates": [
+        0.3220217492944766,
+        0.13755133755133755,
+        0.0,
+        0.0,
+        0.024340642522460702
+      ]
+    },
+    "austinreaves": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4066457",
+      "minutes": 155.0,
+      "rates": [
+        0.3816213538527588,
+        0.16050494959585868,
+        0.0,
+        0.0,
+        0.016625358112961418
+      ]
+    },
+    "ayodosunmu": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4397002",
+      "minutes": 153.0,
+      "rates": [
+        0.3697651000348303,
+        0.12505077340242174,
+        0.0,
+        0.0,
+        0.02041015927129813
+      ]
+    },
+    "babamiller": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5075626",
+      "minutes": 68.0,
+      "rates": [
+        0.34013761866759934,
+        0.08584500605777201,
+        0.0,
+        0.0,
+        0.018999858941831864
+      ]
+    },
+    "bamadebayo": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4066261",
+      "minutes": 122.0,
+      "rates": [
+        0.3758093897087135,
+        0.10801182288785595,
+        0.0,
+        0.0,
+        0.014760220996133845
+      ]
+    },
+    "baylorscheierman": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4593841",
+      "minutes": 146.0,
+      "rates": [
+        0.3494205725921379,
+        0.12834158322880126,
+        0.0,
+        0.0,
+        0.009669073237084174
+      ]
+    },
+    "bennedictmathurin": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4683634",
+      "minutes": 120.0,
+      "rates": [
+        0.3872744679562861,
+        0.12557858807858807,
+        0.0,
+        0.0,
+        0.023216556171101625
+      ]
+    },
+    "bennettstirtz": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5241364",
+      "minutes": 151.0,
+      "rates": [
+        0.3614238830609176,
+        0.10383343593675697,
+        0.0,
+        0.0,
+        0.009490677051898119
+      ]
+    },
+    "bensheppard": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4433076",
+      "minutes": 89.0,
+      "rates": [
+        0.3155304895191802,
+        0.07243474229120163,
+        0.0,
+        0.0,
+        0.012306093210834404
+      ]
+    },
+    "bilalcoulibaly": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5104155",
+      "minutes": 185.0,
+      "rates": [
+        0.29818318790002846,
+        0.06275036438970864,
+        0.0,
+        0.0,
+        0.024826142560866852
+      ]
+    },
+    "bobbyportis": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3064482",
+      "minutes": 143.0,
+      "rates": [
+        0.39142917227950064,
+        0.09178274197285603,
+        0.0,
+        0.0,
+        0.024988492323438746
+      ]
+    },
+    "bogdanbogdanovic": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3037789",
+      "minutes": 101.0,
+      "rates": [
+        0.36174602854981297,
+        0.10017584225729022,
+        0.0,
+        0.0,
+        0.011637889054590001
+      ]
+    },
+    "boneshyland": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4592492",
+      "minutes": 97.0,
+      "rates": [
+        0.3914556327627128,
+        0.12506387621594994,
+        0.0,
+        0.0,
+        0.030285592078637742
+      ]
+    },
+    "bradensmith": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5105854",
+      "minutes": 63.0,
+      "rates": [
+        0.34943099622682333,
+        0.19201563463858545,
+        0.0,
+        0.0,
+        0.014054499896526724
+      ]
+    },
+    "brandinpodziemski": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4709138",
+      "minutes": 182.0,
+      "rates": [
+        0.420350570561287,
+        0.10642006999622894,
+        0.0,
+        0.0,
+        0.015138985036637053
+      ]
+    },
+    "brandonmiller": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4433287",
+      "minutes": 181.0,
+      "rates": [
+        0.557959708669464,
+        0.08684007022877455,
+        0.0,
+        0.0,
+        0.028478317212838503
+      ]
+    },
+    "brandonwilliams": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4397040",
+      "minutes": 132.0,
+      "rates": [
+        0.42438838218059,
+        0.13150341721770292,
+        0.0,
+        0.0,
+        0.018142751908985674
+      ]
+    },
+    "braydenburries": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5082206",
+      "minutes": 149.0,
+      "rates": [
+        0.4124381870241958,
+        0.12319279233777375,
+        0.0,
+        0.0,
+        0.009561239706559073
+      ]
+    },
+    "bricesensabaugh": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5105839",
+      "minutes": 88.0,
+      "rates": [
+        0.39877823225725323,
+        0.10643683239837086,
+        0.0,
+        0.0,
+        0.017172949428194185
+      ]
+    },
+    "bronnyjames": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4683774",
+      "minutes": 66.0,
+      "rates": [
+        0.2954079156425197,
+        0.1351551674132319,
+        0.0,
+        0.0,
+        0.01382781441432468
+      ]
+    },
+    "brooklopez": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3448",
+      "minutes": 100.0,
+      "rates": [
+        0.41339032867958486,
+        0.08244936881300517,
+        0.0,
+        0.0,
+        0.038963515823019955
+      ]
+    },
+    "brooksbarnhizer": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4684208",
+      "minutes": 121.0,
+      "rates": [
+        0.3773687647697455,
+        0.1001612495388429,
+        0.0,
+        0.0,
+        0.02312022191313025
+      ]
+    },
+    "brycehopkins": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4565698",
+      "minutes": 116.0,
+      "rates": [
+        0.2794316623284266,
+        0.08533415736805566,
+        0.0,
+        0.0,
+        0.010898192716374535
+      ]
+    },
+    "bubcarrington": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4845374",
+      "minutes": 135.0,
+      "rates": [
+        0.3448857737627791,
+        0.09858376917200447,
+        0.0,
+        0.0,
+        0.014007739141428981
+      ]
+    },
+    "buddyhield": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "2990984",
+      "minutes": 134.0,
+      "rates": [
+        0.35018059964373494,
+        0.11865693361756353,
+        0.0,
+        0.0,
+        0.010125879846710198
+      ]
+    },
+    "cadecunningham": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4432166",
+      "minutes": 201.0,
+      "rates": [
+        0.42973791996731675,
+        0.1935790066631188,
+        0.0,
+        0.0,
+        0.029819232028237976
+      ]
+    },
+    "calebwilson": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5095151",
+      "minutes": 268.0,
+      "rates": [
+        0.47924193894203265,
+        0.0879867555125287,
+        0.0,
+        0.0,
+        0.029824673920269048
+      ]
+    },
+    "cameronboozer": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5041935",
+      "minutes": 184.0,
+      "rates": [
+        0.414295632597068,
+        0.1353252011146748,
+        0.0,
+        0.0,
+        0.01832886013508023
+      ]
+    },
+    "cameronjohnson": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3138196",
+      "minutes": 102.0,
+      "rates": [
+        0.36462104643922827,
+        0.0817065817065817,
+        0.0,
+        0.0,
+        0.016089970635425183
+      ]
+    },
+    "camspencer": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4433083",
+      "minutes": 113.0,
+      "rates": [
+        0.34740717729402865,
+        0.14222687184060576,
+        0.0,
+        0.0,
+        0.01103851279426777
+      ]
+    },
+    "camwhitmore": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5105592",
+      "minutes": 83.0,
+      "rates": [
+        0.403674247830092,
+        0.07950177900916816,
+        0.0,
+        0.0,
+        0.01266982010376547
+      ]
+    },
+    "carterbryant": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5061568",
+      "minutes": 109.0,
+      "rates": [
+        0.32727455156990687,
+        0.07047537615223204,
+        0.0,
+        0.0,
+        0.033065386380193844
+      ]
+    },
+    "casonwallace": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4683692",
+      "minutes": 87.0,
+      "rates": [
+        0.38138102564980036,
+        0.11661285574329053,
+        0.0,
+        0.0,
+        0.02208682841093908
+      ]
+    },
+    "cedriccoward": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4903027",
+      "minutes": 143.0,
+      "rates": [
+        0.35720863996010904,
+        0.09938730471049863,
+        0.0,
+        0.0,
+        0.013581648216974869
+      ]
+    },
+    "chaneyjohnson": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5174655",
+      "minutes": 124.0,
+      "rates": [
+        0.3276470176619208,
+        0.08663467679861123,
+        0.0,
+        0.0,
+        0.010540874922395043
+      ]
+    },
+    "charlesbassey": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4397886",
+      "minutes": 112.0,
+      "rates": [
+        0.3445942771961581,
+        0.08249509111578077,
+        0.0,
+        0.0,
+        0.05849988569424306
+      ]
+    },
+    "chetholmgren": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4433255",
+      "minutes": 90.0,
+      "rates": [
+        0.33783748718813655,
+        0.08161362447076732,
+        0.0,
+        0.0,
+        0.05510463562411614
+      ]
+    },
+    "chriscenacjr": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5142621",
+      "minutes": 60.0,
+      "rates": [
+        0.4274770683861593,
+        0.08410478410478411,
+        0.0,
+        0.0,
+        0.042066519339246614
+      ]
+    },
+    "christiananderson": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5060701",
+      "minutes": 64.0,
+      "rates": [
+        0.35296669733428626,
+        0.10401554966772357,
+        0.0,
+        0.0,
+        0.01941289935361082
+      ]
+    },
+    "christianbraun": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4431767",
+      "minutes": 200.0,
+      "rates": [
+        0.3217058509672146,
+        0.06605894105894106,
+        0.0,
+        0.0,
+        0.017412417128326217
+      ]
+    },
+    "cjmccollum": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "2490149",
+      "minutes": 167.0,
+      "rates": [
+        0.41444554811675494,
+        0.1015291328880179,
+        0.0,
+        0.0,
+        0.019414541745868954
+      ]
+    },
+    "codywilliams": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4895758",
+      "minutes": 109.0,
+      "rates": [
+        0.3447418004782038,
+        0.08357581283345475,
+        0.0,
+        0.0,
+        0.019964949698971134
+      ]
+    },
+    "collingillespie": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4278585",
+      "minutes": 99.0,
+      "rates": [
+        0.31938754479227704,
+        0.12392174036009652,
+        0.0,
+        0.0,
+        0.01631038119207484
+      ]
+    },
+    "collinmurrayboyles": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5093267",
+      "minutes": 137.0,
+      "rates": [
+        0.3655481412821349,
+        0.10170763089051027,
+        0.0,
+        0.0,
+        0.029462931832935368
+      ]
+    },
+    "cooperflagg": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5041939",
+      "minutes": 124.0,
+      "rates": [
+        0.45469619798978966,
+        0.1440117259789391,
+        0.0,
+        0.0,
+        0.031032678201083564
+      ]
+    },
+    "coreykispert": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4280151",
+      "minutes": 104.0,
+      "rates": [
+        0.4238655013817351,
+        0.10329848722705866,
+        0.0,
+        0.0,
+        0.020410595897608883
+      ]
+    },
+    "craigporterjr": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4701233",
+      "minutes": 60.0,
+      "rates": [
+        0.28303262394171486,
+        0.172993672993673,
+        0.0,
+        0.0,
+        0.025399852672579944
+      ]
+    },
+    "daeqwonplowden": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4279318",
+      "minutes": 120.0,
+      "rates": [
+        0.3289411346229528,
+        0.0714119214119214,
+        0.0,
+        0.0,
+        0.023216556171101625
+      ]
+    },
+    "dailynswain": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4848625",
+      "minutes": 98.0,
+      "rates": [
+        0.3208526252729756,
+        0.13366450063697768,
+        0.0,
+        0.0,
+        0.01638519945442381
+      ]
+    },
+    "dalenterry": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4433159",
+      "minutes": 71.0,
+      "rates": [
+        0.36097315345292497,
+        0.14208827821393266,
+        0.0,
+        0.0,
+        0.01346582974379262
+      ]
+    },
+    "damianlillard": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "6606",
+      "minutes": 101.0,
+      "rates": [
+        0.4250944448394058,
+        0.10470072913511827,
+        0.0,
+        0.0,
+        0.011637889054590001
+      ]
+    },
+    "danielgafford": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4278049",
+      "minutes": 100.0,
+      "rates": [
+        0.3088448741341303,
+        0.10063118699482336,
+        0.0,
+        0.0,
+        0.0435089703684745
+      ]
+    },
+    "danissjenkins": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5107199",
+      "minutes": 168.0,
+      "rates": [
+        0.3505065010746829,
+        0.16020437895437895,
+        0.0,
+        0.0,
+        0.019347130142584688
+      ]
+    },
+    "dariusacuffjr": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5142620",
+      "minutes": 210.0,
+      "rates": [
+        0.5422602191197232,
+        0.13072382163291255,
+        0.0,
+        0.0,
+        0.016884768124437545
+      ]
+    },
+    "dariusgarland": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4396907",
+      "minutes": 162.0,
+      "rates": [
+        0.446616568473435,
+        0.18134347921581964,
+        0.0,
+        0.0,
+        0.009120473337107768
+      ]
+    },
+    "darrynpeterson": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5041955",
+      "minutes": 219.0,
+      "rates": [
+        0.4098698298215595,
+        0.11545386766625705,
+        0.0,
+        0.0,
+        0.010536794929393483
+      ]
+    },
+    "davidjonesgarcia": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4713010",
+      "minutes": 71.0,
+      "rates": [
+        0.4028579702068517,
+        0.08973225727152428,
+        0.0,
+        0.0,
+        0.01346582974379262
+      ]
+    },
+    "davionmitchell": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4278053",
+      "minutes": 175.0,
+      "rates": [
+        0.34896905867630057,
+        0.200470715724953,
+        0.0,
+        0.0,
+        0.018888045698523356
+      ]
+    },
+    "dayronsharpe": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4432194",
+      "minutes": 142.0,
+      "rates": [
+        0.32422088667751403,
+        0.10740023335443183,
+        0.0,
+        0.0,
+        0.04035104382085645
+      ]
+    },
+    "deaaronfox": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4066259",
+      "minutes": 159.0,
+      "rates": [
+        0.34030778605558665,
+        0.18329340909986072,
+        0.0,
+        0.0,
+        0.012802772333564123
+      ]
+    },
+    "deandreayton": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4278129",
+      "minutes": 128.0,
+      "rates": [
+        0.2780075496351156,
+        0.08926960136637556,
+        0.0,
+        0.0,
+        0.018435376939775767
+      ]
+    },
+    "deandrehunter": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4065732",
+      "minutes": 164.0,
+      "rates": [
+        0.3237530715123545,
+        0.06739035612275049,
+        0.0,
+        0.0,
+        0.012577371412198557
+      ]
+    },
+    "deanthonymelton": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4066436",
+      "minutes": 158.0,
+      "rates": [
+        0.3415319147824053,
+        0.11201029186640697,
+        0.0,
+        0.0,
+        0.02364019237792946
+      ]
+    },
+    "deanwade": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3912848",
+      "minutes": 111.0,
+      "rates": [
+        0.2595059407338038,
+        0.07419420406433393,
+        0.0,
+        0.0,
+        0.019792092991620734
+      ]
+    },
+    "dejountemurray": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3907497",
+      "minutes": 118.0,
+      "rates": [
+        0.4325456819727255,
+        0.16024731570950057,
+        0.0,
+        0.0,
+        0.02761333395405206
+      ]
+    },
+    "demarderozan": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3978",
+      "minutes": 138.0,
+      "rates": [
+        0.3912630709670879,
+        0.1051893842591517,
+        0.0,
+        0.0,
+        0.02547276543048213
+      ]
+    },
+    "deniavdija": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4683021",
+      "minutes": 124.0,
+      "rates": [
+        0.4301060340553634,
+        0.13171664401172598,
+        0.0,
+        0.0,
+        0.022835956889608156
+      ]
+    },
+    "dennisschroder": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3032979",
+      "minutes": 182.0,
+      "rates": [
+        0.3574366632765188,
+        0.1329101362213945,
+        0.0,
+        0.0,
+        0.011827726758491358
+      ]
+    },
+    "derikqueen": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4869780",
+      "minutes": 141.0,
+      "rates": [
+        0.3369573651705313,
+        0.1039803108768626,
+        0.0,
+        0.0,
+        0.029011392647756283
+      ]
+    },
+    "derrickjonesjr": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3936099",
+      "minutes": 147.0,
+      "rates": [
+        0.30691337943636204,
+        0.07917176456502299,
+        0.0,
+        0.0,
+        0.013378177831701837
+      ]
+    },
+    "derrickwhite": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3078576",
+      "minutes": 166.0,
+      "rates": [
+        0.37393661646681353,
+        0.14733867531070327,
+        0.0,
+        0.0,
+        0.012489417765959406
+      ]
+    },
+    "desmondbane": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4066320",
+      "minutes": 158.0,
+      "rates": [
+        0.4098772385234125,
+        0.0796361911469825,
+        0.0,
+        0.0,
+        0.016445947773612912
+      ]
+    },
+    "devinbooker": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3136193",
+      "minutes": 101.0,
+      "rates": [
+        0.4793930873733424,
+        0.13637493727991465,
+        0.0,
+        0.0,
+        0.016162775932418057
+      ]
+    },
+    "devinvassell": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4395630",
+      "minutes": 209.0,
+      "rates": [
+        0.3584980921261662,
+        0.11592359008772382,
+        0.0,
+        0.0,
+        0.016936089608098448
+      ]
+    },
+    "dillonbrooks": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3155526",
+      "minutes": 120.0,
+      "rates": [
+        0.39977446795628613,
+        0.09641192141192141,
+        0.0,
+        0.0,
+        0.010716556171101626
+      ]
+    },
+    "dillonmitchell": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5106283",
+      "minutes": 65.0,
+      "rates": [
+        0.3294371476189658,
+        0.12507492507492507,
+        0.0,
+        0.0,
+        0.013902559357104813
+      ]
+    },
+    "domantassabonis": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3155942",
+      "minutes": 175.0,
+      "rates": [
+        0.3252402451169786,
+        0.14623342758935978,
+        0.0,
+        0.0,
+        0.008718554173099628
+      ]
+    },
+    "donovanclingan": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5105565",
+      "minutes": 100.0,
+      "rates": [
+        0.3270266923159485,
+        0.10063118699482336,
+        0.0,
+        0.0,
+        0.057145334004838136
+      ]
+    },
+    "donovanmitchell": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3908809",
+      "minutes": 138.0,
+      "rates": [
+        0.4261467918973204,
+        0.14394907418163233,
+        0.0,
+        0.0,
+        0.017720827445986007
+      ]
+    },
+    "draymondgreen": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "6589",
+      "minutes": 134.0,
+      "rates": [
+        0.22025933980121526,
+        0.20133409897189425,
+        0.0,
+        0.0,
+        0.014062887720725946
+      ]
+    },
+    "duncanrobinson": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3157465",
+      "minutes": 197.0,
+      "rates": [
+        0.37837814608677817,
+        0.09822984586391527,
+        0.0,
+        0.0,
+        0.011268055145313535
+      ]
+    },
+    "dylanharper": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5037871",
+      "minutes": 211.0,
+      "rates": [
+        0.4227971973096939,
+        0.12428658954338713,
+        0.0,
+        0.0,
+        0.01079146066786825
+      ]
+    },
+    "dysondaniels": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4869342",
+      "minutes": 203.0,
+      "rates": [
+        0.3806373755712343,
+        0.11807696947015832,
+        0.0,
+        0.0,
+        0.014154716659642075
+      ]
+    },
+    "egordemin": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5175643",
+      "minutes": 150.0,
+      "rates": [
+        0.3627624900352173,
+        0.13014393014393014,
+        0.0,
+        0.0,
+        0.00952582770764589
+      ]
+    },
+    "emanuelsharp": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5106058",
+      "minutes": 155.0,
+      "rates": [
+        0.3525304447618497,
+        0.08050494959585869,
+        0.0,
+        0.0,
+        0.012988994476597784
+      ]
+    },
+    "evanmobley": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4432158",
+      "minutes": 140.0,
+      "rates": [
+        0.37671489349811027,
+        0.08514946591869668,
+        0.0,
+        0.0,
+        0.036815282619478425
+      ]
+    },
+    "franzwagner": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4566434",
+      "minutes": 169.0,
+      "rates": [
+        0.45656011179760786,
+        0.19425211466733958,
+        0.0,
+        0.0,
+        0.008899562218215884
+      ]
+    },
+    "fredvanvleet": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "2991230",
+      "minutes": 144.0,
+      "rates": [
+        0.3558555769299571,
+        0.1861320497684134,
+        0.0,
+        0.0,
+        0.017318081367668145
+      ]
+    },
+    "garypaytonii": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3134903",
+      "minutes": 121.0,
+      "rates": [
+        0.3358749888361356,
+        0.07111560638531593,
+        0.0,
+        0.0,
+        0.010672089133047263
+      ]
+    },
+    "georgesniang": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "2990969",
+      "minutes": 139.0,
+      "rates": [
+        0.37816939115640413,
+        0.06617320903035188,
+        0.0,
+        0.0,
+        0.009930399540789153
+      ]
+    },
+    "ggjackson": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5105550",
+      "minutes": 107.0,
+      "rates": [
+        0.4182637546674391,
+        0.07990687726370545,
+        0.0,
+        0.0,
+        0.024546138683103038
+      ]
+    },
+    "giannisantetokounmpo": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3032977",
+      "minutes": 144.0,
+      "rates": [
+        0.4770676981420783,
+        0.1596168982532619,
+        0.0,
+        0.0,
+        0.02489383894342572
+      ]
+    },
+    "gogabitadze": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4348700",
+      "minutes": 73.0,
+      "rates": [
+        0.331325763261703,
+        0.0784396950200059,
+        0.0,
+        0.0,
+        0.028870328917432072
+      ]
+    },
+    "gradeydick": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5106258",
+      "minutes": 97.0,
+      "rates": [
+        0.3315477986613303,
+        0.08358922183806976,
+        0.0,
+        0.0,
+        0.016460707286011015
+      ]
+    },
+    "grahamike": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4703396",
+      "minutes": 113.0,
+      "rates": [
+        0.38603378673608874,
+        0.10360026239854565,
+        0.0,
+        0.0,
+        0.015330358287830002
+      ]
+    },
+    "graysonallen": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3135045",
+      "minutes": 125.0,
+      "rates": [
+        0.3548811114673823,
+        0.11077086179126995,
+        0.0,
+        0.0,
+        0.01049785094311996
+      ]
+    },
+    "guisantos": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4997536",
+      "minutes": 178.0,
+      "rates": [
+        0.29847608157553246,
+        0.08771429912369509,
+        0.0,
+        0.0,
+        0.018697897587464395
+      ]
+    },
+    "harrisonbarnes": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "6578",
+      "minutes": 122.0,
+      "rates": [
+        0.31382591863433335,
+        0.07082174024322785,
+        0.0,
+        0.0,
+        0.01889245240109252
+      ]
+    },
+    "herbertjones": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4277813",
+      "minutes": 119.0,
+      "rates": [
+        0.2884764531778606,
+        0.07589481648059053,
+        0.0,
+        0.0,
+        0.010761395318261048
+      ]
+    },
+    "hugogonzalez": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5175647",
+      "minutes": 124.0,
+      "rates": [
+        0.3440404602848716,
+        0.11532320138877515,
+        0.0,
+        0.0,
+        0.014639235578132747
+      ]
+    },
+    "immanuelquickley": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4395724",
+      "minutes": 166.0,
+      "rates": [
+        0.4158946584248555,
+        0.16831769628972426,
+        0.0,
+        0.0,
+        0.00899291426945591
+      ]
+    },
+    "isaacokoro": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4432822",
+      "minutes": 124.0,
+      "rates": [
+        0.25797488651437983,
+        0.09892975876582434,
+        0.0,
+        0.0,
+        0.01873759623387045
+      ]
+    },
+    "isaiahcollier": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4683766",
+      "minutes": 139.0,
+      "rates": [
+        0.3511423641293771,
+        0.2051693480264909,
+        0.0,
+        0.0,
+        0.009930399540789153
+      ]
+    },
+    "isaiahevans": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5061585",
+      "minutes": 87.0,
+      "rates": [
+        0.38621194352419647,
+        0.09728918424570598,
+        0.0,
+        0.0,
+        0.02208682841093908
+      ]
+    },
+    "isaiahhartenstein": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4222252",
+      "minutes": 99.0,
+      "rates": [
+        0.35135101511191175,
+        0.10109069013178602,
+        0.0,
+        0.0,
+        0.02087659123773694
+      ]
+    },
+    "isaiahjackson": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4432170",
+      "minutes": 125.0,
+      "rates": [
+        0.32630968289595375,
+        0.10668922913820873,
+        0.0,
+        0.0,
+        0.026824381555364856
+      ]
+    },
+    "isaiahjoe": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4395702",
+      "minutes": 107.0,
+      "rates": [
+        0.4270743273546638,
+        0.08871744995093013,
+        0.0,
+        0.0,
+        0.020140852339490704
+      ]
+    },
+    "ivicazubac": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4017837",
+      "minutes": 142.0,
+      "rates": [
+        0.3509384439294224,
+        0.10740023335443183,
+        0.0,
+        0.0,
+        0.028900662141467137
+      ]
+    },
+    "jabarismithjr": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4432639",
+      "minutes": 211.0,
+      "rates": [
+        0.35935308854836456,
+        0.08501166507208803,
+        0.0,
+        0.0,
+        0.019854904776629576
+      ]
+    },
+    "jabariwalker": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4432446",
+      "minutes": 84.0,
+      "rates": [
+        0.3722836877917092,
+        0.0889159859748095,
+        0.0,
+        0.0,
+        0.017509673926786228
+      ]
+    },
+    "jadenbradley": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4432737",
+      "minutes": 99.0,
+      "rates": [
+        0.29655649456396654,
+        0.10565690017744812,
+        0.0,
+        0.0,
+        0.01631038119207484
+      ]
+    },
+    "jadenmcdaniels": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4431671",
+      "minutes": 173.0,
+      "rates": [
+        0.38206782358194086,
+        0.08921113016676156,
+        0.0,
+        0.0,
+        0.03266885147120952
+      ]
+    },
+    "jaimejaquezjr": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4432848",
+      "minutes": 200.0,
+      "rates": [
+        0.3935808509672146,
+        0.10668394105894105,
+        0.0,
+        0.0,
+        0.00803741712832622
+      ]
+    },
+    "jakelaravia": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4592691",
+      "minutes": 110.0,
+      "rates": [
+        0.31280814047612465,
+        0.09625591799504843,
+        0.0,
+        0.0,
+        0.024225971656801695
+      ]
+    },
+    "jakobewalter": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4684272",
+      "minutes": 153.0,
+      "rates": [
+        0.3587760890458193,
+        0.09208374043538878,
+        0.0,
+        0.0,
+        0.024073162934301794
+      ]
+    },
+    "jakobigillespie": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5107968",
+      "minutes": 74.0,
+      "rates": [
+        0.4584838778840653,
+        0.12958175844773784,
+        0.0,
+        0.0,
+        0.018412234438476238
+      ]
+    },
+    "jakobpoeltl": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3134908",
+      "minutes": 152.0,
+      "rates": [
+        0.23509511878495837,
+        0.07403993065757772,
+        0.0,
+        0.0,
+        0.02416166720979555
+      ]
+    },
+    "jalenbrunson": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3934672",
+      "minutes": 225.0,
+      "rates": [
+        0.5041909342304599,
+        0.13663438011264098,
+        0.0,
+        0.0,
+        0.01615064777120113
+      ]
+    },
+    "jalenduren": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4433621",
+      "minutes": 73.0,
+      "rates": [
+        0.409045970515589,
+        0.09916508362104216,
+        0.0,
+        0.0,
+        0.03405167606769114
+      ]
+    },
+    "jalengreen": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4437244",
+      "minutes": 115.0,
+      "rates": [
+        0.40402498855110075,
+        0.10271855803770696,
+        0.0,
+        0.0,
+        0.01519988715346549
+      ]
+    },
+    "jalenjohnson": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4701230",
+      "minutes": 199.0,
+      "rates": [
+        0.4418365903119394,
+        0.17284909447918853,
+        0.0,
+        0.0,
+        0.020601797746283353
+      ]
+    },
+    "jalenslawson": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4398207",
+      "minutes": 110.0,
+      "rates": [
+        0.282373357867429,
+        0.08756026582113538,
+        0.0,
+        0.0,
+        0.05031292817854083
+      ]
+    },
+    "jalensmith": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4397189",
+      "minutes": 155.0,
+      "rates": [
+        0.40707589930730426,
+        0.08414131323222232,
+        0.0,
+        0.0,
+        0.016625358112961418
+      ]
+    },
+    "jalensuggs": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4432165",
+      "minutes": 134.0,
+      "rates": [
+        0.31868453665160895,
+        0.14227898086165802,
+        0.0,
+        0.0,
+        0.014062887720725946
+      ]
+    },
+    "jalenwilliams": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4593803",
+      "minutes": 160.0,
+      "rates": [
+        0.43552097253395955,
+        0.11478164692450406,
+        0.0,
+        0.0,
+        0.019899905289515678
+      ]
+    },
+    "jalenwilson": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4431714",
+      "minutes": 68.0,
+      "rates": [
+        0.36673336334845036,
+        0.0805258571216018,
+        0.0,
+        0.0,
+        0.01368071000566165
+      ]
+    },
+    "jamalcain": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4278572",
+      "minutes": 110.0,
+      "rates": [
+        0.3388950969978638,
+        0.07451678756026582,
+        0.0,
+        0.0,
+        0.011182493395932133
+      ]
+    },
+    "jamalmurray": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3936299",
+      "minutes": 206.0,
+      "rates": [
+        0.40167445493714315,
+        0.13846276422963538,
+        0.0,
+        0.0,
+        0.014024458530872362
+      ]
+    },
+    "jamalshead": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4432241",
+      "minutes": 143.0,
+      "rates": [
+        0.3077789821654322,
+        0.15642152524281802,
+        0.0,
+        0.0,
+        0.024988492323438746
+      ]
+    },
+    "jamareebouyea": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4280245",
+      "minutes": 83.0,
+      "rates": [
+        0.4086003562044762,
+        0.14354118787616324,
+        0.0,
+        0.0,
+        0.01266982010376547
+      ]
+    },
+    "jamesharden": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3992",
+      "minutes": 119.0,
+      "rates": [
+        0.35960616029083126,
+        0.121919921083101,
+        0.0,
+        0.0,
+        0.01912959615508113
+      ]
+    },
+    "jamorant": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4279888",
+      "minutes": 110.0,
+      "rates": [
+        0.3780255317804725,
+        0.1701689614733093,
+        0.0,
+        0.0,
+        0.011182493395932133
+      ]
+    },
+    "jaracewalker": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5106060",
+      "minutes": 132.0,
+      "rates": [
+        0.3331185409107487,
+        0.12753516324944897,
+        0.0,
+        0.0,
+        0.02211100587723964
+      ]
+    },
+    "jaredmccain": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4683778",
+      "minutes": 134.0,
+      "rates": [
+        0.44860579649412863,
+        0.0989718942474848,
+        0.0,
+        0.0,
+        0.010125879846710198
+      ]
+    },
+    "jarenjacksonjr": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4277961",
+      "minutes": 177.0,
+      "rates": [
+        0.39039014245625814,
+        0.08127562673017218,
+        0.0,
+        0.0,
+        0.03559587030661411
+      ]
+    },
+    "jarrettallen": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4066328",
+      "minutes": 122.0,
+      "rates": [
+        0.3344870756591267,
+        0.058425046028351815,
+        0.0,
+        0.0,
+        0.039553609425885906
+      ]
+    },
+    "jaserichardson": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5239561",
+      "minutes": 124.0,
+      "rates": [
+        0.3276470176619208,
+        0.13171664401172598,
+        0.0,
+        0.0,
+        0.01873759623387045
+      ]
+    },
+    "javontegreen": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "2596112",
+      "minutes": 112.0,
+      "rates": [
+        0.3316632427133995,
+        0.06956405663302215,
+        0.0,
+        0.0,
+        0.02832747190113961
+      ]
+    },
+    "jaxsonhayes": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4397077",
+      "minutes": 144.0,
+      "rates": [
+        0.2914616375360177,
+        0.08764720128356492,
+        0.0,
+        0.0,
+        0.055196869246456025
+      ]
+    },
+    "jayhuff": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4065731",
+      "minutes": 103.0,
+      "rates": [
+        0.4033447188767205,
+        0.10824601407561048,
+        0.0,
+        0.0,
+        0.04292364789714973
+      ]
+    },
+    "jaylenbrown": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3917376",
+      "minutes": 196.0,
+      "rates": [
+        0.4555249123718629,
+        0.11752804157867448,
+        0.0,
+        0.0,
+        0.023961941395773387
+      ]
+    },
+    "jaylenclark": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4432247",
+      "minutes": 98.0,
+      "rates": [
+        0.3300269371995811,
+        0.09696725293055568,
+        0.0,
+        0.0,
+        0.025559511381029312
+      ]
+    },
+    "jaylenwells": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5112087",
+      "minutes": 169.0,
+      "rates": [
+        0.3492936758114487,
+        0.06968464061889668,
+        0.0,
+        0.0,
+        0.008899562218215884
+      ]
+    },
+    "jaylontyson": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4683747",
+      "minutes": 108.0,
+      "rates": [
+        0.3813415452171433,
+        0.10148623306518043,
+        0.0,
+        0.0,
+        0.02005251526782627
+      ]
+    },
+    "jaysontatum": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4065648",
+      "minutes": 201.0,
+      "rates": [
+        0.5169653342975348,
+        0.1717721530805643,
+        0.0,
+        0.0,
+        0.011127643243191248
+      ]
+    },
+    "jeramigrant": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "2991070",
+      "minutes": 142.0,
+      "rates": [
+        0.3165872988912545,
+        0.09594985167504251,
+        0.0,
+        0.0,
+        0.03271745603459691
+      ]
+    },
+    "jeremiahfears": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5144091",
+      "minutes": 146.0,
+      "rates": [
+        0.4170897455244687,
+        0.11330398924383886,
+        0.0,
+        0.0,
+        0.009669073237084174
+      ]
+    },
+    "jerichosims": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4277922",
+      "minutes": 76.0,
+      "rates": [
+        0.28033608321177894,
+        0.0976472507084752,
+        0.0,
+        0.0,
+        0.018224354495226483
+      ]
+    },
+    "jevoncarter": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3133635",
+      "minutes": 71.0,
+      "rates": [
+        0.29814592832203496,
+        0.15255948240241435,
+        0.0,
+        0.0,
+        0.018701431838033456
+      ]
+    },
+    "joanberinger": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5279133",
+      "minutes": 157.0,
+      "rates": [
+        0.3355446653772876,
+        0.05465292829913769,
+        0.0,
+        0.0,
+        0.041776077548968914
+      ]
+    },
+    "jocklandale": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3146557",
+      "minutes": 155.0,
+      "rates": [
+        0.3634395356709406,
+        0.1532322223231314,
+        0.0,
+        0.0,
+        0.03844353993114324
+      ]
+    },
+    "joelembiid": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3059318",
+      "minutes": 132.0,
+      "rates": [
+        0.42835663614884395,
+        0.13943992515421086,
+        0.0,
+        0.0,
+        0.02607925984549361
+      ]
+    },
+    "johncollins": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3908845",
+      "minutes": 191.0,
+      "rates": [
+        0.35030827109166773,
+        0.051893444176402376,
+        0.0,
+        0.0,
+        0.027562615694740805
+      ]
+    },
+    "jonathankuminga": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4433247",
+      "minutes": 138.0,
+      "rates": [
+        0.34087547406786306,
+        0.10906535325139977,
+        0.0,
+        0.0,
+        0.013844858453737948
+      ]
+    },
+    "jonathanmogbo": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5107897",
+      "minutes": 129.0,
+      "rates": [
+        0.34516414582132,
+        0.08891108891108891,
+        0.0,
+        0.0,
+        0.01836133928138309
+      ]
+    },
+    "jordanclarkson": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "2528426",
+      "minutes": 60.0,
+      "rates": [
+        0.37192151283060376,
+        0.08410478410478411,
+        0.0,
+        0.0,
+        0.01984429711702439
+      ]
+    },
+    "jordangoodwin": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4278402",
+      "minutes": 92.0,
+      "rates": [
+        0.3771031712712673,
+        0.11386255254179782,
+        0.0,
+        0.0,
+        0.01684893151445467
+      ]
+    },
+    "jordanmclaughlin": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3134916",
+      "minutes": 75.0,
+      "rates": [
+        0.34331216568978806,
+        0.15968646737877507,
+        0.0,
+        0.0,
+        0.013189607595202001
+      ]
+    },
+    "jordanpoole": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4277956",
+      "minutes": 122.0,
+      "rates": [
+        0.3344870756591267,
+        0.14106967412752536,
+        0.0,
+        0.0,
+        0.03128914661596855
+      ]
+    },
+    "jordanwalsh": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4683689",
+      "minutes": 147.0,
+      "rates": [
+        0.34811188130902126,
+        0.07542644621296306,
+        0.0,
+        0.0,
+        0.03210476959200146
+      ]
+    },
+    "josealvarado": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4277869",
+      "minutes": 87.0,
+      "rates": [
+        0.3765501077754042,
+        0.13593652724087507,
+        0.0,
+        0.0,
+        0.012424992662146814
+      ]
+    },
+    "joshdix": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5105800",
+      "minutes": 120.0,
+      "rates": [
+        0.32060780128961947,
+        0.09224525474525475,
+        0.0,
+        0.0,
+        0.014883222837768294
+      ]
+    },
+    "joshgiddey": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4871145",
+      "minutes": 214.0,
+      "rates": [
+        0.3201972224835589,
+        0.21897862616425492,
+        0.0,
+        0.0,
+        0.02267057928462392
+      ]
+    },
+    "joshhart": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3062679",
+      "minutes": 184.0,
+      "rates": [
+        0.29916405364969956,
+        0.10900941164099058,
+        0.0,
+        0.0,
+        0.015039386450869704
+      ]
+    },
+    "joshokogie": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4065663",
+      "minutes": 106.0,
+      "rates": [
+        0.29179589517481713,
+        0.09795956256133247,
+        0.0,
+        0.0,
+        0.024654749916214115
+      ]
+    },
+    "jrueholiday": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3995",
+      "minutes": 81.0,
+      "rates": [
+        0.3877904095000431,
+        0.15491970715851314,
+        0.0,
+        0.0,
+        0.017771012343603933
+      ]
+    },
+    "julianchampagnie": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4592479",
+      "minutes": 197.0,
+      "rates": [
+        0.3657598495568097,
+        0.07930240106896258,
+        0.0,
+        0.0,
+        0.03335007407275833
+      ]
+    },
+    "julianstrawther": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4432181",
+      "minutes": 74.0,
+      "rates": [
+        0.4378653211830344,
+        0.08834464504567596,
+        0.0,
+        0.0,
+        0.013257595263218507
+      ]
+    },
+    "juliusrandle": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3064514",
+      "minutes": 210.0,
+      "rates": [
+        0.40589658275608687,
+        0.16102685193594285,
+        0.0,
+        0.0,
+        0.010824162063831485
+      ]
+    },
+    "justinchampagnie": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4432907",
+      "minutes": 132.0,
+      "rates": [
+        0.3410550488472566,
+        0.07594786166214737,
+        0.0,
+        0.0,
+        0.02607925984549361
+      ]
+    },
+    "justinedwards": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4711297",
+      "minutes": 81.0,
+      "rates": [
+        0.3081884194502919,
+        0.08526796586498078,
+        0.0,
+        0.0,
+        0.017771012343603933
+      ]
+    },
+    "karlanthonytowns": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3136195",
+      "minutes": 212.0,
+      "rates": [
+        0.38236708526960445,
+        0.12692428053873836,
+        0.0,
+        0.0,
+        0.016783052653808403
+      ]
+    },
+    "karlomatkovic": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4997538",
+      "minutes": 76.0,
+      "rates": [
+        0.3517646546403504,
+        0.0823411282594956,
+        0.0,
+        0.0,
+        0.018224354495226483
+      ]
+    },
+    "kasparasjakucionis": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5214640",
+      "minutes": 147.0,
+      "rates": [
+        0.3218946528446018,
+        0.16531408666240127,
+        0.0,
+        0.0,
+        0.01712349618376176
+      ]
+    },
+    "kawhileonard": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "6450",
+      "minutes": 92.0,
+      "rates": [
+        0.46200883164862583,
+        0.08084368461726951,
+        0.0,
+        0.0,
+        0.02156591264653014
+      ]
+    },
+    "keatonwagler": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5254165",
+      "minutes": 160.0,
+      "rates": [
+        0.356949543962531,
+        0.1219245040673612,
+        0.0,
+        0.0,
+        0.012757048146658538
+      ]
+    },
+    "keeganmurray": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4594327",
+      "minutes": 98.0,
+      "rates": [
+        0.36672418490600306,
+        0.06485716118743642,
+        0.0,
+        0.0,
+        0.011798043491121056
+      ]
+    },
+    "keldonjohnson": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4395723",
+      "minutes": 166.0,
+      "rates": [
+        0.34946109199128905,
+        0.09489112286315084,
+        0.0,
+        0.0,
+        0.00899291426945591
+      ]
+    },
+    "kelelware": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5105623",
+      "minutes": 198.0,
+      "rates": [
+        0.42435808902361216,
+        0.06018509792094698,
+        0.0,
+        0.0,
+        0.030100545537938332
+      ]
+    },
+    "kellyoubrejr": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3133603",
+      "minutes": 157.0,
+      "rates": [
+        0.35359520689353313,
+        0.09075401133162865,
+        0.0,
+        0.0,
+        0.020115427729474333
+      ]
+    },
+    "kenrichwilliams": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3133626",
+      "minutes": 86.0,
+      "rates": [
+        0.3686692830558673,
+        0.08805272397505406,
+        0.0,
+        0.0,
+        0.017339677092545584
+      ]
+    },
+    "kentaviouscaldwellpope": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "2581018",
+      "minutes": 144.0,
+      "rates": [
+        0.3028252738996541,
+        0.08385932249568613,
+        0.0,
+        0.0,
+        0.013530202579789357
+      ]
+    },
+    "keonellis": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4702177",
+      "minutes": 161.0,
+      "rates": [
+        0.30229847796978176,
+        0.0930208581454133,
+        0.0,
+        0.0,
+        0.026946524843645518
+      ]
+    },
+    "kevindurant": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3202",
+      "minutes": 180.0,
+      "rates": [
+        0.3998195743650289,
+        0.09712953712953713,
+        0.0,
+        0.0,
+        0.03190657827021463
+      ]
+    },
+    "kevinhuerter": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4066372",
+      "minutes": 140.0,
+      "rates": [
+        0.31902258580580256,
+        0.10053408130331207,
+        0.0,
+        0.0,
+        0.02143066723486304
+      ]
+    },
+    "kevonlooney": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3155535",
+      "minutes": 61.0,
+      "rates": [
+        0.2759440459088877,
+        0.09468984054619413,
+        0.0,
+        0.0,
+        0.030784383873283923
+      ]
+    },
+    "keyontegeorge": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4433627",
+      "minutes": 200.0,
+      "rates": [
+        0.3873308509672146,
+        0.17230894105894107,
+        0.0,
+        0.0,
+        0.00803741712832622
+      ]
+    },
+    "khamanmaluach": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5203685",
+      "minutes": 130.0,
+      "rates": [
+        0.2877834892380347,
+        0.09655544455544456,
+        0.0,
+        0.0,
+        0.03428789392425756
+      ]
+    },
+    "kingstonflemings": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5149077",
+      "minutes": 185.0,
+      "rates": [
+        0.34408482724429074,
+        0.1676683971765939,
+        0.0,
+        0.0,
+        0.011711388462506198
+      ]
+    },
+    "kjmartin": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4431828",
+      "minutes": 67.0,
+      "rates": [
+        0.3366089428315972,
+        0.07560888309551411,
+        0.0,
+        0.0,
+        0.013753868882697275
+      ]
+    },
+    "klaythompson": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "6475",
+      "minutes": 132.0,
+      "rates": [
+        0.39264235043455825,
+        0.0838843695986553,
+        0.0,
+        0.0,
+        0.02607925984549361
+      ]
+    },
+    "kobebrown": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4431752",
+      "minutes": 88.0,
+      "rates": [
+        0.3410859245649455,
+        0.08720606316760163,
+        0.0,
+        0.0,
+        0.017172949428194185
+      ]
+    },
+    "krisdunn": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "2991139",
+      "minutes": 115.0,
+      "rates": [
+        0.2763654140830156,
+        0.15803770697387717,
+        0.0,
+        0.0,
+        0.03647648289814634
+      ]
+    },
+    "kylekuzma": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3134907",
+      "minutes": 181.0,
+      "rates": [
+        0.35530190136049394,
+        0.10012910677362505,
+        0.0,
+        0.0,
+        0.008544762395562759
+      ]
+    },
+    "kyrieirving": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "6442",
+      "minutes": 96.0,
+      "rates": [
+        0.43030496439587346,
+        0.121013246013246,
+        0.0,
+        0.0,
+        0.01653691426418699
+      ]
+    },
+    "kyshawngeorge": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5174563",
+      "minutes": 217.0,
+      "rates": [
+        0.37669398311426905,
+        0.10426961762273335,
+        0.0,
+        0.0,
+        0.043240277391882465
+      ]
+    },
+    "labaronphilonjr": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4873090",
+      "minutes": 94.0,
+      "rates": [
+        0.37357884256779755,
+        0.14083579971430438,
+        0.0,
+        0.0,
+        0.01201856766852519
+      ]
+    },
+    "lameloball": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4432816",
+      "minutes": 146.0,
+      "rates": [
+        0.4095709485319875,
+        0.2072889516498539,
+        0.0,
+        0.0,
+        0.013428471733324777
+      ]
+    },
+    "landryshamet": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3914044",
+      "minutes": 159.0,
+      "rates": [
+        0.34389201544626763,
+        0.09010344494215462,
+        0.0,
+        0.0,
+        0.00921854294288312
+      ]
+    },
+    "larrynancejr": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "2580365",
+      "minutes": 80.0,
+      "rates": [
+        0.32472936154754334,
+        0.09069430569430569,
+        0.0,
+        0.0,
+        0.01785986740532195
+      ]
+    },
+    "laurimarkkanen": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4066336",
+      "minutes": 174.0,
+      "rates": [
+        0.41818323914798866,
+        0.07870360931585421,
+        0.0,
+        0.0,
+        0.01214956966348432
+      ]
+    },
+    "leakyblack": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4395650",
+      "minutes": 68.0,
+      "rates": [
+        0.31354187398674827,
+        0.08584500605777201,
+        0.0,
+        0.0,
+        0.018999858941831864
+      ]
+    },
+    "lebronjames": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "1966",
+      "minutes": 125.0,
+      "rates": [
+        0.3875341726918721,
+        0.1515871883218822,
+        0.0,
+        0.0,
+        0.018661116249242406
+      ]
+    },
+    "leonardmiller": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5044385",
+      "minutes": 184.0,
+      "rates": [
+        0.42416405364969956,
+        0.08598309585151691,
+        0.0,
+        0.0,
+        0.01832886013508023
+      ]
+    },
+    "liammcneeley": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5239590",
+      "minutes": 81.0,
+      "rates": [
+        0.3728650363657148,
+        0.10019333899930914,
+        0.0,
+        0.0,
+        0.01279588796549448
+      ]
+    },
+    "ljcryer": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4433149",
+      "minutes": 64.0,
+      "rates": [
+        0.39101017559515583,
+        0.10401554966772357,
+        0.0,
+        0.0,
+        0.013978116744915165
+      ]
+    },
+    "luguentzdort": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4397020",
+      "minutes": 138.0,
+      "rates": [
+        0.336999505075615,
+        0.08968550829015945,
+        0.0,
+        0.0,
+        0.009968889461489884
+      ]
+    },
+    "lukadoncic": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3945274",
+      "minutes": 119.0,
+      "rates": [
+        0.5060496749351827,
+        0.14702452359356125,
+        0.0,
+        0.0,
+        0.01912959615508113
+      ]
+    },
+    "lukagarza": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4277951",
+      "minutes": 108.0,
+      "rates": [
+        0.42081522942766963,
+        0.07955640850377692,
+        0.0,
+        0.0,
+        0.03321041000466838
+      ]
+    },
+    "lukekennard": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3913174",
+      "minutes": 85.0,
+      "rates": [
+        0.40461401126589597,
+        0.12262859092127384,
+        0.0,
+        0.0,
+        0.012546212102753123
+      ]
+    },
+    "lukekornet": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3064560",
+      "minutes": 127.0,
+      "rates": [
+        0.27913308627331446,
+        0.08153385076462,
+        0.0,
+        0.0,
+        0.038752929073135184
+      ]
+    },
+    "malachismith": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4397784",
+      "minutes": 86.0,
+      "rates": [
+        0.4026498655801392,
+        0.11717893756728708,
+        0.0,
+        0.0,
+        0.012485308160506749
+      ]
+    },
+    "malevyleons": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4897449",
+      "minutes": 75.0,
+      "rates": [
+        0.36382498620260856,
+        0.08789159558390328,
+        0.0,
+        0.0,
+        0.01831781272340713
+      ]
+    },
+    "marcussasser": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4432107",
+      "minutes": 90.0,
+      "rates": [
+        0.33307558242623175,
+        0.10542314828029113,
+        0.0,
+        0.0,
+        0.017009397528878048
+      ]
+    },
+    "marcussmart": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "2990992",
+      "minutes": 83.0,
+      "rates": [
+        0.3544131640862496,
+        0.10905842925547359,
+        0.0,
+        0.0,
+        0.017595928478149708
+      ]
+    },
+    "mariohezonja": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "2995706",
+      "minutes": 94.0,
+      "rates": [
+        0.410962020137891,
+        0.10812551934047261,
+        0.0,
+        0.0,
+        0.026037259257310232
+      ]
+    },
+    "marvinbagleyiii": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4277848",
+      "minutes": 92.0,
+      "rates": [
+        0.3629522278750409,
+        0.08084368461726951,
+        0.0,
+        0.0,
+        0.030999874910681086
+      ]
+    },
+    "matasbuzelis": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4711294",
+      "minutes": 203.0,
+      "rates": [
+        0.39921322696442313,
+        0.0871172171481769,
+        0.0,
+        0.0,
+        0.03582654328502907
+      ]
+    },
+    "matissethybulle": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3907498",
+      "minutes": 117.0,
+      "rates": [
+        0.32888553717092267,
+        0.08497409763232548,
+        0.0,
+        0.0,
+        0.01929102734626325
+      ]
+    },
+    "maxchristie": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4432582",
+      "minutes": 154.0,
+      "rates": [
+        0.36476595733397327,
+        0.09904693846299685,
+        0.0,
+        0.0,
+        0.01668603460242478
+      ]
+    },
+    "michaelporterjr": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4278104",
+      "minutes": 196.0,
+      "rates": [
+        0.4776768111060401,
+        0.06373057322424411,
+        0.0,
+        0.0,
+        0.01763282747172275
+      ]
+    },
+    "mikalbridges": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3147657",
+      "minutes": 209.0,
+      "rates": [
+        0.31290538695899295,
+        0.09768650802085452,
+        0.0,
+        0.0,
+        0.02301511696372155
+      ]
+    },
+    "mikelbrownjr": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5101761",
+      "minutes": 86.0,
+      "rates": [
+        0.4172129723762557,
+        0.14145078222748125,
+        0.0,
+        0.0,
+        0.012485308160506749
+      ]
+    },
+    "milesbridges": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4066383",
+      "minutes": 76.0,
+      "rates": [
+        0.3721728179056565,
+        0.11295337315745478,
+        0.0,
+        0.0,
+        0.01312231367889995
+      ]
+    },
+    "milesmcbride": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4431823",
+      "minutes": 147.0,
+      "rates": [
+        0.34436656295696133,
+        0.09415303797326269,
+        0.0,
+        0.0,
+        0.01712349618376176
+      ]
+    },
+    "mitchellrobinson": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4351852",
+      "minutes": 112.0,
+      "rates": [
+        0.2885597944375374,
+        0.07818474628819456,
+        0.0,
+        0.0,
+        0.036948161556312024
+      ]
+    },
+    "mobamba": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4277919",
+      "minutes": 78.0,
+      "rates": [
+        0.3330599611591347,
+        0.09161040979222797,
+        0.0,
+        0.0,
+        0.04329279535891106
+      ]
+    },
+    "mohameddiawara": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5289900",
+      "minutes": 93.0,
+      "rates": [
+        0.3471637197629515,
+        0.08515897248291614,
+        0.0,
+        0.0,
+        0.016769828549598076
+      ]
+    },
+    "morezjohnsonjr": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4873153",
+      "minutes": 69.0,
+      "rates": [
+        0.3595019698915803,
+        0.10126381554952983,
+        0.0,
+        0.0,
+        0.013608325296636987
+      ]
+    },
+    "moritzwagner": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3150844",
+      "minutes": 125.0,
+      "rates": [
+        0.36304437677350476,
+        0.11077086179126995,
+        0.0,
+        0.0,
+        0.014579483596181185
+      ]
+    },
+    "moussadiabate": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4433249",
+      "minutes": 175.0,
+      "rates": [
+        0.25066397393053785,
+        0.08182664792834284,
+        0.0,
+        0.0,
+        0.04261685925784539
+      ]
+    },
+    "mylesturner": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3133628",
+      "minutes": 198.0,
+      "rates": [
+        0.3237291582060021,
+        0.07905302244924886,
+        0.0,
+        0.0,
+        0.07727035685869305
+      ]
+    },
+    "myrongardner": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4431772",
+      "minutes": 94.0,
+      "rates": [
+        0.3642330481752742,
+        0.12681710812551933,
+        0.0,
+        0.0,
+        0.026037259257310232
+      ]
+    },
+    "najimarshall": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4278594",
+      "minutes": 159.0,
+      "rates": [
+        0.41199237386920673,
+        0.14028265641168866,
+        0.0,
+        0.0,
+        0.016387001724245124
+      ]
+    },
+    "nazreid": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4396971",
+      "minutes": 186.0,
+      "rates": [
+        0.5030910859787865,
+        0.08868908868908869,
+        0.0,
+        0.0,
+        0.02147703751981827
+      ]
+    },
+    "neemiasqueta": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4397424",
+      "minutes": 121.0,
+      "rates": [
+        0.3275762336494136,
+        0.08771311675875991,
+        0.0,
+        0.0,
+        0.039717732286574235
+      ]
+    },
+    "nickeilalexanderwalker": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4278039",
+      "minutes": 209.0,
+      "rates": [
+        0.4223278793602087,
+        0.12200261744334692,
+        0.0,
+        0.0,
+        0.01085706225247535
+      ]
+    },
+    "nickrichards": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4278076",
+      "minutes": 90.0,
+      "rates": [
+        0.28545653480718414,
+        0.08161362447076732,
+        0.0,
+        0.0,
+        0.0360570165764971
+      ]
+    },
+    "nikolajokic": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3112335",
+      "minutes": 219.0,
+      "rates": [
+        0.398070419792061,
+        0.22459841043911843,
+        0.0,
+        0.0,
+        0.03413561498839053
+      ]
+    },
+    "nikolajovic": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4997528",
+      "minutes": 144.0,
+      "rates": [
+        0.3482798193541995,
+        0.1255259891623528,
+        0.0,
+        0.0,
+        0.03625747530706208
+      ]
+    },
+    "nikolavucevic": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "6478",
+      "minutes": 70.0,
+      "rates": [
+        0.3733993279447825,
+        0.10599400599400599,
+        0.0,
+        0.0,
+        0.029326176216128368
+      ]
+    },
+    "nimariburnett": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4433138",
+      "minutes": 79.0,
+      "rates": [
+        0.3514867955251692,
+        0.10622543285859869,
+        0.0,
+        0.0,
+        0.022974741110876332
+      ]
+    },
+    "niqueclifford": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4702384",
+      "minutes": 107.0,
+      "rates": [
+        0.3830214639185404,
+        0.13717559973066581,
+        0.0,
+        0.0,
+        0.020140852339490704
+      ]
+    },
+    "noaessengue": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5242496",
+      "minutes": 130.0,
+      "rates": [
+        0.3237834892380347,
+        0.08455544455544456,
+        0.0,
+        0.0,
+        0.014287893924257562
+      ]
+    },
+    "noahclowney": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4712896",
+      "minutes": 149.0,
+      "rates": [
+        0.2934790792175044,
+        0.08601807114818268,
+        0.0,
+        0.0,
+        0.020713656063436395
+      ]
+    },
+    "nolantraore": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5279130",
+      "minutes": 122.0,
+      "rates": [
+        0.38407385251863085,
+        0.12454074850769065,
+        0.0,
+        0.0,
+        0.01889245240109252
+      ]
+    },
+    "normanpowell": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "2595516",
+      "minutes": 182.0,
+      "rates": [
+        0.40048302089241283,
+        0.08655252032735476,
+        0.0,
+        0.0,
+        0.008516468480345664
+      ]
+    },
+    "obitoppin": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4278355",
+      "minutes": 153.0,
+      "rates": [
+        0.4210471513168816,
+        0.08475773310938146,
+        0.0,
+        0.0,
+        0.02041015927129813
+      ]
+    },
+    "oganunoby": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3934719",
+      "minutes": 223.0,
+      "rates": [
+        0.36135822830760544,
+        0.08786839982175258,
+        0.0,
+        0.0,
+        0.019160272539546327
+      ]
+    },
+    "onyekaokongwu": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4431680",
+      "minutes": 185.0,
+      "rates": [
+        0.3539208928180612,
+        0.12504544635692177,
+        0.0,
+        0.0,
+        0.021547454036276687
+      ]
+    },
+    "otegaoweh": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5106270",
+      "minutes": 94.0,
+      "rates": [
+        0.34554145939022746,
+        0.07074234177037916,
+        0.0,
+        0.0,
+        0.026037259257310232
+      ]
+    },
+    "ousmanedieng": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4997526",
+      "minutes": 114.0,
+      "rates": [
+        0.3501960355107208,
+        0.12452504760197068,
+        0.0,
+        0.0,
+        0.015264843936172608
+      ]
+    },
+    "pacomedadiet": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5211983",
+      "minutes": 74.0,
+      "rates": [
+        0.3914735686057148,
+        0.08319000587041823,
+        0.0,
+        0.0,
+        0.018412234438476238
+      ]
+    },
+    "paolobanchero": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4432573",
+      "minutes": 154.0,
+      "rates": [
+        0.39396303762594403,
+        0.1537914640104421,
+        0.0,
+        0.0,
+        0.01668603460242478
+      ]
+    },
+    "pascalsiakam": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3149673",
+      "minutes": 210.0,
+      "rates": [
+        0.4483208251803293,
+        0.13072382163291255,
+        0.0,
+        0.0,
+        0.019915071154740574
+      ]
+    },
+    "patrickwilliams": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4431687",
+      "minutes": 60.0,
+      "rates": [
+        0.38303262394171483,
+        0.09521589521589521,
+        0.0,
+        0.0,
+        0.014288741561468836
+      ]
+    },
+    "paulgeorge": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4251",
+      "minutes": 175.0,
+      "rates": [
+        0.44049448240511413,
+        0.11911478352156318,
+        0.0,
+        0.0,
+        0.008718554173099628
+      ]
+    },
+    "paulreed": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4278562",
+      "minutes": 166.0,
+      "rates": [
+        0.35295759548779254,
+        0.11237364034566831,
+        0.0,
+        0.0,
+        0.033468438744980386
+      ]
+    },
+    "paytonpritchard": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4066354",
+      "minutes": 157.0,
+      "rates": [
+        0.3752558567130277,
+        0.1665662856998597,
+        0.0,
+        0.0,
+        0.012895211122976138
+      ]
+    },
+    "pellelarsson": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4601025",
+      "minutes": 125.0,
+      "rates": [
+        0.32630968289595375,
+        0.1189341270973924,
+        0.0,
+        0.0,
+        0.014579483596181185
+      ]
+    },
+    "peytonwatson": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4576087",
+      "minutes": 124.0,
+      "rates": [
+        0.3440404602848716,
+        0.10712648007729975,
+        0.0,
+        0.0,
+        0.03513103885682127
+      ]
+    },
+    "pjwashington": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4278078",
+      "minutes": 159.0,
+      "rates": [
+        0.36181316239967265,
+        0.0757665273794306,
+        0.0,
+        0.0,
+        0.030723919286969138
+      ]
+    },
+    "preciousachiuwa": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4431679",
+      "minutes": 206.0,
+      "rates": [
+        0.383269546961683,
+        0.08018055564067834,
+        0.0,
+        0.0,
+        0.020159427856025737
+      ]
+    },
+    "quentingrimes": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4397014",
+      "minutes": 157.0,
+      "rates": [
+        0.30305369064804577,
+        0.10880455284787414,
+        0.0,
+        0.0,
+        0.012895211122976138
+      ]
+    },
+    "quentonjackson": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4592829",
+      "minutes": 130.0,
+      "rates": [
+        0.3237834892380347,
+        0.13255544455544455,
+        0.0,
+        0.0,
+        0.01828789392425756
+      ]
+    },
+    "quintenpost": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4593016",
+      "minutes": 112.0,
+      "rates": [
+        0.32735289788581323,
+        0.08680543594336697,
+        0.0,
+        0.0,
+        0.019706782245967197
+      ]
+    },
+    "rasheerfleming": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5105977",
+      "minutes": 88.0,
+      "rates": [
+        0.3218551553341763,
+        0.06797529393683241,
+        0.0,
+        0.0,
+        0.017172949428194185
+      ]
+    },
+    "rayanrupert": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5099752",
+      "minutes": 67.0,
+      "rates": [
+        0.3312613492487095,
+        0.08630407026128951,
+        0.0,
+        0.0,
+        0.024449056048472674
+      ]
+    },
+    "rayjdennis": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4431941",
+      "minutes": 75.0,
+      "rates": [
+        0.39459421697183933,
+        0.1648146725069802,
+        0.0,
+        0.0,
+        0.01831781272340713
+      ]
+    },
+    "reedsheppard": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4711272",
+      "minutes": 130.0,
+      "rates": [
+        0.4237834892380347,
+        0.13255544455544455,
+        0.0,
+        0.0,
+        0.01828789392425756
+      ]
+    },
+    "rjbarrett": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4395625",
+      "minutes": 186.0,
+      "rates": [
+        0.45407147813564924,
+        0.1148328795387619,
+        0.0,
+        0.0,
+        0.011673115951190818
+      ]
+    },
+    "ronaldhollandii": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4683771",
+      "minutes": 129.0,
+      "rates": [
+        0.37327659562051674,
+        0.11300747445325758,
+        0.0,
+        0.0,
+        0.042457724823551764
+      ]
+    },
+    "royceoneale": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "2583632",
+      "minutes": 109.0,
+      "rates": [
+        0.3185409271157584,
+        0.09667624951467746,
+        0.0,
+        0.0,
+        0.02433176192604537
+      ]
+    },
+    "rudygobert": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3032976",
+      "minutes": 174.0,
+      "rates": [
+        0.24131249084866896,
+        0.07190088822741884,
+        0.0,
+        0.0,
+        0.015550930207702006
+      ]
+    },
+    "ruihachimura": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4066648",
+      "minutes": 152.0,
+      "rates": [
+        0.41524217760848775,
+        0.06668698948110713,
+        0.0,
+        0.0,
+        0.016808726033324964
+      ]
+    },
+    "ryanconwell": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5107157",
+      "minutes": 128.0,
+      "rates": [
+        0.41913658189318015,
+        0.15781798846314976,
+        0.0,
+        0.0,
+        0.01037086081074351
+      ]
+    },
+    "ryandunn": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4888725",
+      "minutes": 111.0,
+      "rates": [
+        0.28980897103683406,
+        0.08285221272234258,
+        0.0,
+        0.0,
+        0.037108110307638054
+      ]
+    },
+    "ryankalkbrenner": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4576060",
+      "minutes": 115.0,
+      "rates": [
+        0.2678547757851433,
+        0.08569728144196229,
+        0.0,
+        0.0,
+        0.03647648289814634
+      ]
+    },
+    "ryannembhard": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4433629",
+      "minutes": 65.0,
+      "rates": [
+        0.3348425530243712,
+        0.1521019521019521,
+        0.0,
+        0.0,
+        0.013902559357104813
+      ]
+    },
+    "ryanrollins": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4591725",
+      "minutes": 189.0,
+      "rates": [
+        0.4464267712281834,
+        0.1460804567600684,
+        0.0,
+        0.0,
+        0.027741014501826505
+      ]
+    },
+    "saddiqbey": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4397136",
+      "minutes": 142.0,
+      "rates": [
+        0.4005567645401094,
+        0.07304908831626389,
+        0.0,
+        0.0,
+        0.013633486568948056
+      ]
+    },
+    "samhauser": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4065804",
+      "minutes": 125.0,
+      "rates": [
+        0.32630968289595375,
+        0.08219943321984138,
+        0.0,
+        0.0,
+        0.01049785094311996
+      ]
+    },
+    "sammerrill": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4066757",
+      "minutes": 73.0,
+      "rates": [
+        0.3054190275104076,
+        0.11470912507181937,
+        0.0,
+        0.0,
+        0.013326287466654872
+      ]
+    },
+    "sandromamukelashvili": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4278580",
+      "minutes": 126.0,
+      "rates": [
+        0.361568586624019,
+        0.11032057373520787,
+        0.0,
+        0.0,
+        0.026715339353920283
+      ]
+    },
+    "scoothenderson": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4683678",
+      "minutes": 91.0,
+      "rates": [
+        0.4310230915142591,
+        0.12862019497090588,
+        0.0,
+        0.0,
+        0.02166812076333834
+      ]
+    },
+    "scottiebarnes": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4433134",
+      "minutes": 175.0,
+      "rates": [
+        0.49812160104918196,
+        0.1326741055554615,
+        0.0,
+        0.0,
+        0.035837198240896234
+      ]
+    },
+    "scottypippenjr": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4431785",
+      "minutes": 109.0,
+      "rates": [
+        0.35784223715942653,
+        0.13161074733127134,
+        0.0,
+        0.0,
+        0.015598137471896902
+      ]
+    },
+    "sergiodelarrea": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5279129",
+      "minutes": 142.0,
+      "rates": [
+        0.3280376805706438,
+        0.14556817228572955,
+        0.0,
+        0.0,
+        0.025083868248337367
+      ]
+    },
+    "shaigilgeousalexander": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4278073",
+      "minutes": 174.0,
+      "rates": [
+        0.47260500785547166,
+        0.1331253780233372,
+        0.0,
+        0.0,
+        0.03595909347300813
+      ]
+    },
+    "sidycissoko": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5081727",
+      "minutes": 90.0,
+      "rates": [
+        0.2949803443309937,
+        0.09589933875648161,
+        0.0,
+        0.0,
+        0.02177130229078281
+      ]
+    },
+    "simonefontecchio": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3899664",
+      "minutes": 87.0,
+      "rates": [
+        0.41036653289617714,
+        0.07796551274812144,
+        0.0,
+        0.0,
+        0.02208682841093908
+      ]
+    },
+    "sionjames": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4602025",
+      "minutes": 161.0,
+      "rates": [
+        0.277387445941312,
+        0.12149060903509301,
+        0.0,
+        0.0,
+        0.009152930537595695
+      ]
+    },
+    "stephencurry": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3975",
+      "minutes": 147.0,
+      "rates": [
+        0.41927292999815985,
+        0.13535153984592185,
+        0.0,
+        0.0,
+        0.009632859479641912
+      ]
+    },
+    "stephoncastle": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4845367",
+      "minutes": 202.0,
+      "rates": [
+        0.43772010034008907,
+        0.14949956875422712,
+        0.0,
+        0.0,
+        0.007987495282808666
+      ]
+    },
+    "svimykhailiuk": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3133602",
+      "minutes": 142.0,
+      "rates": [
+        0.35857203171568197,
+        0.08068267610252343,
+        0.0,
+        0.0,
+        0.013633486568948056
+      ]
+    },
+    "tarieason": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4433192",
+      "minutes": 157.0,
+      "rates": [
+        0.3680356401065295,
+        0.06548325320888497,
+        0.0,
+        0.0,
+        0.027335644335972527
+      ]
+    },
+    "tarrisreedjr": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5105809",
+      "minutes": 98.0,
+      "rates": [
+        0.2887425335298563,
+        0.08320578504064742,
+        0.0,
+        0.0,
+        0.030146667344332065
+      ]
+    },
+    "terrenceshannonjr": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4432847",
+      "minutes": 154.0,
+      "rates": [
+        0.3611163222974769,
+        0.12094474868197495,
+        0.0,
+        0.0,
+        0.01668603460242478
+      ]
+    },
+    "tidjanesalaun": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5211176",
+      "minutes": 122.0,
+      "rates": [
+        0.35101600127896143,
+        0.07082174024322785,
+        0.0,
+        0.0,
+        0.010627989591175167
+      ]
+    },
+    "timhardawayjr": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "2528210",
+      "minutes": 119.0,
+      "rates": [
+        0.38052666238288146,
+        0.0926312181542307,
+        0.0,
+        0.0,
+        0.01912959615508113
+      ]
+    },
+    "tobeawaka": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5105555",
+      "minutes": 71.0,
+      "rates": [
+        0.30338153041627575,
+        0.08973225727152428,
+        0.0,
+        0.0,
+        0.029172636026515132
+      ]
+    },
+    "tobilawal": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5106040",
+      "minutes": 61.0,
+      "rates": [
+        0.3532921122072302,
+        0.08364011678928807,
+        0.0,
+        0.0,
+        0.030784383873283923
+      ]
+    },
+    "tolusmith": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4397882",
+      "minutes": 62.0,
+      "rates": [
+        0.3019003973049927,
+        0.11065308318055571,
+        0.0,
+        0.0,
+        0.01962622791793621
+      ]
+    },
+    "toumanicamara": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4431736",
+      "minutes": 108.0,
+      "rates": [
+        0.341867861006617,
+        0.09710026815289972,
+        0.0,
+        0.0,
+        0.02005251526782627
+      ]
+    },
+    "traeyoung": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4277905",
+      "minutes": 243.0,
+      "rates": [
+        0.3634872515413462,
+        0.24005195906022353,
+        0.0,
+        0.0,
+        0.007085326394116778
+      ]
+    },
+    "tredonaldson": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4837356",
+      "minutes": 69.0,
+      "rates": [
+        0.3595019698915803,
+        0.1277188420045563,
+        0.0,
+        0.0,
+        0.018899330587642277
+      ]
+    },
+    "trejohnson": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5238230",
+      "minutes": 166.0,
+      "rates": [
+        0.3949156374458345,
+        0.08090510887713685,
+        0.0,
+        0.0,
+        0.012489417765959406
+      ]
+    },
+    "trejones": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4395626",
+      "minutes": 111.0,
+      "rates": [
+        0.35907304030090337,
+        0.17809030796043782,
+        0.0,
+        0.0,
+        0.01113408433361208
+      ]
+    },
+    "trevonbrazile": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4698719",
+      "minutes": 161.0,
+      "rates": [
+        0.30941591569220167,
+        0.053874950672103704,
+        0.0,
+        0.0,
+        0.041181400288485374
+      ]
+    },
+    "treylyles": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3136196",
+      "minutes": 120.0,
+      "rates": [
+        0.3164411346229528,
+        0.09641192141192141,
+        0.0,
+        0.0,
+        0.01904988950443496
+      ]
+    },
+    "treymurphyiii": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4397688",
+      "minutes": 173.0,
+      "rates": [
+        0.4025456392815996,
+        0.10627597658314382,
+        0.0,
+        0.0,
+        0.00877806648827437
+      ]
+    },
+    "tristandasilva": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4702382",
+      "minutes": 171.0,
+      "rates": [
+        0.4465493893797549,
+        0.103569969549351,
+        0.0,
+        0.0,
+        0.019147675192661133
+      ]
+    },
+    "tyjerome": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4065733",
+      "minutes": 174.0,
+      "rates": [
+        0.5202240554745193,
+        0.17734306509816714,
+        0.0,
+        0.0,
+        0.015550930207702006
+      ]
+    },
+    "tylerherro": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4395725",
+      "minutes": 216.0,
+      "rates": [
+        0.48793414377829963,
+        0.14029422957994386,
+        0.0,
+        0.0,
+        0.013607063931739256
+      ]
+    },
+    "tylerkolek": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4433225",
+      "minutes": 98.0,
+      "rates": [
+        0.34837556105279205,
+        0.19788468412321622,
+        0.0,
+        0.0,
+        0.01638519945442381
+      ]
+    },
+    "tyresehaliburton": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4396993",
+      "minutes": 186.0,
+      "rates": [
+        0.4638753997042767,
+        0.21614006908124558,
+        0.0,
+        0.0,
+        0.03128095908844572
+      ]
+    },
+    "tyresemaxey": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4431678",
+      "minutes": 200.0,
+      "rates": [
+        0.4779558509672146,
+        0.13168394105894105,
+        0.0,
+        0.0,
+        0.02366241712832622
+      ]
+    },
+    "tyreseproctor": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5023693",
+      "minutes": 61.0,
+      "rates": [
+        0.3422423884503242,
+        0.1057395643031002,
+        0.0,
+        0.0,
+        0.01420979823792481
+      ]
+    },
+    "tyusjones": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3135046",
+      "minutes": 105.0,
+      "rates": [
+        0.2753149880422608,
+        0.19617271617271617,
+        0.0,
+        0.0,
+        0.01587543769361951
+      ]
+    },
+    "victorwembanyama": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5104157",
+      "minutes": 201.0,
+      "rates": [
+        0.4982737455124881,
+        0.10635159233290074,
+        0.0,
+        0.0,
+        0.08900926318088595
+      ]
+    },
+    "vitkrejci": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4578893",
+      "minutes": 67.0,
+      "rates": [
+        0.357999317163148,
+        0.10234685100995261,
+        0.0,
+        0.0,
+        0.019101462465584976
+      ]
+    },
+    "vjedgecombe": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5124612",
+      "minutes": 144.0,
+      "rates": [
+        0.37100709208147226,
+        0.1255259891623528,
+        0.0,
+        0.0,
+        0.017318081367668145
+      ]
+    },
+    "walkerkessler": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4433136",
+      "minutes": 110.0,
+      "rates": [
+        0.3215037926500377,
+        0.0919080919080919,
+        0.0,
+        0.0,
+        0.054660754265497345
+      ]
+    },
+    "wendellcarterjr": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4277847",
+      "minutes": 164.0,
+      "rates": [
+        0.3131896912306643,
+        0.08499598992556738,
+        0.0,
+        0.0,
+        0.026661878454452077
+      ]
+    },
+    "willrichard": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4897262",
+      "minutes": 147.0,
+      "rates": [
+        0.29942274273224223,
+        0.06793580950884322,
+        0.0,
+        0.0,
+        0.01712349618376176
+      ]
+    },
+    "willriley": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5144126",
+      "minutes": 71.0,
+      "rates": [
+        0.34003074507596165,
+        0.10020346146000596,
+        0.0,
+        0.0,
+        0.018701431838033456
+      ]
+    },
+    "yanghansen": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5217746",
+      "minutes": 65.0,
+      "rates": [
+        0.345653363835182,
+        0.13048033048033048,
+        0.0,
+        0.0,
+        0.013902559357104813
+      ]
+    },
+    "yaxellendeborg": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5175737",
+      "minutes": 220.0,
+      "rates": [
+        0.4233702126750255,
+        0.14746723864370923,
+        0.0,
+        0.0,
+        0.02521168670901291
+      ]
+    },
+    "yvesmissi": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5061589",
+      "minutes": 113.0,
+      "rates": [
+        0.3302397953197797,
+        0.08643288042429673,
+        0.0,
+        0.0,
+        0.04966512223632785
+      ]
+    },
+    "zaccharierisacher": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5211175",
+      "minutes": 189.0,
+      "rates": [
+        0.3719931142702546,
+        0.08459178362090983,
+        0.0,
+        0.0,
+        0.03097726045651906
+      ]
+    },
+    "zachedey": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4600663",
+      "minutes": 90.0,
+      "rates": [
+        0.29021843956908894,
+        0.09113743399457684,
+        0.0,
+        0.0,
+        0.05034273086221138
+      ]
+    },
+    "zachlavine": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "3064440",
+      "minutes": 220.0,
+      "rates": [
+        0.42925256561620195,
+        0.1033495915848857,
+        0.0,
+        0.0,
+        0.010505804356071737
+      ]
+    },
+    "ziairewilliams": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4433137",
+      "minutes": 72.0,
+      "rates": [
+        0.3434680849453577,
+        0.07363990176490177,
+        0.0,
+        0.0,
+        0.018604028547210365
+      ]
+    },
+    "zionwilliamson": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4395628",
+      "minutes": 170.0,
+      "rates": [
+        0.4032616286534782,
+        0.08323745220296944,
+        0.0,
+        0.0,
+        0.015765425796773758
+      ]
+    },
+    "zubyejiofor": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "5106262",
+      "minutes": 78.0,
+      "rates": [
+        0.3684134965126701,
+        0.09666091484273302,
+        0.0,
+        0.0,
+        0.02309077515689086
+      ]
+    },
+    "zyonpullin": {
+      "enabled_roles": [
+        "shot",
+        "assist",
+        "block"
+      ],
+      "espn_id": "4592979",
+      "minutes": 120.0,
+      "rates": [
+        0.33727446795628613,
+        0.1214119214119214,
+        0.0,
+        0.0,
+        0.010716556171101626
+      ]
+    }
+  },
+  "selection_through": "2026-10-28",
+  "validation": {
+    "acceptance": "Each role needs at least 1% improvement on selection AND later confirmation; other roles retain incumbent",
+    "accepted_roles": [
+      "shot",
+      "assist",
+      "block"
+    ],
+    "candidate_mae": {
+      "assist": 1.2896629733874918,
+      "block": 0.47672895147659633,
+      "rebound": 1.695131146056291,
+      "shot": 2.249775427345737,
+      "steal": 0.704000464975303
+    },
+    "candidate_mean_error_ratio": 0.9246447910388318,
+    "incumbent_mae": {
+      "assist": 1.5220736019082426,
+      "block": 0.48489310603905744,
+      "rebound": 1.766672673270002,
+      "shot": 2.7125001173206873,
+      "steal": 0.7013080004592634
+    },
+    "max_role_error_ratio": 1.0,
+    "mean_error_ratio": 0.9319759635090152,
+    "observations": 296,
+    "preserved_roles": [
+      "rebound",
+      "steal"
+    ],
+    "retained_mae": {
+      "assist": 1.2896629733874918,
+      "block": 0.47672895147659633,
+      "rebound": 1.766672673270002,
+      "shot": 2.249775427345737,
+      "steal": 0.7013080004592634
+    },
+    "scope": "Player stat-rate accuracy conditional on observed minutes; not fantasy-point or ROI validation",
+    "selection_error_ratio": {
+      "assist": 0.8668204675724996,
+      "block": 0.9813457103677189,
+      "rebound": 1.007508404583497,
+      "shot": 0.8382236864729469,
+      "steal": 1.0394871834916186
+    },
+    "selection_games": 12,
+    "selection_ids": [
+      "401909881",
+      "401909882",
+      "401909883",
+      "401909884",
+      "401909885",
+      "401909886",
+      "401909887",
+      "401909888",
+      "401909889",
+      "401909890",
+      "401909891",
+      "401909892"
+    ],
+    "selection_observations": 256,
+    "selection_through": "2026-10-28",
+    "status": "approved",
+    "training_before": "2026-10-28",
+    "training_games": 114,
+    "training_ids": [
+      "401902644",
+      "401914127",
+      "401918010",
+      "401898388",
+      "401908947",
+      "401914101",
+      "401914102",
+      "401898389",
+      "401898390",
+      "401901820",
+      "401914128",
+      "401898391",
+      "401908620",
+      "401908939",
+      "401914123",
+      "401914129",
+      "401898392",
+      "401898393",
+      "401898394",
+      "401898717",
+      "401906508",
+      "401898395",
+      "401908940",
+      "401898396",
+      "401898397",
+      "401898398",
+      "401898399",
+      "401898720",
+      "401902645",
+      "401906510",
+      "401898400",
+      "401898401",
+      "401901821",
+      "401908941",
+      "401898402",
+      "401898721",
+      "401901824",
+      "401914124",
+      "401914130",
+      "401898403",
+      "401898718",
+      "401901826",
+      "401908621",
+      "401908944",
+      "401898404",
+      "401898405",
+      "401898722",
+      "401901825",
+      "401908942",
+      "401914125",
+      "401918011",
+      "401908622",
+      "401908945",
+      "401898406",
+      "401898407",
+      "401898408",
+      "401898409",
+      "401898719",
+      "401898843",
+      "401906509",
+      "401908943",
+      "401908946",
+      "401908948",
+      "401914126",
+      "401909088",
+      "401909089",
+      "401909090",
+      "401909091",
+      "401909834",
+      "401909835",
+      "401909836",
+      "401909837",
+      "401909838",
+      "401909839",
+      "401909840",
+      "401909842",
+      "401909093",
+      "401909094",
+      "401909095",
+      "401909096",
+      "401909843",
+      "401909844",
+      "401909845",
+      "401909846",
+      "401909847",
+      "401909848",
+      "401909849",
+      "401909850",
+      "401909851",
+      "401909852",
+      "401909853",
+      "401909854",
+      "401909855",
+      "401909856",
+      "401909857",
+      "401909858",
+      "401909859",
+      "401909860",
+      "401909861",
+      "401909862",
+      "401909863",
+      "401909864",
+      "401909865",
+      "401909866",
+      "401909867",
+      "401909868",
+      "401909870",
+      "401909872",
+      "401909874",
+      "401909875",
+      "401909876",
+      "401909877",
+      "401909878",
+      "401909879"
+    ],
+    "validation_games": 13,
+    "validation_ids": [
+      "401909893",
+      "401909894",
+      "401909895",
+      "401909277",
+      "401909278",
+      "401909279",
+      "401909280",
+      "401909281",
+      "401909282",
+      "401909283",
+      "401909284",
+      "401909285",
+      "401909286"
+    ],
+    "validation_start": "2026-10-29",
+    "validation_through": "2026-10-30"
+  },
+  "validation_start": "2026-10-29",
+  "validation_through": "2026-10-30",
+  "version": "2026-10-31-c296a5a2aaf8"
+}
