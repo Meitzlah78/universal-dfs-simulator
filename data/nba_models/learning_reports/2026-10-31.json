@@ -1,27 +1,27 @@
 {
   "status": "rejected",
   "training_games": 114,
-  "validation_games": 23,
+  "validation_games": 25,
   "training_before": "2026-10-28",
   "validation_through": "2026-10-30",
   "scope": "Player stat-rate accuracy conditional on observed minutes; not fantasy-point or ROI validation",
-  "observations": 509,
+  "observations": 552,
   "candidate_mae": {
-    "shot": 2.326797022654995,
-    "assist": 1.2863150314321288,
-    "rebound": 1.7690425856240186,
-    "steal": 0.707462283943342,
-    "block": 0.48320247191279114
+    "shot": 2.3480461942791537,
+    "assist": 1.2909346597640503,
+    "rebound": 1.7778731839184525,
+    "steal": 0.7040041120626609,
+    "block": 0.49025454495541276
   },
   "incumbent_mae": {
-    "shot": 2.792538321570577,
-    "assist": 1.5049363296833556,
-    "rebound": 1.809690386914117,
-    "steal": 0.6894325287443388,
-    "block": 0.4906514687066893
+    "shot": 2.816510219542246,
+    "assist": 1.507649671101802,
+    "rebound": 1.8097606751673188,
+    "steal": 0.6901576420302317,
+    "block": 0.49909223830315136
   },
-  "mean_error_ratio": 0.9352916901773949,
-  "max_role_error_ratio": 1.026151587642435,
+  "mean_error_ratio": 0.9349328120524835,
+  "max_role_error_ratio": 1.020062764199346,
   "acceptance": "At least 1% average normalized improvement; no role more than 2% worse",
   "training_ids": [
     "401902644",
@@ -162,9 +162,11 @@
     "401909281",
     "401909282",
     "401909283",
-    "401909284"
+    "401909284",
+    "401909285",
+    "401909286"
   ],
   "rejected_archive_games": [],
-  "corpus_games": 137,
+  "corpus_games": 139,
   "as_of": "2026-10-31"
 }
