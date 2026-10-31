@@ -818,13 +818,12 @@
       ]
     },
     "piggy-bank-3000-71856": {
-      "name": "$3K Sat NBA Piggy Bank (150 Entries Max)",
-      "platform": "FanDuel",
+      "name": "$3K Sat NBA Piggy Bloodshot (150 Entries Max)",
       "capacity": 71856,
       "entry_fee": 0.05,
       "prize_pool": 3000,
       "max_entries": 150,
-      "source": "User-provided contest name and payout screenshot, October 31, 2026. Capacity 71,856; displayed fill 59,300 is provisional. Bind contest ID from uploaded FanDuel entries template.",
+      "source": "User-supplied $3K Piggy Bloodshot payout table and exact 71,856 capacity, October 31, 2026. Explicitly selected reusable ladder; uploaded entries determine platform, contest ID and fee.",
       "payout_tiers": [
         {
           "first": 1,
