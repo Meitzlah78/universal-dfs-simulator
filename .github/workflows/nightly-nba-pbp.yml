@@ -10,6 +10,8 @@ on:
     paths:
       - '.github/workflows/nightly-nba-pbp.yml'
       - 'scripts/archive_nba_pbp.py'
+      - 'scripts/learn_nba_roles.py'
+      - 'simmah_nba_learning.py'
 permissions:
   contents: write
 concurrency:
@@ -51,10 +53,21 @@ jobs:
         id: download
         continue-on-error: true
         run: python scripts/archive_nba_pbp.py
+      - name: Install learning dependencies
+        if: steps.clock.outputs.run == 'true'
+        run: python -m pip install numpy pandas scipy
+      - name: Test learning gates
+        if: steps.clock.outputs.run == 'true'
+        run: python -m unittest discover -s tests -p test_nba_learning.py -v
+      - name: Learn and validate historical player roles
+        if: steps.clock.outputs.run == 'true'
+        id: learning
+        continue-on-error: true
+        run: python scripts/learn_nba_roles.py
       - name: Save archived games and status
         if: steps.clock.outputs.run == 'true'
         run: |
-          git add data/nba_pbp/
+          git add data/nba_pbp/ data/nba_models/
           if ! git diff --cached --quiet; then
             git config user.name 'github-actions[bot]'
             git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
@@ -63,5 +76,5 @@ jobs:
             git push origin HEAD:main
           fi
       - name: Report incomplete downloads
-        if: steps.clock.outputs.run == 'true' && steps.download.outcome == 'failure'
+        if: steps.clock.outputs.run == 'true' && (steps.download.outcome == 'failure' || steps.learning.outcome == 'failure')
         run: exit 1

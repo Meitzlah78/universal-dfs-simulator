@@ -64,7 +64,8 @@ def apply_position_priors(pool,model,slate_day):
         existing=np.asarray([row[c] for c in ROLE_COLUMNS],float)
         # All-zero event history cannot support a positive player projection.
         # Use the existing sourced position prior instead of excluding players.
-        if np.isfinite(existing).all() and (existing>=0).all() and existing.sum()>0:
+        if (np.isfinite(existing).all() and (existing>=0).all() and existing.sum()>0
+                and not (previous_sources is not None and str(previous_sources.at[i]).startswith('Learned historical roles '))):
             previous=str(previous_sources.at[i]) if previous_sources is not None else ''
             result.at[i,'Role Rate Source']=previous if previous.startswith('Position prior (') else 'Individual historical rates'
             continue
@@ -80,7 +81,8 @@ def apply_position_priors(pool,model,slate_day):
         if rates.shape!=(5,) or not np.isfinite(rates).all() or (rates<0).any() or rates.sum()<=0:raise ValueError('Invalid historical position prior')
         for c,value in zip(ROLE_COLUMNS,rates):result.at[i,c]=value
         result.at[i,'Role Rate Source']='Position prior ('+'/'.join(groups)+'); '+model['before']
-    return result
+    from simmah_nba_learning import apply_learned_roles
+    return apply_learned_roles(result,slate_day)
 
 
 

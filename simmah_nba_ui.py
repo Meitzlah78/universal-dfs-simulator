@@ -119,6 +119,12 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         from simmah_nba_role_priors import apply_position_priors
         role_path=Path(__file__).parent/'data'/'nba_models'/'position-roles-before-2026-04-09.json'
         pool=apply_position_priors(pool,json.loads(role_path.read_text()),day)
+        if pool.attrs.get('nba_learning'):
+            learned=pool.attrs['nba_learning']
+            with tabs[0]:st.caption(f"Historical role learning: {learned['version']} · {learned['matched_players']} matched players · validation through {learned['validation_through']}. Provider projections and minutes are unchanged.")
+        from simmah_nba_learning import learning_status
+        learning=learning_status(day)
+        with tabs[0]:st.caption('Historical role update check: '+str(learning['status'])+((' · '+str(learning['as_of'])) if learning.get('as_of') else ''))
         slate['players']=pool
         engine=CachedNBAOutcomes(PregameEngine(pool,markets,EventRates(**model['rates']),platform=platform))
         if engine.rotation_reconciliation:
