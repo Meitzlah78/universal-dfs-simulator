@@ -14,7 +14,7 @@ def run_pipeline(pool,outcome_factory,ownership,ownership_source,payouts,entry_f
                  portfolio_count,*,simulations=10000,candidate_target=5000,
                  field_support_target=10000,seed=83,diversity=50,salary_min=0,
                  max_ownership_error=5,progress=None,ownership_mode="projected",correlation=0,
-                 excluded_indices=None,capture_diagnostics=False):
+                 excluded_indices=None,capture_diagnostics=False,selection_mode='tournament'):
 
     """Generate three independent scenario sets and retain scored candidates.
 
@@ -22,6 +22,12 @@ def run_pipeline(pool,outcome_factory,ownership,ownership_source,payouts,entry_f
     A validated pregame engine adapter must supply it; this orchestration does
     not invent projections, rotations, injuries or ownership data.
     """
+    if selection_mode not in {'tournament','flat_payout'}:raise ValueError('Unknown NBA selection mode')
+    if selection_mode=='flat_payout':
+        prize=np.asarray(payouts,float)
+        paid=prize[prize>0]
+        if portfolio_count!=1 or not len(paid) or len(paid)>=len(prize) or not np.isfinite(prize).all() or (prize<0).any() or (np.diff(prize)>0).any() or not np.all(paid==paid[0]) or paid[0]<=entry_fee:
+            raise ValueError('Cash / satellite mode requires one primary lineup and exact equal positive prizes above entry fee')
     if ownership_mode not in {'projected','relative popularity'}:raise ValueError('Unknown ownership mode')
     if not isinstance(simulations,int) or simulations<1:raise ValueError('Positive simulation count required')
     if not np.isfinite(max_ownership_error) or max_ownership_error<0:raise ValueError('Valid ownership error tolerance required')
@@ -102,8 +108,12 @@ def run_pipeline(pool,outcome_factory,ownership,ownership_source,payouts,entry_f
         construction_seed=seed,evaluation_seed=seed+2017,field_copies=field['copies'],score_ticks=rules_for(pool)['score_ticks'])
     timings['contest_scoring']=perf_counter()-started
     notify('Selecting portfolio')
-    portfolio=select_entries(pool,candidates['indices'],report,portfolio_count,diversity=diversity)
-    result={'candidates':candidates,'field':field,'report':report,'portfolio':portfolio,
+    if selection_mode=='flat_payout':
+        from simmah_nba_cash import select_flat_primary
+        portfolio=select_flat_primary(pool,candidates['indices'],report)
+    else:
+        portfolio=select_entries(pool,candidates['indices'],report,portfolio_count,diversity=diversity)
+    result={'selection_mode':selection_mode,'candidates':candidates,'field':field,'report':report,'portfolio':portfolio,
             'timings_seconds':timings,'scenario_cache_hits':cache_hits,
             'excluded_player_ids':pool.iloc[excluded]['Player ID'].astype(str).tolist(),
             'simulation_seeds':{'construction':seed,'field':seed+1009,'evaluation':seed+2017},

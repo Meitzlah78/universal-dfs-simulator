@@ -1,0 +1,11 @@
+# NBA cash and satellite comparison build
+
+Under Build, expand **Cash games & satellites — separate build** and enable the checker. Available on DraftKings and FanDuel NBA. Supply an exact field size, paid-place/ticket count, entry fee and equal payout or ticket face value. Head-to-head uses a field of two and one winning place. Mixed payout schedules and satellites with cash consolation prizes are outside this checker.
+
+The separate build uses 10,000 simulations for each independent scenario phase, 5,000 candidates and a 10,000 opponent-support target. Opponent entry multiplicities match the requested contest field size minus the inserted candidate. It selects one primary lineup by expected paid-place share (ties prorated), with independent evaluation mean points as a tie-breaker. Diversity/correlation are zero; the main minimum-salary and game/team exclusions are respected. Player availability, rotation and roster legality rules remain in force. Tournament portfolio exposure caps are not applied to this separate single primary lineup.
+
+Cash and satellite results live in a separate workspace key and never overwrite the tournament build. Changing inputs hides stale results until a new check finishes. The report identifies the platform, slate, contest structure, ranking and player IDs. It is a review report, not a site entries-upload CSV; no existing contest entries are changed by this tool.
+
+Important limitations: the field uses current slate ownership/popularity, not a separately calibrated cash/satellite opponent model. Estimates can therefore be misleading for those contest types and are explicitly labeled. Ticket face value is not withdrawable cash. The ranking prorates ties by paid finishing positions, while real satellite ticket/tie rules may differ; no claim of guaranteed ticket probability or tournament ROI is made. There is no automatic contest discovery or submission.
+
+The original tournament pipeline remains the default. Flat-payout mode requires exactly one primary lineup, nonincreasing equal positive payouts, unpaid places, and a prize value above the fee before simulation starts. Generic tournament exports continue through the existing cap/legality checks.
