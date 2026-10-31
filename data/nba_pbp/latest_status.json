@@ -1,10 +1,35 @@
 {
-  "checked_at": "2026-10-30T23:16:53.398759-04:00",
+  "checked_at": "2026-10-30T23:18:46.400503-04:00",
   "through_date": "2026-10-29",
-  "lookback_days": 7,
-  "downloaded": 51,
-  "already_archived": 0,
+  "lookback_days": 29,
+  "downloaded": 78,
+  "already_archived": 51,
   "failures": [
+    {
+      "date": "2026-10-05",
+      "event_id": "401898716",
+      "reason": "NBA play-by-play final score does not match the official box score"
+    },
+    {
+      "date": "2026-10-08",
+      "event_id": "401901823",
+      "reason": "NBA play-by-play final score does not match the official box score"
+    },
+    {
+      "date": "2026-10-16",
+      "event_id": "401901822",
+      "reason": "NBA play-by-play final score does not match the official box score"
+    },
+    {
+      "date": "2026-10-21",
+      "event_id": "401909092",
+      "reason": "NBA play-by-play final score does not match the official box score"
+    },
+    {
+      "date": "2026-10-21",
+      "event_id": "401909841",
+      "reason": "NBA play-by-play final score does not match the official box score"
+    },
     {
       "date": "2026-10-26",
       "event_id": "401909869",
