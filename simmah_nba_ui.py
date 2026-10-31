@@ -87,7 +87,7 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
     pool=slate['players'];rules=rules_for(pool);platform=rules['platform'];slots=rules['slots'];contests={c['id']:c for c in slate['contests']}
     with tabs[0]:
         cid=st.selectbox('NBA contest',list(contests),format_func=lambda x:contests[x]['name'],key='nba_selected_contest')
-    selected=contests[cid];count=selected['owned_entries'];error=None;contest=None;engine=None
+    selected=contests[cid];count=selected['owned_entries'];error=None;contest=None;engine=None;day=None
     from simmah_nba_ownership import field_ownership_inputs
     ownership=field_ownership_inputs(pool)
     try:
@@ -110,7 +110,6 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         from simmah_nba_payscales import render_panel as render_payscales
         with tabs[0]:
             contest=render_payscales(st,contest,dict(selected,id=str(cid)),day,platform)
-        if contest is None:raise ValueError('Open Contests → Saved payscales, choose this contest’s NBA payout schedule, and confirm Full contest capacity before building.')
         rates_path=Path(__file__).parent/'data'/'nba_models'/'event-rates-before-2026-04-09.json'
         model=json.loads(rates_path.read_text())
         if model['before']>day:raise ValueError('Historical event baseline follows the selected slate date')
@@ -139,6 +138,8 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
                         '. They remain excluded. The simulator assumes remaining available players absorb those minutes in proportion to their provider shares, capped at 48 each. Refresh projections when updated minutes are available.')
         if engine.missing_markets:
             with tabs[0]:st.warning('Market lines unavailable for: '+', '.join(' vs '.join(pair) for pair in engine.missing_markets)+'. These games use external player projections and historical event rates without Vegas calibration. No totals or spreads are invented.')
+
+        if contest is None:raise ValueError('Open Contests → Saved payscales, choose this contest’s NBA payout schedule, and confirm Full contest capacity before building.')
 
     except (ValueError,KeyError,OSError) as exc:error=str(exc)
     with tabs[0]:
@@ -170,7 +171,7 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         metric=st.selectbox('Rank lineups',['Top 1%','Expected ROI (%)','Expected Prize ($)'],key='nba_rank_metric')
         clicked=workspace_button(st,'BUILD NBA LINEUPS',disabled=bool(error),key='nba_build')
         if error:
-            st.error('NBA build inputs need attention: '+error)
+            st.error('NBA tournament build inputs need attention: '+error)
             from simmah_nba_diagnostics import rotation_audit,make_setup_package,retain_package,package_reference,package_bytes
             with st.expander('Review rotation inputs and save diagnostic',expanded=True):
                 summary,detail=rotation_audit(pool)
@@ -191,6 +192,9 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
                         workspace_download_button(st,'DOWNLOAD SETUP DIAGNOSTIC PACKAGE',data,
                             setup['filename'],'application/zip',key='nba_setup_diagnostic_download',on_click='ignore')
                 except Exception as exc:st.warning('Could not save setup diagnostic: '+str(exc))
+    with tabs[2]:
+        from simmah_nba_cash import render_cash_check
+        render_cash_check(st,pool,engine,ownership,salary_min,excluded,day)
     identity=input_identity(pool,markets,contest,salary_min,correlation,pool.iloc[excluded]['Player ID'])
     saved=st.session_state.get('nba_build_result')
     if clicked:
