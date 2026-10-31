@@ -56,6 +56,25 @@ class PortfolioSelectionTests(unittest.TestCase):
         self.assertFalse((a[slots]=='P0').any().any())
 
 class PortfolioRepairTests(unittest.TestCase):
+    def test_all_solver_timeouts_can_recover_without_relaxing_caps(self):
+        from unittest.mock import patch
+        from types import SimpleNamespace
+        candidates=pd.DataFrame({'S0':['A','A','B'],'S1':['B','C','D'],'Top1':[1.,.9,.8]})
+        with patch('scipy.optimize.milp',return_value=SimpleNamespace(status=1,x=None)):
+            selected=select_portfolio(candidates,['S0','S1'],2,'Top1',default_max=50,
+                controls={'A':{'Min Exposure %':50,'Max Exposure %':50},'D':{'Min Exposure %':50}})
+        self.assertEqual(set(zip(selected.S0,selected.S1)),{('A','C'),('B','D')})
+        self.assertEqual(selected.attrs['effective_auto_cap_pct'],50)
+
+    def test_timeout_fallback_never_relaxes_an_impossible_hard_cap(self):
+        from unittest.mock import patch
+        from types import SimpleNamespace
+        candidates=pd.DataFrame({'S0':['A','A','A'],'S1':['B','C','D'],'Top1':[1.,.9,.8]})
+        with patch('scipy.optimize.milp',return_value=SimpleNamespace(status=1,x=None)):
+            with self.assertRaisesRegex(ValueError,'search limit'):
+                select_portfolio(candidates,['S0','S1'],2,'Top1',default_max=50,
+                    controls={'A':{'Max Exposure %':50}})
+
     def test_reconsiders_early_choice_before_relaxing_any_cap(self):
         candidates=pd.DataFrame({'S0':['A','A','B'],'S1':['B','C','D'],'Top1':[1.,.9,.8]})
         selected=select_portfolio(candidates,['S0','S1'],2,'Top1',default_max=50)

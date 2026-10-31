@@ -153,8 +153,44 @@ def _repair_portfolio(incidence,lower,upper,hard_upper,automatic,count,utility,f
             if len(chosen)==count and (counts>=lower).all() and (counts<=current).all():
                 return chosen.tolist(),cap
         if solution.status!=2:
+            chosen=_bounded_feasible_restart(incidence,lower,current,count,utility,finite)
+            if chosen is not None:
+                return chosen,cap
             raise ValueError('Portfolio repair reached its search limit without a valid full portfolio. Manual exposure limits were kept; no duplicates were added.')
     raise ValueError('No full unique portfolio satisfies the manual exposure limits. Adjust those limits or expand the candidate pool; no duplicates were added.')
+
+
+def _bounded_feasible_restart(incidence,lower,upper,count,utility,finite):
+    """Try different early choices after a solver timeout, with identical caps.
+
+    This bounded fallback proves only the returned portfolio's feasibility.
+    Failed restarts never justify relaxing a constraint.
+    """
+    rng=np.random.default_rng(83031)
+    # Bound candidate evaluations for large NFL/NBA portfolios as well.
+    attempts=max(1,min(32,2000000//max(1,len(incidence)*count)))
+    for attempt in range(attempts):
+        counts=np.zeros(incidence.shape[1],int)
+        available=finite.copy();chosen=[]
+        for turn in range(count):
+            remaining=count-turn
+            deficit=np.maximum(lower-counts,0)
+            valid=available & np.all(incidence<=upper-counts,axis=1)
+            mandatory=deficit>=remaining
+            if mandatory.any():
+                valid &= incidence[:,mandatory].sum(axis=1)==mandatory.sum()
+            options=np.flatnonzero(valid)
+            if not len(options):break
+            # Randomized rank preference escapes the same greedy dead end.
+            # Minimum deficits retain priority; all constraints are checked
+            # again on the complete result below.
+            priority=(incidence[options]@deficit.astype(float))/max(remaining,1)
+            score=utility[options]+2*priority+rng.gumbel(size=len(options))*(.25+attempt/32)
+            best=int(options[np.argmax(score)])
+            chosen.append(best);available[best]=False;counts+=incidence[best]
+        if len(chosen)==count and (counts>=lower).all() and (counts<=upper).all():
+            return chosen
+    return None
 
 
 def put_portfolio_first(candidates,selected,slots):
