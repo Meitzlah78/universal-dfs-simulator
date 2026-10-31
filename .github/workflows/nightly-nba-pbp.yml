@@ -1,0 +1,67 @@
+name: Nightly NBA PBP Archive
+on:
+  schedule:
+    # 03:00 Eastern in daylight / standard time. Gate the inactive UTC slot.
+    - cron: '0 7 * * *'
+    - cron: '0 8 * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/nightly-nba-pbp.yml'
+      - 'scripts/archive_nba_pbp.py'
+permissions:
+  contents: write
+concurrency:
+  group: nightly-nba-pbp
+  cancel-in-progress: false
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Select Eastern schedule slot
+        id: clock
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          CRON: ${{ github.event.schedule }}
+        run: |
+          python - <<'PY'
+          import os
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+          now=datetime.now(ZoneInfo('America/New_York'))
+          # Check the UTC offset, not delivery hour: Actions can start late.
+          scheduled_hour=7 if now.utcoffset().total_seconds()==-14400 else 8
+          # Separate UTC expressions below permit identifying the delivered slot.
+          run=os.environ['EVENT_NAME']!='schedule' or os.environ['CRON']==f'0 {scheduled_hour} * * *'
+          with open(os.environ['GITHUB_OUTPUT'],'a') as f:f.write(f'run={str(run).lower()}\n')
+          PY
+      - name: Validate archive code
+        if: steps.clock.outputs.run == 'true'
+        run: python -m unittest discover -s tests -p test_nba_pbp_archive.py -v
+      - name: Download completed games
+        if: steps.clock.outputs.run == 'true'
+        id: download
+        continue-on-error: true
+        run: python scripts/archive_nba_pbp.py
+      - name: Save archived games and status
+        if: steps.clock.outputs.run == 'true'
+        run: |
+          git add data/nba_pbp/
+          if ! git diff --cached --quiet; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git commit -m 'Archive completed NBA play-by-play'
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+      - name: Report incomplete downloads
+        if: steps.clock.outputs.run == 'true' && steps.download.outcome == 'failure'
+        run: exit 1
