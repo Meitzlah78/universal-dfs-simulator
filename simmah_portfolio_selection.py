@@ -128,6 +128,25 @@ def _repair_portfolio(incidence,lower,upper,hard_upper,automatic,count,utility,f
         solution=milp(objective,integrality=np.ones(len(incidence)),bounds=bounds,
             constraints=LinearConstraint(matrix,np.r_[count,lower],np.r_[count,current]),
             options={'time_limit':5.,'mip_rel_gap':.05})
+        if solution.status==1 and solution.x is None:
+            # A quality search can spend its budget before finding an incumbent.
+            # Retry feasibility with identical constraints; never relax hard caps
+            # merely because optimizing the ranking timed out.
+            retry_bounds=bounds
+            if len(incidence)>512:
+                # Reduce symmetric choices while retaining high-ranked and
+                # evenly distributed alternatives across the candidate list.
+                support=np.unique(np.r_[np.arange(128),np.linspace(0,len(incidence)-1,384,dtype=int)])
+                allowed=np.zeros(len(incidence));allowed[support]=finite[support]
+                retry_bounds=Bounds(np.zeros(len(incidence)),allowed)
+            retry=milp(np.zeros(len(incidence)),integrality=np.ones(len(incidence)),bounds=retry_bounds,
+                constraints=LinearConstraint(matrix,np.r_[count,lower],np.r_[count,current]),
+                options={'time_limit':5.})
+            if retry.x is None and retry_bounds is not bounds:
+                retry=milp(np.zeros(len(incidence)),integrality=np.ones(len(incidence)),bounds=bounds,
+                    constraints=LinearConstraint(matrix,np.r_[count,lower],np.r_[count,current]),
+                    options={'time_limit':5.})
+            solution=retry
         if solution.x is not None:
             chosen=np.flatnonzero(solution.x>.5)
             counts=incidence[chosen].sum(axis=0)

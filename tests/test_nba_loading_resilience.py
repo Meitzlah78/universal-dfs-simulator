@@ -231,7 +231,9 @@ class LoadingTests(unittest.TestCase):
         values={(r.Name.casefold(),r.Team):{'Expected Starter':True,'Starter Confirmed':True} for r in p.itertuples()}
         with patch('simmah_nba_confirmed.cached_confirmed_status',return_value={'players':values,'checked_at':100}):
             current_confirmed_pool(st,p,'2026-10-21',pairs)
-        with patch('simmah_nba_confirmed.cached_confirmed_status',side_effect=OSError('timeout')):
+        with patch('simmah_nba_confirmed.cached_confirmed_status',side_effect=OSError('timeout')), \
+             patch('simmah_nba_confirmed.cached_player_lineups',side_effect=OSError('timeout')), \
+             patch('simmah_nba_official_lineups.cached_lineups',side_effect=OSError('timeout')):
             view,status=current_confirmed_pool(st,p,'2026-10-21',pairs)
             self.assertTrue(status['stale'])
             self.assertEqual(team_lineup(view,'NY')['status'],'Last confirmed')
@@ -274,7 +276,9 @@ class LoadingTests(unittest.TestCase):
 
     def test_confirmation_outage_keeps_dated_expected_five_without_green_checks(self):
         p=self.pool();p.attrs['slate_date']='2026-10-21'
-        with patch('simmah_nba_confirmed.cached_confirmed_status',side_effect=OSError('timeout')):
+        with patch('simmah_nba_confirmed.cached_confirmed_status',side_effect=OSError('timeout')), \
+             patch('simmah_nba_confirmed.cached_player_lineups',side_effect=OSError('timeout')), \
+             patch('simmah_nba_official_lineups.cached_lineups',side_effect=OSError('timeout')):
             view,status=current_confirmed_pool(FakeStreamlit(),p,'2026-10-21',[('NY','PHI')])
         self.assertTrue(status['stale'])
         self.assertEqual(team_lineup(view,'NY')['status'],'Last expected')

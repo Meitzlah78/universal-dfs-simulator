@@ -28,7 +28,7 @@ class ExclusionTests(unittest.TestCase):
                 excluded=excluded_player_indices(pool,teams=['A'])
                 def factory(n,seed):return np.random.default_rng(seed).gamma(4,8,(n,len(pool)))
                 r=run_pipeline(pool,factory,np.ones(len(pool)),'synthetic relative popularity',
-                    [1]*10+[0]*91,.05,3,simulations=10,candidate_target=30,
+                    [1]*10+[0]*91,.05,3,simulations=128,candidate_target=500,
                     field_support_target=100,diversity=0,ownership_mode='relative popularity',excluded_indices=excluded)
                 self.assertFalse(np.isin(r['candidates']['indices'],excluded).any())
                 self.assertTrue(np.isin(r['field']['indices'],excluded).any())

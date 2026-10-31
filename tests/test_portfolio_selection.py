@@ -63,6 +63,44 @@ class PortfolioRepairTests(unittest.TestCase):
         self.assertEqual(selected.attrs['effective_auto_cap_pct'],50)
         self.assertEqual(selected.attrs['selection_method'],'integer repair')
 
+    def test_quality_timeout_retries_feasibility_without_relaxing_limits(self):
+        from unittest.mock import patch
+        from types import SimpleNamespace
+        from scipy.optimize import milp
+        candidates=pd.DataFrame({'S0':['A','A','B'],'S1':['B','C','D'],'Top1':[1.,.9,.8]})
+        calls=[]
+        def solve(objective,**kwargs):
+            calls.append((np.asarray(objective).copy(),kwargs['constraints']))
+            if len(calls)==1:return SimpleNamespace(status=1,x=None)
+            return milp(objective,**kwargs)
+        with patch('scipy.optimize.milp',side_effect=solve):
+            selected=select_portfolio(candidates,['S0','S1'],2,'Top1',default_max=50,
+                controls={'A':{'Max Exposure %':50}})
+        self.assertEqual(len(calls),2)
+        self.assertTrue((calls[1][0]==0).all())
+        np.testing.assert_array_equal(calls[0][1].ub,calls[1][1].ub)
+        self.assertEqual(selected.attrs['effective_auto_cap_pct'],50)
+        self.assertEqual(set(zip(selected.S0,selected.S1)),{('A','C'),('B','D')})
+
+    def test_large_timeout_retry_validates_full_pool_indices(self):
+        from unittest.mock import patch
+        from types import SimpleNamespace
+        from scipy.optimize import milp
+        from simmah_portfolio_selection import _repair_portfolio
+        incidence=np.tile(np.array([[1,1,0,0],[1,0,1,0],[0,1,0,1]]),(200,1))
+        calls=[]
+        def solve(objective,**kwargs):
+            calls.append(kwargs)
+            if len(calls)==1:return SimpleNamespace(status=1,x=None)
+            return milp(objective,**kwargs)
+        with patch('scipy.optimize.milp',side_effect=solve):
+            chosen,cap=_repair_portfolio(incidence,np.zeros(4),np.ones(4),np.ones(4),
+                np.zeros(4,bool),2,np.linspace(1,0,600),np.ones(600,bool),50)
+        self.assertEqual(len(chosen),2)
+        self.assertTrue((incidence[chosen].sum(axis=0)<=1).all())
+        self.assertLessEqual(np.count_nonzero(calls[1]['bounds'].ub),512)
+        self.assertEqual(cap,50)
+
     def test_only_automatic_cap_relaxes_when_proven_infeasible(self):
         d,slots=fixture();d['S0']='Always'
         selected=select_portfolio(d,slots,20,'Top1')
