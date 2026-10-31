@@ -1,27 +1,27 @@
 {
   "status": "rejected",
-  "training_games": 111,
-  "validation_games": 18,
-  "training_before": "2026-10-27",
-  "validation_through": "2026-10-29",
+  "training_games": 114,
+  "validation_games": 23,
+  "training_before": "2026-10-28",
+  "validation_through": "2026-10-30",
   "scope": "Player stat-rate accuracy conditional on observed minutes; not fantasy-point or ROI validation",
-  "observations": 395,
+  "observations": 509,
   "candidate_mae": {
-    "shot": 2.3655394532337093,
-    "assist": 1.3113961919600716,
-    "rebound": 1.782335118469393,
-    "steal": 0.7152280233326739,
-    "block": 0.5127865359330668
+    "shot": 2.326797022654995,
+    "assist": 1.2863150314321288,
+    "rebound": 1.7690425856240186,
+    "steal": 0.707462283943342,
+    "block": 0.48320247191279114
   },
   "incumbent_mae": {
-    "shot": 2.761307746542191,
-    "assist": 1.4874410909347688,
-    "rebound": 1.8644565893374916,
-    "steal": 0.6930490376202846,
-    "block": 0.5253213872265357
+    "shot": 2.792538321570577,
+    "assist": 1.5049363296833556,
+    "rebound": 1.809690386914117,
+    "steal": 0.6894325287443388,
+    "block": 0.4906514687066893
   },
-  "mean_error_ratio": 0.9404828705158893,
-  "max_role_error_ratio": 1.0320020438792399,
+  "mean_error_ratio": 0.9352916901773949,
+  "max_role_error_ratio": 1.026151587642435,
   "acceptance": "At least 1% average normalized improvement; no role more than 2% worse",
   "training_ids": [
     "401902644",
@@ -134,12 +134,12 @@
     "401909872",
     "401909874",
     "401909875",
-    "401909876"
-  ],
-  "validation_ids": [
+    "401909876",
     "401909877",
     "401909878",
-    "401909879",
+    "401909879"
+  ],
+  "validation_ids": [
     "401909881",
     "401909882",
     "401909883",
@@ -154,9 +154,17 @@
     "401909892",
     "401909893",
     "401909894",
-    "401909895"
+    "401909895",
+    "401909277",
+    "401909278",
+    "401909279",
+    "401909280",
+    "401909281",
+    "401909282",
+    "401909283",
+    "401909284"
   ],
   "rejected_archive_games": [],
-  "corpus_games": 129,
+  "corpus_games": 137,
   "as_of": "2026-10-31"
 }
