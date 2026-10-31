@@ -120,7 +120,8 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         pool=apply_position_priors(pool,json.loads(role_path.read_text()),day)
         if pool.attrs.get('nba_learning'):
             learned=pool.attrs['nba_learning']
-            with tabs[0]:st.caption(f"Historical role learning: {learned['version']} · {learned['matched_players']} matched players · validation through {learned['validation_through']}. Provider projections and minutes are unchanged.")
+            kept=', '.join(learned.get('accepted_roles',[]))
+            with tabs[0]:st.caption(f"Historical role learning: {learned['version']} · {learned['matched_players']} matched players · latest retained improvements: {kept} · validation through {learned['validation_through']}. Provider projections and minutes are unchanged.")
         from simmah_nba_learning import learning_status
         learning=learning_status(day)
         with tabs[0]:st.caption('Historical role update check: '+str(learning['status'])+((' · '+str(learning['as_of'])) if learning.get('as_of') else ''))

@@ -1,28 +1,56 @@
 {
-  "status": "rejected",
+  "status": "approved",
   "training_games": 114,
-  "validation_games": 25,
+  "selection_games": 12,
+  "validation_games": 13,
   "training_before": "2026-10-28",
+  "selection_through": "2026-10-28",
+  "validation_start": "2026-10-29",
   "validation_through": "2026-10-30",
   "scope": "Player stat-rate accuracy conditional on observed minutes; not fantasy-point or ROI validation",
-  "observations": 552,
+  "observations": 296,
+  "selection_observations": 256,
+  "selection_error_ratio": {
+    "shot": 0.8382236864729469,
+    "assist": 0.8668204675724996,
+    "rebound": 1.007508404583497,
+    "steal": 1.0394871834916186,
+    "block": 0.9813457103677189
+  },
   "candidate_mae": {
-    "shot": 2.3480461942791537,
-    "assist": 1.2909346597640503,
-    "rebound": 1.7778731839184525,
-    "steal": 0.7040041120626609,
-    "block": 0.49025454495541276
+    "shot": 2.249775427345737,
+    "assist": 1.2896629733874918,
+    "rebound": 1.695131146056291,
+    "steal": 0.704000464975303,
+    "block": 0.47672895147659633
   },
   "incumbent_mae": {
-    "shot": 2.816510219542246,
-    "assist": 1.507649671101802,
-    "rebound": 1.8097606751673188,
-    "steal": 0.6901576420302317,
-    "block": 0.49909223830315136
+    "shot": 2.7125001173206873,
+    "assist": 1.5220736019082426,
+    "rebound": 1.766672673270002,
+    "steal": 0.7013080004592634,
+    "block": 0.48489310603905744
   },
-  "mean_error_ratio": 0.9349328120524835,
-  "max_role_error_ratio": 1.020062764199346,
-  "acceptance": "At least 1% average normalized improvement; no role more than 2% worse",
+  "retained_mae": {
+    "shot": 2.249775427345737,
+    "assist": 1.2896629733874918,
+    "rebound": 1.766672673270002,
+    "steal": 0.7013080004592634,
+    "block": 0.47672895147659633
+  },
+  "accepted_roles": [
+    "shot",
+    "assist",
+    "block"
+  ],
+  "preserved_roles": [
+    "rebound",
+    "steal"
+  ],
+  "candidate_mean_error_ratio": 0.9246447910388318,
+  "mean_error_ratio": 0.9319759635090152,
+  "max_role_error_ratio": 1.0,
+  "acceptance": "Each role needs at least 1% improvement on selection AND later confirmation; other roles retain incumbent",
   "training_ids": [
     "401902644",
     "401914127",
@@ -139,7 +167,7 @@
     "401909878",
     "401909879"
   ],
-  "validation_ids": [
+  "selection_ids": [
     "401909881",
     "401909882",
     "401909883",
@@ -151,7 +179,9 @@
     "401909889",
     "401909890",
     "401909891",
-    "401909892",
+    "401909892"
+  ],
+  "validation_ids": [
     "401909893",
     "401909894",
     "401909895",
