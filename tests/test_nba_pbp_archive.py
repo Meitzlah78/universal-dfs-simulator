@@ -4,7 +4,7 @@ from datetime import date
 from pathlib import Path
 import tempfile
 import unittest
-from scripts.archive_nba_pbp import archive
+from scripts.archive_nba_pbp import archive, run_nightly
 
 class ArchiveTests(unittest.TestCase):
     def test_rollover_retry_idempotence_and_partial_failure(self):
@@ -38,3 +38,29 @@ class ArchiveTests(unittest.TestCase):
                 download=lambda *args:{'date':'2026-10-01'})
             self.assertEqual(len(report['failures']),2)
             self.assertFalse(list(Path(directory).rglob('*.gz')))
+
+    def test_first_run_backfills_season_and_retries_until_complete(self):
+        with tempfile.TemporaryDirectory() as directory:
+            days=[]
+            def schedule(day,before):
+                days.append(day)
+                if day=='2026-10-02':raise OSError('not ready')
+                return []
+            report=run_nightly(directory,date(2026,10,31),schedule=schedule)
+            self.assertEqual(days[0],'2026-10-01')
+            self.assertEqual(days[-1],'2026-10-30')
+            self.assertFalse(list(Path(directory).glob('backfill_*.json')))
+            days.clear()
+            report=run_nightly(directory,date(2026,11,1),schedule=lambda d,b:days.append(d) or [])
+            self.assertEqual(days[0],'2026-10-01')
+            self.assertTrue(list(Path(directory).glob('backfill_*.json')))
+            days.clear()
+            run_nightly(directory,date(2026,11,2),schedule=lambda d,b:days.append(d) or [])
+            self.assertEqual(len(days),7)
+
+    def test_january_uses_previous_october(self):
+        with tempfile.TemporaryDirectory() as directory:
+            days=[]
+            run_nightly(directory,date(2027,1,2),schedule=lambda d,b:days.append(d) or [])
+            self.assertEqual(days[0],'2026-10-01')
+            self.assertEqual(days[-1],'2027-01-01')

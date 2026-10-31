@@ -1,6 +1,6 @@
 """Archive completed NBA games; retry a rolling seven-day window."""
 import argparse
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 import gzip
 import json
 from pathlib import Path
@@ -45,10 +45,24 @@ def archive(root, today, lookback=7, schedule=completed_games, download=download
     return report
 
 
+def run_nightly(root, today, schedule=completed_games, download=download_game):
+    """Backfill from October 1 until complete, then maintain a retry window."""
+    root=Path(root)
+    season_start=date(today.year if today.month>=10 else today.year-1,10,1)
+    marker=root/('backfill_'+season_start.isoformat()+'.json')
+    backfill=not marker.exists()
+    lookback=max(0,(today-season_start).days) if backfill else 7
+    report=archive(root,today,lookback=lookback,schedule=schedule,download=download)
+    if backfill and not report['failures']:
+        marker.write_text(json.dumps({'from_date':season_start.isoformat(),
+            'through_date':report['through_date'],'completed_at':report['checked_at']},indent=2)+'\n')
+    return report
+
+
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--root',default='data/nba_pbp')
     args=parser.parse_args()
-    report=archive(args.root,datetime.now(ZoneInfo('America/New_York')).date())
+    report=run_nightly(args.root,datetime.now(ZoneInfo('America/New_York')).date())
     print(json.dumps(report,indent=2))
     raise SystemExit(bool(report['failures']))
