@@ -2,23 +2,9 @@ name: Weekly NFL PBP Archive
 
 on:
   schedule:
-    # GitHub cron can start late. Fire several times Wednesday afternoon UTC and
-    # let the Eastern-time gate decide whether the archive should run.
-    - cron: "0 16 * * 3"
-    - cron: "0 17 * * 3"
-    - cron: "0 18 * * 3"
-    - cron: "0 19 * * 3"
-    - cron: "0 20 * * 3"
-    - cron: "0 21 * * 3"
-    - cron: "0 22 * * 3"
-    - cron: "0 23 * * 3"
+    # Tuesdays at 11:00 UTC = 7:00 AM Eastern during daylight time.
+    - cron: "0 11 * * 2"
   workflow_dispatch:
-  # Also run when this workflow is repaired. The path filter prevents the
-  # generated PBP archive commit from recursively triggering another run.
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/weekly-pbp.yml"
 
 permissions:
   contents: write
@@ -27,52 +13,23 @@ jobs:
   download-previous-week:
     runs-on: ubuntu-latest
     steps:
-      - name: Check Wednesday Eastern window
-        id: noon_gate
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          import os
-          from datetime import datetime
-          from zoneinfo import ZoneInfo
-
-          event = os.environ.get("GITHUB_EVENT_NAME", "")
-          now_et = datetime.now(ZoneInfo("America/New_York"))
-          # Manual runs and workflow-repair pushes run immediately. Scheduled
-          # runs are allowed any time from noon through 7:59 PM ET Wednesday.
-          should_run = event in {"workflow_dispatch", "push"} or (
-              now_et.weekday() == 2 and 12 <= now_et.hour <= 19
-          )
-          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as handle:
-              handle.write(f"run={'true' if should_run else 'false'}\n")
-          print(f"Current Eastern time: {now_et:%Y-%m-%d %I:%M %p %Z}")
-          print(f"Event: {event}")
-          print(f"Run archive: {should_run}")
-          PY
-
-      - name: Check out active SIMMAH branch
-        if: steps.noon_gate.outputs.run == 'true'
+      - name: Check out repository
         uses: actions/checkout@v4
-        with:
-          ref: feature/salary-csv-upload
-          fetch-depth: 0
 
       - name: Set up Python
-        if: steps.noon_gate.outputs.run == 'true'
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
       - name: Install download dependencies
-        if: steps.noon_gate.outputs.run == 'true'
         run: python -m pip install --upgrade pandas requests
 
       - name: Download and archive latest completed NFL week
-        if: steps.noon_gate.outputs.run == 'true'
         run: |
           python - <<'PY'
           import io
-          from datetime import datetime, timezone
+          import os
+          from datetime import datetime, timezone, timedelta
           from pathlib import Path
 
           import pandas as pd
@@ -86,6 +43,8 @@ jobs:
           response = requests.get(url, timeout=(15, 180))
           response.raise_for_status()
 
+          # Keep play-level fields useful for game-script analysis while avoiding
+          # downloading/storing unrelated columns in the archive.
           wanted = {
               "season", "week", "game_id", "old_game_id", "game_date", "home_team",
               "away_team", "posteam", "defteam", "play_id", "drive", "qtr",
@@ -123,43 +82,21 @@ jobs:
           if weekly.empty:
               raise RuntimeError(f"No plays found for selected week {week}.")
 
-          game_ids = sorted(weekly["game_id"].dropna().astype(str).unique())
-          matchup_rows = (
-              weekly[["game_id", "away_team", "home_team"]]
-              .dropna(subset=["game_id"])
-              .drop_duplicates("game_id")
-          )
-          matchups = [
-              f"{row.away_team}@{row.home_team}"
-              for row in matchup_rows.itertuples(index=False)
-          ]
-
           out_dir = Path("data/pbp")
           out_dir.mkdir(parents=True, exist_ok=True)
           output = out_dir / f"{season}_week_{week:02d}.csv.gz"
-
-          # Deterministic gzip output lets later scheduled runs become no-ops.
-          new_bytes = weekly.to_csv(index=False).encode("utf-8")
-          import gzip
-          compressed = gzip.compress(new_bytes, mtime=0)
-          if output.exists() and output.read_bytes() == compressed:
-              print(f"Archive already current for season {season}, week {week}: {output}")
-          else:
-              output.write_bytes(compressed)
-              print(f"Archived {len(weekly):,} plays for season {season}, week {week}: {output}")
-          print(f"Games archived: {len(game_ids)}")
-          print("Matchups: " + ", ".join(matchups))
+          weekly.to_csv(output, index=False, compression="gzip")
+          print(f"Archived {len(weekly):,} plays for season {season}, week {week}: {output}")
           PY
 
       - name: Commit archive if changed
-        if: steps.noon_gate.outputs.run == 'true'
         run: |
           if [[ -n "$(git status --porcelain data/pbp)" ]]; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add data/pbp/
             git commit -m "Archive weekly NFL play-by-play data"
-            git push origin HEAD:feature/salary-csv-upload
+            git push
           else
             echo "PBP archive is already up to date."
           fi

@@ -1,0 +1,16 @@
+
+# Host-local anonymous field learning; use the app backup/restore controls.
+data/field_history_local.json
+data/field_history_local.json.lock
+
+# Host-local prepared simulation matrices; never commit player data/cache files.
+data/simulation_cache/
+
+# Private original uploads, per-browser job histories and calibration outputs.
+data/input_archive/
+__pycache__/
+*.pyc
+
+# Private, browser-confirmed workspace recovery files.
+static/workspace_backups/
+data/workspace_recovery/

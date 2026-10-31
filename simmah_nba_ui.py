@@ -1,0 +1,314 @@
+from simmah_slate_workspaces import workspace_button
+from simmah_slate_workspaces import workspace_download_button
+"""Experimental NBA workspace wiring; numerical work stays outside Streamlit."""
+import hashlib,json
+from datetime import datetime,timezone
+from pathlib import Path
+import numpy as np
+import pandas as pd
+from simmah_nba_contests import saved_contest,payout_vector
+from simmah_nba_projections import slate_date
+from simmah_nba_pregame import PregameEngine
+from simmah_nba_simulation_cache import CachedNBAOutcomes
+from simmah_nba_engine import EventRates
+from simmah_nba_pipeline import run_pipeline,export_portfolio
+from simmah_nba_contest import select_entries
+from simmah_nba_rosters import SLOT_COLUMNS
+from simmah_nba_rules import rules_for
+from simmah_portfolio import portfolio_roi_totals
+
+
+def input_identity(pool,markets,contest,salary_min,correlation=0,excluded_player_ids=()):
+    from simmah_nba_pregame import ROLE_COLUMNS
+    columns=[c for c in ['Player ID','Position','Salary','Team','Opponent','Projection','Injury Status',
+                         'Projected Minutes','Eligible',*ROLE_COLUMNS,'RotoWire Projected Own %'] if c in pool]
+    content={'pool':pool[columns].to_json(orient='split',double_precision=10),'markets':markets,
+             'contest':contest,'salary_min':salary_min,'field_model_version':5,'overtime_period_limit':10}
+    if correlation:content['build_correlation']=correlation
+    if len(excluded_player_ids):content['excluded_player_ids']=sorted(map(str,excluded_player_ids))
+    return hashlib.sha256(json.dumps(content,sort_keys=True).encode()).hexdigest()
+
+
+def display_lineups(pool,frame,status_pool=None):
+    result=frame.copy()
+    from simmah_nba_player_display import player_labels
+    names=player_labels(pool,status_pool)
+    for c in rules_for(pool)['slots']:
+        if c in result:result[c]=result[c].astype(str).map(names).fillna(result[c])
+    return result
+
+
+
+def render_exports(st,upload,cid,pool,built,portfolio,platform,stale,location,status_pool=None,*,current_pool=None,salary_min=0,saved_contest_id=None):
+    st.subheader('Export lineups')
+    package=built.get('diagnostic_package')
+    if package:
+        from simmah_nba_diagnostics import package_bytes
+        data=package_bytes(st,package)
+        if data is not None:
+            workspace_download_button(st,'DOWNLOAD CALIBRATION & SOLVER PACKAGE',data,
+                package['filename'],'application/zip',key='nba_diagnostic_download_'+location,on_click='ignore')
+            st.caption('One file for this saved build: opponent field, player inputs, simulations, solver details and contest identity.')
+        else:st.caption('Diagnostic package is awaiting archive recovery. Check Saved files below.')
+    else:
+        st.caption('Rebuild once to capture a complete calibration and solver package.')
+    st.caption('Export the selected portfolio ('+str(len(portfolio))+' lineups), not the full candidate pool.')
+    with st.expander('Advanced — reports and frozen inputs'):
+        workspace_download_button(st,'DOWNLOAD PORTFOLIO REPORT',display_lineups(pool,portfolio,status_pool).to_csv(index=False).encode(),
+            'Simmah_NBA_'+platform+'_Portfolio_Report.csv','text/csv',
+            key='nba_portfolio_report_'+location,on_click='ignore')
+        workspace_download_button(st,'DOWNLOAD BUILD PLAYER POOL',pool.to_csv(index=False).encode('utf-8-sig'),
+            'Simmah_NBA_'+platform+'_Build_Player_Pool.csv','text/csv',
+            key='nba_build_player_pool_'+location,on_click='ignore',
+            help='Frozen player inputs used by this saved build, including RotoWire RST values. Use this file to compare with its opponent field.')
+    data=b'';export_error=None
+    validation_pool=current_pool if current_pool is not None else pool
+    try:
+        if saved_contest_id is not None and str(saved_contest_id)!=str(cid):
+            raise ValueError('Select the contest used for this saved build before exporting.')
+        data=export_portfolio(upload.getvalue(),cid,validation_pool,built,salary_min=salary_min)
+    except (ValueError,KeyError,IndexError) as exc:export_error=str(exc)
+    workspace_download_button(st,'EXPORT TO '+platform.upper()+' — EDIT ENTRIES CSV',data,
+        'Simmah_NBA_'+platform+'_Edit_Entries.csv','text/csv',
+        disabled=bool(export_error),key='nba_entries_download' if location=='lineups' else 'nba_entries_download_build',on_click='ignore',
+        export_checkpoint={'format':platform+' NBA','contest_id':str(cid),'kind':'entries',
+            'player_pool':pool.copy(deep=True),'estimates_stale':bool(stale),
+            'original_entries':upload.getvalue(),
+            'build':{**built,'export_validation_pool':validation_pool.copy(deep=True)},'portfolio':portfolio.copy(deep=True)})
+    if stale:st.caption('Inputs changed; rebuild to update estimates and selection. This saved portfolio can still export when it passes current player, salary and entry checks.')
+    if export_error:st.error('Entries export unavailable: '+export_error)
+    if platform=='FanDuel':st.link_button('OPEN FANDUEL / EDIT ENTRIES','https://www.fanduel.com/upcoming',key='nba_open_fanduel_'+location)
+    elif platform=='DraftKings':
+        st.link_button('OPEN DRAFTKINGS / UPLOAD CSV','https://www.draftkings.com/lineup',key='nba_open_draftkings_'+location)
+        st.caption('On DraftKings, choose Edit Entries and upload the exported entries CSV.')
+
+
+def render_workspace(st,slate,upload,tabs,controls,markets):
+    pool=slate['players'];rules=rules_for(pool);platform=rules['platform'];slots=rules['slots'];contests={c['id']:c for c in slate['contests']}
+    with tabs[0]:
+        cid=st.selectbox('NBA contest',list(contests),format_func=lambda x:contests[x]['name'],key='nba_selected_contest')
+    selected=contests[cid];count=selected['owned_entries'];error=None;contest=None;engine=None
+    from simmah_nba_ownership import field_ownership_inputs
+    ownership=field_ownership_inputs(pool)
+    try:
+        day=slate.get('date') or pool.attrs.get('slate_date') or slate_date(upload.name)
+        contest=saved_contest(cid,day,selected['entry_fee'],name=selected['name'],platform=platform)
+        if contest is None:
+            pending_path=Path(__file__).parent/'data'/'nba_contests'/'pending'/(str(cid)+'.json')
+            if pending_path.exists():
+                pending=json.loads(pending_path.read_text())
+                if pending['id']!=str(cid) or pending['date']!=day or abs(pending['entry_fee']-selected['entry_fee'])>1e-9:
+                    raise ValueError('Saved payout schedule differs from uploaded contest')
+                with tabs[0]:
+                    st.info('Payouts are saved. Enter the exact full contest capacity; the rounded '+pending.get('capacity_display','')+' display cannot determine it.')
+                    capacity=st.number_input('Exact contest capacity',min_value=pending['payout_tiers'][-1]['last'],
+                        max_value=1000000,value=None,step=1,key='nba_exact_capacity_'+str(cid))
+                if capacity is not None:
+                    contest=dict(pending,capacity=int(capacity))
+                    payout_vector(contest)
+
+        from simmah_nba_payscales import render_panel as render_payscales
+        with tabs[0]:
+            contest=render_payscales(st,contest,dict(selected,id=str(cid)),day,platform)
+        if contest is None:raise ValueError('Open Contests → Saved payscales, choose this contest’s NBA payout schedule, and confirm Full contest capacity before building.')
+        rates_path=Path(__file__).parent/'data'/'nba_models'/'event-rates-before-2026-04-09.json'
+        model=json.loads(rates_path.read_text())
+        if model['before']>day:raise ValueError('Historical event baseline follows the selected slate date')
+        # Restored workspaces can contain empty event histories. Repair the
+        # actual frozen build inputs, not only an internal engine copy.
+        from simmah_nba_role_priors import apply_position_priors
+        role_path=Path(__file__).parent/'data'/'nba_models'/'position-roles-before-2026-04-09.json'
+        pool=apply_position_priors(pool,json.loads(role_path.read_text()),day)
+        slate['players']=pool
+        engine=CachedNBAOutcomes(PregameEngine(pool,markets,EventRates(**model['rates']),platform=platform))
+        if engine.rotation_reconciliation:
+            with tabs[0]:st.warning('Simulation rotation budget adjusted to 240 minutes for: '+
+                ', '.join(f"{row['team']} ({row['provider_total']:g} provider minutes)" for row in engine.rotation_reconciliation)+
+                '. Source minutes and player point projections are preserved; only simulation playing-time shares are reconciled.')
+            for row in engine.rotation_reconciliation:
+                if row.get('basis')=='inactive-player budget reconciliation':
+                    with tabs[0]:st.warning(row['team']+' provider rotation still assigned '+
+                        f"{row['excluded_inactive_minutes']:g} minutes to OUT players: "+
+                        ', '.join(player['name'] for player in row['excluded_inactive_players'])+
+                        '. They remain excluded. The simulator assumes remaining available players absorb those minutes in proportion to their provider shares, capped at 48 each. Refresh projections when updated minutes are available.')
+        if engine.missing_markets:
+            with tabs[0]:st.warning('Market lines unavailable for: '+', '.join(' vs '.join(pair) for pair in engine.missing_markets)+'. These games use external player projections and historical event rates without Vegas calibration. No totals or spreads are invented.')
+
+    except (ValueError,KeyError,OSError) as exc:error=str(exc)
+    with tabs[0]:
+        if contest:
+            st.caption(f"{contest['capacity']:,} contest places · ${contest['prize_pool']:,.0f} prizes · {count} reserved entries · selected payout schedule")
+        st.caption(ownership['source'])
+        if ownership['mode']!='projected':st.warning(ownership['status'])
+    with controls:
+        st.write(f'{count} portfolio entries')
+        from simmah_nba_exclusions import game_options,excluded_player_indices
+        from simmah_nba_projections import team_key
+        _games=list(game_options(pool));_teams=sorted({team_key(team) for team in pool['Team']})
+        _game_key='nba_excluded_games_'+platform;_team_key='nba_excluded_teams_'+platform
+        for _key,_options in ((_game_key,_games),(_team_key,_teams)):
+            if _key in st.session_state:
+                _saved_options=st.session_state[_key]
+                _valid_options=[value for value in _saved_options if value in _options]
+                if _valid_options!=_saved_options:st.session_state[_key]=_valid_options
+        excluded_games=st.multiselect('Exclude games',_games,key=_game_key)
+        excluded_teams=st.multiselect('Exclude teams',_teams,key=_team_key)
+        excluded=excluded_player_indices(pool,excluded_games,excluded_teams)
+        if len(excluded):st.caption(f'{len(excluded)} players excluded from your next build. Opponents still use the full slate.')
+        salary_min=st.number_input('Minimum salary',min_value=0,max_value=rules['salary_cap'],value=58000 if platform=='FanDuel' else 48000,step=500,key='nba_min_salary' if platform=='FanDuel' else 'nba_min_salary_DraftKings')
+        correlation=st.slider('Build correlation',0,100,0,key='nba_build_correlation',
+            help='Extra preference for positively correlated player combinations measured from the shared game simulations. 0 = no extra bonus; 100 = strongest bonus. Game simulations remain correlated at every setting.')
+        diversity=st.slider('Exposure diversity',0,100,50,key='nba_exposure_diversity')
+        st.caption('Experimental blowout rotations: simulated leads of 20+ in the final six minutes, or 15+ in the final three, can rest high-minute players for active reserves on both teams. Overtime keeps its normal rotations.')
+        st.caption('Hard portfolio caps: 60% overall; verified projected ownership + 5 percentage points where lower; below 16 projected minutes: 15%. Small portfolios round positive caps up to at least one entry. Caps never relax; selection/export stops if they cannot be met.')
+        metric=st.selectbox('Rank lineups',['Top 1%','Expected ROI (%)','Expected Prize ($)'],key='nba_rank_metric')
+        clicked=workspace_button(st,'BUILD NBA LINEUPS',disabled=bool(error),key='nba_build')
+        if error:
+            st.error('NBA build inputs need attention: '+error)
+            from simmah_nba_diagnostics import rotation_audit,make_setup_package,retain_package,package_reference,package_bytes
+            with st.expander('Review rotation inputs and save diagnostic',expanded=True):
+                summary,detail=rotation_audit(pool)
+                st.dataframe(summary,hide_index=True,width='stretch')
+                st.caption('Minutes below count only players included in the simulation. OUT players, explicit zero minutes and missing projections are shown separately. Refresh projections to retry the provider feed; no missing minutes are filled automatically.')
+                st.dataframe(detail,hide_index=True,width='stretch')
+                try:
+                    setup_identity=hashlib.sha256(upload.getvalue()+pool.to_json(orient='split').encode()+
+                        json.dumps({'contest_id':str(cid),'error':error,'markets':markets},sort_keys=True).encode()).hexdigest()
+                    setup=st.session_state.get('nba_setup_diagnostic')
+                    if not setup or setup.get('identity')!=setup_identity:
+                        package=make_setup_package(pool,upload.getvalue(),dict(contest or selected,id=str(cid),date=slate.get('date')),markets,error)
+                        retain_package(st,package)
+                        setup={**package_reference(package),'identity':setup_identity}
+                        st.session_state['nba_setup_diagnostic']=setup
+                    data=package_bytes(st,setup)
+                    if data is not None:
+                        workspace_download_button(st,'DOWNLOAD SETUP DIAGNOSTIC PACKAGE',data,
+                            setup['filename'],'application/zip',key='nba_setup_diagnostic_download',on_click='ignore')
+                except Exception as exc:st.warning('Could not save setup diagnostic: '+str(exc))
+    identity=input_identity(pool,markets,contest,salary_min,correlation,pool.iloc[excluded]['Player ID'])
+    saved=st.session_state.get('nba_build_result')
+    if clicked:
+        build_started_at=datetime.now(timezone.utc).isoformat()
+        with tabs[2]:
+            message=st.empty();bar=st.progress(0)
+            stages={'Simulating candidate scenarios':.05,'Building independent opponent support':.35,
+                    'Scoring independent evaluation scenarios':.65,'Selecting portfolio':.95}
+            def progress(text):
+                message.write(text)
+                if text in stages:bar.progress(stages[text])
+            try:
+                built=run_pipeline(pool,engine,ownership['weights'],
+                    ownership['source'],
+                    payout_vector(contest),selected['entry_fee'],count,diversity=diversity,
+                    salary_min=salary_min,correlation=correlation,ownership_mode=ownership['mode'],progress=progress,
+                    excluded_indices=excluded,capture_diagnostics=True)
+                reports=engine.last_report
+                # A completed portfolio must serialize and pass site legality
+                # before replacing the last successful build or showing success.
+                export_portfolio(upload.getvalue(),cid,pool,built)
+                from simmah_nba_diagnostics import make_package,retain_package,package_reference
+                try:
+                    package=make_package(pool,built,upload.getvalue(),dict(contest,id=str(cid),date=day),markets,
+                        {'input_identity':identity,'rank_metric_at_build':'Top 1%'},started_at=build_started_at,
+                        engine_metadata={'rates':vars(engine.rates),'max_overtimes':engine.max_overtimes,
+                            'rotation_reconciliation':engine.rotation_reconciliation,
+                            'simulation_identity':engine.identity})
+                    built['diagnostic_package']=package_reference(package)
+                    retain_package(st,package)
+                    # Exact outcome arrays now live in the compressed package.
+                    built.pop('diagnostics',None)
+                except Exception as exc:
+                    st.warning('Lineups built, but diagnostic package capture failed: '+str(exc))
+                saved={'identity':identity,'result':built,'engine_reports':reports,'pool':pool.copy(),'contest_id':cid,
+                       'rotation_reconciliation':engine.rotation_reconciliation}
+                st.session_state['nba_build_result']=saved
+                bar.progress(1.);message.success('NBA build complete')
+            except Exception as exc:
+                st.error(f'NBA build stopped: {exc}')
+    with tabs[3]:
+        from simmah_nba_late_swap import render_late_swap
+        render_late_swap(st,pool,cid,salary_min,diversity,markets=markets,contest=contest,original_template=upload.getvalue())
+    if not saved:
+        with tabs[2]:st.info('Ready to build when the contest, projections, rotations and market lines are complete.')
+        with tabs[3]:st.info('Your NBA portfolio will appear here after BUILD NBA LINEUPS.')
+        return
+    stale=saved['identity']!=identity
+    built=saved['result'];saved_pool=saved['pool']
+    from simmah_nba_player_display import display_pool
+    labeled_pool=display_pool(saved_pool,status_pool=pool)
+    if built['field'].get('ownership_fit_warning'):
+        with tabs[2]:st.warning('Opponent field uses estimated relative popularity because external ownership could not be fitted. '+built['field']['ownership_fit_warning'])
+        with tabs[3]:st.warning('ROI uses estimated opponent ownership; the external ownership fit failed.')
+
+    try:
+        portfolio=select_entries(saved_pool,built['candidates']['indices'],built['report'],len(built['portfolio']),diversity=diversity,metric=metric)
+        built['portfolio']=portfolio
+    except ValueError as exc:
+        with tabs[3]:st.error(str(exc))
+        return
+    export_pool=pool.copy(deep=True)
+    if 'Eligible' not in export_pool:export_pool['Eligible']=True
+    if len(excluded):
+        export_pool.loc[export_pool['Player ID'].isin(pool.iloc[excluded]['Player ID']),'Eligible']=False
+    with tabs[2]:
+        if stale:st.info('Inputs or build settings changed. Previous estimates remain visible; rebuild to update them. Export checks the saved lineups against current inputs.')
+        if built.get('timings_seconds'):
+            _timing=built['timings_seconds']
+            st.caption('Build timing · '+ ' · '.join(label+f" {_timing[key]:.1f}s" for key,label in [('game_scenarios','Game scenarios'),('candidates','Candidates'),('opponent_field','Opponents'),('contest_scoring','Scoring')])+
+                f" · {built.get('scenario_cache_hits',0)}/3 scenario sets reused")
+        render_exports(st,upload,cid,saved_pool,built,portfolio,platform,stale,'build',status_pool=pool,current_pool=export_pool,salary_min=salary_min,saved_contest_id=saved.get('contest_id',''))
+        st.subheader('Candidate lineups')
+        st.caption(f"{built['candidates']['unique']:,} unique candidates · {built['field']['entries']:,} modeled opponents · {built['field']['unique_rosters']:,} unique opponent rosters. Ownership and ROI are estimates.")
+        candidate_rows=built['report'].copy()
+        for j,slot in enumerate(slots):candidate_rows[slot]=saved_pool.iloc[built['candidates']['indices'][:,j]]['Player ID'].to_numpy()
+        st.dataframe(display_lineups(saved_pool,candidate_rows,status_pool=pool).sort_values(metric,ascending=False),hide_index=True,width="stretch")
+        candidate_export=candidate_rows.sort_values(metric,ascending=False).copy()
+        candidate_names=saved_pool.set_index('Player ID')['Name']
+        for slot in slots:
+            candidate_export[slot+' Name']=candidate_export[slot].map(candidate_names)
+        workspace_download_button(st,'DOWNLOAD ALL CANDIDATE LINEUPS',
+            candidate_export.to_csv(index=False).encode('utf-8-sig'),
+            'Simmah_NBA_'+platform.replace(' ','_')+'_All_Candidates.csv','text/csv',
+            key='nba_all_candidates_download',on_click='ignore')
+        workspace_download_button(st,'DOWNLOAD OPPONENT FIELD',pd.DataFrame(built['field']['indices'],columns=slots).apply(lambda c:c.map(saved_pool['Player ID'].to_dict())).assign(Copies=built['field']['copies']).to_csv(index=False).encode(),
+            'Simmah_NBA_Opponent_Field.csv','text/csv',key='nba_field_download',on_click='ignore')
+        if st.session_state.get('nba_show_advanced',False):
+            with st.expander('NBA engine and ownership report'):
+                st.write(saved['engine_reports'])
+                st.caption(built['field']['ownership_source'])
+                report=pd.DataFrame({'Name':labeled_pool['Name'],'Estimated Field Own %':built['field']['ownership_sampled']})
+                if 'RotoWire Projected Own %' in saved_pool:
+                    report['RotoWire Projected Own %']=pd.to_numeric(saved_pool['RotoWire Projected Own %'],errors='coerce')
+                    report['Field minus RotoWire (pp)']=report['Estimated Field Own %']-report['RotoWire Projected Own %']
+                st.dataframe(report,hide_index=True,width="stretch",key="nba_ownership_table",
+                             column_config={'Name':st.column_config.TextColumn('Player',pinned=True)})
+    with tabs[3]:
+        st.subheader('Portfolio ROI — estimated')
+        totals=portfolio_roi_totals(portfolio)
+        cols=st.columns(4)
+        for col,label,value in zip(cols,['Entries','Fees','Estimated winnings','Estimated ROI'],
+                                   [str(totals['entries']),f"${totals['fees']:.2f}",f"${totals['winnings']:.2f}",f"{totals['roi']:.1f}%"]):col.metric(label,value)
+        st.caption('Experimental model estimates; totals sum marginal lineup estimates against the modeled field.')
+        render_exports(st,upload,cid,saved_pool,built,portfolio,platform,stale,'lineups',status_pool=pool,current_pool=export_pool,salary_min=salary_min,saved_contest_id=saved.get('contest_id',''))
+        st.subheader('My lineups')
+        st.dataframe(display_lineups(saved_pool,portfolio,status_pool=pool),hide_index=True,width="stretch")
+        exposure=portfolio[list(slots)].stack().value_counts().rename('Lineups')
+        exposure=exposure.rename_axis('Player ID').reset_index()
+        exposure['Exposure %']=100*exposure['Lineups']/len(portfolio)
+        exposure=exposure.merge(labeled_pool[['Player ID','Name','Team','Injury Status']],on='Player ID',how='left')
+        st.subheader('Player exposures')
+        st.dataframe(exposure[['Name','Team','Injury Status','Lineups','Exposure %']],hide_index=True,width='stretch',key='nba_exposure_table',
+                     column_config={'Name':st.column_config.TextColumn('Player',pinned=True)})
+
+
+
+
+
+
+
+
+
+
+
+
+

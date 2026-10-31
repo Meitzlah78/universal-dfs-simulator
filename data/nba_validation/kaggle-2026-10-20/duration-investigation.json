@@ -1,0 +1,23 @@
+{
+  "source_commit": "5f36bdbe3aec53a7f70a2f36d8fc27a0278dd63c",
+  "source_file": "https://github.com/eoinmooremath/nba-data-pipeline/blob/5f36bdbe3aec53a7f70a2f36d8fc27a0278dd63c/src/lamba_function.py",
+  "function": "parse_duration",
+  "examples": [
+    {
+      "input": "34:59",
+      "publisher_result": 34.0,
+      "seconds_preserving_result": 34.983333333333334
+    },
+    {
+      "input": "PT34M59.00S",
+      "publisher_result": 34.0,
+      "seconds_preserving_result": 34.983333333333334
+    },
+    {
+      "input": "0:45",
+      "publisher_result": 0.0,
+      "seconds_preserving_result": 0.75
+    }
+  ],
+  "conclusion": "Source parser discards seconds. Downloaded CSV is mixed precision; this does not certify that every row used this version. Lost seconds cannot be reconstructed from minute totals."
+}

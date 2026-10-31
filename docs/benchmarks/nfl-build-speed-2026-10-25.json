@@ -1,0 +1,27 @@
+{
+  "classification": "FROZEN_PREGAME_REPLAY",
+  "scope": "Local execution environment; prepared outcomes reused, excludes cold simulation fitting, network and Streamlit rendering. No standings or postgame results used.",
+  "players": 275,
+  "evaluation_outcomes": 10000,
+  "construction_outcomes": 10000,
+  "candidates": 5000,
+  "opponents": 10000,
+  "candidate_search_seconds": 2.5496594650003317,
+  "opponent_field_seconds": 3.225185519999741,
+  "before": {
+    "candidate_summary_seconds": 2.6151943969998683,
+    "contest_scoring_seconds": 16.44092106500011,
+    "total_replay_seconds": 24.830960447000052
+  },
+  "after": {
+    "candidate_summary_seconds": 1.6828790959998514,
+    "contest_scoring_seconds": 9.543256743000256,
+    "total_replay_seconds": 17.00098082400018
+  },
+  "exact_summary_and_report_parity": true,
+  "scoring_speedup_ratio": 1.7227788697039008,
+  "total_replay_reduction_pct": 31.53313235592484,
+  "baseline_commit": "2aed4402310380443e8d4d4dee770336592bcbc4",
+  "common_stages_measured_once": true,
+  "limitations": "Single paired local comparison on a 275-player DK Classic slate. Candidate search and opponent field are unchanged, measured once and shared in replay totals. Not a benchmark of cold game simulation, network, live Streamlit Cloud, or a matched NBA slate. Counts, lineup rules, payout scaling and scoring precision are unchanged."
+}

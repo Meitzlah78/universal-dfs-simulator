@@ -1,0 +1,38 @@
+[
+  {
+    "contest_id": "197055079",
+    "platform": "DraftKings",
+    "passed": true,
+    "entries_checked": 20,
+    "excluded_entries": 0,
+    "contest_counts": {
+      "197055079": 20
+    },
+    "salary_cap": 50000,
+    "assignment_parity_verified": true,
+    "reference_rows_preserved": false,
+    "site_upload_acceptance_verified": false,
+    "repeated_replacement_identical": true,
+    "export_sha256": "61eb0efab0973a7bd88b85c6dad63fb9448d33c02fecd3b8f571c2c2bdc8bd38",
+    "source_package_sha256": "4ec12006671de303959c6e7b9582c653c64c86642b9f14f896e0313fb5bc5dad",
+    "evidence": "Regenerated from original template and frozen selector; not a captured submitted export."
+  },
+  {
+    "contest_id": "135830-281254012",
+    "platform": "FanDuel",
+    "passed": true,
+    "entries_checked": 60,
+    "excluded_entries": 0,
+    "contest_counts": {
+      "135830-281254012": 60
+    },
+    "salary_cap": 60000,
+    "assignment_parity_verified": true,
+    "reference_rows_preserved": true,
+    "site_upload_acceptance_verified": false,
+    "repeated_replacement_identical": true,
+    "export_sha256": "b39c4e7c5a40f4b0416b92f2453323940968e6611df6f53c79b21dec964a8cda",
+    "source_package_sha256": "4bbbba71e7ea66c767ee82050b2d62ee2bb78f22ee7bedd97bb618d5974fad33",
+    "evidence": "Regenerated from original template and frozen selector; not a captured submitted export."
+  }
+]

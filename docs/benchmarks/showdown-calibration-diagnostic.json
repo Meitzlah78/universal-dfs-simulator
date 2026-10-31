@@ -1,0 +1,36 @@
+{
+  "scope": "Same-contest diagnostic selection from saved proposals; not a fresh build or holdout validation",
+  "proposal_rows": 35651,
+  "selected_rows": 5000,
+  "calibration": {
+    "applied": true,
+    "contests": 1,
+    "historical_entries": 35434,
+    "features": [
+      "ownership_sum",
+      "captain_popularity",
+      "ownership_product_log"
+    ],
+    "formats": [
+      "DK_SHOWDOWN"
+    ],
+    "profile_ids": [
+      "b4bb59ec157037d40276c5e64baa9b5aac2d3e9cebeb27ba43bba6c1b9e4341f"
+    ]
+  },
+  "before": {
+    "captain_popularity": 8.382826487129341,
+    "ownership_sum": 248.87009153870764,
+    "ownership_product_log": -6.201776210212998
+  },
+  "after": {
+    "captain_popularity": 8.66212,
+    "ownership_sum": 244.97467999999998,
+    "ownership_product_log": -6.304223650037815
+  },
+  "historical": {
+    "captain_popularity": 10.264582042397379,
+    "ownership_sum": 244.12465393481136,
+    "ownership_product_log": -6.581808122359454
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "scope": "Synthetic lineup-score accumulation only; excludes game simulation, field fitting, ranks and UI",
+  "simulations": 10000,
+  "candidate_lineups": 5000,
+  "opponent_support_lineups": 10000,
+  "repetitions": 3,
+  "results": [
+    {
+      "slots": 8,
+      "before_seconds": 1.024713120999877,
+      "after_seconds": 0.34589055000014923,
+      "reduction_pct": 66.24513310977788,
+      "exact_scores": true
+    },
+    {
+      "slots": 9,
+      "before_seconds": 1.104282952000176,
+      "after_seconds": 0.3775993350000135,
+      "reduction_pct": 65.80592552696102,
+      "exact_scores": true
+    }
+  ]
+}

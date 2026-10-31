@@ -1,0 +1,47 @@
+{
+  "purpose": "Actual-file post-lock import, optimization and export acceptance; no platform submissions",
+  "cases": [
+    {
+      "platform": "DraftKings",
+      "input_name": "DKEntries (2).csv",
+      "input_sha256": "270ecf0eb76001c3b7ca6d26c29bfaf14d31d7478925f62c1cb2aeaec8b143d9",
+      "clock_utc": "2026-10-27T23:45:00Z",
+      "input_entries": 20,
+      "export_entries": 20,
+      "locked_slots_verified": 21,
+      "changed_entries": 20,
+      "unchanged_entries": 0,
+      "entry_identity_parity": true,
+      "locked_slot_parity": true,
+      "site_submission_verified": false
+    },
+    {
+      "platform": "DraftKings",
+      "input_name": "DKEntries (4).csv",
+      "input_sha256": "eb1b80b1b8c4b78685ec8f572f42970ec9dffdbbad21840cd3ce96f9f7ed60d7",
+      "clock_utc": "2026-10-28T02:00:00Z",
+      "input_entries": 20,
+      "export_entries": 20,
+      "locked_slots_verified": 123,
+      "changed_entries": 3,
+      "unchanged_entries": 17,
+      "entry_identity_parity": true,
+      "locked_slot_parity": true,
+      "site_submission_verified": false
+    },
+    {
+      "platform": "FanDuel",
+      "input_name": "Simmah_NBA_FanDuel_Edit_Entries (1).csv",
+      "input_sha256": "834704aacaa4685bf5bb6a8693cc24445feecc4c85e00f580e3f0c4e8591bfcb",
+      "clock_utc": "2026-10-28T02:00:00Z",
+      "input_entries": 48,
+      "export_entries": 48,
+      "locked_slots_verified": 373,
+      "changed_entries": 13,
+      "unchanged_entries": 35,
+      "entry_identity_parity": true,
+      "locked_slot_parity": true,
+      "site_submission_verified": false
+    }
+  ]
+}

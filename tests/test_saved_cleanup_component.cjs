@@ -1,0 +1,13 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const html=fs.readFileSync('components/saved_cleanup/index.html','utf8');
+assert(!html.includes('<button'));assert(!html.includes('indexedDB'));assert(!html.includes('delete('));
+const messages=[],listeners={},parent={postMessage:m=>messages.push(m)};
+const context={crypto:require('crypto').webcrypto,localStorage:{getItem:()=> '2026-10-25'},window:{parent,addEventListener:(name,fn)=>listeners[name]=fn}};
+vm.runInNewContext(html.split('<script>')[1].split('</script>')[0],context);
+listeners.message({data:{type:'streamlit:render',args:{day:'2026-10-25',fresh:false}}});
+const values=messages.filter(m=>m.type==='streamlit:setComponentValue');
+assert.equal(values.length,1);assert.equal(values[0].value.fresh,true);assert(!values[0].value.clear);
+listeners.message({data:{type:'streamlit:render',args:{day:'2026-10-25',fresh:false}}});
+assert.equal(messages.filter(m=>m.type==='streamlit:setComponentValue').length,1);
+assert.equal(messages.find(m=>m.type==='streamlit:setFrameHeight').height,0);
+console.log('No cleanup button or deletion path; existing fresh-workspace preference retained once.');

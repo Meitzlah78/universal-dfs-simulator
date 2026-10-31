@@ -1,0 +1,9 @@
+{
+  "scope": "Audit of archived FD scoring-input export, not validation of current football engine",
+  "players": 271,
+  "fixed_projection_multiple_ranges": 271,
+  "p10_multiplier": 0.35,
+  "p90_multiplier": 1.65,
+  "conclusion": "The archived ranges cannot establish current model calibration. No archived joint pregame outcome matrix was available.",
+  "fix": "FD player-pool summaries require a stored outcome matrix and matching player column; missing simulations remain pending. Existing scoring-input report safeguard already excludes placeholders."
+}

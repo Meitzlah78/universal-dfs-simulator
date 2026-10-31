@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "source_mib": 32,
+  "preflight": {
+    "passed": false,
+    "reason": "Process RSS is unavailable; memory-monitored test is blocked",
+    "available_memory_bytes": 8447811584,
+    "required_memory_headroom_bytes": 805306368,
+    "temporary_disk_free_bytes": 29883973632,
+    "process_monitor_available": false
+  },
+  "memory_before": {
+    "limit_bytes": 8589934592,
+    "current_bytes": 142123008,
+    "oom": 0,
+    "oom_kill": 0
+  },
+  "parent_process_before": {
+    "pid": 5,
+    "sampled_at_monotonic": 2431.46389069,
+    "source": "psutil",
+    "rss_bytes": null,
+    "vms_bytes": null,
+    "uss_bytes": null,
+    "rss_mib": null,
+    "vms_mib": null,
+    "uss_mib": null,
+    "uss_status": "unavailable",
+    "process_created_at": 1793118044.74,
+    "proc_status_rss_bytes": 2121728,
+    "proc_status_hwm_bytes": 2121728,
+    "proc_self_pid": 1443,
+    "error": "ProcessIdentityMismatch"
+  },
+  "status": "blocked",
+  "reason": "Process RSS is unavailable; memory-monitored test is blocked",
+  "environment": "isolated local executor, not Streamlit Cloud",
+  "reader": "disk ZIP with bounded NPY reads; not exercised if blocked"
+}

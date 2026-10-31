@@ -1,0 +1,294 @@
+from simmah_slate_workspaces import workspace_file_uploader, workspace_download_button
+"""FanDuel NBA entry-template import; historical FPPG is never a projection."""
+import csv
+import io
+import time
+from decimal import Decimal
+import pandas as pd
+
+SLOTS = ('PG', 'SG', 'SF', 'PF', 'C', 'G/F', 'F/C', 'UTIL', 'UTIL')
+
+
+def read_template(data, *, game_context_pool=None):
+    if data.decode('utf-8-sig').startswith('Entry ID,Contest Name,Contest ID,Entry Fee,PG,SG,SF,PF,C,G,F,UTIL'):
+        from simmah_nba_dk_import import read_draftkings
+        return read_draftkings(data, game_context_pool=game_context_pool)
+    rows = list(csv.reader(io.StringIO(data.decode('utf-8-sig'))))
+    if not rows or tuple(rows[0][4:13]) != SLOTS or rows[0][:2] != ['entry_id', 'contest_id']:
+        raise ValueError('Expected a FanDuel NBA nine-slot entries template')
+    entries = [r[:13] for r in rows[1:] if len(r) >= 13 and r[0].isdigit() and r[1]]
+    if not entries or len({r[0] for r in entries}) != len(entries):
+        raise ValueError('Entry IDs must be present and unique')
+    start = next((i for i, r in enumerate(rows) if 'Id' in r and 'Nickname' in r and 'Salary' in r), None)
+    if start is None:
+        raise ValueError('The player/salary table is missing')
+    header = rows[start]
+    def cell(row, name):
+        i = header.index(name)
+        return row[i].strip() if i < len(row) else ''
+    players = []
+    for row in rows[start+1:]:
+        pid = cell(row, 'Id')
+        if not pid:
+            continue
+        name = cell(row, 'Nickname')
+        salary = Decimal(cell(row, 'Salary'))
+        pos = cell(row, 'Position')
+        if not name or salary <= 0 or salary != int(salary) or not set(pos.split('/')) <= {'PG','SG','SF','PF','C'}:
+            raise ValueError('Invalid NBA player name, salary or position')
+        injury = cell(row, 'Injury Indicator').upper()
+        players.append({'Player ID':pid, 'Name':name, 'Position':pos, 'Salary':int(salary),
+            'Team':cell(row,'Team'), 'Opponent':cell(row,'Opponent'), 'Game':cell(row,'Game'),
+            'Injury Status':{'O':'Out','Q':'Questionable','D':'Doubtful'}.get(injury,injury or 'Active'),
+            'Injury Details':cell(row,'Injury Details'),
+            'Historical FPPG':float(cell(row,'FPPG') or 0), 'Projection':None})
+    pool = pd.DataFrame(players)
+    if pool.empty or pool['Player ID'].duplicated().any():
+        raise ValueError('Player IDs must be present and unique')
+    prefixes = {p.split('-')[0] for p in pool['Player ID']}
+    if any(r[1].split('-')[0] not in prefixes for r in entries):
+        raise ValueError('Entry contest and salary slate IDs do not match')
+    contests = []
+    for cid in dict.fromkeys(r[1] for r in entries):
+        owned = [r for r in entries if r[1] == cid]
+        if len({(r[2],r[3]) for r in owned}) != 1:
+            raise ValueError('Conflicting contest metadata')
+        contests.append({'id':cid, 'name':owned[0][2], 'entry_fee':float(Decimal(owned[0][3])), 'owned_entries':len(owned)})
+    return {'entries':entries, 'players':pool, 'contests':contests, 'slots':SLOTS}
+
+
+def read_workspace_template(st, uploaded_file, contest_tab):
+    """Read current entries with saved clocks, or recover in the same screen."""
+    from simmah_nba_dk_import import MissingDKGameContext
+    state=st.session_state
+    sources=[state.get('nba_import_game_context'),(state.get('nba_build_result') or {}).get('pool'),
+             (state.get('nba_imported_slate') or {}).get('players'),None]
+    missing=None
+    for context in sources:
+        try:
+            slate=read_template(uploaded_file.getvalue(),game_context_pool=context)
+            break
+        except MissingDKGameContext as exc:missing=exc
+    else:
+        with contest_tab:
+            st.warning(str(missing)+'. Your current entry rosters have not been changed.')
+            recovery=workspace_file_uploader(st,'Original pregame DraftKings entries CSV',type=['csv'],
+                key='nba_original_game_context_DraftKings',
+                help='Used only to recover game times. Current uploaded entries supply every roster and entry ID.')
+        if recovery is None:return None
+        original=read_template(recovery.getvalue())
+        if original.get('platform')!='DraftKings':raise ValueError('Choose the original DraftKings NBA entries file for this slate')
+        slate=read_template(uploaded_file.getvalue(),game_context_pool=original['players'])
+    if slate.get('platform')=='DraftKings':
+        state['nba_import_game_context']=slate['players'].copy(deep=True)
+    return slate
+
+
+def render_setup(st, uploaded_file, tabs, controls, game_header=None):
+    try:
+        slate = read_workspace_template(st,uploaded_file,tabs[0])
+        if slate is None:return
+    except (ValueError, ArithmeticError) as exc:
+        st.error(str(exc))
+        return
+    pool = slate['players']
+    platform = slate.get('platform','FanDuel')
+    from simmah_nba_slate_date import resolve_slate_date
+    try:
+        day = resolve_slate_date(slate,uploaded_file.name)
+    except (ValueError,KeyError,OSError) as exc:
+        with tabs[0]:st.error('NBA slate date could not be resolved: '+str(exc))
+        return
+    if day is None:
+        with tabs[0]:
+            st.info('This file has no dated game information or matching saved contest. Select its slate date to load projections.')
+            chosen = st.date_input('NBA slate date',value=None,key='nba_explicit_slate_date_'+platform)
+        if chosen is None:
+            with controls:st.caption('Choose the NBA slate date in Contests before building.')
+            return
+        day = chosen.isoformat()
+    slate['date'] = day
+    from simmah_nba_pool_overrides import requested_pool_exclusions
+    pool,_requested_drops=requested_pool_exclusions(pool,day,platform,restore_rotation=False)
+    slate['players']=pool
+    if _requested_drops:
+        with tabs[1]:st.caption('Excluded by request for this slate: '+', '.join(_requested_drops)+'.')
+    pool.attrs['slate_date'] = day
+    from simmah_nba_projections import apply_rotowire_projections, read_projection_upload, EntriesInProjectionUpload
+    _force_refresh=st.session_state.pop('refresh_projections_requested',False)
+    if _force_refresh:
+        from simmah_nba_confirmed import request_lineup_refresh
+        request_lineup_refresh(day)
+        from simmah_nba_game_context import download_game_context_result
+        st.cache_data(ttl=60,show_spinner=False,max_entries=8)(download_game_context_result).clear()
+        st.session_state['nba_lineup_refresh_requested']=True
+        st.session_state['projection_updates_found']=False
+        st.session_state['injury_updates_found']=False
+    with tabs[1]:
+        projection_file = workspace_file_uploader(st,'Optional NBA projections CSV', type=['csv'], key='nba_projection_upload_'+platform,
+            help='Player ID and Projection columns. Uploaded values override RotoWire, including zeros that exclude a player.')
+    from simmah_nba_source_cache import load_sources
+    from simmah_nba_projections import download_rotowire
+    identity=(platform,day,tuple(sorted(zip(pool['Player ID'],pool['Team'],pool['Opponent']))),'rotowire-game-minutes-v9')
+    def _load_rw():
+        values,details,sid=download_rotowire(day,pool,platform=platform)
+        return {'values':values,'details':details,'slate_id':sid}
+    with st.spinner('Checking NBA projection sources (up to 12 seconds)…'):
+        _sources=load_sources(st.session_state,identity,
+            {'nba_rotowire_cache':_load_rw},force=_force_refresh)
+    _rw=_sources['nba_rotowire_cache']
+    rw_values,rw_details=_rw.get('values',{}),_rw.get('details',{})
+    for _key,_label in [('nba_rotowire_cache','NBA projections / minutes / RotoWire')]:
+        _source=_sources[_key]
+        if _source.get('error'):
+            with tabs[1]:
+                _fallback=' Last successful data retained; it may be stale.' if 'time' in _source else ''
+                st.warning(_label+' unavailable: '+_source['error']+_fallback+' Automatic retry pauses for up to 60 seconds; REFRESH retries immediately.')
+    if rw_details and not _rw.get('error') and st.session_state.pop('nba_lineup_refresh_requested',False):
+        from simmah_nba_lineups import acknowledge_lineup_refresh
+        acknowledge_lineup_refresh(st.session_state)
+    uploaded = None
+    if projection_file is not None:
+        try:
+            uploaded = read_projection_upload(projection_file.getvalue())
+        except EntriesInProjectionUpload as exc:
+            with tabs[1]:st.warning(str(exc))
+            st.session_state.get('_slate_restored_uploads',{}).pop('nba_projection_upload_'+platform,None)
+        except ValueError as exc:
+            with tabs[1]:st.error(str(exc))
+            return
+    try:
+        pool = apply_rotowire_projections(pool, rw_values, rw_details, uploaded)
+    except ValueError as exc:
+        with tabs[1]:
+            st.error(str(exc))
+        return
+    from simmah_nba_confirmed import current_confirmed_pool
+    from simmah_nba_projections import team_key
+    from simmah_nba_game_context import restore_saved_game_metadata
+    from simmah_nba_minutes_recovery import restore_saved_minutes,restore_verified_zero_snapshot
+    _previous_slate=st.session_state.get('nba_imported_slate',{})
+    _previous_build=st.session_state.get('nba_build_result',{})
+    for _previous_pool in (st.session_state.get('nba_import_game_context'),_previous_slate.get('players'),_previous_build.get('pool')):
+        pool=restore_saved_game_metadata(pool,_previous_pool,day)
+        pool=restore_saved_minutes(pool,_previous_pool,day)
+    pool=restore_verified_zero_snapshot(pool,day)
+    _status_pairs=tuple(sorted({(team_key(r.Team),team_key(r.Opponent)) for r in pool.itertuples()}))
+    if _force_refresh:
+        from simmah_nba_confirmed import cached_player_lineups
+        try:cached_player_lineups(st,day,_status_pairs,force=True)
+        except (ValueError,OSError,KeyError,TypeError):pass
+    pool,_shared_status=current_confirmed_pool(st,pool,day,_status_pairs)
+    # Provider application recomputes eligibility; apply the requested fade
+    # again while retaining the player's verified simulation-only rotation.
+    pool,_requested_drops=requested_pool_exclusions(pool,day,platform)
+    if _shared_status['stale']:
+        with tabs[1]:st.caption('Starting-lineup feed unavailable. Previous same-slate statuses are labeled Last confirmed / Last expected.')
+    if pool.attrs.get('saved_game_metadata_restored'):
+        with tabs[1]:st.caption('Game times and implied scores recovered from this slate’s saved data; these are last-known pregame values.')
+    if pool.attrs.get('saved_minutes_restored'):
+        with tabs[1]:st.warning('Using last saved provider minutes for: '+', '.join(pool.attrs['saved_minutes_restored'])+'. These minutes are stale; no estimates or team-minute adjustments were added.')
+    from simmah_nba_markets import extract_markets
+    try:
+        import json
+        from pathlib import Path
+        from simmah_nba_role_priors import apply_position_priors
+        model_path=Path(__file__).parent/'data'/'nba_models'/'position-roles-before-2026-04-09.json'
+        pool=apply_position_priors(pool,json.loads(model_path.read_text()),day)
+    except (ValueError, OSError) as exc:
+        with tabs[1]:
+            st.warning(f'NBA historical role priors unavailable: {exc}')
+    _minutes=pd.to_numeric(pool.get('Projected Minutes',pd.Series(index=pool.index,dtype=float)),errors='coerce')
+    _projection=pd.to_numeric(pool['Projection'],errors='coerce')
+    _zero_minutes=_minutes.eq(0)
+    pool.loc[_zero_minutes,'Eligible']=False
+    _missing_minutes=(_projection>0) & ~_zero_minutes & ~pool['Injury Status'].astype(str).str.upper().isin(['OUT','O','IR','SUSPENDED']) & ~_minutes.between(0,48,inclusive='right')
+    if _missing_minutes.any():
+        with tabs[1]:
+            _missing_names=', '.join(pool.loc[_missing_minutes,'Name'].astype(str))
+            st.warning(f'{int(_missing_minutes.sum())} projected NBA player(s) have unavailable or invalid minutes: {_missing_names}. The slate can be viewed, but simulation builds need complete projected rotations. Missing minutes are not treated as zero.')
+    from simmah_nba_game_context import download_game_context_result,apply_game_context,has_game_context
+    if not has_game_context(pool):
+        try:
+            _game_pairs=tuple(sorted({tuple(sorted((team_key(r.Team),team_key(r.Opponent)))) for r in pool.itertuples()}))
+            _context_result=st.cache_data(ttl=60,show_spinner=False,max_entries=8)(download_game_context_result)(day,_game_pairs)
+            if _context_result.get('error'):raise ValueError(_context_result['error'])
+            pool=apply_game_context(pool,_context_result['values'])
+        except (ValueError,OSError,KeyError,TypeError):
+            with tabs[1]:st.caption('NBA game times / market feed unavailable; existing salary-file and projection metadata retained.')
+    markets = extract_markets(pool)
+    slate['markets'] = markets
+    slate['players'] = pool
+    st.session_state['nba_imported_slate'] = slate
+    with tabs[0]:
+        st.subheader(platform+' NBA contests')
+        for c in slate['contests']:
+            st.write(c['name'])
+            st.caption(f"Contest {c['id']} · {c['owned_entries']} entries · ${c['entry_fee']:.2f} each")
+        with st.expander('Market lines — view or edit',expanded=False):
+            from simmah_nba_markets import implied_scores
+            from simmah_nba_projections import team_key
+            pairs=sorted({tuple(sorted((team_key(r.Team),team_key(r.Opponent)))) for r in pool.itertuples()})
+            by_pair={m['teams']:m for m in markets}
+            for pair in pairs:
+                a,b=pair
+                current=by_pair.get(pair,{})
+                key='nba_market_'+str(day if 'day' in locals() else uploaded_file.name)+'_'+a+'_'+b
+                if st.checkbox(f'Use manual lines: {a} vs {b}',key=key+'_manual'):
+                    total=st.number_input(f'{a} vs {b} total',min_value=101.,max_value=399.,value=float(current.get('total',230.)),step=.5,key=key+'_total')
+                    spread=st.number_input(f'{a} spread (negative = favored)',min_value=-99.,max_value=99.,value=float(current.get('team_0_spread',0.)),step=.5,key=key+'_spread')
+                    points=implied_scores(total,spread)
+                    by_pair[pair]={'teams':pair,'total':total,'team_0_spread':spread,'implied_points':points,'source':'Manual override'}
+            markets=list(by_pair.values())
+            slate['markets']=markets
+            st.session_state['nba_game_markets']=markets
+            for market in markets:
+                a, b = market['teams']
+                x, y = market['implied_points']
+                st.write(f"{a} vs {b} · Total {market['total']:g} · {a} {market['team_0_spread']:+g} · Implied {a} {x:g}, {b} {y:g}")
+                st.caption(market['source'] + (' · refreshed with NBA projections; cached up to 15 minutes' if market['source'] != 'Manual override' else ''))
+            if not markets:
+                st.info('No complete, consistent market lines are available for this NBA slate.')
+    if game_header is not None:
+        from simmah_nba_lineups import render_live_strip
+        source_cache=st.session_state.get('nba_rotowire_cache',{})
+        with game_header:
+            render_live_strip(st,pool,markets,source_cache.get('slate_id') if rw_details else None,
+                              day,source_cache.get('time') if rw_details else None)
+    with tabs[1]:
+        from simmah_nba_news import render_underdog_news
+        render_underdog_news(st)
+        from simmah_nba_live import render_live_points
+        render_live_points(st,pool,day,platform)
+        from simmah_nba_minutes_validation import render_minutes_snapshots
+        _advanced=st.checkbox('Show advanced reports and validation',key='nba_show_advanced')
+        render_minutes_snapshots(st,pool,platform,show_controls=_advanced)
+        st.subheader('NBA player pool')
+        st.caption(f"Positive projections: {pool['Projection'].notna().sum()} / {len(pool)} · Eligible after injuries: {pool['Eligible'].sum()}. Automatic data is cached for up to 15 minutes; refresh runs on app activity.")
+        from simmah_nba_ownership import field_ownership_inputs
+        ownership_check=field_ownership_inputs(pool)
+        st.caption(ownership_check['source'])
+        if ownership_check['mode']!='projected':st.warning(ownership_check['status'])
+        leading_columns = ['Name', 'Starter Confirmed', 'Injury Status', 'Position', 'Team',
+                           'Opponent', 'Salary', 'Projection', 'Projection Source',
+                           'RotoWire Projected Own %', 'Projected Minutes', 'Minutes Source']
+        column_order = [column for column in leading_columns if column in pool.columns]
+        column_order += [column for column in pool.columns if column not in leading_columns]
+        from simmah_nba_player_display import display_pool
+        st.caption("✅ = confirmed starter; Q/D injury tags remain visible.")
+        st.dataframe(display_pool(pool), hide_index=True, width="stretch", key="nba_player_pool_table",
+                     column_order=column_order,
+                     column_config={'Name': st.column_config.TextColumn('Player', pinned=True)})
+        workspace_download_button(st,'DOWNLOAD PLAYER POOL',
+            pool[column_order].to_csv(index=False).encode('utf-8-sig'),
+            'Simmah_NBA_'+platform+'_Player_Pool.csv','text/csv',
+            key='nba_player_pool_download',on_click='ignore')
+        st.write(f"{len(pool)} players · {(pool['Injury Status']=='Out').sum()} Out · {(pool['Injury Status']=='Questionable').sum()} Questionable")
+    from simmah_nba_ui import render_workspace
+    render_workspace(st,slate,uploaded_file,tabs,controls,markets)
+
+
+
+
+
+

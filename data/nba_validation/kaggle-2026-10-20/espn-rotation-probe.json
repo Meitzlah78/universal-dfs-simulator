@@ -1,0 +1,67 @@
+{
+  "event_id": "401468702",
+  "source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/summary?event=401468702",
+  "final_verified": true,
+  "complete": true,
+  "issues": [],
+  "player_minutes": {
+    "3155942": 32.94833333333333,
+    "4066259": 35.53333333333334,
+    "4066372": 32.185,
+    "4594327": 27.733333333333334,
+    "6578": 28.53333333333333,
+    "2993370": 13.618333333333332,
+    "3136196": 18.033333333333335,
+    "4066262": 26.31666666666667,
+    "4278053": 15.233333333333333,
+    "4278521": 4.131666666666667,
+    "2991235": 34.49666666666668,
+    "3134932": 27.63333333333334,
+    "3155526": 36.09833333333334,
+    "4277961": 28.965000000000003,
+    "4279888": 32.79833333333334,
+    "4593041": 15.100000000000001,
+    "3135046": 32.31666666666667,
+    "4277964": 12.585,
+    "4592691": 4.0183333333333335,
+    "4432646": 14.051666666666668,
+    "2489716": 1.4333333333333333,
+    "2596107": 1.4333333333333333,
+    "3914283": 1.4333333333333333,
+    "3919454": 1.4333333333333333,
+    "4397227": 0.9683333333333334,
+    "4585610": 0.9683333333333334
+  },
+  "caveat": "ESPN player IDs need an explicit mapping to NBA IDs. Incomplete reconstruction is excluded; no missing lineup guessed.",
+  "team_minute_totals": {
+    "Sacramento Kings": 240.0,
+    "Memphis Grizzlies": 240.00000000000006
+  },
+  "examples": [
+    {
+      "ESPN Player ID": "6578",
+      "Name": "Harrison Barnes",
+      "reconstructed_minutes": 28.53333333333333
+    },
+    {
+      "ESPN Player ID": "3155942",
+      "Name": "Domantas Sabonis",
+      "reconstructed_minutes": 32.94833333333333
+    },
+    {
+      "ESPN Player ID": "4594327",
+      "Name": "Keegan Murray",
+      "reconstructed_minutes": 27.733333333333334
+    },
+    {
+      "ESPN Player ID": "4066259",
+      "Name": "De'Aaron Fox",
+      "reconstructed_minutes": 35.53333333333334
+    },
+    {
+      "ESPN Player ID": "4066372",
+      "Name": "Kevin Huerter",
+      "reconstructed_minutes": 32.185
+    }
+  ]
+}

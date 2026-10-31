@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "environment": "isolated local executor, not Streamlit Cloud",
+  "synthetic_array_bytes": 535822336,
+  "zip_bytes": 535985895,
+  "zip_mib": 511.1559820175171,
+  "configured_zip_cap_bytes": 536870912,
+  "recovery_frames": 715,
+  "exact_full_array_equal": true,
+  "archive_hash_verified": true,
+  "seconds": 31.407040071999972
+}

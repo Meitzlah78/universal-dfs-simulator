@@ -1,0 +1,237 @@
+{
+  "schema": 1,
+  "source": "User-supplied RotoWire optimizer screenshots",
+  "received_date_eastern": "2026-10-27",
+  "slate_date": null,
+  "capture_timestamp_verified": false,
+  "benchmarks": [
+    {
+      "platform": "DraftKings",
+      "optimizer_rank_displayed": 1,
+      "source_file": "Screenshot 2026-10-27 184644.png",
+      "source_sha256": "a6009d2920c1e9c6212242020f04e582f4e140e42ed155a90db28d845d0c0118",
+      "projected_points_total": 286.63,
+      "salary_total": 49600,
+      "rst_total_displayed": 147.8,
+      "players": [
+        {
+          "slot_display": "PG",
+          "slot_internal": "PG",
+          "name": "Damian Lillard",
+          "team_display": "POR",
+          "opponent_display": "LAL",
+          "salary": 6600,
+          "projected_points": 38.64,
+          "rst_pct_displayed": 37.8,
+          "status_display": null
+        },
+        {
+          "slot_display": "SG",
+          "slot_internal": "SG",
+          "name": "Dylan Harper",
+          "team_display": "SAS",
+          "opponent_display": "SAC",
+          "salary": 6200,
+          "projected_points": 34.56,
+          "rst_pct_displayed": 5.9,
+          "status_display": null
+        },
+        {
+          "slot_display": "SF",
+          "slot_internal": "SF",
+          "name": "Mikal Bridges",
+          "team_display": "NYK",
+          "opponent_display": "DET",
+          "salary": 5000,
+          "projected_points": 29.16,
+          "rst_pct_displayed": 13.4,
+          "status_display": null
+        },
+        {
+          "slot_display": "PF",
+          "slot_internal": "PF",
+          "name": "Karl-Anthony Towns",
+          "team_display": "NYK",
+          "opponent_display": "DET",
+          "salary": 8300,
+          "projected_points": 44.88,
+          "rst_pct_displayed": 33.9,
+          "status_display": null
+        },
+        {
+          "slot_display": "C",
+          "slot_internal": "C",
+          "name": "Domantas Sabonis",
+          "team_display": "SAC",
+          "opponent_display": "SAS",
+          "salary": 9400,
+          "projected_points": 50.32,
+          "rst_pct_displayed": 19.5,
+          "status_display": null
+        },
+        {
+          "slot_display": "G",
+          "slot_internal": "G",
+          "name": "Ziaire Williams",
+          "team_display": "LAL",
+          "opponent_display": "POR",
+          "salary": 3900,
+          "projected_points": 24.16,
+          "rst_pct_displayed": 11.6,
+          "status_display": null
+        },
+        {
+          "slot_display": "F",
+          "slot_internal": "F",
+          "name": "Precious Achiuwa",
+          "team_display": "SAC",
+          "opponent_display": "SAS",
+          "salary": 5000,
+          "projected_points": 32.03,
+          "rst_pct_displayed": 19.7,
+          "status_display": null
+        },
+        {
+          "slot_display": "UTIL",
+          "slot_internal": "UTIL",
+          "name": "Paul Reed",
+          "team_display": "DET",
+          "opponent_display": "NYK",
+          "salary": 5200,
+          "projected_points": 32.88,
+          "rst_pct_displayed": 6,
+          "status_display": null
+        }
+      ],
+      "checks": {
+        "display_totals_reconcile": true,
+        "slot_count_matches_simmah": true,
+        "within_salary_cap": true,
+        "individual_position_eligibility_verified": false
+      }
+    },
+    {
+      "platform": "FanDuel",
+      "optimizer_rank_displayed": 1,
+      "source_file": "Screenshot 2026-10-27 184706.png",
+      "source_sha256": "6ba604059abd8d2852c6fe3953907bc5caec8e082213d2f4215caabffdab17fe",
+      "projected_points_total": 329.32,
+      "salary_total": 60000,
+      "rst_total_displayed": 218.8,
+      "players": [
+        {
+          "slot_display": "PG",
+          "slot_internal": "PG",
+          "name": "Derrick White",
+          "team_display": "BOS",
+          "opponent_display": "BKN",
+          "salary": 5800,
+          "projected_points": 32.76,
+          "rst_pct_displayed": 35.4,
+          "status_display": "PROB"
+        },
+        {
+          "slot_display": "SG",
+          "slot_internal": "SG",
+          "name": "Mikal Bridges",
+          "team_display": "NYK",
+          "opponent_display": "DET",
+          "salary": 4200,
+          "projected_points": 27.67,
+          "rst_pct_displayed": 2,
+          "status_display": null
+        },
+        {
+          "slot_display": "SF",
+          "slot_internal": "SF",
+          "name": "Jayson Tatum",
+          "team_display": "BOS",
+          "opponent_display": "BKN",
+          "salary": 10000,
+          "projected_points": 46.57,
+          "rst_pct_displayed": 2,
+          "status_display": null
+        },
+        {
+          "slot_display": "PF",
+          "slot_internal": "PF",
+          "name": "Precious Achiuwa",
+          "team_display": "SAC",
+          "opponent_display": "SAS",
+          "salary": 5400,
+          "projected_points": 31.17,
+          "rst_pct_displayed": 41.5,
+          "status_display": null
+        },
+        {
+          "slot_display": "C",
+          "slot_internal": "C",
+          "name": "Mitchell Robinson",
+          "team_display": "BOS",
+          "opponent_display": "BKN",
+          "salary": 4000,
+          "projected_points": 25.49,
+          "rst_pct_displayed": 15.9,
+          "status_display": null
+        },
+        {
+          "slot_display": "G/F",
+          "slot_internal": "GF",
+          "name": "De’Aaron Fox",
+          "team_display": "SAS",
+          "opponent_display": "SAC",
+          "salary": 6200,
+          "projected_points": 35.27,
+          "rst_pct_displayed": 54,
+          "status_display": null
+        },
+        {
+          "slot_display": "F/C",
+          "slot_internal": "FC",
+          "name": "Karl-Anthony Towns",
+          "team_display": "NYK",
+          "opponent_display": "DET",
+          "salary": 8300,
+          "projected_points": 44.79,
+          "rst_pct_displayed": 29.2,
+          "status_display": null
+        },
+        {
+          "slot_display": "UTIL",
+          "slot_internal": "UTIL1",
+          "name": "Stephon Castle",
+          "team_display": "SAS",
+          "opponent_display": "SAC",
+          "salary": 6700,
+          "projected_points": 37.59,
+          "rst_pct_displayed": 2,
+          "status_display": null
+        },
+        {
+          "slot_display": "UTIL",
+          "slot_internal": "UTIL2",
+          "name": "Domantas Sabonis",
+          "team_display": "SAC",
+          "opponent_display": "SAS",
+          "salary": 9400,
+          "projected_points": 48.01,
+          "rst_pct_displayed": 36.8,
+          "status_display": null
+        }
+      ],
+      "checks": {
+        "display_totals_reconcile": true,
+        "slot_count_matches_simmah": true,
+        "within_salary_cap": true,
+        "individual_position_eligibility_verified": false
+      }
+    }
+  ],
+  "notes": [
+    "Numbers are displayed RotoWire projections, not actual fantasy results.",
+    "Slot labels, teams and opponents are transcribed from screenshots; no independent roster-status validation.",
+    "Slates/platforms and pre-lock capture must be verified before a prospective comparison.",
+    "Individual RST values and totals are preserved as displayed, not used as verified field ownership or a joint lineup probability.",
+    "No Simmah generation, ownership target, status filter or ranking logic was changed."
+  ]
+}

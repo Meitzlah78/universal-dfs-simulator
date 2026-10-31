@@ -1,0 +1,30 @@
+name: Fix DFF FanDuel Single Game Route
+on:
+  push:
+    branches:
+      - feature/salary-csv-upload
+    paths:
+      - '.github/workflows/fix-dff-fd-single-route.yml'
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/salary-csv-upload
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python .github/scripts/fix_dff_fd_single_route.py
+      - run: python -m py_compile dfs_app.py
+      - run: |
+          grep -n 'showdown-single-game-projections/fanduel' dfs_app.py
+          if grep -n 'platform=fd&slate=21128' dfs_app.py; then exit 1; fi
+      - run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add dfs_app.py
+          git commit -m 'Fix DFF FanDuel Single Game projection route [skip ci]'
+          git push

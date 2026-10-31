@@ -1,0 +1,821 @@
+{
+  "profiles": {
+    "piggy-bank-shot": {
+      "name": "$4K NBA Piggy Bank Shot (150 Entries Max)",
+      "platform": "FanDuel",
+      "capacity": 95808,
+      "entry_fee": 0.05,
+      "prize_pool": 4000,
+      "max_entries": 150,
+      "payout_tiers": [
+        {
+          "first": 1,
+          "last": 1,
+          "prize": 200
+        },
+        {
+          "first": 2,
+          "last": 2,
+          "prize": 100
+        },
+        {
+          "first": 3,
+          "last": 3,
+          "prize": 50
+        },
+        {
+          "first": 4,
+          "last": 4,
+          "prize": 30
+        },
+        {
+          "first": 5,
+          "last": 5,
+          "prize": 25
+        },
+        {
+          "first": 6,
+          "last": 6,
+          "prize": 20
+        },
+        {
+          "first": 7,
+          "last": 7,
+          "prize": 15
+        },
+        {
+          "first": 8,
+          "last": 8,
+          "prize": 12
+        },
+        {
+          "first": 9,
+          "last": 10,
+          "prize": 10
+        },
+        {
+          "first": 11,
+          "last": 12,
+          "prize": 8
+        },
+        {
+          "first": 13,
+          "last": 15,
+          "prize": 6
+        },
+        {
+          "first": 16,
+          "last": 20,
+          "prize": 4
+        },
+        {
+          "first": 21,
+          "last": 25,
+          "prize": 3
+        },
+        {
+          "first": 26,
+          "last": 30,
+          "prize": 2
+        },
+        {
+          "first": 31,
+          "last": 40,
+          "prize": 1.5
+        },
+        {
+          "first": 41,
+          "last": 50,
+          "prize": 1
+        },
+        {
+          "first": 51,
+          "last": 75,
+          "prize": 0.75
+        },
+        {
+          "first": 76,
+          "last": 100,
+          "prize": 0.5
+        },
+        {
+          "first": 101,
+          "last": 150,
+          "prize": 0.4
+        },
+        {
+          "first": 151,
+          "last": 250,
+          "prize": 0.35
+        },
+        {
+          "first": 251,
+          "last": 500,
+          "prize": 0.3
+        },
+        {
+          "first": 501,
+          "last": 1000,
+          "prize": 0.25
+        },
+        {
+          "first": 1001,
+          "last": 2255,
+          "prize": 0.2
+        },
+        {
+          "first": 2256,
+          "last": 5000,
+          "prize": 0.15
+        },
+        {
+          "first": 5001,
+          "last": 10000,
+          "prize": 0.12
+        },
+        {
+          "first": 10001,
+          "last": 28750,
+          "prize": 0.1
+        }
+      ]
+    },
+    "fadeaway": {
+      "name": "$15K NBA Fadeaway (Only $0.25 to Enter)",
+      "platform": "FanDuel",
+      "capacity": 71856,
+      "entry_fee": 0.25,
+      "prize_pool": 15000,
+      "max_entries": 150,
+      "payout_tiers": [
+        {
+          "first": 1,
+          "last": 1,
+          "prize": 750
+        },
+        {
+          "first": 2,
+          "last": 2,
+          "prize": 300
+        },
+        {
+          "first": 3,
+          "last": 3,
+          "prize": 200
+        },
+        {
+          "first": 4,
+          "last": 4,
+          "prize": 150
+        },
+        {
+          "first": 5,
+          "last": 5,
+          "prize": 100
+        },
+        {
+          "first": 6,
+          "last": 6,
+          "prize": 75
+        },
+        {
+          "first": 7,
+          "last": 7,
+          "prize": 50
+        },
+        {
+          "first": 8,
+          "last": 8,
+          "prize": 30
+        },
+        {
+          "first": 9,
+          "last": 10,
+          "prize": 25
+        },
+        {
+          "first": 11,
+          "last": 12,
+          "prize": 20
+        },
+        {
+          "first": 13,
+          "last": 15,
+          "prize": 15
+        },
+        {
+          "first": 16,
+          "last": 20,
+          "prize": 10
+        },
+        {
+          "first": 21,
+          "last": 30,
+          "prize": 8
+        },
+        {
+          "first": 31,
+          "last": 50,
+          "prize": 6
+        },
+        {
+          "first": 51,
+          "last": 70,
+          "prize": 4
+        },
+        {
+          "first": 71,
+          "last": 100,
+          "prize": 3
+        },
+        {
+          "first": 101,
+          "last": 200,
+          "prize": 2
+        },
+        {
+          "first": 201,
+          "last": 500,
+          "prize": 1.5
+        },
+        {
+          "first": 501,
+          "last": 1000,
+          "prize": 1
+        },
+        {
+          "first": 1001,
+          "last": 4000,
+          "prize": 0.75
+        },
+        {
+          "first": 4001,
+          "last": 10000,
+          "prize": 0.6
+        },
+        {
+          "first": 10001,
+          "last": 21580,
+          "prize": 0.5
+        }
+      ]
+    },
+    "dime-time": {
+      "name": "NBA $250 Dime Time ($0.10)",
+      "platform": "DraftKings",
+      "capacity": 2972,
+      "entry_fee": 0.1,
+      "prize_pool": 250,
+      "max_entries": 20,
+      "payout_tiers": [
+        {
+          "first": 1,
+          "last": 1,
+          "prize": 25
+        },
+        {
+          "first": 2,
+          "last": 2,
+          "prize": 15
+        },
+        {
+          "first": 3,
+          "last": 3,
+          "prize": 8
+        },
+        {
+          "first": 4,
+          "last": 4,
+          "prize": 5
+        },
+        {
+          "first": 5,
+          "last": 5,
+          "prize": 4
+        },
+        {
+          "first": 6,
+          "last": 6,
+          "prize": 3
+        },
+        {
+          "first": 7,
+          "last": 8,
+          "prize": 2
+        },
+        {
+          "first": 9,
+          "last": 10,
+          "prize": 1.5
+        },
+        {
+          "first": 11,
+          "last": 13,
+          "prize": 1
+        },
+        {
+          "first": 14,
+          "last": 23,
+          "prize": 0.75
+        },
+        {
+          "first": 24,
+          "last": 48,
+          "prize": 0.5
+        },
+        {
+          "first": 49,
+          "last": 113,
+          "prize": 0.4
+        },
+        {
+          "first": 114,
+          "last": 283,
+          "prize": 0.3
+        },
+        {
+          "first": 284,
+          "last": 698,
+          "prize": 0.2
+        }
+      ]
+    },
+    "quarter-jukebox": {
+      "name": "NBA $4K Quarter Jukebox ($0.25)",
+      "platform": "DraftKings",
+      "capacity": 19024,
+      "entry_fee": 0.25,
+      "prize_pool": 4000,
+      "max_entries": 20,
+      "payout_tiers": [
+        {
+          "first": 1,
+          "last": 1,
+          "prize": 200
+        },
+        {
+          "first": 2,
+          "last": 2,
+          "prize": 150
+        },
+        {
+          "first": 3,
+          "last": 3,
+          "prize": 100
+        },
+        {
+          "first": 4,
+          "last": 4,
+          "prize": 75
+        },
+        {
+          "first": 5,
+          "last": 5,
+          "prize": 50
+        },
+        {
+          "first": 6,
+          "last": 6,
+          "prize": 40
+        },
+        {
+          "first": 7,
+          "last": 7,
+          "prize": 30
+        },
+        {
+          "first": 8,
+          "last": 8,
+          "prize": 25
+        },
+        {
+          "first": 9,
+          "last": 10,
+          "prize": 20
+        },
+        {
+          "first": 11,
+          "last": 13,
+          "prize": 15
+        },
+        {
+          "first": 14,
+          "last": 16,
+          "prize": 10
+        },
+        {
+          "first": 17,
+          "last": 20,
+          "prize": 8
+        },
+        {
+          "first": 21,
+          "last": 25,
+          "prize": 6
+        },
+        {
+          "first": 26,
+          "last": 35,
+          "prize": 5
+        },
+        {
+          "first": 36,
+          "last": 45,
+          "prize": 4
+        },
+        {
+          "first": 46,
+          "last": 70,
+          "prize": 3
+        },
+        {
+          "first": 71,
+          "last": 140,
+          "prize": 2
+        },
+        {
+          "first": 141,
+          "last": 295,
+          "prize": 1.5
+        },
+        {
+          "first": 296,
+          "last": 720,
+          "prize": 1
+        },
+        {
+          "first": 721,
+          "last": 1810,
+          "prize": 0.75
+        },
+        {
+          "first": 1811,
+          "last": 4556,
+          "prize": 0.5
+        }
+      ]
+    },
+    "and-one": {
+      "name": "NBA $20K And-One ($1)",
+      "platform": "DraftKings",
+      "capacity": 23781,
+      "entry_fee": 1,
+      "prize_pool": 20000,
+      "max_entries": 20,
+      "payout_tiers": [
+        {
+          "first": 1,
+          "last": 1,
+          "prize": 1000
+        },
+        {
+          "first": 2,
+          "last": 2,
+          "prize": 600
+        },
+        {
+          "first": 3,
+          "last": 3,
+          "prize": 400
+        },
+        {
+          "first": 4,
+          "last": 4,
+          "prize": 300
+        },
+        {
+          "first": 5,
+          "last": 5,
+          "prize": 250
+        },
+        {
+          "first": 6,
+          "last": 6,
+          "prize": 200
+        },
+        {
+          "first": 7,
+          "last": 8,
+          "prize": 150
+        },
+        {
+          "first": 9,
+          "last": 10,
+          "prize": 100
+        },
+        {
+          "first": 11,
+          "last": 14,
+          "prize": 75
+        },
+        {
+          "first": 15,
+          "last": 19,
+          "prize": 60
+        },
+        {
+          "first": 20,
+          "last": 25,
+          "prize": 50
+        },
+        {
+          "first": 26,
+          "last": 35,
+          "prize": 40
+        },
+        {
+          "first": 36,
+          "last": 45,
+          "prize": 30
+        },
+        {
+          "first": 46,
+          "last": 55,
+          "prize": 25
+        },
+        {
+          "first": 56,
+          "last": 70,
+          "prize": 20
+        },
+        {
+          "first": 71,
+          "last": 90,
+          "prize": 15
+        },
+        {
+          "first": 91,
+          "last": 120,
+          "prize": 10
+        },
+        {
+          "first": 121,
+          "last": 160,
+          "prize": 8
+        },
+        {
+          "first": 161,
+          "last": 280,
+          "prize": 6
+        },
+        {
+          "first": 281,
+          "last": 515,
+          "prize": 5
+        },
+        {
+          "first": 516,
+          "last": 925,
+          "prize": 4
+        },
+        {
+          "first": 926,
+          "last": 1680,
+          "prize": 3
+        },
+        {
+          "first": 1681,
+          "last": 3220,
+          "prize": 2
+        },
+        {
+          "first": 3221,
+          "last": 6420,
+          "prize": 1.5
+        }
+      ]
+    },
+    "nba-3000-14268": {
+      "name": "NBA $3K Quarter Jukebox [Just $0.25!]",
+      "capacity": 14268,
+      "prize_pool": 3000,
+      "source": "Exact 14,268 capacity, contest name, fee and payout table supplied by user on 2026-10-27",
+      "payout_tiers": [
+        {
+          "first": 1,
+          "last": 1,
+          "prize": 150
+        },
+        {
+          "first": 2,
+          "last": 2,
+          "prize": 100
+        },
+        {
+          "first": 3,
+          "last": 3,
+          "prize": 60
+        },
+        {
+          "first": 4,
+          "last": 4,
+          "prize": 45
+        },
+        {
+          "first": 5,
+          "last": 5,
+          "prize": 35
+        },
+        {
+          "first": 6,
+          "last": 6,
+          "prize": 25
+        },
+        {
+          "first": 7,
+          "last": 8,
+          "prize": 20
+        },
+        {
+          "first": 9,
+          "last": 10,
+          "prize": 15
+        },
+        {
+          "first": 11,
+          "last": 13,
+          "prize": 10
+        },
+        {
+          "first": 14,
+          "last": 16,
+          "prize": 8
+        },
+        {
+          "first": 17,
+          "last": 20,
+          "prize": 6
+        },
+        {
+          "first": 21,
+          "last": 25,
+          "prize": 5
+        },
+        {
+          "first": 26,
+          "last": 35,
+          "prize": 4
+        },
+        {
+          "first": 36,
+          "last": 55,
+          "prize": 3
+        },
+        {
+          "first": 56,
+          "last": 120,
+          "prize": 2
+        },
+        {
+          "first": 121,
+          "last": 255,
+          "prize": 1.5
+        },
+        {
+          "first": 256,
+          "last": 610,
+          "prize": 1
+        },
+        {
+          "first": 611,
+          "last": 1490,
+          "prize": 0.75
+        },
+        {
+          "first": 1491,
+          "last": 3419,
+          "prize": 0.5
+        }
+      ],
+      "platform": "DraftKings",
+      "entry_fee": 0.25
+    },
+    "nba-14000-242424": {
+      "name": "$14K Wed NBA Piggy Bank Shot (Guaranteed Overlay!)",
+      "platform": "FanDuel",
+      "capacity": 242424,
+      "entry_fee": 0.05,
+      "prize_pool": 14000,
+      "max_entries": 150,
+      "source": "User-provided contest details and payout screenshot, 2026-10-28",
+      "source_sha256": "3efd02652853d04761aa17276424478210b25c798e1efe21b9efc263d7ff6bb2",
+      "payout_tiers": [
+        {
+          "first": 1,
+          "last": 1,
+          "prize": 400
+        },
+        {
+          "first": 2,
+          "last": 2,
+          "prize": 250
+        },
+        {
+          "first": 3,
+          "last": 3,
+          "prize": 150
+        },
+        {
+          "first": 4,
+          "last": 4,
+          "prize": 125
+        },
+        {
+          "first": 5,
+          "last": 5,
+          "prize": 100
+        },
+        {
+          "first": 6,
+          "last": 6,
+          "prize": 75
+        },
+        {
+          "first": 7,
+          "last": 8,
+          "prize": 50
+        },
+        {
+          "first": 9,
+          "last": 10,
+          "prize": 30
+        },
+        {
+          "first": 11,
+          "last": 12,
+          "prize": 20
+        },
+        {
+          "first": 13,
+          "last": 15,
+          "prize": 15
+        },
+        {
+          "first": 16,
+          "last": 20,
+          "prize": 10
+        },
+        {
+          "first": 21,
+          "last": 30,
+          "prize": 7.5
+        },
+        {
+          "first": 31,
+          "last": 50,
+          "prize": 5
+        },
+        {
+          "first": 51,
+          "last": 100,
+          "prize": 3
+        },
+        {
+          "first": 101,
+          "last": 200,
+          "prize": 2
+        },
+        {
+          "first": 201,
+          "last": 300,
+          "prize": 1
+        },
+        {
+          "first": 301,
+          "last": 500,
+          "prize": 0.75
+        },
+        {
+          "first": 501,
+          "last": 1000,
+          "prize": 0.5
+        },
+        {
+          "first": 1001,
+          "last": 2000,
+          "prize": 0.3
+        },
+        {
+          "first": 2001,
+          "last": 5000,
+          "prize": 0.2
+        },
+        {
+          "first": 5001,
+          "last": 15000,
+          "prize": 0.15
+        },
+        {
+          "first": 15001,
+          "last": 40000,
+          "prize": 0.12
+        },
+        {
+          "first": 40001,
+          "last": 101800,
+          "prize": 0.1
+        }
+      ]
+    }
+  }
+}

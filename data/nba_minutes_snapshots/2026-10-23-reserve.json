@@ -1,0 +1,17 @@
+{
+  "date": "2026-10-23",
+  "source": "RotoWire",
+  "source_url": "https://www.rotowire.com/daily/nba/api/players.php?slateID=29843",
+  "captured_at": "2026-10-23T22:45:58.004409+00:00",
+  "source_sha256": "4039d57fd691813eb0fb1b8abacc577e25c4d285f761b9b227920b82edbda3ea",
+  "records": [
+    {
+      "name": "Sergio de Larrea",
+      "team": "DAL",
+      "opponent": "IND",
+      "game_start": "2026-10-23 19:00:00",
+      "rw_id": 6593,
+      "projected_minutes": 7
+    }
+  ]
+}

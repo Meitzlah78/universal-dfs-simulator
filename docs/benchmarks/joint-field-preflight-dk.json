@@ -1,0 +1,144 @@
+{
+  "schema": 1,
+  "development_only": true,
+  "contest_id": "197055079",
+  "format": "DraftKings Showdown",
+  "package_sha256": "4ec12006671de303959c6e7b9582c653c64c86642b9f14f896e0313fb5bc5dad",
+  "standings_sha256": "507ae9e6f9981b033b26b388d56cca8f728176a3ed06ab138515d05e01c86127",
+  "total_entries": 47562,
+  "excluded_user_entries": 20,
+  "unparsed_or_empty_opponents": 491,
+  "captured_build_minimum_salary": 45000.0,
+  "actual_below_captured_build_minimum_entries": 884,
+  "actual_above_site_cap_entries": 0,
+  "actual_unknown_salary_entries": 1474,
+  "complete_scored_opponents": 47051,
+  "distinct_opponent_lineups": 9188,
+  "maximum_lineup_copies": 321,
+  "occupied_duplicate_bands": 6,
+  "duplicate_bands": [
+    {
+      "band": "1",
+      "unique_lineups": 4658,
+      "entries": 4658,
+      "entry_fraction": 0.0989989585768634
+    },
+    {
+      "band": "2\u20134",
+      "unique_lineups": 2523,
+      "entries": 6647,
+      "entry_fraction": 0.14127223650931967
+    },
+    {
+      "band": "5\u20139",
+      "unique_lineups": 976,
+      "entries": 6418,
+      "entry_fraction": 0.13640517736073624
+    },
+    {
+      "band": "10\u201324",
+      "unique_lineups": 684,
+      "entries": 10161,
+      "entry_fraction": 0.21595715287666575
+    },
+    {
+      "band": "25\u201399",
+      "unique_lineups": 309,
+      "entries": 12982,
+      "entry_fraction": 0.2759133705978619
+    },
+    {
+      "band": "100\u2013+",
+      "unique_lineups": 38,
+      "entries": 6185,
+      "entry_fraction": 0.13145310407855307
+    }
+  ],
+  "duplicate_band_exact_minimum_unique_lineups": 7591,
+  "duplicate_band_minimum_expected_unique_at_tolerance": 7255.107078104078,
+  "pair_selection": "top 15 actual overall ownership players; retrospective development only",
+  "declared_inactive_players": [
+    "Zach Ertz"
+  ],
+  "inactive_status_source": "User-reported; not inferred from zero points",
+  "inactive_roster_opponent_entries": 1069,
+  "inactive_roster_distinct_lineups": 419,
+  "inactive_players_published_points": {
+    "Zach Ertz": 0.0
+  },
+  "full_field_target_scope": "All complete scored opponents, including inactive-player rosters",
+  "support": {
+    "candidate_pool": {
+      "conditional_inactive_free_checks": {
+        "opponent_entries": 45982,
+        "excluded_inactive_entries": 1069,
+        "target_scope": "Conditional on no explicitly declared inactive players; not the full field",
+        "roles": "feasible",
+        "roles_and_pairs": "feasible"
+      },
+      "rows": 5000,
+      "unique_lineups": 5000,
+      "all_support_salary_team_legal": true,
+      "observed_chalk_pairs": 105,
+      "pairs_present": 105,
+      "unsupported_positive_pairs": [],
+      "minimum_pair_support_rows": 9,
+      "role_only_linear_feasibility": "infeasible",
+      "unsupported_role_targets": [
+        {
+          "player": "Zach Ertz",
+          "role": "flex",
+          "actual_fraction": 0.021551082867526633,
+          "support_min": 0.0,
+          "support_max": 0.0,
+          "declared_inactive": true
+        }
+      ],
+      "role_and_pair_linear_feasibility": "infeasible",
+      "linear_solver_message": "The problem is infeasible. (HiGHS Status 8: model_status is Infeasible; primal_status is None)",
+      "tolerance_probability": 0.005,
+      "exact_empirical_distinct_count_representable": false,
+      "band_unique_lower_bound_exceeds_support": true,
+      "actual_lineup_entry_coverage": 0.42260525812416316
+    },
+    "frozen_opponent_support": {
+      "conditional_inactive_free_checks": {
+        "opponent_entries": 45982,
+        "excluded_inactive_entries": 1069,
+        "target_scope": "Conditional on no explicitly declared inactive players; not the full field",
+        "roles": "feasible",
+        "roles_and_pairs": "feasible"
+      },
+      "rows": 47542,
+      "unique_lineups": 10000,
+      "all_support_salary_team_legal": true,
+      "observed_chalk_pairs": 105,
+      "pairs_present": 105,
+      "unsupported_positive_pairs": [],
+      "minimum_pair_support_rows": 105,
+      "role_only_linear_feasibility": "infeasible",
+      "unsupported_role_targets": [
+        {
+          "player": "Zach Ertz",
+          "role": "flex",
+          "actual_fraction": 0.021551082867526633,
+          "support_min": 0.0,
+          "support_max": 0.0,
+          "declared_inactive": true
+        }
+      ],
+      "role_and_pair_linear_feasibility": "infeasible",
+      "linear_solver_message": "The problem is infeasible. (HiGHS Status 8: model_status is Infeasible; primal_status is None)",
+      "tolerance_probability": 0.005,
+      "exact_empirical_distinct_count_representable": true,
+      "band_unique_lower_bound_exceeds_support": false,
+      "actual_lineup_entry_coverage": 0.6287007715032624
+    }
+  },
+  "fd_payouts_still_provisional": false,
+  "limitations": [
+    "Previously inspected slate, not untouched validation.",
+    "Excluded incomplete opponents are reported separately; preserve them in subsequent payout ranks.",
+    "Pair presence and linear feasibility do not establish nonlinear joint-fit convergence."
+  ]
+}

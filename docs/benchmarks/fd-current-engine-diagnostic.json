@@ -1,0 +1,410 @@
+{
+  "scope": "Current engine diagnostic using supplied FD inputs. Role/weather mappings omitted from CLI use model defaults/neutral weather. Not exact original app replay or pregame holdout; not profitability validation. Actual outcomes used only for descriptive comparison after simulation.",
+  "simulations_each": 10000,
+  "players": 271,
+  "finite": true,
+  "independent_construction": true,
+  "overall": {
+    "players": 271,
+    "mean_abs_projection_residual": 0.4069171771793711,
+    "max_abs_projection_residual": 2.5115900500930834,
+    "matched_actual": 262,
+    "actual_p10_p90_coverage": 0.8206106870229007,
+    "zero_median_players": 72
+  },
+  "by_position": {
+    "D": {
+      "players": 20,
+      "mean_abs_projection_residual": 1.072505,
+      "max_abs_projection_residual": 2.3036000000000003,
+      "matched_actual": 20,
+      "actual_p10_p90_coverage": 0.85,
+      "zero_median_players": 0
+    },
+    "QB": {
+      "players": 20,
+      "mean_abs_projection_residual": 0.5933651038450237,
+      "max_abs_projection_residual": 1.4157583161163316,
+      "matched_actual": 20,
+      "actual_p10_p90_coverage": 1.0,
+      "zero_median_players": 0
+    },
+    "RB": {
+      "players": 58,
+      "mean_abs_projection_residual": 0.3156665713210193,
+      "max_abs_projection_residual": 1.9668147270139684,
+      "matched_actual": 56,
+      "actual_p10_p90_coverage": 0.7678571428571429,
+      "zero_median_players": 9
+    },
+    "TE": {
+      "players": 70,
+      "mean_abs_projection_residual": 0.26319151975171373,
+      "max_abs_projection_residual": 2.0672669459570585,
+      "matched_actual": 65,
+      "actual_p10_p90_coverage": 0.8,
+      "zero_median_players": 30
+    },
+    "WR": {
+      "players": 103,
+      "mean_abs_projection_residual": 0.39053480989776707,
+      "max_abs_projection_residual": 2.5115900500930834,
+      "matched_actual": 101,
+      "actual_p10_p90_coverage": 0.8217821782178217,
+      "zero_median_players": 33
+    }
+  },
+  "preparation_key": "f9b0be789ff935572513d918a6d4e641f3bf963f2b0d48c6e8a60714ef8785ff",
+  "qb_receiver_correlations": [
+    {
+      "team": "ARI",
+      "quarterback": "Jacoby Brissett",
+      "receiver": "Trey McBride",
+      "correlation": 0.5825038079786824
+    },
+    {
+      "team": "ARI",
+      "quarterback": "Jacoby Brissett",
+      "receiver": "Michael Wilson",
+      "correlation": 0.523695021263799
+    },
+    {
+      "team": "ATL",
+      "quarterback": "Michael Penix Jr.",
+      "receiver": "Drake London",
+      "correlation": 0.6010515495633894
+    },
+    {
+      "team": "ATL",
+      "quarterback": "Michael Penix Jr.",
+      "receiver": "Kyle Pitts Sr.",
+      "correlation": 0.36685380995583267
+    },
+    {
+      "team": "BAL",
+      "quarterback": "Tyler Huntley",
+      "receiver": "Zay Flowers",
+      "correlation": 0.5633636817056388
+    },
+    {
+      "team": "BAL",
+      "quarterback": "Tyler Huntley",
+      "receiver": "Mark Andrews",
+      "correlation": 0.43938099499795763
+    },
+    {
+      "team": "BUF",
+      "quarterback": "Josh Allen",
+      "receiver": "Dalton Kincaid",
+      "correlation": 0.41131291061171943
+    },
+    {
+      "team": "BUF",
+      "quarterback": "Josh Allen",
+      "receiver": "DJ Moore",
+      "correlation": 0.39841019162699076
+    },
+    {
+      "team": "CAR",
+      "quarterback": "Bryce Young",
+      "receiver": "Tetairoa McMillan",
+      "correlation": 0.5282084902565616
+    },
+    {
+      "team": "CAR",
+      "quarterback": "Bryce Young",
+      "receiver": "Jalen Coker",
+      "correlation": 0.49890663652889355
+    },
+    {
+      "team": "CHI",
+      "quarterback": "Caleb Williams",
+      "receiver": "Luther Burden III",
+      "correlation": 0.45942175984736877
+    },
+    {
+      "team": "CHI",
+      "quarterback": "Caleb Williams",
+      "receiver": "Rome Odunze",
+      "correlation": 0.42281466772183146
+    },
+    {
+      "team": "CLE",
+      "quarterback": "Deshaun Watson",
+      "receiver": "Denzel Boston",
+      "correlation": 0.5539913441322863
+    },
+    {
+      "team": "CLE",
+      "quarterback": "Deshaun Watson",
+      "receiver": "Harold Fannin Jr.",
+      "correlation": 0.5225508938403091
+    },
+    {
+      "team": "IND",
+      "quarterback": "Daniel Jones",
+      "receiver": "Tyler Warren",
+      "correlation": 0.4775677751071961
+    },
+    {
+      "team": "IND",
+      "quarterback": "Daniel Jones",
+      "receiver": "Josh Downs",
+      "correlation": 0.43581952109247013
+    },
+    {
+      "team": "KC",
+      "quarterback": "Patrick Mahomes",
+      "receiver": "Travis Kelce",
+      "correlation": 0.5009247420314186
+    },
+    {
+      "team": "KC",
+      "quarterback": "Patrick Mahomes",
+      "receiver": "Xavier Worthy",
+      "correlation": 0.45149610895261366
+    },
+    {
+      "team": "LAC",
+      "quarterback": "Justin Herbert",
+      "receiver": "Ladd McConkey",
+      "correlation": 0.4995338079371841
+    },
+    {
+      "team": "LAC",
+      "quarterback": "Justin Herbert",
+      "receiver": "Quentin Johnston",
+      "correlation": 0.4379935795698392
+    },
+    {
+      "team": "LAR",
+      "quarterback": "Matthew Stafford",
+      "receiver": "Puka Nacua",
+      "correlation": 0.5783865350292196
+    },
+    {
+      "team": "LAR",
+      "quarterback": "Matthew Stafford",
+      "receiver": "Davante Adams",
+      "correlation": 0.44688919436287716
+    },
+    {
+      "team": "LV",
+      "quarterback": "Kirk Cousins",
+      "receiver": "Brock Bowers",
+      "correlation": 0.5858189867790009
+    },
+    {
+      "team": "LV",
+      "quarterback": "Kirk Cousins",
+      "receiver": "Tre Tucker",
+      "correlation": 0.4389108173927728
+    },
+    {
+      "team": "NE",
+      "quarterback": "Drake Maye",
+      "receiver": "A.J. Brown",
+      "correlation": 0.47435501816718
+    },
+    {
+      "team": "NE",
+      "quarterback": "Drake Maye",
+      "receiver": "Romeo Doubs",
+      "correlation": 0.3793861992136921
+    },
+    {
+      "team": "NO",
+      "quarterback": "Tyler Shough",
+      "receiver": "Chris Olave",
+      "correlation": 0.5909358323573406
+    },
+    {
+      "team": "NO",
+      "quarterback": "Tyler Shough",
+      "receiver": "Juwan Johnson",
+      "correlation": 0.4582818970482132
+    },
+    {
+      "team": "NYG",
+      "quarterback": "Jameis Winston",
+      "receiver": "Malik Nabers",
+      "correlation": 0.5835350322104742
+    },
+    {
+      "team": "NYG",
+      "quarterback": "Jameis Winston",
+      "receiver": "Isaiah Likely",
+      "correlation": 0.5360602282159392
+    },
+    {
+      "team": "NYJ",
+      "quarterback": "Geno Smith",
+      "receiver": "Garrett Wilson",
+      "correlation": 0.6274369770660494
+    },
+    {
+      "team": "NYJ",
+      "quarterback": "Geno Smith",
+      "receiver": "Kenyon Sadiq",
+      "correlation": 0.3381677822612197
+    },
+    {
+      "team": "PHI",
+      "quarterback": "Tanner McKee",
+      "receiver": "DeVonta Smith",
+      "correlation": 0.5569630328019111
+    },
+    {
+      "team": "PHI",
+      "quarterback": "Tanner McKee",
+      "receiver": "Dallas Goedert",
+      "correlation": 0.4818038715127444
+    },
+    {
+      "team": "PIT",
+      "quarterback": "Aaron Rodgers",
+      "receiver": "DK Metcalf",
+      "correlation": 0.5038760546593838
+    },
+    {
+      "team": "PIT",
+      "quarterback": "Aaron Rodgers",
+      "receiver": "Germie Bernard",
+      "correlation": 0.46117676731031093
+    },
+    {
+      "team": "TB",
+      "quarterback": "Jalon Daniels",
+      "receiver": "Emeka Egbuka",
+      "correlation": 0.48100662512733244
+    },
+    {
+      "team": "TB",
+      "quarterback": "Jalon Daniels",
+      "receiver": "Chris Godwin Jr.",
+      "correlation": 0.41786130939155014
+    },
+    {
+      "team": "TEN",
+      "quarterback": "Cam Ward",
+      "receiver": "Carnell Tate",
+      "correlation": 0.5028121314615962
+    },
+    {
+      "team": "TEN",
+      "quarterback": "Cam Ward",
+      "receiver": "Wan'Dale Robinson",
+      "correlation": 0.49519616976520064
+    }
+  ],
+  "largest_projection_residuals": [
+    {
+      "Name": "Denzel Boston",
+      "Projection": 9.8,
+      "mean": 12.311590050093084,
+      "mean_error": 2.5115900500930834,
+      "p10": 4.6158257102966305,
+      "p50": 11.285789966583252,
+      "p90": 21.40917892456055
+    },
+    {
+      "Name": "Los Angeles Rams",
+      "Projection": 8.0,
+      "mean": 5.6964,
+      "mean_error": -2.3036000000000003,
+      "p10": 1.0,
+      "p50": 5.0,
+      "p90": 12.0
+    },
+    {
+      "Name": "Dalton Kincaid",
+      "Projection": 9.85,
+      "mean": 11.917266945957058,
+      "mean_error": 2.0672669459570585,
+      "p10": 3.2093885135650635,
+      "p50": 10.729636955261231,
+      "p90": 22.280285568237307
+    },
+    {
+      "Name": "Harold Fannin Jr.",
+      "Projection": 8.5,
+      "mean": 10.507033607180938,
+      "mean_error": 2.0070336071809383,
+      "p10": 3.2883126449584967,
+      "p50": 9.347381973266602,
+      "p90": 19.226967849731444
+    },
+    {
+      "Name": "James Cook III",
+      "Projection": 18.75,
+      "mean": 20.71681472701397,
+      "mean_error": 1.9668147270139684,
+      "p10": 9.221489448547365,
+      "p50": 19.591543674468994,
+      "p90": 33.68497272491455
+    },
+    {
+      "Name": "KC Concepcion Jr.",
+      "Projection": 7.1,
+      "mean": 8.948428240438401,
+      "mean_error": 1.8484282404384018,
+      "p10": 2.5155701828002934,
+      "p50": 7.847246170043945,
+      "p90": 16.90512130737305
+    },
+    {
+      "Name": "Pittsburgh Steelers",
+      "Projection": 7.800000000000001,
+      "mean": 6.0111,
+      "mean_error": -1.7889000000000008,
+      "p10": 1.0,
+      "p50": 5.0,
+      "p90": 12.0
+    },
+    {
+      "Name": "New York Giants",
+      "Projection": 6.7,
+      "mean": 4.9208,
+      "mean_error": -1.7792000000000003,
+      "p10": 0.0,
+      "p50": 4.0,
+      "p90": 11.0
+    },
+    {
+      "Name": "New England Patriots",
+      "Projection": 7.95,
+      "mean": 6.1823,
+      "mean_error": -1.7677000000000005,
+      "p10": 1.0,
+      "p50": 5.0,
+      "p90": 12.0
+    },
+    {
+      "Name": "Philadelphia Eagles",
+      "Projection": 6.8,
+      "mean": 5.0836,
+      "mean_error": -1.7164000000000001,
+      "p10": 0.0,
+      "p50": 4.0,
+      "p90": 11.0
+    },
+    {
+      "Name": "Khalil Shakir",
+      "Projection": 8.4,
+      "mean": 10.071276002350412,
+      "mean_error": 1.671276002350412,
+      "p10": 2.275944519042969,
+      "p50": 8.881267929077149,
+      "p90": 19.51610000610352
+    },
+    {
+      "Name": "Bucky Irving",
+      "Projection": 13.0,
+      "mean": 14.625917813233828,
+      "mean_error": 1.6259178132338281,
+      "p10": 5.8666148853302005,
+      "p50": 13.457193374633789,
+      "p90": 24.998962116241458
+    }
+  ]
+}

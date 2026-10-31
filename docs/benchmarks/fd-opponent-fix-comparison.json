@@ -1,0 +1,122 @@
+{
+  "scope": "Same-slate diagnostic; no held-out prediction claim. Default roles and neutral weather; no archived pregame ownership. Construction profile trained on this contest. Actual scores read only after generation. Coefficients inherited from DK or chosen by projection/value rationale, not fitted to actual scores.",
+  "changes": [
+    "Projection magnitude and salary value replace compressed rank fallback",
+    "FD projected-strength preference normalizes within salary buckets",
+    "Blank ownership no longer blocks automatic loading",
+    "Exact quota solve fixes concentrated ownership selection failures"
+  ],
+  "before_fix": {
+    "entries": 10000,
+    "scoreable": 9794,
+    "missing_actual_entries_excluded": 206,
+    "mean": 92.7608352052277,
+    "top10_cutoff": 117.72800000000004,
+    "top1_cutoff": 139.88099999999991
+  },
+  "old_saved": {
+    "entries": 10000,
+    "scoreable": 9983,
+    "missing_actual_entries_excluded": 17,
+    "mean": 102.18966042271862,
+    "top10_cutoff": 126.9,
+    "top1_cutoff": 146.9836
+  },
+  "real": {
+    "entries": 215568,
+    "scored_entries": 215417,
+    "mean": 111.28444635288764,
+    "top10_cutoff": 136.06,
+    "top1_cutoff": 155.68
+  },
+  "after_fix_runs": [
+    {
+      "seed": 123,
+      "scores": {
+        "entries": 10000,
+        "scoreable": 9974,
+        "missing_actual_entries_excluded": 26,
+        "mean": 106.11435331862845,
+        "top10_cutoff": 132.1,
+        "top1_cutoff": 153.22700000000006
+      },
+      "ownership_error_pp": 4.752884615384615,
+      "joint_counts": [
+        1511,
+        535,
+        2974,
+        2668,
+        1212,
+        1100
+      ]
+    },
+    {
+      "seed": 124,
+      "scores": {
+        "entries": 10000,
+        "scoreable": 9970,
+        "missing_actual_entries_excluded": 30,
+        "mean": 105.90770912738213,
+        "top10_cutoff": 131.582,
+        "top1_cutoff": 153.23099999999994
+      },
+      "ownership_error_pp": 4.823653846153847,
+      "joint_counts": [
+        1511,
+        535,
+        2974,
+        2668,
+        1212,
+        1100
+      ]
+    },
+    {
+      "seed": 125,
+      "scores": {
+        "entries": 10000,
+        "scoreable": 9978,
+        "missing_actual_entries_excluded": 22,
+        "mean": 105.96297053517739,
+        "top10_cutoff": 131.46600000000004,
+        "top1_cutoff": 153.7
+      },
+      "ownership_error_pp": 4.727307692307693,
+      "joint_counts": [
+        1511,
+        535,
+        2974,
+        2668,
+        1212,
+        1100
+      ]
+    }
+  ],
+  "ownership_examples_seed123": {
+    "Isaiah Likely": {
+      "actual": 38.37,
+      "old": 14.799999999999999,
+      "new": 18.32
+    },
+    "Matthew Stafford": {
+      "actual": 27.88,
+      "old": 14.7,
+      "new": 24.8
+    },
+    "Tampa Bay Buccaneers": {
+      "actual": 24.6,
+      "old": 10.51,
+      "new": 22.66
+    },
+    "D'Andre Swift": {
+      "actual": 31.09,
+      "old": 20.97,
+      "new": 17.0
+    },
+    "Puka Nacua": {
+      "actual": 44.2,
+      "old": 43.24,
+      "new": 55.1
+    }
+  },
+  "remaining_gap": "Average strength still below actual; future ownership and ROI accuracy unvalidated. Defense-versus-position ratings are not part of this fix."
+}

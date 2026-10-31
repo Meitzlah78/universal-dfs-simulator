@@ -1,0 +1,36 @@
+name: NFL engine checks
+on:
+  push:
+    branches: [main, feature/salary-csv-upload]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  nfl-engine:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install test dependencies
+        run: python -m pip install numpy pandas "scipy>=1.11"
+      - name: Compile simulator
+        run: python -m py_compile dfs_app.py simmah_nfl_engine.py simmah_weather.py simmah_candidates.py simmah_contests.py simmah_contest_history.py simmah_classic_field.py
+      - name: Verify football events and DFS scoring
+        run: python -m unittest discover -s tests -p test_nfl_engine.py -v
+      - name: Verify full-slate stacks
+        run: python -m unittest discover -s tests -p test_full_roster_stacks.py -v
+      - name: Verify game weather routing and event effects
+        run: python -m unittest discover -s tests -p test_weather.py -v
+      - name: Verify completed-contest learning
+        run: python -m unittest discover -s tests -p test_contest_history.py -v
+      - name: Verify joint-outcome candidate construction
+        run: python -m unittest discover -s tests -p test_candidates.py -v
+      - name: Verify payouts, ties and all-outcome evaluation
+        run: python -m unittest discover -s tests -p test_contests.py -v
+      - name: Verify workflow integration
+        run: python -m unittest discover -s tests -p test_workflow_integration.py -v
+      - name: Verify Classic opponent construction
+        run: python -m unittest discover -s tests -p test_classic_field.py -v

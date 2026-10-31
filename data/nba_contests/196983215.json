@@ -1,0 +1,83 @@
+{
+  "id": "196983215",
+  "platform": "DraftKings",
+  "date": "2026-10-21",
+  "name": "NBA $250 Dime Time [Just $0.10!]",
+  "capacity": 2972,
+  "entry_fee": 0.1,
+  "prize_pool": 250,
+  "max_entries": 20,
+  "payout_tiers": [
+    {
+      "first": 1,
+      "last": 1,
+      "prize": 25
+    },
+    {
+      "first": 2,
+      "last": 2,
+      "prize": 15
+    },
+    {
+      "first": 3,
+      "last": 3,
+      "prize": 8
+    },
+    {
+      "first": 4,
+      "last": 4,
+      "prize": 5
+    },
+    {
+      "first": 5,
+      "last": 5,
+      "prize": 4
+    },
+    {
+      "first": 6,
+      "last": 6,
+      "prize": 3
+    },
+    {
+      "first": 7,
+      "last": 8,
+      "prize": 2
+    },
+    {
+      "first": 9,
+      "last": 10,
+      "prize": 1.5
+    },
+    {
+      "first": 11,
+      "last": 13,
+      "prize": 1
+    },
+    {
+      "first": 14,
+      "last": 23,
+      "prize": 0.75
+    },
+    {
+      "first": 24,
+      "last": 48,
+      "prize": 0.5
+    },
+    {
+      "first": 49,
+      "last": 113,
+      "prize": 0.4
+    },
+    {
+      "first": 114,
+      "last": 283,
+      "prize": 0.3
+    },
+    {
+      "first": 284,
+      "last": 698,
+      "prize": 0.2
+    }
+  ],
+  "source": "User supplied payouts; contest ID and 20 reserved entries verified from DKEntries(2).csv. Salary table dated 2026-10-21."
+}

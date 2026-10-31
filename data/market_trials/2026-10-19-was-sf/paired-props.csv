@@ -1,0 +1,137 @@
+Name,Market,Book,Line,Over,Under,FairOver
+Brock Purdy,passing_yards,BetMGM,250.5,-115,-115,0.5
+Brock Purdy,passing_yards,bet365,251.5,-110,-120,0.48987854251012153
+Brock Purdy,passing_yards,DraftKings,251.5,-111,-113,0.4978941161605526
+Brock Purdy,passing_yards,Fanatics Sportsbook,250.5,-115,-115,0.5
+Brock Purdy,passing_yards,Caesars Odds,249.5,-113,-112,0.5010457625700661
+Brock Purdy,passing_yards,Hard Rock Bet,250.5,-115,-115,0.5
+Jayden Daniels,passing_yards,BetMGM,206.5,-120,-110,0.5101214574898786
+Jayden Daniels,passing_yards,bet365,210.5,-115,-115,0.5
+Jayden Daniels,passing_yards,DraftKings,209.5,-112,-112,0.5
+Jayden Daniels,passing_yards,BetRivers,207.5,-114,-117,0.4969864995178399
+Jayden Daniels,passing_yards,Caesars Odds,208.5,-114,-115,0.4989820846905538
+Jayden Daniels,passing_yards,Hard Rock Bet,209.5,-115,-115,0.5
+Rachaad White,rush_and_rec_yards,BetMGM,64.5,-111,-118,0.4928711096627016
+Rachaad White,rush_and_rec_yards,DraftKings,64.5,-115,-111,0.5041554124246831
+Rachaad White,rush_and_rec_yards,FanDuel,63.5,-111,-115,0.4958445875753168
+Rachaad White,rush_and_rec_yards,theScore Bet,64.5,-115,-115,0.5
+Rachaad White,rush_and_rec_yards,Hard Rock Bet,63.5,-115,-115,0.5
+Christian McCaffrey,rush_and_rec_yards,BetMGM,105.5,-115,-115,0.5
+Christian McCaffrey,rush_and_rec_yards,FanDuel,104.5,-113,-113,0.5
+Christian McCaffrey,rush_and_rec_yards,BetRivers,104.5,-118,-113,0.5050233081498151
+Christian McCaffrey,rush_and_rec_yards,Caesars Odds,105.5,-115,-115,0.5
+Christian McCaffrey,rush_and_rec_yards,theScore Bet,104.5,-120,-110,0.5101214574898786
+Christian McCaffrey,rush_and_rec_yards,Hard Rock Bet,104.5,-115,-115,0.5
+Austin Ekeler,rush_and_rec_yards,FanDuel,29.5,-115,-111,0.5041554124246831
+Austin Ekeler,rush_and_rec_yards,Hard Rock Bet,29.5,-115,-115,0.5
+Christian McCaffrey,rushing_yards,Caesars Odds,60.5,-115,-113,0.502049600327936
+Christian McCaffrey,rushing_yards,Hard Rock Bet,61.5,-115,-120,0.4951076320939334
+Rachaad White,rushing_yards,Hard Rock Bet,46.5,-115,-115,0.5
+Jacory Croskey-Merritt,rushing_yards,DraftKings,39.5,-110,-114,0.495787700084246
+Jayden Daniels,rushing_yards,bet365,38.5,-115,-115,0.5
+Jayden Daniels,rushing_yards,FanDuel,38.5,-113,-113,0.5
+Jayden Daniels,rushing_yards,Hard Rock Bet,39.5,-115,-115,0.5
+Brock Purdy,rushing_yards,FanDuel,17.5,-113,-113,0.5
+Brock Purdy,rushing_yards,Hard Rock Bet,18.5,-115,-115,0.5
+Kaelon Black,rushing_yards,Caesars Odds,24.5,-114,-114,0.5
+Kaelon Black,rushing_yards,Hard Rock Bet,23.5,-120,-110,0.5101214574898786
+Austin Ekeler,rushing_yards,Caesars Odds,20.5,-113,-117,0.4959548561951377
+Mike Evans,receiving_yards,theScore Bet,69.5,-125,-105,0.5203045685279188
+George Kittle,receiving_yards,BetMGM,63.5,-125,-105,0.5203045685279188
+George Kittle,receiving_yards,DraftKings,65.5,-114,-110,0.5042122999157539
+George Kittle,receiving_yards,FanDuel,66.5,-113,-113,0.5
+George Kittle,receiving_yards,Caesars Odds,65.5,-114,-114,0.5
+Terry McLaurin,receiving_yards,DraftKings,46.5,-114,-110,0.5042122999157539
+Terry McLaurin,receiving_yards,Caesars Odds,47.5,-115,-113,0.502049600327936
+Terry McLaurin,receiving_yards,Hard Rock Bet,48.5,-115,-120,0.4951076320939334
+Christian McCaffrey,receiving_yards,FanDuel,40.5,-113,-113,0.5
+Rachaad White,receiving_yards,BetMGM,12.5,-120,-110,0.5101214574898786
+Rachaad White,receiving_yards,bet365,13.5,-115,-115,0.5
+Rachaad White,receiving_yards,Caesars Odds,13.5,-109,-120,0.4887892376681614
+Rachaad White,receiving_yards,Hard Rock Bet,13.5,-110,-120,0.48987854251012153
+Antonio Williams,receiving_yards,bet365,23.5,-115,-115,0.5
+Austin Ekeler,receiving_yards,FanDuel,6.5,-113,-113,0.5
+Stefon Diggs,receiving_yards,FanDuel,38.5,-113,-113,0.5
+Stefon Diggs,receiving_yards,Caesars Odds,39.5,-115,-114,0.5010179153094463
+George Kittle,receptions_made,FanDuel,5.5,+102,-136,0.46209273182957394
+George Kittle,receptions_made,Hard Rock Bet,5.5,-105,-125,0.4796954314720812
+Mike Evans,receptions_made,FanDuel,5.5,-102,-130,0.4718423169750604
+Mike Evans,receptions_made,theScore Bet,5.5,+125,-160,0.4193548387096774
+Mike Evans,receptions_made,Hard Rock Bet,5.5,+105,-135,0.4592085979482169
+Terry McLaurin,receptions_made,DraftKings,3.5,-119,-107,0.512482836100362
+Christian McCaffrey,receptions_made,BetMGM,4.5,-125,-105,0.5203045685279188
+Christian McCaffrey,receptions_made,FanDuel,4.5,-114,-114,0.5
+Christian McCaffrey,receptions_made,Caesars Odds,4.5,-120,-109,0.5112107623318386
+Chig Okonkwo,receptions_made,BetMGM,2.5,-165,+125,0.5834970530451867
+Chig Okonkwo,receptions_made,Caesars Odds,3.5,+145,-193,0.3825814454527649
+Rachaad White,receptions_made,Caesars Odds,2.5,+108,-141,0.45107434304110205
+Stefon Diggs,receptions_made,DraftKings,3.5,-166,+130,0.5893794380981784
+Stefon Diggs,receptions_made,Caesars Odds,4.5,+129,-170,0.40952525405733353
+Stefon Diggs,receptions_made,theScore Bet,3.5,-170,+130,0.5915279878971256
+Austin Ekeler,receptions_made,FanDuel,1.5,+112,-148,0.44146966676160637
+Austin Ekeler,receptions_made,Caesars Odds,1.5,+116,-152,0.4342431761786601
+Austin Ekeler,receptions_made,Hard Rock Bet,1.5,+120,-150,0.4310344827586207
+Antonio Williams,receptions_made,FanDuel,2.5,+124,-166,0.4170324846356453
+Brock Purdy,passing_completions,BetMGM,21.5,+100,-135,0.4653465346534653
+Brock Purdy,passing_completions,FanDuel,21.5,+102,-136,0.46209273182957394
+Brock Purdy,passing_completions,Caesars Odds,21.5,+106,-139,0.45494346518445195
+Brock Purdy,passing_completions,Hard Rock Bet,20.5,-130,+100,0.5306122448979592
+Jayden Daniels,passing_completions,BetMGM,19.5,+105,-140,0.4554079696394686
+Jayden Daniels,passing_completions,FanDuel,19.5,-102,-130,0.4718423169750604
+Jayden Daniels,passing_completions,Fanatics Sportsbook,18.5,-125,-105,0.5203045685279188
+Jayden Daniels,passing_completions,Caesars Odds,19.5,+105,-139,0.45615039603015556
+Christian McCaffrey,rushing_attempts,BetMGM,14.5,-120,-110,0.5101214574898786
+Rachaad White,rushing_attempts,DraftKings,13.5,+101,-129,0.468983595813963
+Rachaad White,rushing_attempts,FanDuel,13.5,-102,-130,0.4718423169750604
+Rachaad White,rushing_attempts,theScore Bet,12.5,-135,+105,0.5407914020517831
+Rachaad White,rushing_attempts,Hard Rock Bet,12.5,-135,+105,0.5407914020517831
+Jacory Croskey-Merritt,rushing_attempts,DraftKings,11.5,+102,-130,0.4669102720259846
+Jacory Croskey-Merritt,rushing_attempts,Hard Rock Bet,10.5,-120,-110,0.5101214574898786
+Jayden Daniels,rushing_attempts,DraftKings,7.5,+116,-149,0.43619928526382173
+Jayden Daniels,rushing_attempts,Hard Rock Bet,6.5,-130,+100,0.5306122448979592
+Brock Purdy,rushing_attempts,FanDuel,3.5,-205,+152,0.6287731256085686
+Brock Purdy,rushing_attempts,Caesars Odds,4.5,+106,-139,0.45494346518445195
+Brock Purdy,rushing_attempts,theScore Bet,4.5,+105,-135,0.4592085979482169
+Brock Purdy,rushing_attempts,Hard Rock Bet,4.5,+105,-135,0.4592085979482169
+Kaelon Black,rushing_attempts,bet365,6.5,-120,-110,0.5101214574898786
+Brock Purdy,passing_and_rushing_yards,BetMGM,272.5,-115,-115,0.5
+Brock Purdy,passing_and_rushing_yards,Caesars Odds,275.5,-115,-115,0.5
+Brock Purdy,passing_and_rushing_yards,theScore Bet,274.5,-115,-115,0.5
+Brock Purdy,passing_and_rushing_yards,Hard Rock Bet,272.5,-115,-115,0.5
+Jayden Daniels,passing_and_rushing_yards,BetMGM,248.5,-115,-115,0.5
+Jayden Daniels,passing_and_rushing_yards,FanDuel,253.5,-113,-113,0.5
+Jayden Daniels,passing_and_rushing_yards,BetRivers,249.5,-117,-114,0.5030135004821601
+Jayden Daniels,passing_and_rushing_yards,Caesars Odds,248.5,-115,-115,0.5
+Jayden Daniels,passing_and_rushing_yards,Hard Rock Bet,252.5,-115,-115,0.5
+Jayden Daniels,interceptions_thrown,BetMGM,0.5,+125,-165,0.4165029469548134
+Jayden Daniels,interceptions_thrown,bet365,0.5,+125,-160,0.4193548387096774
+Jayden Daniels,interceptions_thrown,DraftKings,0.5,+139,-178,0.3952119644024907
+Jayden Daniels,interceptions_thrown,FanDuel,0.5,+140,-188,0.38961038961038963
+Jayden Daniels,interceptions_thrown,BetRivers,0.5,+123,-165,0.4186744608578877
+Jayden Daniels,interceptions_thrown,Caesars Odds,0.5,+128,-170,0.41058394160583944
+Jayden Daniels,interceptions_thrown,theScore Bet,0.5,+135,-180,0.3982930298719772
+Jayden Daniels,interceptions_thrown,Hard Rock Bet,0.5,+130,-175,0.4059040590405904
+Brock Purdy,interceptions_thrown,BetMGM,0.5,+100,-135,0.4653465346534653
+Brock Purdy,interceptions_thrown,bet365,0.5,+130,-165,0.4111714507370054
+Brock Purdy,interceptions_thrown,DraftKings,0.5,+105,-134,0.4599960684096717
+Brock Purdy,interceptions_thrown,FanDuel,0.5,+110,-146,0.4451682953311618
+Brock Purdy,interceptions_thrown,BetRivers,0.5,+110,-148,0.4438081603435934
+Brock Purdy,interceptions_thrown,Caesars Odds,0.5,+113,-155,0.43578569597539096
+Brock Purdy,interceptions_thrown,theScore Bet,0.5,+115,-150,0.43668122270742354
+Brock Purdy,interceptions_thrown,Hard Rock Bet,0.5,+110,-140,0.449438202247191
+Jayden Daniels,passing_attempts,bet365,30.5,-105,-125,0.4796954314720812
+Jayden Daniels,passing_attempts,DraftKings,30.5,-120,-106,0.5145711906744379
+Jayden Daniels,passing_attempts,FanDuel,30.5,-125,-106,0.5191532258064516
+Jayden Daniels,passing_attempts,Fanatics Sportsbook,30.5,-120,-110,0.5101214574898786
+Jayden Daniels,passing_attempts,BetRivers,30.5,+100,-132,0.4677419354838709
+Jayden Daniels,passing_attempts,Caesars Odds,30.5,-118,-112,0.5060689431946916
+Jayden Daniels,passing_attempts,theScore Bet,30.5,-125,-105,0.5203045685279188
+Jayden Daniels,passing_attempts,Hard Rock Bet,30.5,-120,-110,0.5101214574898786
+Brock Purdy,passing_attempts,bet365,30.5,-115,-115,0.5
+Brock Purdy,passing_attempts,DraftKings,30.5,-128,+100,0.5289256198347108
+Brock Purdy,passing_attempts,FanDuel,30.5,-122,-106,0.5164392569455861
+Brock Purdy,passing_attempts,Fanatics Sportsbook,30.5,-135,+100,0.5346534653465347
+Brock Purdy,passing_attempts,BetRivers,30.5,-115,-115,0.5
+Brock Purdy,passing_attempts,Caesars Odds,31.5,+105,-139,0.45615039603015556
+Brock Purdy,passing_attempts,theScore Bet,30.5,-130,+100,0.5306122448979592
+Brock Purdy,passing_attempts,Hard Rock Bet,30.5,-125,-105,0.5203045685279188

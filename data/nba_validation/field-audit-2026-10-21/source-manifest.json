@@ -1,0 +1,35 @@
+{
+  "analysis_date": "2026-10-22",
+  "type": "retrospective descriptive audit",
+  "code_reference": "0531ddbe6a5340ab1bdc40fc1d5ac8cb9df3e4e2",
+  "sources": [
+    {
+      "filename": "Simmah_NBA_DraftKings_Build_Player_Pool (1).csv",
+      "sha256": "313d08467a18863040960733fe43d5452bc85db7b18df63286e2ef724605d5ee"
+    },
+    {
+      "filename": "contest-standings-196983215.zip",
+      "sha256": "a30d064f5e10c467ee5bb4763dc3d931a0d3abd04e9d9623b1ff3f9a0149d5fa"
+    },
+    {
+      "filename": "Simmah_NBA_Opponent_Field.csv",
+      "sha256": "854ad85e2263eb6145b5cc4bf506d3a9f5e796f24d0c3c73f238249383d48a58"
+    },
+    {
+      "filename": "Simmah_NBA_Opponent_Field (1)(1).csv",
+      "sha256": "50831e03a9dff8d3661f840fd061c441d8873f2e5813db314631f019f55320f4"
+    },
+    {
+      "filename": "Simmah_NBA_FanDuel_Build_Player_Pool.csv",
+      "sha256": "2e3e6b7d7c8a7d236a01e2f8bba2ddf04cc3cf07d5e28ed7cbace1508f59c617"
+    },
+    {
+      "filename": "135636-281187909.csv",
+      "sha256": "51b504ca3210090d5205fed3641ce194ea6e0c8ca4a944e26d78ac1a8209cbfe"
+    },
+    {
+      "filename": "Simmah_NBA_Opponent_Field (2)(2).csv",
+      "sha256": "4918dc85ba98b8d1ab9fada7bae45b4eadae42a358011dc95898e78653909969"
+    }
+  ]
+}

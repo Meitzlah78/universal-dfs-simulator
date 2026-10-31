@@ -1,0 +1,12 @@
+{
+  "scope": "One real GS/LAL game, FanDuel; not a full Streamlit build benchmark",
+  "simulations": 10000,
+  "baseline_cold_seconds": 6.9949070480001865,
+  "optimized_cold_seconds": 6.448033477000081,
+  "cached_draw_seconds": 0.006001527999615064,
+  "exact_score_parity": true,
+  "first_draw_speedup_pct": 7.818167807625898,
+  "cache_max_slates": 2,
+  "candidate_target_unchanged": 5000,
+  "full_build_runtime_not_measured": true
+}

@@ -1,0 +1,66 @@
+name: Apply FanDuel Full Roster setup
+
+on:
+  push:
+    branches:
+      - feature/salary-csv-upload
+    paths:
+      - '.github/scripts/fix_fd_player_pool_refresh.py'
+      - '.github/scripts/fix_fd_editable_injury_and_columns.py'
+      - '.github/scripts/fix_fd_cap_hit.py'
+      - '.github/scripts/calibrate_fd_pbp_roles.py'
+      - '.github/scripts/add_fd_historical_qb_rushing.py'
+      - '.github/scripts/add_fd_historical_all_roles.py'
+      - '.github/scripts/add_fd_historical_play_mix.py'
+      - '.github/scripts/fix_fd_play_assignment_tds.py'
+      - '.github/scripts/calibrate_fd_pbp_efficiency.py'
+      - '.github/scripts/calibrate_fd_backfield_opportunity.py'
+      - '.github/workflows/apply-fd-full-roster.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/salary-csv-upload
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Refresh FanDuel Player Pool after SIM
+        run: python .github/scripts/fix_fd_player_pool_refresh.py
+      - name: Add editable injury status and requested column order
+        run: python .github/scripts/fix_fd_editable_injury_and_columns.py
+      - name: Populate FanDuel Cap Hit from PBP simulations
+        run: python .github/scripts/fix_fd_cap_hit.py
+      - name: Calibrate FanDuel PBP player roles
+        run: python .github/scripts/calibrate_fd_pbp_roles.py
+      - name: Add historical QB rushing to FanDuel PBP
+        run: python .github/scripts/add_fd_historical_qb_rushing.py
+      # Historical all-position roles are already installed in dfs_app.py. The legacy
+      # installer predates the integrated QB-run allocator and is no longer rerun here.
+      - name: Add historical team play mix to FanDuel PBP
+        run: python .github/scripts/add_fd_historical_play_mix.py
+      - name: Allocate QB rushes and historical TD rates inside PBP
+        run: python .github/scripts/fix_fd_play_assignment_tds.py
+      - name: Calibrate historical QB and rushing efficiency
+        run: python .github/scripts/calibrate_fd_pbp_efficiency.py
+      - name: Calibrate historical backfield opportunity
+        run: python .github/scripts/calibrate_fd_backfield_opportunity.py
+      - name: Syntax check
+        run: python -m py_compile dfs_app.py
+      - name: Commit patched app
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add dfs_app.py
+          if git diff --cached --quiet; then
+            echo "No app changes needed"
+          else
+            git commit -m "Apply FanDuel Player Pool updates [skip ci]"
+            git push origin HEAD:feature/salary-csv-upload
+          fi

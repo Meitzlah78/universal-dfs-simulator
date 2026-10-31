@@ -1,0 +1,102 @@
+{
+  "scope": "Same-slate diagnostic, not holdout or exact original app replay. Anonymous construction profile was trained on this contest. No archived pregame ownership, roles or weather: current engine defaults, neutral weather and exact app projection-rank ownership fallback used. Actual player scores loaded only after lineup selection.",
+  "branch": "25e988f4ff07b58350a3b9aad9b3dfd222bfd4fc",
+  "seed": 123,
+  "model_preparation_key": "f9b0be789ff935572513d918a6d4e641f3bf963f2b0d48c6e8a60714ef8785ff",
+  "player_pool": 271,
+  "fresh_proposals": 15000,
+  "final_opponents": 10000,
+  "field_seconds": 7.595384319999994,
+  "total_seconds": 77.832922086,
+  "calibration": {
+    "applied": true,
+    "contests": 1,
+    "historical_entries": 215417,
+    "features": [
+      "ownership_sum",
+      "ownership_product_log",
+      "salary_left",
+      "qb_pass_catcher_stack_count",
+      "bring_back_count",
+      "rb_dst_stack"
+    ],
+    "formats": [
+      "FD_FULL"
+    ],
+    "profile_ids": [
+      "330dec95a79459d59a4d141374fe7b8c1d91cff96be228a9f99a6b02a043ad8a"
+    ]
+  },
+  "old": {
+    "entries": 10000,
+    "scoreable": 9983,
+    "missing_actual_entries_excluded": 17,
+    "mean": 102.18966042271862,
+    "top10_cutoff": 126.9,
+    "top1_cutoff": 146.9836
+  },
+  "new": {
+    "entries": 10000,
+    "scoreable": 9794,
+    "missing_actual_entries_excluded": 206,
+    "mean": 92.7608352052277,
+    "top10_cutoff": 117.72800000000004,
+    "top1_cutoff": 139.88099999999991
+  },
+  "real": {
+    "entries": 215568,
+    "scored_entries": 215417,
+    "mean": 111.28444635288764,
+    "top10_cutoff": 136.06,
+    "top1_cutoff": 155.68
+  },
+  "ownership_examples": {
+    "Isaiah Likely": {
+      "actual": 38.37,
+      "old": 14.799999999999999,
+      "new": 3.3000000000000003
+    },
+    "Matthew Stafford": {
+      "actual": 27.88,
+      "old": 14.7,
+      "new": 9.55
+    },
+    "Tampa Bay Buccaneers": {
+      "actual": 24.6,
+      "old": 10.51,
+      "new": 5.65
+    },
+    "D'Andre Swift": {
+      "actual": 31.09,
+      "old": 20.97,
+      "new": 8.18
+    },
+    "Puka Nacua": {
+      "actual": 44.2,
+      "old": 43.24,
+      "new": 30.91
+    }
+  },
+  "ownership_mae_for_actual_at_least_5_percent": {
+    "players": 52,
+    "old": 4.907884615384615,
+    "new": 7.835192307692308
+  },
+  "joint_construction_counts": [
+    1511,
+    535,
+    2974,
+    2668,
+    1212,
+    1100
+  ],
+  "proposal_actual_scores": {
+    "entries": 15000,
+    "scoreable": 14698,
+    "missing_actual_entries_excluded": 302,
+    "mean": 92.68412845285073,
+    "top10_cutoff": 117.58,
+    "top1_cutoff": 138.96060000000003
+  },
+  "interpretation": "Fresh updated field is weaker than archived field under available replay inputs. Exact learned joint construction quotas are met, but ownership errors remain larger. Proposals are already weak before final history selection; construction histograms alone do not validate ownership or field strength."
+}

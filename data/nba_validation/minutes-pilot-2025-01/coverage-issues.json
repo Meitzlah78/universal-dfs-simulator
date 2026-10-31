@@ -1,0 +1,2756 @@
+[
+  {
+    "game": "401705075",
+    "team": "25",
+    "player": "2991350",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705075",
+    "team": "25",
+    "player": "4432971",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705075",
+    "team": "25",
+    "player": "4592435",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705075",
+    "team": "25",
+    "player": "4897449",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705075",
+    "team": "25",
+    "player": "4900671",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705075",
+    "team": "25",
+    "player": "4702159",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705075",
+    "team": "25",
+    "player": "4997526",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705075",
+    "team": "5",
+    "reason": "insufficient prior accepted team games",
+    "players": 14
+  },
+  {
+    "game": "401705076",
+    "team": "11",
+    "player": "4592699",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705076",
+    "team": "11",
+    "player": "4592829",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705076",
+    "team": "11",
+    "player": "4396909",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705076",
+    "team": "4",
+    "player": "4702023",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705076",
+    "team": "4",
+    "player": "4432821",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705077",
+    "team": "18",
+    "player": "5211983",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705077",
+    "team": "28",
+    "player": "4431893",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705077",
+    "team": "28",
+    "player": "5107897",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705077",
+    "team": "28",
+    "player": "4432820",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705077",
+    "team": "28",
+    "player": "4277952",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705077",
+    "team": "28",
+    "player": "5211984",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705078",
+    "team": "20",
+    "player": "3059318",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705078",
+    "team": "20",
+    "player": "3012",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705078",
+    "team": "27",
+    "player": "4432356",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705078",
+    "team": "27",
+    "player": "2566769",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705078",
+    "team": "27",
+    "player": "4997537",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705078",
+    "team": "27",
+    "player": "4277956",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705079",
+    "team": "17",
+    "player": "4432735",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705079",
+    "team": "17",
+    "player": "3907387",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705079",
+    "team": "17",
+    "player": "4065697",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705079",
+    "team": "17",
+    "player": "4432174",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705079",
+    "team": "17",
+    "player": "4684286",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705079",
+    "team": "8",
+    "player": "4684742",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705080",
+    "team": "3",
+    "player": "4397688",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705080",
+    "team": "3",
+    "player": "4278572",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705080",
+    "team": "3",
+    "player": "4395628",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705081",
+    "team": "12",
+    "player": "4431699",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705081",
+    "team": "12",
+    "player": "6450",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705081",
+    "team": "7",
+    "player": "3112335",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705081",
+    "team": "7",
+    "player": "4592427",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705082",
+    "team": "24",
+    "player": "4610139",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705082",
+    "team": "24",
+    "player": "5081727",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705083",
+    "team": "28",
+    "player": "4431893",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705083",
+    "team": "28",
+    "player": "5107897",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705083",
+    "team": "28",
+    "player": "4432820",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705083",
+    "team": "28",
+    "player": "4277952",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705083",
+    "team": "28",
+    "player": "4397018",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705083",
+    "team": "28",
+    "player": "5211984",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705083",
+    "team": "5",
+    "player": "4066757",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705083",
+    "team": "5",
+    "player": "4433620",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705083",
+    "team": "5",
+    "player": "3908809",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705084",
+    "team": "8",
+    "player": "4906923",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705084",
+    "team": "8",
+    "player": "5107199",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705084",
+    "team": "9",
+    "player": "3059319",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705084",
+    "team": "9",
+    "player": "4433247",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705085",
+    "team": "16",
+    "player": "4592965",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705085",
+    "team": "16",
+    "player": "4432847",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705085",
+    "team": "16",
+    "player": "4432176",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705085",
+    "team": "19",
+    "player": "4432165",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705086",
+    "team": "10",
+    "player": "4711272",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705086",
+    "team": "29",
+    "player": "4279888",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705086",
+    "team": "29",
+    "player": "4593125",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705086",
+    "team": "29",
+    "player": "4433083",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705087",
+    "team": "6",
+    "player": "6461",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705087",
+    "team": "6",
+    "player": "4708972",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705087",
+    "team": "6",
+    "player": "6442",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705088",
+    "team": "1",
+    "player": "4701230",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705088",
+    "team": "21",
+    "player": "4683749",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705089",
+    "team": "14",
+    "player": "4432117",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705089",
+    "team": "26",
+    "player": "2528426",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705089",
+    "team": "26",
+    "player": "3908845",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705089",
+    "team": "26",
+    "player": "5105839",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705091",
+    "team": "11",
+    "player": "4431941",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705091",
+    "team": "11",
+    "player": "4592829",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705091",
+    "team": "11",
+    "player": "4592699",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705091",
+    "team": "9",
+    "player": "4593016",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705091",
+    "team": "9",
+    "player": "3059319",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705091",
+    "team": "9",
+    "player": "4433247",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705091",
+    "team": "9",
+    "player": "3975",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705092",
+    "team": "19",
+    "player": "4432573",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705092",
+    "team": "19",
+    "player": "4432165",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705093",
+    "team": "20",
+    "player": "3059318",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705093",
+    "team": "20",
+    "player": "3012",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705093",
+    "team": "3",
+    "player": "4277813",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705093",
+    "team": "3",
+    "player": "4397688",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705093",
+    "team": "3",
+    "player": "4395628",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705094",
+    "team": "2",
+    "player": "4397689",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705094",
+    "team": "23",
+    "player": "4066259",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705094",
+    "team": "23",
+    "player": "4592857",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705094",
+    "team": "23",
+    "player": "4593049",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705095",
+    "team": "18",
+    "player": "5211983",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705095",
+    "team": "25",
+    "player": "4897449",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705095",
+    "team": "25",
+    "player": "4900671",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705095",
+    "team": "25",
+    "player": "4997526",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705095",
+    "team": "25",
+    "player": "4702159",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705096",
+    "team": "27",
+    "player": "2566769",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705096",
+    "team": "27",
+    "player": "4997537",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705096",
+    "team": "4",
+    "player": "4702023",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705096",
+    "team": "4",
+    "player": "4432821",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705097",
+    "team": "17",
+    "player": "4431675",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705097",
+    "team": "17",
+    "player": "4432735",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705097",
+    "team": "17",
+    "player": "4065697",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705097",
+    "team": "17",
+    "player": "4432174",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705097",
+    "team": "17",
+    "player": "4684286",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705097",
+    "team": "7",
+    "player": "4592427",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705099",
+    "team": "21",
+    "player": "4683749",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705099",
+    "team": "26",
+    "player": "4397449",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705099",
+    "team": "26",
+    "player": "4432827",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705099",
+    "team": "26",
+    "player": "2528426",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705099",
+    "team": "26",
+    "player": "4432817",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705099",
+    "team": "26",
+    "player": "3908845",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705099",
+    "team": "26",
+    "player": "5105839",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705099",
+    "team": "26",
+    "player": "4433627",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705100",
+    "team": "28",
+    "player": "4431893",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705100",
+    "team": "28",
+    "player": "5107897",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705100",
+    "team": "28",
+    "player": "4432820",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705100",
+    "team": "28",
+    "player": "4277952",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705100",
+    "team": "28",
+    "player": "5211984",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705100",
+    "team": "8",
+    "player": "4906923",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705100",
+    "team": "8",
+    "player": "5107199",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705101",
+    "team": "16",
+    "player": "4592965",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705101",
+    "team": "16",
+    "player": "4432847",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705101",
+    "team": "16",
+    "player": "4432176",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705101",
+    "team": "29",
+    "player": "4397204",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705101",
+    "team": "29",
+    "player": "4433083",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705102",
+    "team": "14",
+    "player": "4432117",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705102",
+    "team": "22",
+    "player": "4278111",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705102",
+    "team": "22",
+    "player": "4576086",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705102",
+    "team": "22",
+    "player": "4066211",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705102",
+    "team": "22",
+    "player": "2991070",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705105",
+    "team": "15",
+    "player": "4591725",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705105",
+    "team": "15",
+    "player": "4277843",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705106",
+    "team": "6",
+    "player": "4708972",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705106",
+    "team": "6",
+    "player": "6442",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705106",
+    "team": "7",
+    "player": "3064290",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705106",
+    "team": "7",
+    "player": "4592427",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705107",
+    "team": "23",
+    "player": "4592857",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705107",
+    "team": "23",
+    "player": "4593049",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705107",
+    "team": "4",
+    "player": "4395651",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705107",
+    "team": "4",
+    "player": "4702023",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705107",
+    "team": "4",
+    "player": "4432821",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705108",
+    "team": "2",
+    "player": "4397689",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705108",
+    "team": "3",
+    "player": "4277813",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705108",
+    "team": "3",
+    "player": "4278572",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705109",
+    "team": "11",
+    "player": "4592829",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705109",
+    "team": "11",
+    "player": "4431941",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705109",
+    "team": "11",
+    "player": "4592699",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705109",
+    "team": "5",
+    "player": "4702233",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705109",
+    "team": "5",
+    "player": "4433620",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705109",
+    "team": "5",
+    "player": "4065733",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705110",
+    "team": "19",
+    "player": "5105806",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705110",
+    "team": "19",
+    "player": "4432165",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705110",
+    "team": "20",
+    "player": "3012",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705110",
+    "team": "20",
+    "player": "6585",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705111",
+    "team": "25",
+    "player": "4897449",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705111",
+    "team": "25",
+    "player": "4900671",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705111",
+    "team": "25",
+    "player": "4997526",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705111",
+    "team": "25",
+    "player": "4702159",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705111",
+    "team": "27",
+    "player": "2566769",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705112",
+    "team": "17",
+    "player": "3136776",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705112",
+    "team": "17",
+    "player": "4431675",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705112",
+    "team": "17",
+    "player": "4432174",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705112",
+    "team": "26",
+    "player": "2528426",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705112",
+    "team": "26",
+    "player": "4432817",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705112",
+    "team": "26",
+    "player": "3908845",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705112",
+    "team": "26",
+    "player": "4066336",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705112",
+    "team": "26",
+    "player": "4433627",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705113",
+    "team": "21",
+    "player": "2583632",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705113",
+    "team": "21",
+    "player": "4683749",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705113",
+    "team": "21",
+    "player": "3102530",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705113",
+    "team": "30",
+    "player": "4433249",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705113",
+    "team": "30",
+    "player": "3913220",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705113",
+    "team": "30",
+    "player": "4066218",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705114",
+    "team": "16",
+    "player": "4432847",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705114",
+    "team": "27",
+    "player": "2566769",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705115",
+    "team": "18",
+    "player": "4277922",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705115",
+    "team": "8",
+    "player": "4906923",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705115",
+    "team": "8",
+    "player": "5107199",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705116",
+    "team": "28",
+    "player": "4066410",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705116",
+    "team": "28",
+    "player": "4431893",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705116",
+    "team": "28",
+    "player": "4432820",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705116",
+    "team": "28",
+    "player": "4277952",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705116",
+    "team": "28",
+    "player": "4395724",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705116",
+    "team": "9",
+    "player": "4433247",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705116",
+    "team": "9",
+    "player": "4593016",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705117",
+    "team": "29",
+    "player": "4397204",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705117",
+    "team": "29",
+    "player": "4433083",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705118",
+    "team": "13",
+    "player": "4432070",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705118",
+    "team": "13",
+    "player": "4683774",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705118",
+    "team": "13",
+    "player": "4431778",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705118",
+    "team": "24",
+    "player": "4610139",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705118",
+    "team": "24",
+    "player": "5081727",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705119",
+    "team": "12",
+    "player": "4431752",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705119",
+    "team": "12",
+    "player": "4396818",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705119",
+    "team": "14",
+    "player": "4432117",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705119",
+    "team": "14",
+    "player": "2581190",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705120",
+    "team": "11",
+    "player": "4592829",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705120",
+    "team": "11",
+    "player": "4592699",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705120",
+    "team": "5",
+    "player": "4702233",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705120",
+    "team": "5",
+    "player": "4433620",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705120",
+    "team": "5",
+    "player": "4065733",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705121",
+    "team": "20",
+    "player": "4397233",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705121",
+    "team": "20",
+    "player": "3059318",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705121",
+    "team": "20",
+    "player": "3012",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705121",
+    "team": "20",
+    "player": "6585",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705121",
+    "team": "25",
+    "player": "4897449",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705121",
+    "team": "25",
+    "player": "4900671",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705121",
+    "team": "25",
+    "player": "4997526",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705121",
+    "team": "25",
+    "player": "4702159",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705122",
+    "team": "1",
+    "player": "2580365",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705122",
+    "team": "1",
+    "player": "4683736",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705122",
+    "team": "1",
+    "player": "4701230",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705122",
+    "team": "21",
+    "player": "3102530",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705123",
+    "team": "3",
+    "player": "4277813",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705123",
+    "team": "3",
+    "player": "4278572",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705124",
+    "team": "15",
+    "player": "4433622",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705124",
+    "team": "15",
+    "player": "6609",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705124",
+    "team": "15",
+    "player": "4277843",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705124",
+    "team": "23",
+    "player": "4066262",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705124",
+    "team": "23",
+    "player": "4592857",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705124",
+    "team": "23",
+    "player": "4593049",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705125",
+    "team": "6",
+    "player": "6442",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705125",
+    "team": "6",
+    "player": "4708972",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705126",
+    "team": "17",
+    "player": "4431675",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705126",
+    "team": "17",
+    "player": "4278067",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705126",
+    "team": "22",
+    "player": "4066211",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705126",
+    "team": "22",
+    "player": "4576086",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705127",
+    "team": "18",
+    "player": "3136195",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705127",
+    "team": "20",
+    "player": "3059318",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705127",
+    "team": "20",
+    "player": "3138160",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705128",
+    "team": "2",
+    "player": "4397689",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705128",
+    "team": "28",
+    "player": "5107897",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705128",
+    "team": "28",
+    "player": "4277952",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705128",
+    "team": "28",
+    "player": "4684272",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705128",
+    "team": "28",
+    "player": "4395724",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705128",
+    "team": "28",
+    "player": "4066410",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705129",
+    "team": "1",
+    "player": "4279118",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705129",
+    "team": "1",
+    "player": "4279318",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705129",
+    "team": "1",
+    "player": "4683736",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705129",
+    "team": "1",
+    "player": "4065732",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705129",
+    "team": "1",
+    "player": "4277905",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705129",
+    "team": "1",
+    "player": "4701230",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705129",
+    "team": "4",
+    "player": "4397002",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705129",
+    "team": "4",
+    "player": "4066421",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705130",
+    "team": "15",
+    "player": "4277843",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705130",
+    "team": "19",
+    "player": "4432165",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705130",
+    "team": "19",
+    "player": "4348700",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705131",
+    "team": "16",
+    "player": "4432847",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705131",
+    "team": "9",
+    "player": "3134903",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705131",
+    "team": "9",
+    "player": "4593016",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705131",
+    "team": "9",
+    "player": "2993874",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705131",
+    "team": "9",
+    "player": "6589",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705132",
+    "team": "3",
+    "player": "4277813",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705132",
+    "team": "3",
+    "player": "4592686",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705132",
+    "team": "3",
+    "player": "4278572",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705132",
+    "team": "6",
+    "player": "4683688",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705132",
+    "team": "6",
+    "player": "6442",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705133",
+    "team": "24",
+    "player": "4397107",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705133",
+    "team": "24",
+    "player": "4610139",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705133",
+    "team": "29",
+    "player": "4397204",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705133",
+    "team": "29",
+    "player": "4433083",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705134",
+    "team": "7",
+    "player": "3064290",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705134",
+    "team": "7",
+    "player": "3112335",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705135",
+    "team": "26",
+    "player": "4066336",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705135",
+    "team": "26",
+    "player": "4432817",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705135",
+    "team": "26",
+    "player": "4277811",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705135",
+    "team": "30",
+    "player": "4278076",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705135",
+    "team": "30",
+    "player": "4433249",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705135",
+    "team": "30",
+    "player": "4066218",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705136",
+    "team": "13",
+    "player": "4278077",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705136",
+    "team": "13",
+    "player": "5104156",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705136",
+    "team": "13",
+    "player": "4432070",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705136",
+    "team": "13",
+    "player": "4683774",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705136",
+    "team": "13",
+    "player": "2578185",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705136",
+    "team": "13",
+    "player": "4431778",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705136",
+    "team": "14",
+    "player": "2581190",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705137",
+    "team": "12",
+    "player": "4431752",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705137",
+    "team": "17",
+    "player": "4431675",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705137",
+    "team": "17",
+    "player": "3907387",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705138",
+    "team": "11",
+    "player": "4592699",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705138",
+    "team": "8",
+    "player": "4906923",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705138",
+    "team": "8",
+    "player": "5107199",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705139",
+    "team": "21",
+    "player": "4278076",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705139",
+    "team": "21",
+    "player": "6580",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705139",
+    "team": "21",
+    "player": "4065663",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705139",
+    "team": "21",
+    "player": "3102530",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705139",
+    "team": "27",
+    "player": "4433246",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705140",
+    "team": "25",
+    "player": "4397654",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705140",
+    "team": "25",
+    "player": "4897449",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705140",
+    "team": "25",
+    "player": "4222252",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705140",
+    "team": "25",
+    "player": "4702159",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705140",
+    "team": "5",
+    "player": "4433620",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705141",
+    "team": "12",
+    "player": "6450",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705141",
+    "team": "22",
+    "player": "4576086",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705141",
+    "team": "22",
+    "player": "2991070",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705142",
+    "team": "10",
+    "player": "2991230",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705142",
+    "team": "10",
+    "player": "3146557",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705142",
+    "team": "23",
+    "player": "3134916",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705142",
+    "team": "23",
+    "player": "4593049",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705143",
+    "team": "19",
+    "player": "4348700",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705143",
+    "team": "2",
+    "player": "4593841",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705144",
+    "team": "16",
+    "player": "4684275",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705144",
+    "team": "16",
+    "player": "4592965",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705144",
+    "team": "16",
+    "player": "5044385",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705144",
+    "team": "16",
+    "player": "4432847",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705144",
+    "team": "16",
+    "player": "3934673",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705144",
+    "team": "18",
+    "player": "5211983",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705145",
+    "team": "14",
+    "player": "4432117",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705145",
+    "team": "14",
+    "player": "4432168",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705145",
+    "team": "7",
+    "player": "4701225",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705145",
+    "team": "7",
+    "player": "4433268",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705146",
+    "team": "15",
+    "player": "4432179",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705146",
+    "team": "15",
+    "player": "4432190",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705146",
+    "team": "28",
+    "player": "4397018",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705146",
+    "team": "28",
+    "player": "4684272",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705146",
+    "team": "28",
+    "player": "4066410",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705146",
+    "team": "28",
+    "player": "4395724",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705147",
+    "team": "26",
+    "player": "4066399",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705147",
+    "team": "26",
+    "player": "4433136",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705147",
+    "team": "26",
+    "player": "4066336",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705147",
+    "team": "3",
+    "player": "5061589",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705147",
+    "team": "3",
+    "player": "4592686",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705147",
+    "team": "3",
+    "player": "4432162",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705148",
+    "team": "24",
+    "player": "4610139",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705148",
+    "team": "24",
+    "player": "4397107",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705148",
+    "team": "24",
+    "player": "5081727",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705148",
+    "team": "29",
+    "player": "4397204",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705148",
+    "team": "29",
+    "player": "4433083",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705148",
+    "team": "29",
+    "player": "4279888",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705149",
+    "team": "25",
+    "player": "4222252",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705149",
+    "team": "6",
+    "player": "4683688",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705150",
+    "team": "30",
+    "player": "4065663",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705150",
+    "team": "30",
+    "player": "4278076",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705150",
+    "team": "30",
+    "player": "4433287",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705150",
+    "team": "30",
+    "player": "4066218",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705150",
+    "team": "4",
+    "player": "4396991",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705151",
+    "team": "13",
+    "player": "4395623",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705151",
+    "team": "13",
+    "player": "4432070",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705151",
+    "team": "13",
+    "player": "5104156",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705151",
+    "team": "13",
+    "player": "4278077",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705151",
+    "team": "13",
+    "player": "2578185",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705151",
+    "team": "17",
+    "player": "4431675",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705151",
+    "team": "17",
+    "player": "4432735",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705152",
+    "team": "21",
+    "player": "4278585",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705152",
+    "team": "21",
+    "player": "6580",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705152",
+    "team": "21",
+    "player": "4065663",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705152",
+    "team": "21",
+    "player": "3102530",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705152",
+    "team": "8",
+    "player": "4906923",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705152",
+    "team": "8",
+    "player": "5107199",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705153",
+    "team": "1",
+    "player": "4683736",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705153",
+    "team": "1",
+    "player": "5211175",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705153",
+    "team": "1",
+    "player": "4279118",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705153",
+    "team": "1",
+    "player": "2580365",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705154",
+    "team": "11",
+    "player": "4592829",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705154",
+    "team": "11",
+    "player": "4592699",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705154",
+    "team": "20",
+    "player": "3059318",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705154",
+    "team": "20",
+    "player": "3138160",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705155",
+    "team": "27",
+    "player": "4997537",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705155",
+    "team": "27",
+    "player": "4433246",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705155",
+    "team": "9",
+    "player": "2993874",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705156",
+    "team": "16",
+    "player": "4592965",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705156",
+    "team": "16",
+    "player": "3934673",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705156",
+    "team": "5",
+    "player": "4432158",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705156",
+    "team": "5",
+    "player": "4433620",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705156",
+    "team": "5",
+    "player": "4432822",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705157",
+    "team": "10",
+    "player": "3146557",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705157",
+    "team": "22",
+    "player": "4278129",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705157",
+    "team": "22",
+    "player": "4683021",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705158",
+    "team": "14",
+    "player": "4432117",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705158",
+    "team": "24",
+    "player": "4610139",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705158",
+    "team": "24",
+    "player": "4397107",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705159",
+    "team": "19",
+    "player": "4348700",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705159",
+    "team": "7",
+    "player": "4433268",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705160",
+    "team": "15",
+    "player": "4432179",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705160",
+    "team": "15",
+    "player": "4397475",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705160",
+    "team": "15",
+    "player": "4397347",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705160",
+    "team": "20",
+    "player": "3059318",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705160",
+    "team": "20",
+    "player": "3138160",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705161",
+    "team": "17",
+    "player": "4432735",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705161",
+    "team": "25",
+    "player": "4702159",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705161",
+    "team": "25",
+    "player": "4222252",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705161",
+    "team": "25",
+    "player": "4593803",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705162",
+    "team": "12",
+    "player": "4845363",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705162",
+    "team": "12",
+    "player": "4431699",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705162",
+    "team": "13",
+    "player": "4431778",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705162",
+    "team": "13",
+    "player": "4432070",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705162",
+    "team": "13",
+    "player": "5104156",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705162",
+    "team": "13",
+    "player": "4278077",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705163",
+    "team": "22",
+    "player": "4066211",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705163",
+    "team": "22",
+    "player": "4351851",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705163",
+    "team": "4",
+    "player": "4592402",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705163",
+    "team": "4",
+    "player": "3133635",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705164",
+    "team": "23",
+    "player": "4592857",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705164",
+    "team": "23",
+    "player": "5107818",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705164",
+    "team": "23",
+    "player": "4433188",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705164",
+    "team": "23",
+    "player": "4593049",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705164",
+    "team": "27",
+    "player": "4433246",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705165",
+    "team": "30",
+    "player": "4431727",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705165",
+    "team": "30",
+    "player": "4278076",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705165",
+    "team": "30",
+    "player": "4433287",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705165",
+    "team": "30",
+    "player": "5211176",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705165",
+    "team": "30",
+    "player": "4683834",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705165",
+    "team": "6",
+    "player": "4397693",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705165",
+    "team": "6",
+    "player": "4708972",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705165",
+    "team": "6",
+    "player": "4397014",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705165",
+    "team": "6",
+    "player": "4683688",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705165",
+    "team": "6",
+    "player": "4868423",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705165",
+    "team": "6",
+    "player": "2531367",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705167",
+    "team": "16",
+    "player": "4592965",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705167",
+    "team": "16",
+    "player": "3934673",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705167",
+    "team": "29",
+    "player": "5105550",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705167",
+    "team": "29",
+    "player": "5159895",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705167",
+    "team": "29",
+    "player": "4397204",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705168",
+    "team": "1",
+    "player": "4683736",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705168",
+    "team": "1",
+    "player": "5211175",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705168",
+    "team": "1",
+    "player": "4279118",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705168",
+    "team": "1",
+    "player": "2580365",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705169",
+    "team": "21",
+    "player": "4278585",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705169",
+    "team": "21",
+    "player": "4065663",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705169",
+    "team": "21",
+    "player": "3102530",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705169",
+    "team": "5",
+    "player": "4432158",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705169",
+    "team": "5",
+    "player": "4432822",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705169",
+    "team": "5",
+    "player": "2991043",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705170",
+    "team": "9",
+    "player": "2993874",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705170",
+    "team": "9",
+    "player": "6589",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705171",
+    "team": "26",
+    "player": "4066399",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705171",
+    "team": "26",
+    "player": "4066336",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705171",
+    "team": "26",
+    "player": "4277811",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705171",
+    "team": "3",
+    "player": "4432162",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705171",
+    "team": "3",
+    "player": "4592686",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705171",
+    "team": "3",
+    "player": "4395628",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705177",
+    "team": "12",
+    "player": "5165257",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705177",
+    "team": "12",
+    "player": "4017837",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705177",
+    "team": "12",
+    "player": "6450",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705177",
+    "team": "4",
+    "player": "4592402",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705177",
+    "team": "4",
+    "player": "3133635",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705172",
+    "team": "17",
+    "player": "4431675",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705172",
+    "team": "17",
+    "player": "3907387",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705172",
+    "team": "17",
+    "player": "4432735",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705173",
+    "team": "14",
+    "player": "4432117",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705173",
+    "team": "22",
+    "player": "3907498",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705173",
+    "team": "22",
+    "player": "5099752",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705174",
+    "team": "19",
+    "player": "2999547",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705174",
+    "team": "19",
+    "player": "4348700",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705174",
+    "team": "19",
+    "player": "4432165",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705174",
+    "team": "28",
+    "player": "4593049",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705174",
+    "team": "28",
+    "player": "5211984",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705174",
+    "team": "28",
+    "player": "4067017",
+    "reason": "player absent from prior team history"
+  },
+  {
+    "game": "401705174",
+    "team": "28",
+    "player": "5107897",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705174",
+    "team": "28",
+    "player": "4066410",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705174",
+    "team": "28",
+    "player": "4395724",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705174",
+    "team": "28",
+    "player": "4397018",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705175",
+    "team": "20",
+    "player": "3059318",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705175",
+    "team": "20",
+    "player": "3138160",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705175",
+    "team": "7",
+    "player": "4433268",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705176",
+    "team": "13",
+    "player": "4432070",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705176",
+    "team": "13",
+    "player": "5104156",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705176",
+    "team": "13",
+    "player": "4278077",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705176",
+    "team": "13",
+    "player": "4431778",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705176",
+    "team": "27",
+    "player": "4433246",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  },
+  {
+    "game": "401705176",
+    "team": "27",
+    "player": "4395695",
+    "reason": "forecast player missing from current box roster; not assigned zero"
+  }
+]

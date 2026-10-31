@@ -1,0 +1,132 @@
+{
+  "trial": "2026-10-19 WAS @ SF",
+  "kickoff": "2026-10-20T00:15:00+00:00",
+  "frozen_at": "2026-10-19T12:40:44.850574+00:00",
+  "live_app_changed": false,
+  "blend_fraction": 0.5,
+  "ridge": 0.05,
+  "min_ess_fraction": 0.25,
+  "simulation_count_per_platform": 10000,
+  "source_pages": [
+    {
+      "file": "tonight-dff_dk.html",
+      "captured_at": "2026-10-19T12:36:28.480043+00:00",
+      "sha256": "82e0c2c9a9437aedee48c5c57d9c7c6ed45be792f473c39686c654f59b474a63"
+    },
+    {
+      "file": "tonight-dff_fd.html",
+      "captured_at": "2026-10-19T12:36:28.559460+00:00",
+      "sha256": "a2da2e16f4bbd4aaca6a570083e9449fe3e9b2c008397ff70302b7b255ab5da3"
+    },
+    {
+      "file": "tonight-draftedge.html",
+      "captured_at": "2026-10-19T12:36:28.744536+00:00",
+      "sha256": "8c0433b3630a2ba1b7e30aba9ff1503a3b5d507e71e2a21af413c7ef35dfb09c"
+    },
+    {
+      "file": "tonight-covers.html",
+      "captured_at": "2026-10-19T12:36:26.954073+00:00",
+      "sha256": "f3f283bcf4d2208c989a309a96b7654c6efcfa2a224e3a5cf1b4f8135b80c191"
+    },
+    {
+      "file": "tonight-covers-rush_and_rec_yards.html",
+      "captured_at": "2026-10-19T12:37:45.956114+00:00",
+      "sha256": "237b3865cab72a314c244d044216f9a1c84619c03123c88a99acde2acb1e3013"
+    },
+    {
+      "file": "tonight-covers-rushing_yards.html",
+      "captured_at": "2026-10-19T12:37:45.985243+00:00",
+      "sha256": "b076e8b3fae29439f8db1914ae9a10c994a30e3cdf584e6cad126c20b2bbee56"
+    },
+    {
+      "file": "tonight-covers-receiving_yards.html",
+      "captured_at": "2026-10-19T12:37:46.008417+00:00",
+      "sha256": "a4dafbec316a59e0a89b5a45ea6521116cb4c2d9473dcb213845332128eb7770"
+    },
+    {
+      "file": "tonight-covers-receptions_made.html",
+      "captured_at": "2026-10-19T12:37:46.129169+00:00",
+      "sha256": "294844f1e353a9df94f351bb26852b9eea5ef610fda165e84b828a33cc33dc76"
+    },
+    {
+      "file": "tonight-covers-passing_completions.html",
+      "captured_at": "2026-10-19T12:37:45.996567+00:00",
+      "sha256": "382f17fb231a7c1d70f4d7529f9d3301b71b18eee34b663d5760dfdf0269501c"
+    },
+    {
+      "file": "tonight-covers-rushing_attempts.html",
+      "captured_at": "2026-10-19T12:37:45.964573+00:00",
+      "sha256": "c26d07cce1ba83d11da286432eb45d55083641ea483c5ad986727eea1d42a458"
+    },
+    {
+      "file": "tonight-covers-passing_and_rushing_yards.html",
+      "captured_at": "2026-10-19T12:37:49.732136+00:00",
+      "sha256": "8026ac2b68d2927342961c21461e87a60c3c3d14e52a273b91742813ca97877f"
+    },
+    {
+      "file": "tonight-covers-interceptions_thrown.html",
+      "captured_at": "2026-10-19T12:37:45.946009+00:00",
+      "sha256": "91c281420864f1e7609a7e0e66c42b86c6365a472a5033884efd888f2ff8bece"
+    },
+    {
+      "file": "tonight-covers-passing_attempts.html",
+      "captured_at": "2026-10-19T12:37:46.045146+00:00",
+      "sha256": "7b16beb1ebe0b32fead36beb16f6522f5fdda888156f084612a53b5975afdfea"
+    }
+  ],
+  "source_urls": {
+    "dff_dk": "https://www.dailyfantasyfuel.com/nfl/showdown-single-game-projections/2026-10-19/",
+    "dff_fd": "https://www.dailyfantasyfuel.com/nfl/showdown-single-game-projections/fanduel/2026-10-19/",
+    "draftedge": "https://draftedge.com/nfl/",
+    "dk_props": "https://dknetwork.draftkings.com/draftkings-sportsbook-player-props/?tb_edate=n30days&tb_eg=88808&tb_view=2",
+    "covers": "https://www.covers.com/sport/football/nfl/matchup/380011/odds",
+    "statmuse": "https://www.statmuse.com/nfl/game/10-19-2026-was-at-sf-19155",
+    "legion": "https://legionreport.com/commanders-vs-49ers/",
+    "Rushing Yards": "https://www.covers.com/odds/matchup/filling/nfl/380011/269/us",
+    "Receiving Yards": "https://www.covers.com/odds/matchup/filling/nfl/380011/265/us",
+    "Receptions Made": "https://www.covers.com/odds/matchup/filling/nfl/380011/266/us",
+    "Rushing Attempts": "https://www.covers.com/odds/matchup/filling/nfl/380011/243/us",
+    "Passing Attempts": "https://www.covers.com/odds/matchup/filling/nfl/380011/262/us",
+    "Passing Completions": "https://www.covers.com/odds/matchup/filling/nfl/380011/244/us",
+    "Interceptions Thrown": "https://www.covers.com/odds/matchup/filling/nfl/380011/250/us",
+    "Rush and Rec Yards": "https://www.covers.com/odds/matchup/filling/nfl/380011/267/us",
+    "Passing and Rushing Yards": "https://www.covers.com/odds/matchup/filling/nfl/380011/261/us"
+  },
+  "caveats": [
+    "Morning snapshot, not closing lines; individual quote update times unavailable.",
+    "Provider scoring for generic DraftEdge values not independently confirmed for FanDuel; preserved separately and used exactly as current generic app blend.",
+    "DFF injury statuses only; Questionable retained. No presumed starters or missing player projections added.",
+    "Neutral weather; reconstructed dated historical roles.",
+    "One-sided anytime touchdown prices excluded, no inferred no-vig TD probability.",
+    "This is a partial-market challenger, not a full market-only point projection model."
+  ],
+  "valid_same_book_pairs": 136,
+  "excluded_rows_including_repeated_cards": 548,
+  "fit_reports": {
+    "DraftKings": {
+      "effective_sample_size": 4281.714457120823,
+      "tempering": 1.0,
+      "mean_abs_probability_residual": 0.019903567132194384,
+      "iterations": 11,
+      "players": 27,
+      "constraints": 27
+    },
+    "FanDuel": {
+      "effective_sample_size": 2818.239867954452,
+      "tempering": 0.9,
+      "mean_abs_probability_residual": 0.03489532250743825,
+      "iterations": 12,
+      "players": 26,
+      "constraints": 25
+    }
+  },
+  "code_hashes": {
+    "simmah_market_trial.py": "e7791b7abea4b318026114144262e4e53fa3dc191ac9a32ba1431aa567245fe6",
+    "simmah_nfl_engine.py": "cae146e52d98af675e7a9852b4255f2586dd7a857b8011b086168c4fd933c708",
+    "simmah_projection_inputs.py": "90291b8d4c3dbd85128d1e428d7e39243d0031d6e8f52ff052089eeba877a57a",
+    "simmah_nfl_scoring.py": "6cd046c179df5c8d1342d7cfb7a97959c3a5d159e81a3211c1697ac97bd9c0b6",
+    "simmah_matchups.py": "77f3d8617ca042a002e67d9364afeaf6805086fb5318325ce7030f7c56b03723",
+    "scripts/prepare_market_trial.py": "daab1cca975b6a4f106344e14d3320c5c220782ca312cc9c9e2e6f2177a8b699",
+    "scripts/score_market_trial.py": "4e190147060a789beb021e47d25d0256bd7e95f9088c7c844515eaa04dbb245f"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "classification": "Synthetic two-team twelve-player fixture; not full-slate app performance",
+  "outcomes_per_matrix": 10000,
+  "matrices": [
+    "evaluation",
+    "construction"
+  ],
+  "cold": {
+    "fit_seconds": 4.531911349000438,
+    "evaluation_seconds": 1.4246983800003363,
+    "construction_seconds": 1.4155625410003267,
+    "persist_seconds": 0.08266155200180947,
+    "total_seconds": 7.467257692998828
+  },
+  "warm": {
+    "load_seconds": 0.02987514199958241
+  },
+  "warm_engine_calls": 0
+}

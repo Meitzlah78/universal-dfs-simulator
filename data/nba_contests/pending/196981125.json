@@ -1,0 +1,120 @@
+{
+  "id": "196981125",
+  "platform": "DraftKings",
+  "date": "2026-10-21",
+  "name": "NBA $5K Quarter Jukebox [Just $0.25!]",
+  "capacity": null,
+  "entry_fee": 0.25,
+  "prize_pool": 5000,
+  "max_entries": 20,
+  "payout_tiers": [
+    {
+      "first": 1,
+      "last": 1,
+      "prize": 250
+    },
+    {
+      "first": 2,
+      "last": 2,
+      "prize": 150
+    },
+    {
+      "first": 3,
+      "last": 3,
+      "prize": 100
+    },
+    {
+      "first": 4,
+      "last": 4,
+      "prize": 75
+    },
+    {
+      "first": 5,
+      "last": 5,
+      "prize": 50
+    },
+    {
+      "first": 6,
+      "last": 6,
+      "prize": 40
+    },
+    {
+      "first": 7,
+      "last": 8,
+      "prize": 30
+    },
+    {
+      "first": 9,
+      "last": 10,
+      "prize": 25
+    },
+    {
+      "first": 11,
+      "last": 13,
+      "prize": 20
+    },
+    {
+      "first": 14,
+      "last": 16,
+      "prize": 15
+    },
+    {
+      "first": 17,
+      "last": 20,
+      "prize": 10
+    },
+    {
+      "first": 21,
+      "last": 25,
+      "prize": 8
+    },
+    {
+      "first": 26,
+      "last": 35,
+      "prize": 6
+    },
+    {
+      "first": 36,
+      "last": 45,
+      "prize": 5
+    },
+    {
+      "first": 46,
+      "last": 60,
+      "prize": 4
+    },
+    {
+      "first": 61,
+      "last": 90,
+      "prize": 3
+    },
+    {
+      "first": 91,
+      "last": 185,
+      "prize": 2
+    },
+    {
+      "first": 186,
+      "last": 390,
+      "prize": 1.5
+    },
+    {
+      "first": 391,
+      "last": 940,
+      "prize": 1
+    },
+    {
+      "first": 941,
+      "last": 2340,
+      "prize": 0.75
+    },
+    {
+      "first": 2341,
+      "last": 5705,
+      "prize": 0.5
+    }
+  ],
+  "source": "User supplied payouts; contest ID and 20 reserved entries verified from DKEntries(2).csv. Salary table dated 2026-10-21.",
+  "capacity_display": "23.7K",
+  "status": "Pending exact capacity; rounded display is insufficient for contest simulation"
+}

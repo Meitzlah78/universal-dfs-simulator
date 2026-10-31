@@ -1,0 +1,122 @@
+{
+  "name": "$15K Fri NBA Fadeaway (Only $0.25 to Enter)",
+  "platform": "FanDuel",
+  "date": "2026-10-23",
+  "capacity": 71856,
+  "entry_fee": 0.25,
+  "prize_pool": 15000,
+  "max_entries": 150,
+  "payout_tiers": [
+    {
+      "first": 1,
+      "last": 1,
+      "prize": 750
+    },
+    {
+      "first": 2,
+      "last": 2,
+      "prize": 300
+    },
+    {
+      "first": 3,
+      "last": 3,
+      "prize": 200
+    },
+    {
+      "first": 4,
+      "last": 4,
+      "prize": 150
+    },
+    {
+      "first": 5,
+      "last": 5,
+      "prize": 100
+    },
+    {
+      "first": 6,
+      "last": 6,
+      "prize": 75
+    },
+    {
+      "first": 7,
+      "last": 7,
+      "prize": 50
+    },
+    {
+      "first": 8,
+      "last": 8,
+      "prize": 30
+    },
+    {
+      "first": 9,
+      "last": 10,
+      "prize": 25
+    },
+    {
+      "first": 11,
+      "last": 12,
+      "prize": 20
+    },
+    {
+      "first": 13,
+      "last": 15,
+      "prize": 15
+    },
+    {
+      "first": 16,
+      "last": 20,
+      "prize": 10
+    },
+    {
+      "first": 21,
+      "last": 30,
+      "prize": 8
+    },
+    {
+      "first": 31,
+      "last": 50,
+      "prize": 6
+    },
+    {
+      "first": 51,
+      "last": 70,
+      "prize": 4
+    },
+    {
+      "first": 71,
+      "last": 100,
+      "prize": 3
+    },
+    {
+      "first": 101,
+      "last": 200,
+      "prize": 2
+    },
+    {
+      "first": 201,
+      "last": 500,
+      "prize": 1.5
+    },
+    {
+      "first": 501,
+      "last": 1000,
+      "prize": 1
+    },
+    {
+      "first": 1001,
+      "last": 4000,
+      "prize": 0.75
+    },
+    {
+      "first": 4001,
+      "last": 10000,
+      "prize": 0.6
+    },
+    {
+      "first": 10001,
+      "last": 21580,
+      "prize": 0.5
+    }
+  ],
+  "source": "User-supplied contest details and payout screenshot Screenshot 2026-10-22 235246.png. Friday date 2026-10-23; exact uploaded name/platform/date/fee match required. Contest ID comes from uploaded entries. Current fill 2181 is not capacity."
+}

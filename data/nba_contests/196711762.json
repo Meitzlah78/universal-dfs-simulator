@@ -1,0 +1,102 @@
+{
+  "id": "196711762",
+  "platform": "DraftKings",
+  "date": "2026-10-20",
+  "name": "NBA $1.5K Quarter Jukebox [Just $0.25!] (Night)",
+  "capacity": 7134,
+  "entry_fee": 0.25,
+  "prize_pool": 1500,
+  "payout_tiers": [
+    {
+      "first": 1,
+      "last": 1,
+      "prize": 100
+    },
+    {
+      "first": 2,
+      "last": 2,
+      "prize": 75
+    },
+    {
+      "first": 3,
+      "last": 3,
+      "prize": 50
+    },
+    {
+      "first": 4,
+      "last": 4,
+      "prize": 35
+    },
+    {
+      "first": 5,
+      "last": 5,
+      "prize": 25
+    },
+    {
+      "first": 6,
+      "last": 6,
+      "prize": 20
+    },
+    {
+      "first": 7,
+      "last": 8,
+      "prize": 15
+    },
+    {
+      "first": 9,
+      "last": 10,
+      "prize": 10
+    },
+    {
+      "first": 11,
+      "last": 13,
+      "prize": 8
+    },
+    {
+      "first": 14,
+      "last": 16,
+      "prize": 6
+    },
+    {
+      "first": 17,
+      "last": 20,
+      "prize": 5
+    },
+    {
+      "first": 21,
+      "last": 25,
+      "prize": 4
+    },
+    {
+      "first": 26,
+      "last": 30,
+      "prize": 3
+    },
+    {
+      "first": 31,
+      "last": 45,
+      "prize": 2
+    },
+    {
+      "first": 46,
+      "last": 85,
+      "prize": 1.5
+    },
+    {
+      "first": 86,
+      "last": 205,
+      "prize": 1
+    },
+    {
+      "first": 206,
+      "last": 555,
+      "prize": 0.75
+    },
+    {
+      "first": 556,
+      "last": 1706,
+      "prize": 0.5
+    }
+  ],
+  "source": "User supplied contest capacity and complete payouts on 2026-10-20"
+}

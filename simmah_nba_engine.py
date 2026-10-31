@@ -1,0 +1,204 @@
+"""NumPy NBA possession core with experimental score-driven late rotations.
+
+Callers must supply calibrated event rates and on-court rotations. No normal
+fantasy-point draws are used. Quarter boundaries are respected. Overtime requires explicit five-player
+rotations; ties beyond the supplied overtime periods remain marked unresolved.
+"""
+from dataclasses import dataclass
+import numpy as np
+from simmah_nba_scoring import score_nba
+
+STAT_NAMES=('FGM','3PM','FTM','REB','AST','STL','BLK','TO')
+
+@dataclass(frozen=True)
+class EventRates:
+    turnover:float
+    free_throw_trip:float
+    three_share:float
+    make_two:float
+    make_three:float
+    make_free_throw:float
+    assisted:float
+    offensive_rebound:float
+    steal_on_turnover:float
+    block_on_miss:float
+    seconds_per_action:float
+
+    def validate(self):
+        for name,value in vars(self).items():
+            if not np.isfinite(value) or (value<=0 if name=='seconds_per_action' else not 0<=value<=1):
+                raise ValueError('Invalid NBA event rate: '+name)
+        if self.turnover+self.free_throw_trip>1:
+            raise ValueError('Turnover and free throw probabilities exceed one')
+
+
+def simulate_game(rotations, profiles, rates, seed, overtime_rotations=None, platform='FanDuel', blowouts=True):
+    """Simulate an explicit rotation with score-driven garbage-time substitutions.
+
+    rotations: integer (scenarios, 2 teams, 48 minutes, 5 players), global player
+    indices. profiles: (2 teams, players per team, 5 role weights), roles ordered
+    shooter, assist, rebound, steal, block. Team rosters occupy disjoint index
+    ranges. These are role weights, not supplied fantasy projections.
+    """
+    rotation=np.asarray(rotations)
+    weights=np.asarray(profiles,float)
+    if weights.ndim!=3 or weights.shape[0]!=2 or weights.shape[2]!=5 or (weights<0).any() or not np.isfinite(weights).all():
+        raise ValueError('Finite nonnegative two-team role profiles required')
+    size=weights.shape[1]
+    if rotation.ndim!=4 or rotation.shape[1:]!=(2,48,5) or rotation.dtype.kind not in 'iu':
+        raise ValueError('Explicit five-player rotations for 48 minutes required')
+    if size<5 or not len(rotation):raise ValueError('At least five players per team and one scenario required')
+    for team in (0,1):
+        selected=rotation[:,team]
+        if (selected<team*size).any() or (selected>=(team+1)*size).any() or np.any(np.diff(np.sort(selected,axis=-1),axis=-1)==0):
+            raise ValueError('Rotation has wrong-team or duplicate on-court players')
+    if len(rates)!=2:raise ValueError('One event-rate model per team required')
+    for r in rates:r.validate()
+    n=len(rotation)
+    overtime=None if overtime_rotations is None else np.asarray(overtime_rotations)
+    if overtime is not None:
+        if overtime.ndim!=5 or overtime.shape[:2]!=(n,2) or overtime.shape[3:]!=(5,5) or overtime.dtype.kind not in 'iu':
+            raise ValueError('Overtime rotations must be scenarios x teams x periods x 5 minutes x 5 players')
+        for team in (0,1):
+            selected=overtime[:,team]
+            if (selected<team*size).any() or (selected>=(team+1)*size).any() or np.any(np.diff(np.sort(selected,axis=-1),axis=-1)==0):
+                raise ValueError('Overtime rotation has wrong-team or duplicate players')
+    from simmah_nba_blowouts import planned_minutes, garbage_time_court
+    planned=[planned_minutes(rotation[:,t]-t*size,size) for t in (0,1)] if blowouts else None
+    blowout_seen=np.zeros((n,2),bool)
+    rng=np.random.default_rng(seed)
+    stats=np.zeros((n,2*size,len(STAT_NAMES)),np.int32)
+    team_points=np.zeros((n,2),np.int32)
+    clock=np.full(n,2880.);side=rng.integers(0,2,n)
+    opening=side.copy();elapsed=np.zeros(n);period_clock=np.full(n,720.)
+    quarter=np.ones(n,int);overtime_count=np.zeros(n,int)
+    counters={k:np.zeros(n,np.int32) for k in ['field_goal_makes','field_goal_misses','free_throw_misses','credited_rebounds','credited_assists','turnovers','steals','blocks']}
+    flat_weights=weights.reshape(2*size,5)
+    def pick(ids,lineups,role,exclude=None):
+        cdf=flat_weights[lineups,role]
+        if exclude is not None:cdf[lineups==exclude[:,None]]=0
+        # Uniform role allocation among eligible on-court players if all supplied
+        # weights are zero; a scorer is still never his own assister.
+        np.cumsum(cdf,axis=1,out=cdf)
+        empty=cdf[:,-1]<=0
+        if empty.any():
+            uniform=np.ones((int(empty.sum()),5)) if exclude is None else (lineups[empty]!=exclude[empty,None])
+            cdf[empty]=np.cumsum(uniform,axis=1)
+        draw=rng.random(len(ids))*cdf[:,-1]
+        # Five on-court players: the final CDF entry is the draw's upper
+        # bound. Compare the first four boundaries without a row reduction.
+        pick_index=(cdf[:,0]<draw).astype(np.intp)
+        pick_index+=(cdf[:,1]<draw)
+        pick_index+=(cdf[:,2]<draw)
+        pick_index+=(cdf[:,3]<draw)
+        return lineups[np.arange(len(ids)),pick_index]
+    # Event subsets contain unique scenario IDs; no index pair repeats.
+    # Buffered indexed addition is equivalent to add.at without its reduction cost.
+    def add(ids,player,stat):stats[ids,player,STAT_NAMES.index(stat)]+=1
+    actions=0
+    while np.any(clock>0):
+        actions+=1
+        if actions>5000*(1+(overtime.shape[2] if overtime is not None else 0)):raise RuntimeError('NBA event simulation exceeded its bounded action limit')
+        live=np.flatnonzero(clock>0)
+        action_side=side.copy()
+        for team in (0,1):
+            ids=live[action_side[live]==team]
+            if not len(ids):continue
+            r=rates[team]
+            duration=rng.gamma(4,r.seconds_per_action/4,len(ids))
+            remaining=np.minimum(clock[ids],period_clock[ids])
+            valid=duration<remaining
+            consumed=np.minimum(duration,remaining)
+            clock[ids]=np.maximum(0,clock[ids]-consumed)
+            period_clock[ids]=np.maximum(0,period_clock[ids]-consumed)
+            elapsed[ids]+=consumed
+            ids=ids[valid]
+            if not len(ids):continue
+            minute=np.minimum((elapsed[ids]/60).astype(int),47)
+            offense=rotation[ids,team,minute];defense=rotation[ids,1-team,minute]
+            in_ot=overtime_count[ids]>0
+            if in_ot.any():
+                oi=ids[in_ot];op=overtime_count[oi]-1
+                om=np.clip(((elapsed[oi]-2880-op*300)/60).astype(int),0,4)
+                offense[in_ot]=overtime[oi,team,op,om]
+                defense[in_ot]=overtime[oi,1-team,op,om]
+            if blowouts:
+                margin=team_points[ids,0]-team_points[ids,1]
+                offense,changed=garbage_time_court(offense-team*size,planned[team][ids],elapsed[ids],margin)
+                offense+=team*size;blowout_seen[ids,team]|=changed
+                defense,changed=garbage_time_court(defense-(1-team)*size,planned[1-team][ids],elapsed[ids],margin)
+                defense+=(1-team)*size;blowout_seen[ids,1-team]|=changed
+            shooter=pick(ids,offense,0)
+            choice=rng.random(len(ids))
+            turn=choice<r.turnover
+            trips=(choice>=r.turnover)&(choice<r.turnover+r.free_throw_trip)
+            shots=~(turn|trips)
+            if turn.any():
+                ti=ids[turn];add(ti,shooter[turn],'TO');counters['turnovers'][ti]+=1
+                stolen=rng.random(len(ti))<r.steal_on_turnover
+                if stolen.any():
+                    si=ti[stolen];add(si,pick(si,defense[np.flatnonzero(turn)[stolen]],3),'STL');counters['steals'][si]+=1
+                side[ti]=1-team
+            if trips.any():
+                ti=ids[trips];tp=shooter[trips]
+                made=rng.random((len(ti),2))<r.make_free_throw
+                made_count=made.sum(axis=1)
+                stats[ti,tp,2]+=made_count
+                team_points[ti,team]+=made_count
+                counters['free_throw_misses'][ti]+=2-made_count
+                # Only the final miss creates a live rebound opportunity.
+                last_miss=~made[:,-1]
+                side[ti]=1-team
+                if last_miss.any():
+                    ri=ti[last_miss];oreb=rng.random(len(ri))<r.offensive_rebound
+                    rows=np.flatnonzero(trips)[last_miss]
+                    lineup=np.where(oreb[:,None],offense[rows],defense[rows])
+                    add(ri,pick(ri,lineup,2),'REB');counters['credited_rebounds'][ri]+=1
+                    side[ri]=np.where(oreb,team,1-team)
+            if shots.any():
+                shot_rows=np.flatnonzero(shots)
+                si=ids[shots];sp=shooter[shots]
+                three=rng.random(len(si))<r.three_share
+                made=rng.random(len(si))<np.where(three,r.make_three,r.make_two)
+                if made.any():
+                    mi=si[made];mp=sp[made]
+                    add(mi,mp,'FGM');add(mi[three[made]],mp[three[made]],'3PM')
+                    team_points[mi,team]+=2+three[made]
+                    counters['field_goal_makes'][mi]+=1
+                    assisted=rng.random(len(mi))<r.assisted
+                    if assisted.any():
+                        ai=mi[assisted];ap=pick(ai,offense[shot_rows[made][assisted]],1,mp[assisted])
+                        add(ai,ap,'AST');counters['credited_assists'][ai]+=1
+                    side[mi]=1-team
+                if (~made).any():
+                    ri=si[~made];counters['field_goal_misses'][ri]+=1
+                    blocked=rng.random(len(ri))<r.block_on_miss
+                    if blocked.any():
+                        bi=ri[blocked];add(bi,pick(bi,defense[shot_rows[~made][blocked]],4),'BLK');counters['blocks'][bi]+=1
+                    oreb=rng.random(len(ri))<r.offensive_rebound
+                    rows=shot_rows[~made]
+                    lineup=np.where(oreb[:,None],offense[rows],defense[rows])
+                    add(ri,pick(ri,lineup,2),'REB');counters['credited_rebounds'][ri]+=1
+                    side[ri]=np.where(oreb,team,1-team)
+        # A shot may not span a period boundary. Expired periods advance without
+        # crediting an event; overtime requires an explicit on-court rotation.
+        next_quarter=(period_clock<=0)&(clock>0)&(overtime_count==0)
+        quarter[next_quarter]+=1
+        period_clock[next_quarter]=720
+        next_period=quarter[next_quarter]
+        side[next_quarter]=np.where((next_period==2)|(next_period==3),1-opening[next_quarter],opening[next_quarter])
+        tied=(clock<=0)&(team_points[:,0]==team_points[:,1])
+        can_extend=tied & (overtime_count < (overtime.shape[2] if overtime is not None else 0))
+        if can_extend.any():
+            overtime_count[can_extend]+=1
+            clock[can_extend]=300
+            period_clock[can_extend]=300
+            side[can_extend]=rng.integers(0,2,int(can_extend.sum()))
+    fgm,threes,ftm,reb,ast,stl,blk,to=np.moveaxis(stats,2,0)
+    scores=score_nba(platform,fgm=fgm,threes=threes,ftm=ftm,rebounds=reb,assists=ast,steals=stl,blocks=blk,turnovers=to)
+    return {'scores':scores.astype(np.float32),'stats':stats,'team_points':team_points,
+        'requires_overtime':team_points[:,0]==team_points[:,1], 'overtime_periods':overtime_count, 'elapsed_seconds':elapsed, 'counters':counters,
+        'blowout_rotation_applied':blowout_seen,
+        'engine':'experimental-nba-possession-v3-score-driven-blowouts'}
+
+

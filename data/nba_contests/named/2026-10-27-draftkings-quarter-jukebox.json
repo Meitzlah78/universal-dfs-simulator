@@ -1,0 +1,106 @@
+{
+  "name": "NBA $3K Quarter Jukebox [Just $0.25!]",
+  "capacity": 14268,
+  "prize_pool": 3000,
+  "source": "Exact 14,268 capacity, contest name, fee and payout table supplied by user on 2026-10-27",
+  "payout_tiers": [
+    {
+      "first": 1,
+      "last": 1,
+      "prize": 150
+    },
+    {
+      "first": 2,
+      "last": 2,
+      "prize": 100
+    },
+    {
+      "first": 3,
+      "last": 3,
+      "prize": 60
+    },
+    {
+      "first": 4,
+      "last": 4,
+      "prize": 45
+    },
+    {
+      "first": 5,
+      "last": 5,
+      "prize": 35
+    },
+    {
+      "first": 6,
+      "last": 6,
+      "prize": 25
+    },
+    {
+      "first": 7,
+      "last": 8,
+      "prize": 20
+    },
+    {
+      "first": 9,
+      "last": 10,
+      "prize": 15
+    },
+    {
+      "first": 11,
+      "last": 13,
+      "prize": 10
+    },
+    {
+      "first": 14,
+      "last": 16,
+      "prize": 8
+    },
+    {
+      "first": 17,
+      "last": 20,
+      "prize": 6
+    },
+    {
+      "first": 21,
+      "last": 25,
+      "prize": 5
+    },
+    {
+      "first": 26,
+      "last": 35,
+      "prize": 4
+    },
+    {
+      "first": 36,
+      "last": 55,
+      "prize": 3
+    },
+    {
+      "first": 56,
+      "last": 120,
+      "prize": 2
+    },
+    {
+      "first": 121,
+      "last": 255,
+      "prize": 1.5
+    },
+    {
+      "first": 256,
+      "last": 610,
+      "prize": 1
+    },
+    {
+      "first": 611,
+      "last": 1490,
+      "prize": 0.75
+    },
+    {
+      "first": 1491,
+      "last": 3419,
+      "prize": 0.5
+    }
+  ],
+  "platform": "DraftKings",
+  "entry_fee": 0.25,
+  "date": "2026-10-27"
+}

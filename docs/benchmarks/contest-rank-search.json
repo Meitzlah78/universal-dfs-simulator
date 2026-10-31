@@ -1,0 +1,12 @@
+{
+  "scope": "Direct app score_batch, synthetic player outcomes and roster indices; offline runtime only",
+  "simulations": 10000,
+  "candidates": 5000,
+  "opponents": 10000,
+  "workers": 4,
+  "seed": 42,
+  "before_seconds": 27.75383206999868,
+  "after_seconds": 22.19309744900056,
+  "validation": "Exact equality of all seven batch metrics against original function: 1, 20, 5000 candidates; 1x and 1.5x; integer outcomes with ties. Permanent scalar-reference tests include payout and no-payout paths.",
+  "limitation": "Single timing per implementation; not Streamlit Cloud timing, legal-lineup validation, or model accuracy validation. Simulation and opponent counts unchanged."
+}

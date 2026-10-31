@@ -1,0 +1,74 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+body{margin:0;font:14px system-ui;color:#dce8f4;background:transparent}.bar{display:flex;overflow-x:auto;gap:7px;padding:5px 0;white-space:nowrap}button{color:#bccddb;background:#102536;border:1px solid #34516b;border-radius:7px;padding:8px 11px;cursor:pointer;max-width:300px;overflow:hidden;text-overflow:ellipsis;flex-shrink:0}button.active{color:#fff;background:#225a80;border-color:#4b9fd3}.note{font-size:11px;color:#91a9be}.slate{display:flex;flex-shrink:0}.slate button{border-radius:7px 0 0 7px}.slate .close{border-radius:0 7px 7px 0;padding:8px;color:#ccd9e3}.slate .close:hover{background:#793535;color:white}#status{font-size:11px;color:#91a9be}
+</style></head><body><div class="bar" id="tabs" role="tablist" aria-label="Loaded slates"></div><div id="status">Restoring loaded slates…</div><script>
+const send=(type,extra={})=>window.parent.postMessage({isStreamlitMessage:true,type,...extra},'*');
+const transferState=window.parent.__simmahSlateTransfersV1||(window.parent.__simmahSlateTransfersV1={upload:null,download:null,lastDownload:null,lastFullEvent:null,records:new Map(),closedIds:new Set(),loaded:false});
+let db,records=transferState.records,generation,active,busy=false,lastIncoming=null,queued=null;const closedIds=transferState.closedIds;
+const CHUNK_CHARS=1000000;
+const openDB=()=>new Promise((resolve,reject)=>{const request=indexedDB.open('simmah-loaded-slates-v1',1);request.onupgradeneeded=()=>request.result.createObjectStore('slates',{keyPath:'id'});request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error)});
+const all=()=>new Promise((resolve,reject)=>{const r=db.transaction('slates').objectStore('slates').getAll();r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});
+const put=record=>new Promise((resolve,reject)=>{const tx=db.transaction('slates','readwrite');tx.objectStore('slates').put(record);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)});
+const remove=id=>new Promise((resolve,reject)=>{const tx=db.transaction('slates','readwrite');tx.objectStore('slates').delete(id);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)});
+async function closeSlate(record){
+ if(busy||transferState.upload||transferState.download)return;
+ busy=true;
+ try{
+  const previousActive=active;
+  await remove(record.id);closedIds.add(record.id);records.delete(record.id);
+  const next=record.id===active?([...records.values()].at(-1)||null):(records.get(active)||null);
+  active=next?.id||null;
+  if(active)localStorage.setItem('simmah-active-slate',active);else localStorage.removeItem('simmah-active-slate');
+  draw();
+  if(record.id===previousActive&&next)select(next,{closed:record.id});
+  else send('streamlit:setComponentValue',{value:{event:crypto.randomUUID(),closed:record.id,selected:null},dataType:'json'});
+ }catch(error){document.getElementById('status').textContent='Could not close slate: '+error.message}
+ finally{busy=false}
+}
+function emitValue(value){send('streamlit:setComponentValue',{value,dataType:'json'})}
+function uploadPart(){const t=transferState.upload;emitValue({event:t.id+':'+t.index,upload_part:{id:t.id,index:t.index,total:t.parts.length,data:t.parts[t.index]}});draw()}
+function select(record,extra={}){
+ if(transferState.upload||transferState.download)return;
+ localStorage.setItem('simmah-active-slate',record.id);
+ const value={event:crypto.randomUUID(),selected:record,...extra},raw=JSON.stringify(value);
+ if(raw.length<=CHUNK_CHARS){transferState.lastFullEvent=value.event;emitValue(value);return}
+ const parts=[];for(let start=0;start<raw.length;){let end=Math.min(start+CHUNK_CHARS,raw.length);const tail=raw.charCodeAt(end-1);if(end<raw.length&&tail>=0xD800&&tail<=0xDBFF)end--;parts.push(raw.slice(start,end));start=end}
+ transferState.upload={id:crypto.randomUUID(),parts,index:0};transferState.lastFullEvent=null;uploadPart()
+}
+async function receiveDownload(part){
+ if(!transferState.download||transferState.download.id!==part.id){if(part.index!==0){emitValue({event:crypto.randomUUID(),download_restart:part.id});return}transferState.download={id:part.id,total:part.total,parts:[]}}
+ const t=transferState.download;if(t.total!==part.total||part.index>t.parts.length||part.data.length>CHUNK_CHARS)throw Error('Invalid saved-slate transfer');
+ if(part.index===t.parts.length)t.parts.push(part.data);
+ if(t.parts.length===t.total){
+  const payload=JSON.parse(t.parts.join('')),r={...payload.current,snapshot:payload.snapshot,updated:Date.now()};
+  await put(r);records.set(r.id,r);active=r.id;transferState.lastDownload=t.id;transferState.download=null
+ }
+ emitValue({event:crypto.randomUUID(),download_ack:{id:part.id,index:part.index}})
+}
+function draw(){const bar=document.getElementById('tabs');bar.replaceChildren();for(const record of records.values()){const b=document.createElement('button');b.textContent=record.title;b.title=record.name;b.className=record.id===active?'active':'';b.setAttribute('role','tab');b.setAttribute('aria-selected',record.id===active);b.onclick=()=>{if(record.id!==active)select(record)};const group=document.createElement('div');group.className='slate';group.append(b);const close=document.createElement('button');close.className='close';close.textContent='×';close.title='Close slate';close.setAttribute('aria-label','Close '+record.title);close.onclick=()=>closeSlate(record);group.append(close);bar.append(group)}document.getElementById('status').textContent=transferState.upload?('Restoring saved slate: '+(transferState.upload.index+1)+' / '+transferState.upload.parts.length+' parts'):transferState.download?('Saving slate: '+transferState.download.parts.length+' / '+transferState.download.total+' parts'):records.size?'Slates save in this browser, including across app reboots. Large calculation caches may need rebuilding.':'Upload a slate to create its tab.';send('streamlit:setFrameHeight',{height:records.size?80:34})}
+window.addEventListener('message',async event=>{if(event.data.type!=='streamlit:render')return;if(busy){queued=event;return}busy=true;try{const a=event.data.args;
+ if(typeof localStorage!=='undefined'&&localStorage.getItem('simmah-clean-start-date')===new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()))return;
+
+ if(a.ack&&a.ack===transferState.lastFullEvent){transferState.lastFullEvent=null;send('streamlit:setComponentValue',{value:{event:a.ack,acknowledged:true},dataType:'json'})}
+ if(!db){db=await openDB();if(!transferState.loaded){for(const r of await all())records.set(r.id,r);transferState.loaded=true}}
+ if(a.transport_error){transferState.upload=null;transferState.download=null;document.getElementById('status').textContent=a.transport_error;send('streamlit:setFrameHeight',{height:50});return}
+ if(a.upload_ack&&!transferState.upload)emitValue({event:crypto.randomUUID(),upload_restart:a.upload_ack.id});
+ if(a.upload_ack&&transferState.upload&&a.upload_ack.id===transferState.upload.id&&a.upload_ack.index===transferState.upload.index){
+  transferState.upload.index++;
+  if(transferState.upload.index<transferState.upload.parts.length)uploadPart();
+  else{const id=transferState.upload.id;transferState.upload=null;emitValue({event:crypto.randomUUID(),upload_done:id})}
+ }
+ if(a.download)await receiveDownload(a.download);
+ if(a.download_done&&(!transferState.lastDownload||a.download_done===transferState.lastDownload)){const id=a.download_done;transferState.lastDownload=null;emitValue({event:crypto.randomUUID(),download_received:id})}
+ if(a.transport_only){draw();return}
+
+ if(generation!==a.generation){generation=a.generation;active=a.active;if(!a.active&&records.size){const r=records.get(localStorage.getItem('simmah-active-slate'))||[...records.values()].at(-1);active=r.id;draw();select(r);return}}
+ if(a.reopen)closedIds.delete(a.reopen);
+ if(a.records){for(const r of a.records){if(closedIds.has(r.id))continue;const merged={...records.get(r.id),...r};if(merged.data!==undefined){records.set(r.id,merged);await put(merged)}}}
+ if(a.current&&!closedIds.has(a.current.id)){const r={...a.current,snapshot:a.snapshot,updated:Date.now()};records.set(r.id,r);await put(r);active=r.id}
+ if(a.incoming&&JSON.stringify([a.incoming.id,a.incoming.data])!==lastIncoming){lastIncoming=JSON.stringify([a.incoming.id,a.incoming.data]);const existing=records.get(a.incoming.id);const r={...a.incoming,snapshot:existing?.snapshot||'',updated:Date.now()};records.set(r.id,r);await put(r);active=r.id;draw();select(r);return}
+ active=a.active;draw();
+}catch(error){document.getElementById('status').textContent='Slate save failed: '+error.message;send('streamlit:setComponentValue',{value:{event:crypto.randomUUID(),error:'Browser slate storage failed: '+error.message},dataType:'json'});send('streamlit:setFrameHeight',{height:50})}finally{busy=false;if(queued){const next=queued;queued=null;window.dispatchEvent(new MessageEvent('message',{data:next.data}))}}});
+send('streamlit:componentReady',{apiVersion:1});send('streamlit:setFrameHeight',{height:34});
+</script></body></html>
+
+

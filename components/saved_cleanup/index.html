@@ -1,0 +1,13 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0}</style></head><body><script>
+const send=value=>window.parent.postMessage({isStreamlitMessage:true,type:'streamlit:setComponentValue',value,dataType:'json'},'*');
+window.addEventListener('message',event=>{
+ if(event.data?.type!=='streamlit:render')return;
+ const a=event.data.args;
+ if(!a.fresh&&localStorage.getItem('simmah-clean-start-date')===a.day&&!window.parent.__simmahFreshStartAnnounced){
+  window.parent.__simmahFreshStartAnnounced=true;
+  send({event:crypto.randomUUID(),day:a.day,fresh:true});
+ }
+});
+window.parent.postMessage({isStreamlitMessage:true,type:'streamlit:componentReady',apiVersion:1},'*');
+window.parent.postMessage({isStreamlitMessage:true,type:'streamlit:setFrameHeight',height:0},'*');
+</script></body></html>

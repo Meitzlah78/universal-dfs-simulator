@@ -1,0 +1,44 @@
+{
+  "classification": "SYNTHETIC_REGRESSION_FIXTURE",
+  "scope": "Sequential separate-process full-size build-to-export runs in the Codex execution environment; not the user's full live NBA slate or Streamlit Cloud hardware",
+  "baseline_commit": "597e59cfbd29410e422ae9b9d343030cc098d40c",
+  "baseline_tree_matches_live_merge": "78a16386057de2fc1a65db60531fa7c3cd55cd9d",
+  "physical_players": 24,
+  "teams": 4,
+  "simulations_per_phase": 10000,
+  "independent_phases": 3,
+  "candidate_lineups": 5000,
+  "requested_opponent_support_lineups": 10000,
+  "sampled_opponent_entries_in_replay": 20000,
+  "before": {
+    "full_test_seconds": 16.241,
+    "game_scenarios_seconds": 12.817533034999997,
+    "contest_scoring_seconds": 3.109924077999949,
+    "candidate_seconds": 0.032344643000215,
+    "opponent_field_seconds": 0.12847733999979027,
+    "peak_rss_mib": 252.2109375
+  },
+  "after": {
+    "full_test_seconds": 14.601,
+    "game_scenarios_seconds": 11.510368891000326,
+    "contest_scoring_seconds": 2.7876588889998857,
+    "candidate_seconds": 0.033986871000251995,
+    "opponent_field_seconds": 0.12432777899994107,
+    "peak_rss_mib": 248.62109375
+  },
+  "runtime_reduction_percent": 10.0979,
+  "changes": [
+    "Ordered SciPy CSR lineup scoring instead of repeated NumPy slot-gather temporaries",
+    "In-place five-player role CDFs",
+    "Direct event-subset row indexing rather than chained five-player array copies",
+    "Reuse free-throw make counts"
+  ],
+  "validation": [
+    "Existing frozen event-ledger hashes unchanged for weighted, zero and single-role FD/DK cases",
+    "Isolated 10000-scenario old/new game events, scores and counters byte-equivalent",
+    "Scoring preserves exact original roster-slot addition order across float32, float64, integer and strided inputs",
+    "Weighted duplicate payouts and ties checked against explicitly expanded opponents",
+    "Metrics identical across single-scenario and 128-scenario batches, including histogram and sorting paths"
+  ],
+  "limitations": "Single paired full-size measurement; runtime varies with hardware, slate size, concurrency and cache state. No projection, rotation, ownership, payout or sample-count policy changed. The faster but rounding-different batched rank experiment was not retained."
+}

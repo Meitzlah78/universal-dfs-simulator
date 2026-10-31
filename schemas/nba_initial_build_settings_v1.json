@@ -1,0 +1,491 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "artifact_type": {
+      "const": "initial_build"
+    },
+    "baseline_commit": {
+      "const": "a3e1ec4ddb56d69fc4614eac4e36367cd21f4d06"
+    },
+    "site": {
+      "enum": [
+        "dk",
+        "fd"
+      ]
+    },
+    "slate_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "slate_date": {
+      "type": "string",
+      "minLength": 10
+    },
+    "pipeline": {
+      "type": "object",
+      "properties": {
+        "simulations": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "candidate_target": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "field_support_target": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "seed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "diversity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "salary_min": {
+          "type": "number",
+          "minimum": 0
+        },
+        "max_ownership_error": {
+          "type": "number",
+          "minimum": 0
+        },
+        "ownership_mode": {
+          "enum": [
+            "projected",
+            "relative popularity"
+          ]
+        },
+        "correlation": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "portfolio_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "ownership_source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "excluded_indices": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "excluded_player_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "required": [
+        "simulations",
+        "candidate_target",
+        "field_support_target",
+        "seed",
+        "diversity",
+        "salary_min",
+        "max_ownership_error",
+        "ownership_mode",
+        "correlation",
+        "portfolio_count",
+        "ownership_source",
+        "excluded_indices",
+        "excluded_player_ids"
+      ],
+      "additionalProperties": false
+    },
+    "contest": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "entry_fee": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "contest_entries": {
+          "type": "integer",
+          "minimum": 2
+        },
+        "represented_opponent_entries": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "id",
+        "entry_fee",
+        "contest_entries",
+        "represented_opponent_entries"
+      ],
+      "additionalProperties": false
+    },
+    "site_rules": {
+      "type": "object"
+    },
+    "implementation": {
+      "type": "object",
+      "properties": {
+        "candidate_search": {
+          "const": {
+            "max_attempts": 200000,
+            "batch_size": 512,
+            "gumbel_multiplier": 0.15,
+            "correlation_cutoff": 0.05,
+            "correlation_multiplier": 0.5,
+            "fixed_slots": {}
+          }
+        },
+        "opponent_search": {
+          "const": {
+            "salary_min": 0,
+            "correlation": 0,
+            "excluded_indices": [],
+            "max_attempts": 200000,
+            "batch_size": 512,
+            "scenario_target_rule": "max(1, target // 2)",
+            "ownership_target_rule": "max(1, target - scenario_target)",
+            "proposal_rows": 1024,
+            "popularity_floor": 0.1,
+            "proposal_gumbel_multiplier": 2
+          }
+        },
+        "ownership_fit": {
+          "const": {
+            "method": "L-BFGS-B",
+            "max_iterations": 100,
+            "regularization": 1e-06,
+            "ftol": 1e-12,
+            "gtol": 1e-07,
+            "sum_tolerance_pp": 0.5
+          }
+        },
+        "fallback": {
+          "const": {
+            "strength": 0.5,
+            "popularity_floor": 0.1,
+            "policy": "relative_popularity_after_failed_fit"
+          }
+        },
+        "support_diagnostic": {
+          "const": {
+            "method": "highs",
+            "time_limit_seconds": 5,
+            "feasibility_epsilon_pp": 1e-06
+          }
+        },
+        "evaluation": {
+          "const": {
+            "batch_size": 128,
+            "histogram_max_span": 65536,
+            "histogram_max_entries": 9007199254740992,
+            "field_weighting": "integer_copies",
+            "payout_mode": "marginal_candidate_exact_tie_split",
+            "top_one_percent_rule": "max(1, ceil(contest_entries * .01))"
+          }
+        },
+        "selection": {
+          "const": {
+            "metric": "Top 1%",
+            "controls": null,
+            "stable_sort": true,
+            "canonical_dedup": true,
+            "strength_rule": "diversity / 100",
+            "cap_rule": "100 - 40 * strength",
+            "overlap_multiplier": 0.7,
+            "urgency_multiplier": 2,
+            "repair_seconds": 5,
+            "repair_relative_gap": 0.05,
+            "repair_cap_step": 5,
+            "repair_start_rule": "int(default_max)",
+            "repair_tiebreak": 1e-10
+          }
+        },
+        "engine": {
+          "const": {
+            "max_overtimes": 4,
+            "require_markets": false,
+            "parallel": true,
+            "game_index_offset": 0,
+            "output_dtype": "float32",
+            "rotation_minutes": 48,
+            "overtime_minutes": 5,
+            "minutes_tolerance": 1e-06,
+            "rotation_remainder_noise": 1e-10,
+            "rotation_capacity_noise": 0.01,
+            "event_gamma_shape": 4,
+            "action_limit_per_period_budget": 5000
+          }
+        },
+        "parallel": {
+          "const": {
+            "max_workers": 2,
+            "start_method": "spawn",
+            "minimum_games": 2,
+            "minimum_scenarios": 512,
+            "fallback_exceptions": [
+              "OSError",
+              "BrokenProcessPool"
+            ]
+          }
+        },
+        "calibration": {
+          "const": {
+            "pilot_limit": 1024,
+            "market_iterations": 4,
+            "market_factor_clip": [
+              0.8,
+              1.2
+            ],
+            "make_two_clip": [
+              0.15,
+              0.85
+            ],
+            "make_three_clip": [
+              0.1,
+              0.75
+            ],
+            "team_score_tolerance": 4,
+            "anchor_iterations": 5,
+            "anchor_floor": 0.1,
+            "anchor_ratio_clip": [
+              0.5,
+              2
+            ],
+            "anchor_exponent": 0.7,
+            "assist_clip": [
+              0.05,
+              0.95
+            ]
+          }
+        },
+        "cache": {
+          "const": {
+            "enabled": true,
+            "identity_version": 1,
+            "max_slates": 2,
+            "construction_seed": 83,
+            "draw_order": [
+              "construction",
+              "field",
+              "evaluation"
+            ]
+          }
+        },
+        "seed_offsets": {
+          "const": {
+            "candidate": 1,
+            "field_draw": 1009,
+            "support": 1010,
+            "sampling": 1011,
+            "evaluation": 2017,
+            "ownership_proposal": 37,
+            "ownership_search": 38,
+            "game_stride": 97,
+            "game_events": 3,
+            "overtime_rotation": 10000,
+            "overtime_stride": 11,
+            "calibration_base": 71333,
+            "anchor": 17,
+            "final_market": 31,
+            "market_pilot": 104729,
+            "anchor_validation": 65537
+          }
+        }
+      },
+      "required": [
+        "candidate_search",
+        "opponent_search",
+        "ownership_fit",
+        "fallback",
+        "support_diagnostic",
+        "evaluation",
+        "selection",
+        "engine",
+        "parallel",
+        "calibration",
+        "cache",
+        "seed_offsets"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "schema_version",
+    "artifact_type",
+    "baseline_commit",
+    "site",
+    "slate_id",
+    "slate_date",
+    "pipeline",
+    "contest",
+    "site_rules",
+    "implementation"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "site": {
+            "const": "dk"
+          }
+        },
+        "required": [
+          "site"
+        ]
+      },
+      "then": {
+        "properties": {
+          "site_rules": {
+            "const": {
+              "platform": "DraftKings",
+              "slots": [
+                "PG",
+                "SG",
+                "SF",
+                "PF",
+                "C",
+                "G",
+                "F",
+                "UTIL"
+              ],
+              "eligibility": [
+                [
+                  "PG"
+                ],
+                [
+                  "SG"
+                ],
+                [
+                  "SF"
+                ],
+                [
+                  "PF"
+                ],
+                [
+                  "C"
+                ],
+                [
+                  "PG",
+                  "SG"
+                ],
+                [
+                  "PF",
+                  "SF"
+                ],
+                [
+                  "C",
+                  "PF",
+                  "PG",
+                  "SF",
+                  "SG"
+                ]
+              ],
+              "salary_cap": 50000,
+              "max_from_team": 8,
+              "min_teams": 2,
+              "min_games": 2,
+              "score_ticks": 4
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "site": {
+            "const": "fd"
+          }
+        },
+        "required": [
+          "site"
+        ]
+      },
+      "then": {
+        "properties": {
+          "site_rules": {
+            "const": {
+              "platform": "FanDuel",
+              "slots": [
+                "PG",
+                "SG",
+                "SF",
+                "PF",
+                "C",
+                "GF",
+                "FC",
+                "UTIL1",
+                "UTIL2"
+              ],
+              "eligibility": [
+                [
+                  "PG"
+                ],
+                [
+                  "SG"
+                ],
+                [
+                  "SF"
+                ],
+                [
+                  "PF"
+                ],
+                [
+                  "C"
+                ],
+                [
+                  "PF",
+                  "PG",
+                  "SF",
+                  "SG"
+                ],
+                [
+                  "C",
+                  "PF",
+                  "SF"
+                ],
+                [
+                  "C",
+                  "PF",
+                  "PG",
+                  "SF",
+                  "SG"
+                ],
+                [
+                  "C",
+                  "PF",
+                  "PG",
+                  "SF",
+                  "SG"
+                ]
+              ],
+              "salary_cap": 60000,
+              "max_from_team": 4,
+              "min_teams": 3,
+              "min_games": 1,
+              "score_ticks": 10
+            }
+          }
+        }
+      }
+    }
+  ]
+}

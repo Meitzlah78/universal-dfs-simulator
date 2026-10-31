@@ -1,0 +1,127 @@
+{
+  "name": "$18K Wed NBA Fadeaway (Only $0.25 to Enter)",
+  "platform": "FanDuel",
+  "date": "2026-10-21",
+  "capacity": 86228,
+  "entry_fee": 0.25,
+  "prize_pool": 18000,
+  "max_entries": 150,
+  "payout_tiers": [
+    {
+      "first": 1,
+      "last": 1,
+      "prize": 500
+    },
+    {
+      "first": 2,
+      "last": 2,
+      "prize": 250
+    },
+    {
+      "first": 3,
+      "last": 3,
+      "prize": 150
+    },
+    {
+      "first": 4,
+      "last": 4,
+      "prize": 125
+    },
+    {
+      "first": 5,
+      "last": 5,
+      "prize": 100
+    },
+    {
+      "first": 6,
+      "last": 6,
+      "prize": 75
+    },
+    {
+      "first": 7,
+      "last": 7,
+      "prize": 50
+    },
+    {
+      "first": 8,
+      "last": 8,
+      "prize": 40
+    },
+    {
+      "first": 9,
+      "last": 10,
+      "prize": 30
+    },
+    {
+      "first": 11,
+      "last": 15,
+      "prize": 20
+    },
+    {
+      "first": 16,
+      "last": 20,
+      "prize": 15
+    },
+    {
+      "first": 21,
+      "last": 30,
+      "prize": 10
+    },
+    {
+      "first": 31,
+      "last": 40,
+      "prize": 8
+    },
+    {
+      "first": 41,
+      "last": 60,
+      "prize": 6
+    },
+    {
+      "first": 61,
+      "last": 100,
+      "prize": 5
+    },
+    {
+      "first": 101,
+      "last": 250,
+      "prize": 4
+    },
+    {
+      "first": 251,
+      "last": 400,
+      "prize": 3
+    },
+    {
+      "first": 401,
+      "last": 600,
+      "prize": 2
+    },
+    {
+      "first": 601,
+      "last": 1000,
+      "prize": 1.5
+    },
+    {
+      "first": 1001,
+      "last": 2000,
+      "prize": 1
+    },
+    {
+      "first": 2001,
+      "last": 5000,
+      "prize": 0.75
+    },
+    {
+      "first": 5001,
+      "last": 10000,
+      "prize": 0.6
+    },
+    {
+      "first": 10001,
+      "last": 25350,
+      "prize": 0.5
+    }
+  ],
+  "source": "User supplied full payout screenshot Screenshot 2026-10-21 001422.png; name/date/fee/platform match required; contest ID comes from uploaded entries"
+}

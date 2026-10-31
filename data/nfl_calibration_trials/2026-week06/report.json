@@ -1,0 +1,276 @@
+{
+  "status": "offline exploratory temporal holdout; no live parameters changed",
+  "training": {
+    "rows": 2687,
+    "games": 15,
+    "sha256": "fc3d99ae9d4d3a40103813cab01c6fcd5affb0067c42f06fd79233a52ac2524f",
+    "game_audit": [
+      {
+        "game_id": "2026_05_BAL_ATL",
+        "rows": 194,
+        "max_quarter": 5,
+        "regulation_end_present": true
+      },
+      {
+        "game_id": "2026_05_BUF_LA",
+        "rows": 199,
+        "max_quarter": 5,
+        "regulation_end_present": true
+      },
+      {
+        "game_id": "2026_05_CHI_GB",
+        "rows": 170,
+        "max_quarter": 4,
+        "regulation_end_present": true
+      },
+      {
+        "game_id": "2026_05_CIN_MIA",
+        "rows": 172,
+        "max_quarter": 4,
+        "regulation_end_present": true
+      },
+      {
+        "game_id": "2026_05_CLE_NYJ",
+        "rows": 184,
+        "max_quarter": 4,
+        "regulation_end_present": true
+      },
+      {
+        "game_id": "2026_05_DEN_LAC",
+        "rows": 177,
+        "max_quarter": 4,
+        "regulation_end_present": true
+      },
+      {
+        "game_id": "2026_05_DET_ARI",
+        "rows": 182,
+        "max_quarter": 4,
+        "regulation_end_present": true
+      },
+      {
+        "game_id": "2026_05_HOU_TEN",
+        "rows": 164,
+        "max_quarter": 4,
+        "regulation_end_present": true
+      },
+      {
+        "game_id": "2026_05_IND_PIT",
+        "rows": 176,
+        "max_quarter": 4,
+        "regulation_end_present": true
+      },
+      {
+        "game_id": "2026_05_LV_NE",
+        "rows": 175,
+        "max_quarter": 4,
+        "regulation_end_present": true
+      },
+      {
+        "game_id": "2026_05_MIN_NO",
+        "rows": 155,
+        "max_quarter": 4,
+        "regulation_end_present": true
+      },
+      {
+        "game_id": "2026_05_NYG_WAS",
+        "rows": 210,
+        "max_quarter": 5,
+        "regulation_end_present": true
+      },
+      {
+        "game_id": "2026_05_PHI_JAX",
+        "rows": 188,
+        "max_quarter": 4,
+        "regulation_end_present": true
+      },
+      {
+        "game_id": "2026_05_SF_SEA",
+        "rows": 169,
+        "max_quarter": 4,
+        "regulation_end_present": true
+      },
+      {
+        "game_id": "2026_05_TB_DAL",
+        "rows": 172,
+        "max_quarter": 4,
+        "regulation_end_present": true
+      }
+    ]
+  },
+  "evaluation": {
+    "rows": 2538,
+    "games": 14,
+    "sha256": "f81867d20490f6d8318d3482369c683e8e97e2ecd61385e3aeb40208d72c1b2a",
+    "game_audit": [
+      {
+        "game_id": "2026_06_ARI_LA",
+        "rows": 173,
+        "max_quarter": 4,
+        "regulation_end_present": true
+      },
+      {
+        "game_id": "2026_06_BAL_CLE",
+        "rows": 170,
+        "max_quarter": 4,
+        "regulation_end_present": true
+      },
+      {
+        "game_id": "2026_06_BUF_LV",
+        "rows": 182,
+        "max_quarter": 4,
+        "regulation_end_present": true
+      },
+      {
+        "game_id": "2026_06_CAR_PHI",
+        "rows": 187,
+        "max_quarter": 4,
+        "regulation_end_present": true
+      },
+      {
+        "game_id": "2026_06_CHI_ATL",
+        "rows": 176,
+        "max_quarter": 4,
+        "regulation_end_present": true
+      },
+      {
+        "game_id": "2026_06_DAL_GB",
+        "rows": 194,
+        "max_quarter": 4,
+        "regulation_end_present": true
+      },
+      {
+        "game_id": "2026_06_HOU_JAX",
+        "rows": 178,
+        "max_quarter": 4,
+        "regulation_end_present": true
+      },
+      {
+        "game_id": "2026_06_LAC_KC",
+        "rows": 166,
+        "max_quarter": 4,
+        "regulation_end_present": true
+      },
+      {
+        "game_id": "2026_06_NO_NYG",
+        "rows": 204,
+        "max_quarter": 4,
+        "regulation_end_present": true
+      },
+      {
+        "game_id": "2026_06_NYJ_NE",
+        "rows": 174,
+        "max_quarter": 4,
+        "regulation_end_present": true
+      },
+      {
+        "game_id": "2026_06_PIT_TB",
+        "rows": 208,
+        "max_quarter": 5,
+        "regulation_end_present": true
+      },
+      {
+        "game_id": "2026_06_SEA_DEN",
+        "rows": 189,
+        "max_quarter": 5,
+        "regulation_end_present": true
+      },
+      {
+        "game_id": "2026_06_TEN_IND",
+        "rows": 169,
+        "max_quarter": 4,
+        "regulation_end_present": true
+      },
+      {
+        "game_id": "2026_06_WAS_SF",
+        "rows": 168,
+        "max_quarter": 4,
+        "regulation_end_present": true
+      }
+    ]
+  },
+  "prior_exposures": 1000.0,
+  "metrics": [
+    {
+      "metric": "early_down_pass_rate",
+      "baseline_default": 0.58,
+      "train_count": 1764,
+      "train_observed": 0.5810657596371882,
+      "fitted": 0.5806801736613604,
+      "test_count": 1715,
+      "test_observed": 0.6110787172011661,
+      "baseline_log_loss": 0.670260617213949,
+      "fitted_log_loss": 0.6701747704392756,
+      "log_loss_change": -8.584677467338153e-05
+    },
+    {
+      "metric": "sack_rate",
+      "baseline_default": 0.065,
+      "train_count": 1058,
+      "train_observed": 0.07277882797731569,
+      "fitted": 0.06899902818270165,
+      "test_count": 1074,
+      "test_observed": 0.06610800744878957,
+      "baseline_log_loss": 0.24346322587306501,
+      "fitted_log_loss": 0.24351909284084056,
+      "log_loss_change": 5.58669677755419e-05
+    },
+    {
+      "metric": "interception_given_no_sack",
+      "baseline_default": 0.021,
+      "train_count": 981,
+      "train_observed": 0.017329255861365953,
+      "fitted": 0.019182231196365473,
+      "test_count": 1003,
+      "test_observed": 0.019940179461615155,
+      "baseline_log_loss": 0.0978339894886573,
+      "fitted_log_loss": 0.09782128505094241,
+      "log_loss_change": -1.2704437714894379e-05
+    },
+    {
+      "metric": "completion_given_no_sack_or_interception",
+      "baseline_default": 0.64,
+      "train_count": 964,
+      "train_observed": 0.6576763485477178,
+      "fitted": 0.6486761710794298,
+      "test_count": 983,
+      "test_observed": 0.6368260427263479,
+      "baseline_log_loss": 0.6552443760064169,
+      "fitted_log_loss": 0.6555290893632455,
+      "log_loss_change": 0.0002847133568285587
+    }
+  ],
+  "yardage_observations": {
+    "week5": {
+      "yards_per_completion": {
+        "count": 634,
+        "mean": 10.646687697160884
+      },
+      "yards_per_rush": {
+        "count": 755,
+        "mean": 4.433112582781457
+      }
+    },
+    "week6": {
+      "yards_per_completion": {
+        "count": 626,
+        "mean": 10.675718849840255
+      },
+      "yards_per_rush": {
+        "count": 678,
+        "mean": 4.0
+      }
+    }
+  },
+  "caveats": [
+    "Protocol constructed after Week 6 outcomes; not a prospective trial.",
+    "Baseline defaults only: live player histories, margins, weather and market gains are not reproduced.",
+    "One training week and one evaluation week cannot establish persistent improvement or lineup ROI.",
+    "Regulation-end markers checked in archive; not independent official final-status verification.",
+    "Overtime, conversions, kneels and spikes excluded by quarter/play-type filters.",
+    "Sacks/pass definitions use recorded pass play_type; QB scrambles are recorded runs.",
+    "Archive lacks fumble-loss, kick-result and complete scoring fields; no DK/FD actual fantasy scores reconstructed.",
+    "No frozen player predictions, tail probabilities, lineups or opponent fields are evaluated here."
+  ],
+  "source_code_commit": "35b689b40f02faacf7040a8e8fb2b0f85ab2301d",
+  "recommendation": "Do not promote this challenger: probability loss improves for two rates and worsens for two; no player-level validation."
+}

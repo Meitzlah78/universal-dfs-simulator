@@ -1,0 +1,147 @@
+import unittest
+import numpy as np
+import pandas as pd
+from simmah_portfolio_selection import select_portfolio,put_portfolio_first
+
+
+def fixture():
+    rng=np.random.default_rng(9)
+    names=np.array([f'P{i}' for i in range(35)])
+    score=rng.random((2000,35));score[:,0:5]*=.2
+    picks=np.argsort(score,axis=1)[:,:9]
+    d=pd.DataFrame(names[picks],columns=[f'S{i}' for i in range(9)])
+    d['Top1']=1-np.arange(len(d))/len(d)
+    return d,list(d.columns[:9])
+
+
+class PortfolioSelectionTests(unittest.TestCase):
+    def test_caps_unique_legal_candidates_and_ranking_retained(self):
+        d,slots=fixture();p=select_portfolio(d,slots,20,'Top1')
+        self.assertEqual(len(p),20)
+        counts=p[slots].stack().value_counts()
+        self.assertLessEqual(counts.max(),16)
+        originals={tuple(row) for row in d[slots].itertuples(index=False,name=None)}
+        self.assertTrue(all(tuple(row) in originals for row in p[slots].itertuples(index=False,name=None)))
+        self.assertEqual(p[slots].apply(lambda r:tuple(sorted(r)),axis=1).nunique(),20)
+        q=put_portfolio_first(d,p,slots)
+        pd.testing.assert_frame_equal(q.head(20),p,check_flags=False)
+
+    def test_lock_manual_max_and_minimum(self):
+        d,slots=fixture()
+        # Lock means every selected lineup must contain the player.
+        p=select_portfolio(d,slots,20,'Top1',controls={'P0':{'Lock':True},'P1':{'Max Exposure %':30},'P34':{'Min Exposure %':35}})
+        c=p[slots].stack().value_counts()
+        self.assertEqual(c['P0'],20)
+        self.assertLessEqual(c.get('P1',0),6)
+        self.assertGreaterEqual(c['P34'],7)
+
+    def test_higher_explicit_minimum_can_exceed_auto_cap(self):
+        d,slots=fixture();p=select_portfolio(d,slots,20,'Top1',controls={'P0':{'Min Exposure %':90}})
+        self.assertGreaterEqual(p[slots].stack().value_counts()['P0'],18)
+
+    def test_impossible_pool_stops_instead_of_repeating_lineups(self):
+        d,slots=fixture();d.loc[:,'S0']='Always'
+        with self.assertRaisesRegex(ValueError,'manual exposure limits'):
+            select_portfolio(d,slots,20,'Top1',controls={'Always':{'Max Exposure %':80}})
+
+    def test_interchangeable_slot_permutations_not_unique(self):
+        d,slots=fixture();d=d.iloc[:1].copy();other=d.copy();other.loc[0,slots[0]],other.loc[0,slots[1]]=d.loc[0,slots[1]],d.loc[0,slots[0]]
+        with self.assertRaisesRegex(ValueError,'Only 1 unique'):
+            select_portfolio(pd.concat([d,other]),slots,2,'Top1')
+
+    def test_deterministic_and_zero_exposure(self):
+        d,slots=fixture();controls={'P0':{'Max Exposure %':0}}
+        a=select_portfolio(d,slots,20,'Top1',controls);b=select_portfolio(d,slots,20,'Top1',controls)
+        pd.testing.assert_frame_equal(a,b)
+        self.assertFalse((a[slots]=='P0').any().any())
+
+class PortfolioRepairTests(unittest.TestCase):
+    def test_reconsiders_early_choice_before_relaxing_any_cap(self):
+        candidates=pd.DataFrame({'S0':['A','A','B'],'S1':['B','C','D'],'Top1':[1.,.9,.8]})
+        selected=select_portfolio(candidates,['S0','S1'],2,'Top1',default_max=50)
+        self.assertEqual(set(zip(selected.S0,selected.S1)),{('A','C'),('B','D')})
+        self.assertEqual(selected.attrs['effective_auto_cap_pct'],50)
+        self.assertEqual(selected.attrs['selection_method'],'integer repair')
+
+    def test_quality_timeout_retries_feasibility_without_relaxing_limits(self):
+        from unittest.mock import patch
+        from types import SimpleNamespace
+        from scipy.optimize import milp
+        candidates=pd.DataFrame({'S0':['A','A','B'],'S1':['B','C','D'],'Top1':[1.,.9,.8]})
+        calls=[]
+        def solve(objective,**kwargs):
+            calls.append((np.asarray(objective).copy(),kwargs['constraints']))
+            if len(calls)==1:return SimpleNamespace(status=1,x=None)
+            return milp(objective,**kwargs)
+        with patch('scipy.optimize.milp',side_effect=solve):
+            selected=select_portfolio(candidates,['S0','S1'],2,'Top1',default_max=50,
+                controls={'A':{'Max Exposure %':50}})
+        self.assertEqual(len(calls),2)
+        self.assertTrue((calls[1][0]==0).all())
+        np.testing.assert_array_equal(calls[0][1].ub,calls[1][1].ub)
+        self.assertEqual(selected.attrs['effective_auto_cap_pct'],50)
+        self.assertEqual(set(zip(selected.S0,selected.S1)),{('A','C'),('B','D')})
+
+    def test_large_timeout_retry_validates_full_pool_indices(self):
+        from unittest.mock import patch
+        from types import SimpleNamespace
+        from scipy.optimize import milp
+        from simmah_portfolio_selection import _repair_portfolio
+        incidence=np.tile(np.array([[1,1,0,0],[1,0,1,0],[0,1,0,1]]),(200,1))
+        calls=[]
+        def solve(objective,**kwargs):
+            calls.append(kwargs)
+            if len(calls)==1:return SimpleNamespace(status=1,x=None)
+            return milp(objective,**kwargs)
+        with patch('scipy.optimize.milp',side_effect=solve):
+            chosen,cap=_repair_portfolio(incidence,np.zeros(4),np.ones(4),np.ones(4),
+                np.zeros(4,bool),2,np.linspace(1,0,600),np.ones(600,bool),50)
+        self.assertEqual(len(chosen),2)
+        self.assertTrue((incidence[chosen].sum(axis=0)<=1).all())
+        self.assertLessEqual(np.count_nonzero(calls[1]['bounds'].ub),512)
+        self.assertEqual(cap,50)
+
+    def test_only_automatic_cap_relaxes_when_proven_infeasible(self):
+        d,slots=fixture();d['S0']='Always'
+        selected=select_portfolio(d,slots,20,'Top1')
+        self.assertEqual(len(selected),20)
+        self.assertEqual(selected.attrs['effective_auto_cap_pct'],100)
+        self.assertEqual(selected[slots].apply(lambda row:tuple(sorted(row)),axis=1).nunique(),20)
+
+    def test_repair_honors_manual_minimum_maximum_and_lock(self):
+        candidates=pd.DataFrame({'S0':['A','A','B'],'S1':['B','C','D'],'Top1':[1.,.9,.8]})
+        selected=select_portfolio(candidates,['S0','S1'],2,'Top1',default_max=50,
+            controls={'A':{'Min Exposure %':50,'Max Exposure %':50},'D':{'Min Exposure %':50}})
+        counts=selected[['S0','S1']].stack().value_counts()
+        self.assertEqual(counts['A'],1)
+        self.assertEqual(counts['D'],1)
+
+class ExposureDiversityTests(unittest.TestCase):
+    def test_higher_diversity_reduces_concentration_without_rebuilding_candidates(self):
+        candidates,slots=fixture();before=candidates.copy(deep=True)
+        low=select_portfolio(candidates,slots,20,'Top1',diversity=0)
+        high=select_portfolio(candidates,slots,20,'Top1',diversity=100)
+        self.assertEqual(low.attrs['default_max_exposure_pct'],100)
+        self.assertEqual(high.attrs['default_max_exposure_pct'],60)
+        self.assertGreater(low[slots].stack().value_counts().max(),high[slots].stack().value_counts().max())
+        self.assertLessEqual(high[slots].stack().value_counts().max(),12)
+        pd.testing.assert_frame_equal(candidates,before)
+    def test_zero_diversity_is_rank_order_when_unconstrained(self):
+        d,slots=fixture();p=select_portfolio(d,slots,20,'Top1',diversity=0)
+        self.assertEqual(p.Top1.tolist(),d.head(20).Top1.tolist())
+    def test_captain_and_mvp_hard_limits_survive_high_diversity(self):
+        for special,prefix in [('Captain','Captain'),('MVP','MVP')]:
+            d,slots=fixture();d=d.rename(columns={slots[0]:special});slots=[special]+slots[1:]
+            p=select_portfolio(d,slots,20,'Top1',diversity=100,
+                controls={'P0':{prefix+' Max %':0},'P20':{prefix+' Min %':10}})
+            self.assertFalse(p[special].eq('P0').any());self.assertGreaterEqual(p[special].eq('P20').sum(),2)
+    def test_app_all_four_formats_share_exposure_selection(self):
+        import ast
+        from pathlib import Path
+        tree=ast.parse(Path('dfs_app.py').read_text())
+        calls=[n for n in ast.walk(tree) if isinstance(n,ast.Call) and isinstance(n.func,ast.Name) and n.func.id=='select_portfolio']
+        self.assertEqual(len(calls),3) # Shared FanDuel branch covers both FD formats.
+        self.assertTrue(all(any(k.arg=='diversity' for k in n.keywords) for n in calls))
+        source=Path('dfs_app.py').read_text();self.assertNotIn('_fd_single_seed.iloc',source)
+
+if __name__=='__main__':unittest.main()

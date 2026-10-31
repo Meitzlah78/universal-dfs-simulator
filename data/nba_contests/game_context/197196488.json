@@ -1,0 +1,982 @@
+{
+  "schema": 1,
+  "contest_id": "197196488",
+  "date": "2026-10-27",
+  "source_sha256": "02fe0fef01d8d07e55cfa638fd9112d8761778cb65f7c4ba96409b48e38c6f64",
+  "source": "User-provided pregame DK salary template; no entry IDs or roster assignments retained",
+  "players": [
+    {
+      "Player ID": "44670017",
+      "Team": "LAL",
+      "Opponent": "POR",
+      "Game Start": "2026-10-27T23:00:00-04:00",
+      "Salary": 11300
+    },
+    {
+      "Player ID": "44670020",
+      "Team": "SA",
+      "Opponent": "SAC",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 10800
+    },
+    {
+      "Player ID": "44670022",
+      "Team": "DET",
+      "Opponent": "NY",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 9700
+    },
+    {
+      "Player ID": "44670027",
+      "Team": "BOS",
+      "Opponent": "BKN",
+      "Game Start": "2026-10-27T19:30:00-04:00",
+      "Salary": 9500
+    },
+    {
+      "Player ID": "44670025",
+      "Team": "SAC",
+      "Opponent": "SA",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 9400
+    },
+    {
+      "Player ID": "44670031",
+      "Team": "NY",
+      "Opponent": "DET",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 8300
+    },
+    {
+      "Player ID": "44670035",
+      "Team": "NY",
+      "Opponent": "DET",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 8100
+    },
+    {
+      "Player ID": "44670038",
+      "Team": "LAL",
+      "Opponent": "POR",
+      "Game Start": "2026-10-27T23:00:00-04:00",
+      "Salary": 7900
+    },
+    {
+      "Player ID": "44670042",
+      "Team": "POR",
+      "Opponent": "LAL",
+      "Game Start": "2026-10-27T23:00:00-04:00",
+      "Salary": 7800
+    },
+    {
+      "Player ID": "44670046",
+      "Team": "LAL",
+      "Opponent": "POR",
+      "Game Start": "2026-10-27T23:00:00-04:00",
+      "Salary": 7300
+    },
+    {
+      "Player ID": "44670048",
+      "Team": "BKN",
+      "Opponent": "BOS",
+      "Game Start": "2026-10-27T19:30:00-04:00",
+      "Salary": 7200
+    },
+    {
+      "Player ID": "44670051",
+      "Team": "BKN",
+      "Opponent": "BOS",
+      "Game Start": "2026-10-27T19:30:00-04:00",
+      "Salary": 7100
+    },
+    {
+      "Player ID": "44670061",
+      "Team": "BOS",
+      "Opponent": "BKN",
+      "Game Start": "2026-10-27T19:30:00-04:00",
+      "Salary": 7000
+    },
+    {
+      "Player ID": "44670054",
+      "Team": "SA",
+      "Opponent": "SAC",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 7000
+    },
+    {
+      "Player ID": "44670057",
+      "Team": "SAC",
+      "Opponent": "SA",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 6900
+    },
+    {
+      "Player ID": "44670064",
+      "Team": "DET",
+      "Opponent": "NY",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 6800
+    },
+    {
+      "Player ID": "44670066",
+      "Team": "BOS",
+      "Opponent": "BKN",
+      "Game Start": "2026-10-27T19:30:00-04:00",
+      "Salary": 6700
+    },
+    {
+      "Player ID": "44670071",
+      "Team": "POR",
+      "Opponent": "LAL",
+      "Game Start": "2026-10-27T23:00:00-04:00",
+      "Salary": 6600
+    },
+    {
+      "Player ID": "44670075",
+      "Team": "SAC",
+      "Opponent": "SA",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 6500
+    },
+    {
+      "Player ID": "44670080",
+      "Team": "POR",
+      "Opponent": "LAL",
+      "Game Start": "2026-10-27T23:00:00-04:00",
+      "Salary": 6400
+    },
+    {
+      "Player ID": "44670087",
+      "Team": "POR",
+      "Opponent": "LAL",
+      "Game Start": "2026-10-27T23:00:00-04:00",
+      "Salary": 6300
+    },
+    {
+      "Player ID": "44670084",
+      "Team": "SA",
+      "Opponent": "SAC",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 6300
+    },
+    {
+      "Player ID": "44670089",
+      "Team": "SA",
+      "Opponent": "SAC",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 6200
+    },
+    {
+      "Player ID": "44670093",
+      "Team": "NY",
+      "Opponent": "DET",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 6100
+    },
+    {
+      "Player ID": "44670098",
+      "Team": "SA",
+      "Opponent": "SAC",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 6000
+    },
+    {
+      "Player ID": "44670104",
+      "Team": "BOS",
+      "Opponent": "BKN",
+      "Game Start": "2026-10-27T19:30:00-04:00",
+      "Salary": 5900
+    },
+    {
+      "Player ID": "44670101",
+      "Team": "DET",
+      "Opponent": "NY",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 5900
+    },
+    {
+      "Player ID": "44670108",
+      "Team": "DET",
+      "Opponent": "NY",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 5800
+    },
+    {
+      "Player ID": "44670112",
+      "Team": "SAC",
+      "Opponent": "SA",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 5800
+    },
+    {
+      "Player ID": "44670114",
+      "Team": "NY",
+      "Opponent": "DET",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 5700
+    },
+    {
+      "Player ID": "44670117",
+      "Team": "SAC",
+      "Opponent": "SA",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 5600
+    },
+    {
+      "Player ID": "44670120",
+      "Team": "BKN",
+      "Opponent": "BOS",
+      "Game Start": "2026-10-27T19:30:00-04:00",
+      "Salary": 5400
+    },
+    {
+      "Player ID": "44670122",
+      "Team": "SA",
+      "Opponent": "SAC",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 5400
+    },
+    {
+      "Player ID": "44670125",
+      "Team": "DET",
+      "Opponent": "NY",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 5200
+    },
+    {
+      "Player ID": "44670131",
+      "Team": "SAC",
+      "Opponent": "SA",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 5200
+    },
+    {
+      "Player ID": "44670135",
+      "Team": "BKN",
+      "Opponent": "BOS",
+      "Game Start": "2026-10-27T19:30:00-04:00",
+      "Salary": 5100
+    },
+    {
+      "Player ID": "44670139",
+      "Team": "POR",
+      "Opponent": "LAL",
+      "Game Start": "2026-10-27T23:00:00-04:00",
+      "Salary": 5100
+    },
+    {
+      "Player ID": "44670145",
+      "Team": "POR",
+      "Opponent": "LAL",
+      "Game Start": "2026-10-27T23:00:00-04:00",
+      "Salary": 5000
+    },
+    {
+      "Player ID": "44670142",
+      "Team": "NY",
+      "Opponent": "DET",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 5000
+    },
+    {
+      "Player ID": "44670127",
+      "Team": "SAC",
+      "Opponent": "SA",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 5000
+    },
+    {
+      "Player ID": "44670155",
+      "Team": "BKN",
+      "Opponent": "BOS",
+      "Game Start": "2026-10-27T19:30:00-04:00",
+      "Salary": 4900
+    },
+    {
+      "Player ID": "44670150",
+      "Team": "DET",
+      "Opponent": "NY",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 4900
+    },
+    {
+      "Player ID": "44670159",
+      "Team": "BOS",
+      "Opponent": "BKN",
+      "Game Start": "2026-10-27T19:30:00-04:00",
+      "Salary": 4800
+    },
+    {
+      "Player ID": "44670170",
+      "Team": "DET",
+      "Opponent": "NY",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 4800
+    },
+    {
+      "Player ID": "44670162",
+      "Team": "LAL",
+      "Opponent": "POR",
+      "Game Start": "2026-10-27T23:00:00-04:00",
+      "Salary": 4700
+    },
+    {
+      "Player ID": "44670167",
+      "Team": "SA",
+      "Opponent": "SAC",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 4700
+    },
+    {
+      "Player ID": "44670178",
+      "Team": "BOS",
+      "Opponent": "BKN",
+      "Game Start": "2026-10-27T19:30:00-04:00",
+      "Salary": 4600
+    },
+    {
+      "Player ID": "44670174",
+      "Team": "SAC",
+      "Opponent": "SA",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 4600
+    },
+    {
+      "Player ID": "44670180",
+      "Team": "BKN",
+      "Opponent": "BOS",
+      "Game Start": "2026-10-27T19:30:00-04:00",
+      "Salary": 4500
+    },
+    {
+      "Player ID": "44670185",
+      "Team": "BOS",
+      "Opponent": "BKN",
+      "Game Start": "2026-10-27T19:30:00-04:00",
+      "Salary": 4500
+    },
+    {
+      "Player ID": "44670187",
+      "Team": "BOS",
+      "Opponent": "BKN",
+      "Game Start": "2026-10-27T19:30:00-04:00",
+      "Salary": 4400
+    },
+    {
+      "Player ID": "44670196",
+      "Team": "POR",
+      "Opponent": "LAL",
+      "Game Start": "2026-10-27T23:00:00-04:00",
+      "Salary": 4300
+    },
+    {
+      "Player ID": "44670192",
+      "Team": "SA",
+      "Opponent": "SAC",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 4300
+    },
+    {
+      "Player ID": "44670200",
+      "Team": "DET",
+      "Opponent": "NY",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 4200
+    },
+    {
+      "Player ID": "44670203",
+      "Team": "LAL",
+      "Opponent": "POR",
+      "Game Start": "2026-10-27T23:00:00-04:00",
+      "Salary": 4100
+    },
+    {
+      "Player ID": "44670214",
+      "Team": "POR",
+      "Opponent": "LAL",
+      "Game Start": "2026-10-27T23:00:00-04:00",
+      "Salary": 4100
+    },
+    {
+      "Player ID": "44670207",
+      "Team": "NY",
+      "Opponent": "DET",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 4100
+    },
+    {
+      "Player ID": "44670209",
+      "Team": "DET",
+      "Opponent": "NY",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 4100
+    },
+    {
+      "Player ID": "44670218",
+      "Team": "BKN",
+      "Opponent": "BOS",
+      "Game Start": "2026-10-27T19:30:00-04:00",
+      "Salary": 4000
+    },
+    {
+      "Player ID": "44670232",
+      "Team": "BOS",
+      "Opponent": "BKN",
+      "Game Start": "2026-10-27T19:30:00-04:00",
+      "Salary": 4000
+    },
+    {
+      "Player ID": "44670228",
+      "Team": "LAL",
+      "Opponent": "POR",
+      "Game Start": "2026-10-27T23:00:00-04:00",
+      "Salary": 4000
+    },
+    {
+      "Player ID": "44670221",
+      "Team": "NY",
+      "Opponent": "DET",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 4000
+    },
+    {
+      "Player ID": "44670225",
+      "Team": "DET",
+      "Opponent": "NY",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 4000
+    },
+    {
+      "Player ID": "44670235",
+      "Team": "SAC",
+      "Opponent": "SA",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 4000
+    },
+    {
+      "Player ID": "44670244",
+      "Team": "BKN",
+      "Opponent": "BOS",
+      "Game Start": "2026-10-27T19:30:00-04:00",
+      "Salary": 3900
+    },
+    {
+      "Player ID": "44670251",
+      "Team": "BKN",
+      "Opponent": "BOS",
+      "Game Start": "2026-10-27T19:30:00-04:00",
+      "Salary": 3900
+    },
+    {
+      "Player ID": "44670239",
+      "Team": "LAL",
+      "Opponent": "POR",
+      "Game Start": "2026-10-27T23:00:00-04:00",
+      "Salary": 3900
+    },
+    {
+      "Player ID": "44670248",
+      "Team": "DET",
+      "Opponent": "NY",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 3900
+    },
+    {
+      "Player ID": "44670253",
+      "Team": "SAC",
+      "Opponent": "SA",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 3900
+    },
+    {
+      "Player ID": "44670270",
+      "Team": "BKN",
+      "Opponent": "BOS",
+      "Game Start": "2026-10-27T19:30:00-04:00",
+      "Salary": 3800
+    },
+    {
+      "Player ID": "44670273",
+      "Team": "BOS",
+      "Opponent": "BKN",
+      "Game Start": "2026-10-27T19:30:00-04:00",
+      "Salary": 3800
+    },
+    {
+      "Player ID": "44670258",
+      "Team": "LAL",
+      "Opponent": "POR",
+      "Game Start": "2026-10-27T23:00:00-04:00",
+      "Salary": 3800
+    },
+    {
+      "Player ID": "44670262",
+      "Team": "DET",
+      "Opponent": "NY",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 3800
+    },
+    {
+      "Player ID": "44670267",
+      "Team": "NY",
+      "Opponent": "DET",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 3800
+    },
+    {
+      "Player ID": "44670276",
+      "Team": "BKN",
+      "Opponent": "BOS",
+      "Game Start": "2026-10-27T19:30:00-04:00",
+      "Salary": 3700
+    },
+    {
+      "Player ID": "44670283",
+      "Team": "POR",
+      "Opponent": "LAL",
+      "Game Start": "2026-10-27T23:00:00-04:00",
+      "Salary": 3700
+    },
+    {
+      "Player ID": "44670289",
+      "Team": "LAL",
+      "Opponent": "POR",
+      "Game Start": "2026-10-27T23:00:00-04:00",
+      "Salary": 3700
+    },
+    {
+      "Player ID": "44670280",
+      "Team": "NY",
+      "Opponent": "DET",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 3700
+    },
+    {
+      "Player ID": "44670286",
+      "Team": "NY",
+      "Opponent": "DET",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 3700
+    },
+    {
+      "Player ID": "44670278",
+      "Team": "SA",
+      "Opponent": "SAC",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 3700
+    },
+    {
+      "Player ID": "44670294",
+      "Team": "SA",
+      "Opponent": "SAC",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 3600
+    },
+    {
+      "Player ID": "44670302",
+      "Team": "BOS",
+      "Opponent": "BKN",
+      "Game Start": "2026-10-27T19:30:00-04:00",
+      "Salary": 3500
+    },
+    {
+      "Player ID": "44670307",
+      "Team": "BKN",
+      "Opponent": "BOS",
+      "Game Start": "2026-10-27T19:30:00-04:00",
+      "Salary": 3500
+    },
+    {
+      "Player ID": "44670298",
+      "Team": "LAL",
+      "Opponent": "POR",
+      "Game Start": "2026-10-27T23:00:00-04:00",
+      "Salary": 3500
+    },
+    {
+      "Player ID": "44670311",
+      "Team": "NY",
+      "Opponent": "DET",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 3400
+    },
+    {
+      "Player ID": "44670317",
+      "Team": "BKN",
+      "Opponent": "BOS",
+      "Game Start": "2026-10-27T19:30:00-04:00",
+      "Salary": 3300
+    },
+    {
+      "Player ID": "44670314",
+      "Team": "SAC",
+      "Opponent": "SA",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 3300
+    },
+    {
+      "Player ID": "44670330",
+      "Team": "BKN",
+      "Opponent": "BOS",
+      "Game Start": "2026-10-27T19:30:00-04:00",
+      "Salary": 3200
+    },
+    {
+      "Player ID": "44670325",
+      "Team": "NY",
+      "Opponent": "DET",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 3200
+    },
+    {
+      "Player ID": "44670320",
+      "Team": "SAC",
+      "Opponent": "SA",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 3200
+    },
+    {
+      "Player ID": "44670340",
+      "Team": "BOS",
+      "Opponent": "BKN",
+      "Game Start": "2026-10-27T19:30:00-04:00",
+      "Salary": 3100
+    },
+    {
+      "Player ID": "44670338",
+      "Team": "LAL",
+      "Opponent": "POR",
+      "Game Start": "2026-10-27T23:00:00-04:00",
+      "Salary": 3100
+    },
+    {
+      "Player ID": "44670342",
+      "Team": "NY",
+      "Opponent": "DET",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 3100
+    },
+    {
+      "Player ID": "44670335",
+      "Team": "SA",
+      "Opponent": "SAC",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 3100
+    },
+    {
+      "Player ID": "44670344",
+      "Team": "SAC",
+      "Opponent": "SA",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 3100
+    },
+    {
+      "Player ID": "44670390",
+      "Team": "BKN",
+      "Opponent": "BOS",
+      "Game Start": "2026-10-27T19:30:00-04:00",
+      "Salary": 3000
+    },
+    {
+      "Player ID": "44670393",
+      "Team": "BKN",
+      "Opponent": "BOS",
+      "Game Start": "2026-10-27T19:30:00-04:00",
+      "Salary": 3000
+    },
+    {
+      "Player ID": "44670418",
+      "Team": "BOS",
+      "Opponent": "BKN",
+      "Game Start": "2026-10-27T19:30:00-04:00",
+      "Salary": 3000
+    },
+    {
+      "Player ID": "44670421",
+      "Team": "BOS",
+      "Opponent": "BKN",
+      "Game Start": "2026-10-27T19:30:00-04:00",
+      "Salary": 3000
+    },
+    {
+      "Player ID": "44670424",
+      "Team": "BOS",
+      "Opponent": "BKN",
+      "Game Start": "2026-10-27T19:30:00-04:00",
+      "Salary": 3000
+    },
+    {
+      "Player ID": "44670428",
+      "Team": "BOS",
+      "Opponent": "BKN",
+      "Game Start": "2026-10-27T19:30:00-04:00",
+      "Salary": 3000
+    },
+    {
+      "Player ID": "44670430",
+      "Team": "BOS",
+      "Opponent": "BKN",
+      "Game Start": "2026-10-27T19:30:00-04:00",
+      "Salary": 3000
+    },
+    {
+      "Player ID": "44670456",
+      "Team": "BKN",
+      "Opponent": "BOS",
+      "Game Start": "2026-10-27T19:30:00-04:00",
+      "Salary": 3000
+    },
+    {
+      "Player ID": "44670458",
+      "Team": "BKN",
+      "Opponent": "BOS",
+      "Game Start": "2026-10-27T19:30:00-04:00",
+      "Salary": 3000
+    },
+    {
+      "Player ID": "44670353",
+      "Team": "POR",
+      "Opponent": "LAL",
+      "Game Start": "2026-10-27T23:00:00-04:00",
+      "Salary": 3000
+    },
+    {
+      "Player ID": "44670356",
+      "Team": "POR",
+      "Opponent": "LAL",
+      "Game Start": "2026-10-27T23:00:00-04:00",
+      "Salary": 3000
+    },
+    {
+      "Player ID": "44670381",
+      "Team": "LAL",
+      "Opponent": "POR",
+      "Game Start": "2026-10-27T23:00:00-04:00",
+      "Salary": 3000
+    },
+    {
+      "Player ID": "44670384",
+      "Team": "LAL",
+      "Opponent": "POR",
+      "Game Start": "2026-10-27T23:00:00-04:00",
+      "Salary": 3000
+    },
+    {
+      "Player ID": "44670387",
+      "Team": "LAL",
+      "Opponent": "POR",
+      "Game Start": "2026-10-27T23:00:00-04:00",
+      "Salary": 3000
+    },
+    {
+      "Player ID": "44670403",
+      "Team": "POR",
+      "Opponent": "LAL",
+      "Game Start": "2026-10-27T23:00:00-04:00",
+      "Salary": 3000
+    },
+    {
+      "Player ID": "44670406",
+      "Team": "POR",
+      "Opponent": "LAL",
+      "Game Start": "2026-10-27T23:00:00-04:00",
+      "Salary": 3000
+    },
+    {
+      "Player ID": "44670411",
+      "Team": "POR",
+      "Opponent": "LAL",
+      "Game Start": "2026-10-27T23:00:00-04:00",
+      "Salary": 3000
+    },
+    {
+      "Player ID": "44670413",
+      "Team": "POR",
+      "Opponent": "LAL",
+      "Game Start": "2026-10-27T23:00:00-04:00",
+      "Salary": 3000
+    },
+    {
+      "Player ID": "44670443",
+      "Team": "LAL",
+      "Opponent": "POR",
+      "Game Start": "2026-10-27T23:00:00-04:00",
+      "Salary": 3000
+    },
+    {
+      "Player ID": "44670446",
+      "Team": "LAL",
+      "Opponent": "POR",
+      "Game Start": "2026-10-27T23:00:00-04:00",
+      "Salary": 3000
+    },
+    {
+      "Player ID": "44670449",
+      "Team": "LAL",
+      "Opponent": "POR",
+      "Game Start": "2026-10-27T23:00:00-04:00",
+      "Salary": 3000
+    },
+    {
+      "Player ID": "44670452",
+      "Team": "LAL",
+      "Opponent": "POR",
+      "Game Start": "2026-10-27T23:00:00-04:00",
+      "Salary": 3000
+    },
+    {
+      "Player ID": "44670475",
+      "Team": "POR",
+      "Opponent": "LAL",
+      "Game Start": "2026-10-27T23:00:00-04:00",
+      "Salary": 3000
+    },
+    {
+      "Player ID": "44670478",
+      "Team": "POR",
+      "Opponent": "LAL",
+      "Game Start": "2026-10-27T23:00:00-04:00",
+      "Salary": 3000
+    },
+    {
+      "Player ID": "44670351",
+      "Team": "DET",
+      "Opponent": "NY",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 3000
+    },
+    {
+      "Player ID": "44670363",
+      "Team": "NY",
+      "Opponent": "DET",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 3000
+    },
+    {
+      "Player ID": "44670366",
+      "Team": "NY",
+      "Opponent": "DET",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 3000
+    },
+    {
+      "Player ID": "44670396",
+      "Team": "DET",
+      "Opponent": "NY",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 3000
+    },
+    {
+      "Player ID": "44670408",
+      "Team": "DET",
+      "Opponent": "NY",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 3000
+    },
+    {
+      "Player ID": "44670435",
+      "Team": "NY",
+      "Opponent": "DET",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 3000
+    },
+    {
+      "Player ID": "44670438",
+      "Team": "NY",
+      "Opponent": "DET",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 3000
+    },
+    {
+      "Player ID": "44670461",
+      "Team": "DET",
+      "Opponent": "NY",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 3000
+    },
+    {
+      "Player ID": "44670463",
+      "Team": "DET",
+      "Opponent": "NY",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 3000
+    },
+    {
+      "Player ID": "44670466",
+      "Team": "DET",
+      "Opponent": "NY",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 3000
+    },
+    {
+      "Player ID": "44670346",
+      "Team": "SA",
+      "Opponent": "SAC",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 3000
+    },
+    {
+      "Player ID": "44670348",
+      "Team": "SA",
+      "Opponent": "SAC",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 3000
+    },
+    {
+      "Player ID": "44670360",
+      "Team": "SAC",
+      "Opponent": "SA",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 3000
+    },
+    {
+      "Player ID": "44670370",
+      "Team": "SA",
+      "Opponent": "SAC",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 3000
+    },
+    {
+      "Player ID": "44670373",
+      "Team": "SA",
+      "Opponent": "SAC",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 3000
+    },
+    {
+      "Player ID": "44670377",
+      "Team": "SA",
+      "Opponent": "SAC",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 3000
+    },
+    {
+      "Player ID": "44670399",
+      "Team": "SAC",
+      "Opponent": "SA",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 3000
+    },
+    {
+      "Player ID": "44670441",
+      "Team": "SA",
+      "Opponent": "SAC",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 3000
+    },
+    {
+      "Player ID": "44670469",
+      "Team": "SAC",
+      "Opponent": "SA",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 3000
+    },
+    {
+      "Player ID": "44670472",
+      "Team": "SAC",
+      "Opponent": "SA",
+      "Game Start": "2026-10-27T20:00:00-04:00",
+      "Salary": 3000
+    }
+  ]
+}

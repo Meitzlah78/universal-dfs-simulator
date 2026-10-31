@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "captured_at_utc": "2026-10-27T16:31:02.957293+00:00",
+  "execution_context": "host of this Streamlit app",
+  "container_memory": {
+    "limit_bytes": 3221225472,
+    "current_bytes": 2262212608,
+    "oom": 0,
+    "oom_kill": 0
+  },
+  "process_memory": {
+    "pid": 331,
+    "rss_bytes": 482324480,
+    "vms_bytes": 5554311168,
+    "uss_bytes": 463646720,
+    "proc_status_hwm_bytes": 633110528,
+    "uss_status": "available",
+    "source": "psutil"
+  },
+  "preflight": {
+    "passed": false,
+    "reason": "Insufficient memory headroom for the full test; no large payload allocated",
+    "available_memory_bytes": 959012864,
+    "required_memory_headroom_bytes": 4823449600,
+    "process_monitor_available": true
+  },
+  "heavy_test_executed": false,
+  "worker_visibility_verified": false,
+  "evidence": "Transcribed numeric fields from the live read-only Streamlit preflight DOM; no heavy worker started."
+}
