@@ -3,6 +3,7 @@ name: Python Syntax Check
 on:
   push:
     branches:
+      - main
       - feature/salary-csv-upload
   pull_request:
     branches:

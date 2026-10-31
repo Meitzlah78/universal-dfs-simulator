@@ -4,7 +4,7 @@ import unittest
 import numpy as np
 import pandas as pd
 from simmah_nba_import import SLOTS
-from simmah_nba_late_swap import swap_entries, export_swaps, locked_players, validate_swap
+from simmah_nba_late_swap import swap_entries, export_swaps, locked_players, validate_swap, late_swap_filename
 
 
 class LateSwapTests(unittest.TestCase):
@@ -34,6 +34,14 @@ class LateSwapTests(unittest.TestCase):
         for _,r in self.pool.iterrows():rows.append(['']*14+[r['Player ID'],r.Name,str(r.Salary),r.Position,r.Team,r.Opponent,r.Game,'','','30'])
         stream=io.StringIO();csv.writer(stream).writerows(rows);self.template=stream.getvalue().encode();self.rows=rows
         self.now=pd.Timestamp('2026-10-21T00:00:00Z')
+
+    def test_site_slate_contest_and_eastern_time_identify_exports(self):
+        self.pool.attrs['slate_date']='2026-10-20'
+        name=late_swap_filename(self.pool,'42-99',now=self.now)
+        self.assertEqual(name,'Simmah_FD_Late_Swap_2026-10-20_42-99_20261020_200000_EDT.csv')
+        self.pool.attrs['platform']='DraftKings'
+        name=late_swap_filename(self.pool,'197/99',automatic=True,now=self.now)
+        self.assertEqual(name,'Simmah_DK_Auto_Late_Swap_2026-10-20_197-99_20261020_200000_EDT.csv')
 
     def test_locked_out_preserved_and_open_out_replaced_export_exact(self):
         self.pool.loc[0,'Injury Status']='Out';self.pool.loc[0,'Projection']=0

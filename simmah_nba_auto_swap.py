@@ -48,7 +48,7 @@ def input_signature(pool, locked):
 def render_auto_swap(st,pool,data,contest_id,salary_min,diversity,markets,contest,
                      saved_build,simulation,actuals,pregame_locked):
     from simmah_nba_late_swap import (entry_rows,locked_players,swap_entries,
-        run_simulated_late_swap,revalidate_current_locks,export_swaps)
+        run_simulated_late_swap,revalidate_current_locks,export_swaps,late_swap_filename)
     from simmah_nba_rules import rules_for
     from simmah_slate_workspaces import workspace_download_button
     from simmah_nba_ui import display_lineups
@@ -88,8 +88,8 @@ def render_auto_swap(st,pool,data,contest_id,salary_min,diversity,markets,contes
             st.dataframe(current['report'],hide_index=True,width='stretch')
             st.dataframe(display_lineups(fresh,pd.DataFrame(current['lineups'],columns=rules['slots'])),hide_index=True,width='stretch')
             output=export_swaps(data,contest_id,fresh,current)
-            workspace_download_button(st,'EXPORT TO '+platform.upper()+' — AUTO LATE SWAP CSV',
-                output,'Simmah_NBA_Auto_Late_Swap.csv','text/csv',key='nba_auto_swap_download',on_click='ignore')
+            workspace_download_button(st,'DOWNLOAD '+('DK' if platform.upper() in ('DRAFTKINGS','DK') else 'FD')+' LATE SWAP (AUTO)',
+                output,late_swap_filename(fresh,contest_id,automatic=True),'text/csv',key='nba_auto_swap_download',on_click='ignore')
         except Exception as exc:
             # Do not display a stale download after a feed failure or failed solve.
             st.error('Auto late swap paused; no current export prepared: '+str(exc))

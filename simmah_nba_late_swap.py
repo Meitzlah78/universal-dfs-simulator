@@ -13,6 +13,22 @@ from simmah_nba_rosters import ELIGIBILITY, SLOT_COLUMNS, validate_lineup
 from simmah_nba_rules import rules_for
 
 
+
+def late_swap_filename(pool, contest_id, *, automatic=False, now=None):
+    """Identify the site, slate, contest and Eastern export time in every swap."""
+    import re
+    platform=rules_for(pool)['platform'].upper()
+    site={'DRAFTKINGS':'DK','FANDUEL':'FD','DK':'DK','FD':'FD'}[platform]
+    stamp=pd.Timestamp.now(tz='America/New_York') if now is None else pd.Timestamp(now)
+    if stamp.tzinfo is None:
+        raise ValueError('Export timestamp must be timezone-aware')
+    stamp=stamp.tz_convert('America/New_York')
+    clean=lambda value: re.sub(r'[^A-Za-z0-9_-]+','-',str(value)).strip('-') or 'slate'
+    slate=clean(pool.attrs.get('slate_date') or stamp.strftime('%Y-%m-%d'))
+    mode='Auto_Late_Swap' if automatic else 'Late_Swap'
+    return f'Simmah_{site}_{mode}_{slate}_{clean(contest_id)}_{stamp.strftime("%Y%m%d_%H%M%S_%Z")}.csv'
+
+
 def locked_players(pool, now=None):
     now = pd.Timestamp.now(tz='UTC') if now is None else pd.Timestamp(now)
     if now.tzinfo is None:
@@ -24,7 +40,6 @@ def locked_players(pool, now=None):
         values=[salary_clocks.get(str(row['Player ID']),row.get('Game Start')) for _,row in players.iterrows()]
         for value in values:
             try:
-                if isinstance(value,str) and ':' not in value: continue
                 if isinstance(value,str) and ':' not in value: continue
                 stamp = pd.Timestamp(value)
                 if pd.isna(stamp): continue
@@ -266,7 +281,7 @@ def render_late_swap(st,pool,contest_id,salary_min,diversity,markets=None,contes
                         st.dataframe(display_lineups(pool,frame),hide_index=True,width='stretch')
                         output=export_swaps(data,contest_id,pool,current)
                         st.caption(f"Export ready: {len(current['lineups'])} {platform} entries for contest {contest_id}.")
-                        workspace_download_button(st,'EXPORT TO '+platform.upper()+' — LATE SWAP CSV',output,'Simmah_NBA_Late_Swap.csv','text/csv',key='nba_late_swap_download',on_click='ignore',
+                        workspace_download_button(st,'DOWNLOAD '+('DK' if platform.upper() in ('DRAFTKINGS','DK') else 'FD')+' LATE SWAP',output,late_swap_filename(pool,contest_id),'text/csv',key='nba_late_swap_download',on_click='ignore',
                             export_checkpoint={'format':platform+' NBA','contest_id':str(contest_id),'kind':'late_swap',
                                 'player_pool':pool.copy(deep=True),'original_entries':data,'late_swap':current,
                                 'portfolio':frame.copy(deep=True),
