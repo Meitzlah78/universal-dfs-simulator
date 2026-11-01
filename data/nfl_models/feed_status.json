@@ -1,0 +1,26 @@
+{
+  "checked_at": "2026-11-01T05:46:12.937370+00:00",
+  "completed_weeks": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+  ],
+  "games": 107,
+  "season": 2026,
+  "sources": [
+    {
+      "sha256": "9a1e5cbd9f26e2ef533422242d8bf29e2086ad2053af73500a8d16ea8695d327",
+      "url": "https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2026.csv"
+    },
+    {
+      "sha256": "4c8342662e2704998d0c098b22d6045cb706689f8b4c967c48a716569fbd6704",
+      "url": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv"
+    }
+  ],
+  "status": "fresh completed-game feed",
+  "verification": "Published final scores plus all scheduled games and regulation-end markers; provider corrections may occur."
+}

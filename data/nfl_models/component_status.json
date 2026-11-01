@@ -1,8 +1,5 @@
 {
-  "accepted_components": [
-    "rushing_df",
-    "rushing_sd"
-  ],
+  "accepted_components": [],
   "active_version": "d6464a5c58186cc1",
   "component_validation": {
     "completion_rate": {
@@ -262,7 +259,7 @@
       "sha256": "8abfd0793446b8746f24d773918563c5eecb0a9c899ed2fb37ad697aefe62747"
     }
   ],
-  "status": "accepted",
+  "status": "already evaluated; waiting for new independent week",
   "training_games": 15,
   "training_through": "2026-10-12",
   "validation_from": "2026-10-22",
