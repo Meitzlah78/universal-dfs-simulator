@@ -78,7 +78,7 @@ def render_cloud_storage_header(st, host):
             st.error('S3 read/write test failed: '+str(result)+'. Check bucket, region, keys and IAM permissions.')
 
 
-render_cloud_storage_header(st, st.container())
+render_cloud_storage_header(st, st.sidebar)
 
 _loaded_slate_tabs = begin_workspaces(st)
 from simmah_injury_display import injury_frame, injury_player_pool
