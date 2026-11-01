@@ -4577,6 +4577,8 @@ def simulate_fd_play_by_play(players_df, rng, n=SIMULATION_COUNT, correlation_st
                     c = next((x for x in cols if x in _rows.columns), None)
                     return float(pd.to_numeric(_rows[c], errors="coerce").fillna(0).clip(lower=0).mean()) if c else 0.0
                 _fd_hist_roles[_name] = {
+                    "player_id": str(_rows["player_id"].iloc[-1]) if "player_id" in _rows else "",
+                    "team": str(_row.get("Team", "")),
                     "carries": _avg("carries", "rushing_attempts", "rush_attempts"),
                     "targets": _avg("targets"),
                     "receptions": _avg("receptions"),
@@ -4612,11 +4614,16 @@ def simulate_fd_play_by_play(players_df, rng, n=SIMULATION_COUNT, correlation_st
         }
     from simmah_simulation_store import prepare_simulations, weather_snapshot
     weather_by_team = weather_snapshot(pool)
+    from simmah_nfl_learning import slate_clock_inputs
+    _learning_day,_learning_clocks=slate_clock_inputs(pool)
     _fit_pool = pool[["Name", "Team", "Opponent", "Position", "Projection"]].copy()
     prepared = prepare_simulations(_fit_pool, _fd_hist_roles, platform, simulation_cache_root(),
         count=n, correlation_strength=correlation_strength, weather_by_team=weather_by_team,
+        slate_date=_learning_day,game_starts=_learning_clocks,
         market_targets=st.session_state.get("active_game_markets", {}),
         progress=lambda fraction,text: progress.progress(fraction,text=text))
+    st.caption("NFL performance learning: " + prepared["metadata"]["learning"]["status"] +
+               ((" · " + prepared["metadata"]["learning"]["version"]) if prepared["metadata"]["learning"].get("version") else ""))
     result = prepared["evaluation"].copy()
     result.attrs["preparation_key"] = prepared["metadata"]["key"]
     _projection_fit_report = prepared["fit_report"]

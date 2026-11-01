@@ -1,0 +1,273 @@
+{
+  "accepted_components": [
+    "rushing_df",
+    "rushing_sd"
+  ],
+  "active_version": "d6464a5c58186cc1",
+  "component_validation": {
+    "completion_rate": {
+      "accepted": false,
+      "baseline": 0.64,
+      "fitted": 0.6560150375939849,
+      "reason": "rejected on selection games"
+    },
+    "defensive_return_td_rate": {
+      "accepted": false,
+      "reason": "missing or insufficient observed events",
+      "selection_count": 0,
+      "training_count": 0,
+      "validation_count": 0
+    },
+    "extra_point_rate": {
+      "accepted": false,
+      "reason": "missing or insufficient observed events",
+      "selection_count": 0,
+      "training_count": 0,
+      "validation_count": 0
+    },
+    "field_goal_logit_offset": {
+      "accepted": false,
+      "reason": "missing or insufficient observed events",
+      "selection_count": 0,
+      "training_count": 0,
+      "validation_count": 0
+    },
+    "fumble_loss_rate": {
+      "accepted": false,
+      "reason": "missing or insufficient observed events",
+      "selection_count": 0,
+      "training_count": 0,
+      "validation_count": 0
+    },
+    "interception_rate": {
+      "accepted": false,
+      "baseline": 0.021,
+      "fitted": 0.01766882516188714,
+      "reason": "rejected on selection games"
+    },
+    "pass_rate": {
+      "accepted": false,
+      "baseline": 0.58,
+      "fitted": 0.5686416184971098,
+      "reason": "rejected on selection games"
+    },
+    "receiving_shape": {
+      "accepted": false,
+      "baseline": 1.5,
+      "baseline_loss": 4.999105711488248,
+      "candidate_loss": 4.9995124578910985,
+      "familywise_95pct_upper_loss_change": 0.031385012507869396,
+      "fitted": 1.7398182332499823,
+      "game_loss_changes": {
+        "2026_07_CIN_BAL": -0.03962642124290827,
+        "2026_07_CLE_TEN": -0.005335582263437111,
+        "2026_07_DAL_PHI": -0.02706188715757385,
+        "2026_07_DEN_ARI": 0.046441582966854966,
+        "2026_07_GB_DET": 0.008627195083300343,
+        "2026_07_IND_MIN": -0.030289467609724063,
+        "2026_07_KC_SEA": 0.0033416371180834403,
+        "2026_07_LA_LV": -0.019025247949853608,
+        "2026_07_MIA_NYJ": 0.03228923937628991,
+        "2026_07_NE_CHI": -0.027739590180535068,
+        "2026_07_NYG_HOU": 0.08536670981063921,
+        "2026_07_PIT_NO": 0.011868244481560986,
+        "2026_07_SF_ATL": -0.0018316706641821057,
+        "2026_07_TB_CAR": -0.03133029212860894
+      },
+      "games": 14,
+      "reason": "improvement not established",
+      "relative_gain": -8.13638331183294e-05,
+      "selection_count": 626,
+      "tail_validation": {
+        "accepted": false,
+        "baseline_loss": 0.07605285636808747,
+        "candidate_loss": 0.0761163833388118,
+        "familywise_95pct_upper_loss_change": 0.0004916789152370062,
+        "game_loss_changes": {
+          "2026_07_CIN_BAL": 2.2725795593092624e-05,
+          "2026_07_CLE_TEN": 0.00021001138651972895,
+          "2026_07_DAL_PHI": -0.00022855604540746033,
+          "2026_07_DEN_ARI": 0.0008164887234463764,
+          "2026_07_GB_DET": 0.00025812052268502084,
+          "2026_07_IND_MIN": -0.0003136809243713262,
+          "2026_07_KC_SEA": -0.0008632954810246854,
+          "2026_07_LA_LV": -0.0006425323340024797,
+          "2026_07_MIA_NYJ": 0.0007058707593868979,
+          "2026_07_NE_CHI": 0.0008002496874656845,
+          "2026_07_NYG_HOU": 0.0008118994846571109,
+          "2026_07_PIT_NO": 2.1449196288214623e-05,
+          "2026_07_SF_ATL": -0.00033366069097747614,
+          "2026_07_TB_CAR": -0.00037571249011791874
+        },
+        "games": 14,
+        "reason": "improvement not established",
+        "relative_gain": -0.0008353002603462766
+      },
+      "training_count": 634,
+      "validation_count": 579
+    },
+    "rushing_distribution": {
+      "accepted": true,
+      "baseline": {
+        "df": 0.0,
+        "sd": 5.5
+      },
+      "baseline_loss": 2.777930396267988,
+      "candidate_loss": 2.7157725988664803,
+      "familywise_95pct_upper_loss_change": -0.03524092333239211,
+      "fitted": {
+        "df": 3.0,
+        "sd": 6.0
+      },
+      "game_loss_changes": {
+        "2026_07_CIN_BAL": -0.12260698544835003,
+        "2026_07_CLE_TEN": -0.007084463595723012,
+        "2026_07_DAL_PHI": -0.06557564145461914,
+        "2026_07_DEN_ARI": -0.07387638443871047,
+        "2026_07_GB_DET": -0.012870642831876111,
+        "2026_07_IND_MIN": -0.056829268367185826,
+        "2026_07_KC_SEA": -0.12737562050779427,
+        "2026_07_LA_LV": -0.09075092255952244,
+        "2026_07_MIA_NYJ": -0.03331292746622161,
+        "2026_07_NE_CHI": -0.07180855556509025,
+        "2026_07_NYG_HOU": -0.06763457886868318,
+        "2026_07_PIT_NO": -0.0750537029023155,
+        "2026_07_SF_ATL": -0.03978696745839638,
+        "2026_07_TB_CAR": -0.02564250215662156
+      },
+      "games": 14,
+      "reason": "passed independent component validation",
+      "relative_gain": 0.022375577690864307,
+      "selection_count": 678,
+      "tail_validation": {
+        "accepted": true,
+        "baseline_loss": 0.056140689072905606,
+        "candidate_loss": 0.05448141823139369,
+        "familywise_95pct_upper_loss_change": -0.00030825332342044736,
+        "game_loss_changes": {
+          "2026_07_CIN_BAL": -0.005448138853836965,
+          "2026_07_CLE_TEN": 0.0012770934721366978,
+          "2026_07_DAL_PHI": 0.0002907390641204155,
+          "2026_07_DEN_ARI": -0.0013430317266839575,
+          "2026_07_GB_DET": -0.0034333943059603467,
+          "2026_07_IND_MIN": -0.0003663697373296332,
+          "2026_07_KC_SEA": -0.0032628994020841573,
+          "2026_07_LA_LV": -0.0012389107843348915,
+          "2026_07_MIA_NYJ": 5.651111796456387e-05,
+          "2026_07_NE_CHI": -0.0023225046091262733,
+          "2026_07_NYG_HOU": -0.0015938042571528796,
+          "2026_07_PIT_NO": -0.003826377982573695,
+          "2026_07_SF_ATL": -0.001717183926788983,
+          "2026_07_TB_CAR": -0.0003015198495167487
+        },
+        "games": 14,
+        "reason": "passed independent component validation",
+        "relative_gain": 0.029555583818309576
+      },
+      "training_count": 755,
+      "validation_count": 757
+    },
+    "sack_rate": {
+      "accepted": false,
+      "baseline": 0.065,
+      "fitted": 0.07210708117443869,
+      "reason": "rejected on selection games"
+    },
+    "two_point_pass_share": {
+      "accepted": false,
+      "reason": "missing or insufficient observed events",
+      "selection_count": 8,
+      "training_count": 9,
+      "validation_count": 5
+    },
+    "two_point_pass_success": {
+      "accepted": false,
+      "reason": "missing or insufficient observed events",
+      "selection_count": 0,
+      "training_count": 0,
+      "validation_count": 0
+    },
+    "two_point_rate": {
+      "accepted": false,
+      "baseline": 0.097,
+      "baseline_loss": 0.22496601642773786,
+      "candidate_loss": 0.2281218213734846,
+      "familywise_95pct_upper_loss_change": 0.007017831180128602,
+      "fitted": 0.10331491712707185,
+      "game_loss_changes": {
+        "2026_07_CIN_BAL": 0.007017831180128595,
+        "2026_07_CLE_TEN": 0.007017831180128595,
+        "2026_07_DAL_PHI": -0.002994829427528156,
+        "2026_07_DEN_ARI": 0.007017831180128609,
+        "2026_07_GB_DET": 0.007017831180128609,
+        "2026_07_IND_MIN": 0.007017831180128609,
+        "2026_07_KC_SEA": 0.007017831180128609,
+        "2026_07_LA_LV": -0.013007490035185199,
+        "2026_07_MIA_NYJ": -0.002994829427528267,
+        "2026_07_NE_CHI": 0.007017831180128595,
+        "2026_07_NYG_HOU": -0.006999893670590951,
+        "2026_07_PIT_NO": 0.007017831180128609,
+        "2026_07_SF_ATL": 0.007017831180128595,
+        "2026_07_TB_CAR": 0.007017831180128581
+      },
+      "games": 14,
+      "reason": "improvement not established",
+      "relative_gain": -0.014027918509017832,
+      "selection_count": 61,
+      "training_count": 81,
+      "validation_count": 71
+    },
+    "two_point_run_success": {
+      "accepted": false,
+      "reason": "missing or insufficient observed events",
+      "selection_count": 0,
+      "training_count": 0,
+      "validation_count": 0
+    }
+  },
+  "engine_sha256": "30b0dc3cf890f4c056569b424b150f879a7441f973a3325dec286a1baaa14d38",
+  "limitations": [
+    "Conditional event distribution validation, not whole-game fantasy accuracy or ROI validation.",
+    "Existing engine event-support limitations are preserved; unknown actual events are never zero-filled.",
+    "Current published archives may contain later statistical corrections; this historical trial is retrospective."
+  ],
+  "parameters": {
+    "rushing_df": 3.0,
+    "rushing_sd": 6.0
+  },
+  "parent_version": null,
+  "players": {},
+  "remaining_scope": {
+    "joint_correlations": "requires frozen full-game replay validation",
+    "kicking_and_defense": "component activation only where observed flags and sample sizes pass",
+    "player_roles": "requires longer per-player histories and independent opportunity validation"
+  },
+  "schema": 1,
+  "selection_games": 14,
+  "selection_through": "2026-10-19",
+  "sources": [
+    {
+      "path": "2026_week_05.csv.gz",
+      "rows": 2687,
+      "sha256": "fc3d99ae9d4d3a40103813cab01c6fcd5affb0067c42f06fd79233a52ac2524f"
+    },
+    {
+      "path": "2026_week_06.csv.gz",
+      "rows": 2538,
+      "sha256": "f81867d20490f6d8318d3482369c683e8e97e2ecd61385e3aeb40208d72c1b2a"
+    },
+    {
+      "path": "2026_week_07.csv.gz",
+      "rows": 2358,
+      "sha256": "8abfd0793446b8746f24d773918563c5eecb0a9c899ed2fb37ad697aefe62747"
+    }
+  ],
+  "status": "accepted",
+  "training_games": 15,
+  "training_through": "2026-10-12",
+  "validation_from": "2026-10-22",
+  "validation_games": 14,
+  "validation_kind": "independent conditional-event components",
+  "validation_through": "2026-10-26",
+  "version": "d6464a5c58186cc1"
+}

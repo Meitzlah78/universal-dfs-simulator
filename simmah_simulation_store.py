@@ -41,7 +41,7 @@ def _hash(raw):
 def _model_digest():
     root=Path(__file__).parent
     names=['simmah_simulation_store.py','simmah_nfl_engine.py','simmah_projection_inputs.py',
-           'simmah_nfl_scoring.py','simmah_market_calibration.py','simmah_weather.py','simmah_qb_roles.py','simmah_matchups.py']
+           'simmah_nfl_scoring.py','simmah_nfl_event_learning.py','simmah_nfl_learning.py','simmah_market_calibration.py','simmah_weather.py','simmah_qb_roles.py','simmah_matchups.py']
     return _hash(_json({name:_hash((root/name).read_bytes()) for name in names}))
 
 
@@ -67,7 +67,7 @@ def _cache_lock(path):
         finally:fcntl.flock(handle.fileno(),fcntl.LOCK_UN)
 
 
-def _fit(pool,roles,platform,root,key,pilot_n,iterations,progress):
+def _fit(pool,roles,platform,root,key,pilot_n,iterations,progress,learned_parameters=None):
     path=root/'fits'/(key+'.json')
     with _cache_lock(root/'locks'/('fit-'+key+'.lock')):
         if path.exists():
@@ -80,7 +80,7 @@ def _fit(pool,roles,platform,root,key,pilot_n,iterations,progress):
             except (KeyError,TypeError,json.JSONDecodeError) as exc:
                 raise CacheIntegrityError('Unreadable projection-fit cache') from exc
         parameters,report=fit_projection_inputs(pool,roles,platform,score_nfl_stat_line,
-            pilot_n=pilot_n,iterations=iterations,progress=progress)
+            pilot_n=pilot_n,iterations=iterations,progress=progress,learned_parameters=learned_parameters)
         payload={'key':key,'parameters':parameters,
                  'report':report.astype(object).where(pd.notna(report),None).to_dict(orient='split')}
         _atomic_write(path,_json({'payload':payload,'sha256':_hash(_json(payload))}))
@@ -119,13 +119,25 @@ def _read_prepared(directory,key,names,count):
 
 def prepare_simulations(pool,roles,platform,cache_root,count=10000,correlation_strength=1.,
                         weather_by_team=None,evaluation_seed=530001,construction_seed=530002,
-                        pilot_n=1024,iterations=8,progress=None,market_targets=None):
+                        pilot_n=1024,iterations=8,progress=None,market_targets=None,slate_date=None,game_starts=None):
     """Return two DataFrames, fit report and timings. No candidate/field work here.
 
     Confirm QB roles before this call. Input row order is part of the key because
     it affects RNG consumption. History and weather must be supplied snapshots;
     this layer never fetches today's data during a replay.
     """
+    from simmah_nfl_learning import model_for_date, apply_player_profiles
+    learning_error=None
+    try:model=model_for_date(slate_date)
+    except (ValueError,KeyError,OSError,TypeError) as exc:
+        model=None;learning_error=str(exc)
+    learned_parameters=model['parameters'] if model else {}
+    if model:roles=apply_player_profiles(roles,model['players'])
+    label=('validated event components active' if model and model.get('validation_kind')=='independent conditional-event components'
+           else 'validated full-game update active' if model else 'baseline; no eligible validated update')
+    if learning_error:label='baseline; learned model unavailable: '+learning_error
+    learning={'status':label,'accepted_components':model.get('accepted_components',[]) if model else [],
+              'version':model['version'] if model else None,'slate_date':str(slate_date) if slate_date else None}
     started=time.perf_counter();count=int(count)
     if count<1 or int(pilot_n)<1 or int(iterations)<0:raise ValueError('Invalid simulation counts')
     if evaluation_seed==construction_seed:raise ValueError('Construction and evaluation require distinct seeds')
@@ -157,7 +169,7 @@ def prepare_simulations(pool,roles,platform,cache_root,count=10000,correlation_s
     from simmah_market_calibration import canonical_targets, calibrate_market_inputs
     market_targets=canonical_targets(market_targets)
     fit_spec={'schema':SCHEMA,'model_digest':_model_digest(),'players':inputs.to_dict('records'),
-              'roles':roles,'platform':platform,'pilot_n':pilot_n,'iterations':iterations}
+              'roles':roles,'learning':learning,'learned_parameters':learned_parameters,'platform':platform,'pilot_n':pilot_n,'iterations':iterations}
     fit_key=_hash(_json(fit_spec))
     spec={'schema':SCHEMA,'fit_key':fit_key,'count':count,'correlation_strength':correlation_strength,
           'weather':weather_by_team,'market_targets':market_targets,'evaluation_seed':int(evaluation_seed),'construction_seed':int(construction_seed)}
@@ -166,22 +178,27 @@ def prepare_simulations(pool,roles,platform,cache_root,count=10000,correlation_s
         cached=_read_prepared(directory,key,names,count)
         if cached is not None:
             cached['metadata']={'key':key,'fit_key':fit_key,'cache_hit':True,'count':count,
-                'platform':platform,'input_players':fit_spec['players'],'weather':weather_by_team,
+                'platform':platform,'learning':learning,'input_players':fit_spec['players'],'weather':weather_by_team,
                 'correlation_strength':correlation_strength,
                 'market_targets':market_targets, 'market_report':cached.get('market_report', []),
                 'timings':{'load_seconds':time.perf_counter()-started}}
             return cached
         timings={};mark=time.perf_counter()
         parameters,report,fit_hit=_fit(inputs,roles,platform,root,fit_key,pilot_n,iterations,
-            (lambda f,t:progress(.3*f,t)) if progress else None)
+            (lambda f,t:progress(.3*f,t)) if progress else None,learned_parameters)
         timings['fit_seconds']=time.perf_counter()-mark
-        market_gain,market_report=calibrate_market_inputs(inputs,roles,parameters,weather_by_team,platform,market_targets,pilot_n=max(512,int(pilot_n)))
+        market_gain,market_report=calibrate_market_inputs(inputs,roles,parameters,weather_by_team,platform,market_targets,pilot_n=max(512,int(pilot_n)),learned_parameters=learned_parameters)
+        from simmah_nfl_learning import capture_pregame_inputs
+        replay_paths=capture_pregame_inputs(inputs,roles,platform,parameters,weather_by_team,market_gain,
+                               game_starts or {},root,incumbent=model,
+                               fit_settings={"pilot_n":pilot_n,"iterations":iterations},market_targets=market_targets,
+                               correlation_strength=correlation_strength)
         result={}
         for index,(kind,seed) in enumerate([('evaluation',evaluation_seed),('construction',construction_seed)]):
             mark=time.perf_counter()
             if progress:progress(.3+.35*index,'Preparing '+kind+' outcomes')
             stats=simulate_stat_lines(inputs,roles,np.random.default_rng(seed),count,correlation_strength,
-                weather_by_team=weather_by_team,projection_inputs=parameters,scoring_platform=platform,market_gain=market_gain,
+                weather_by_team=weather_by_team,projection_inputs=parameters,scoring_platform=platform,market_gain=market_gain,learned_parameters=learned_parameters,
                 progress=(lambda fraction,text:progress(.3+.35*index+.35*fraction,text)) if progress else None)
             values={}
             for row in inputs.itertuples():
@@ -199,12 +216,13 @@ def prepare_simulations(pool,roles,platform,cache_root,count=10000,correlation_s
         _atomic_write(directory/'outcomes.npz',raw);_atomic_write(directory/'fit_report.json',report_raw)
         # Manifest is the commit marker; readers never accept a partial write.
         manifest={'schema':SCHEMA,'key':key,'spec':spec,'fit_spec':fit_spec,'names':names,'model_digest':_model_digest(),
-                  'outcomes_sha256':_hash(raw),'fit_report_sha256':_hash(report_raw), 'market_report':market_report}
+                  'outcomes_sha256':_hash(raw),'fit_report_sha256':_hash(report_raw), 'market_report':market_report,
+                  'pregame_replay_inputs':[json.loads(Path(path).read_text()) for path in replay_paths]}
         _atomic_write(directory/'manifest.json',_json(manifest))
         timings['persist_seconds']=time.perf_counter()-mark;timings['total_seconds']=time.perf_counter()-started
         result['fit_report']=report
         result['metadata']={'key':key,'fit_key':fit_key,'cache_hit':False,'fit_cache_hit':fit_hit,
-                            'count':count,'timings':timings,'platform':platform,'input_players':fit_spec['players'],
+                            'count':count,'timings':timings,'learning':learning,'platform':platform,'input_players':fit_spec['players'],
                             'weather':weather_by_team,'correlation_strength':correlation_strength,
                             'market_targets':market_targets,'market_report':market_report}
         if progress:progress(1.,'Prepared simulation bundle ready')
@@ -228,7 +246,7 @@ def load_prepared(cache_root,key):
         result=_read_prepared(directory,key,manifest['names'],int(manifest['spec']['count']))
         if result is None:raise CacheIntegrityError('Preparation is incomplete')
         result['metadata']={'key':key,'cache_hit':True,'count':manifest['spec']['count'],
-            'platform':manifest['fit_spec']['platform'],'input_players':manifest['fit_spec']['players'],
+            'platform':manifest['fit_spec']['platform'],'learning':manifest['fit_spec'].get('learning',{}),'input_players':manifest['fit_spec']['players'],
             'weather':manifest['spec']['weather'],'correlation_strength':manifest['spec']['correlation_strength'],
             'market_targets':manifest['spec'].get('market_targets',{}),'market_report':manifest.get('market_report',[]),
             'timings':{'load_seconds':time.perf_counter()-started}}
@@ -279,6 +297,12 @@ def construction_for_build(evaluation,pool,platform,cache_root,count=10000,corre
     current_weather=weather_snapshot(pool)
     if any(metadata['weather'].get(team)!=weather for team,weather in current_weather.items()):
         raise ValueError('Weather inputs changed since preparation; run SIM again')
+    from simmah_nfl_learning import model_for_date
+    learning=metadata.get('learning',{})
+    try:active=model_for_date(learning.get('slate_date'))
+    except (ValueError,KeyError,OSError,TypeError):active=None
+    if learning.get('version')!=(active['version'] if active else None):
+        raise ValueError('NFL learned model changed; run SIM again')
     reference=prepared['evaluation']
     if list(evaluation.columns)!=list(reference.columns) or evaluation.shape!=reference.shape or not np.array_equal(evaluation.to_numpy(),reference.to_numpy()):
         raise ValueError('Evaluation outcomes do not match preparation; run SIM again')
@@ -308,3 +332,4 @@ def main():
 
 
 if __name__=='__main__':main()
+

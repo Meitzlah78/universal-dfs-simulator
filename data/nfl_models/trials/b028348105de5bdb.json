@@ -1,0 +1,240 @@
+{
+  "event_diagnostics": {
+    "completion_rate": {
+      "baseline": 0.64,
+      "baseline_loss": 0.634283991835281,
+      "candidate_loss": 0.6333992300120465,
+      "fitted": 0.646800195407914,
+      "status": "candidate",
+      "training_count": 1947,
+      "unknown_training_records": null,
+      "unknown_validation_records": null,
+      "validation_count": 860
+    },
+    "defensive_return_td_rate": {
+      "reason": "'fumble_lost'",
+      "status": "unavailable"
+    },
+    "environment_sd": {
+      "reason": "Shared-game dependence must be fitted against joint outcomes",
+      "status": "awaiting full-engine training replays"
+    },
+    "extra_point_rate": {
+      "reason": "'extra_point_result'",
+      "status": "unavailable"
+    },
+    "field_goal_logit_offset": {
+      "reason": "'DataFrame' object has no attribute 'kick_distance'",
+      "status": "unavailable"
+    },
+    "fumble_loss_rate": {
+      "reason": "Missing fumble_lost",
+      "status": "unavailable"
+    },
+    "interception_rate": {
+      "baseline": 0.021,
+      "baseline_loss": 0.09139732055769217,
+      "candidate_loss": 0.09121387371341466,
+      "fitted": 0.01876199616122841,
+      "status": "candidate",
+      "training_count": 1984,
+      "unknown_training_records": null,
+      "unknown_validation_records": null,
+      "validation_count": 876
+    },
+    "opportunity_concentration": {
+      "reason": "Shared-game dependence must be fitted against joint outcomes",
+      "status": "awaiting full-engine training replays"
+    },
+    "pace_sd": {
+      "reason": "Shared-game dependence must be fitted against joint outcomes",
+      "status": "awaiting full-engine training replays"
+    },
+    "pass_rate": {
+      "baseline": 0.58,
+      "baseline_loss": 0.6942137755038472,
+      "candidate_loss": 0.6929339256044145,
+      "fitted": 0.5720147722609766,
+      "status": "candidate",
+      "training_count": 2337,
+      "unknown_training_records": null,
+      "unknown_validation_records": null,
+      "validation_count": 1207
+    },
+    "receiving_shape": {
+      "baseline": 1.5,
+      "baseline_loss": 305.80072672822484,
+      "candidate_loss": 6.09269732727808,
+      "fitted": 1.2716243219040895,
+      "status": "candidate",
+      "training_count": 1260,
+      "unknown_training_records": null,
+      "unknown_validation_records": null,
+      "validation_count": 579
+    },
+    "receiving_yards": {
+      "baseline": 11.2,
+      "baseline_loss": 0.00942140132024447,
+      "candidate_loss": 0.35560781010731907,
+      "fitted": 10.700735294117647,
+      "status": "rejected event diagnostic",
+      "training_count": 1260,
+      "unknown_training_records": null,
+      "unknown_validation_records": null,
+      "validation_count": 579
+    },
+    "rushing_sd": {
+      "baseline": 5.5,
+      "baseline_loss": 2.280739281906209,
+      "candidate_loss": 2.2759657576327723,
+      "fitted": 5.776747976148114,
+      "status": "candidate",
+      "training_count": 1433,
+      "unknown_training_records": null,
+      "unknown_validation_records": null,
+      "validation_count": 757
+    },
+    "rushing_yards": {
+      "baseline": 4.35,
+      "baseline_loss": 2.280739281906209,
+      "candidate_loss": 2.281306852173221,
+      "fitted": 4.236138290932812,
+      "status": "rejected event diagnostic",
+      "training_count": 1433,
+      "unknown_training_records": null,
+      "unknown_validation_records": null,
+      "validation_count": 757
+    },
+    "sack_rate": {
+      "baseline": 0.065,
+      "baseline_loss": 0.21389065069565666,
+      "candidate_loss": 0.214704801032636,
+      "fitted": 0.06922043010752688,
+      "status": "rejected event diagnostic",
+      "training_count": 2132,
+      "unknown_training_records": null,
+      "unknown_validation_records": null,
+      "validation_count": 927
+    },
+    "two_point_pass_share": {
+      "status": "insufficient sample",
+      "training_count": 17,
+      "validation_count": 5
+    },
+    "two_point_pass_success": {
+      "reason": "'two_point_conv_result'",
+      "status": "unavailable"
+    },
+    "two_point_rate": {
+      "baseline": 0.097,
+      "baseline_loss": 0.25914621675625044,
+      "candidate_loss": 0.2639031273472221,
+      "fitted": 0.11033057851239671,
+      "status": "rejected event diagnostic",
+      "training_count": 142,
+      "unknown_training_records": null,
+      "unknown_validation_records": null,
+      "validation_count": 71
+    },
+    "two_point_run_success": {
+      "reason": "'two_point_conv_result'",
+      "status": "unavailable"
+    }
+  },
+  "limitations": [
+    "Regulation only; incomplete historical kick/fumble flags are not inferred.",
+    "Event diagnostic is not full-engine prediction or DFS ROI validation.",
+    "No player/DST fantasy actuals are reconstructed from reduced archives."
+  ],
+  "parameters": {
+    "completion_rate": 0.646800195407914,
+    "interception_rate": 0.01876199616122841,
+    "pass_rate": 0.5720147722609766,
+    "receiving_shape": 1.2716243219040895,
+    "rushing_sd": 5.776747976148114
+  },
+  "player_role_minimum_team_games": 4,
+  "players": {},
+  "schema": 1,
+  "scope": [
+    "passing",
+    "rushing",
+    "receiving",
+    "volume",
+    "efficiency",
+    "variance",
+    "correlations",
+    "kicking",
+    "turnovers",
+    "defense"
+  ],
+  "source_game_ids": [
+    "2026_05_BAL_ATL",
+    "2026_05_BUF_LA",
+    "2026_05_CHI_GB",
+    "2026_05_CIN_MIA",
+    "2026_05_CLE_NYJ",
+    "2026_05_DEN_LAC",
+    "2026_05_DET_ARI",
+    "2026_05_HOU_TEN",
+    "2026_05_IND_PIT",
+    "2026_05_LV_NE",
+    "2026_05_MIN_NO",
+    "2026_05_NYG_WAS",
+    "2026_05_PHI_JAX",
+    "2026_05_SF_SEA",
+    "2026_05_TB_DAL",
+    "2026_06_ARI_LA",
+    "2026_06_BAL_CLE",
+    "2026_06_BUF_LV",
+    "2026_06_CAR_PHI",
+    "2026_06_CHI_ATL",
+    "2026_06_DAL_GB",
+    "2026_06_HOU_JAX",
+    "2026_06_LAC_KC",
+    "2026_06_NO_NYG",
+    "2026_06_NYJ_NE",
+    "2026_06_PIT_TB",
+    "2026_06_SEA_DEN",
+    "2026_06_TEN_IND",
+    "2026_06_WAS_SF",
+    "2026_07_CIN_BAL",
+    "2026_07_CLE_TEN",
+    "2026_07_DAL_PHI",
+    "2026_07_DEN_ARI",
+    "2026_07_GB_DET",
+    "2026_07_IND_MIN",
+    "2026_07_KC_SEA",
+    "2026_07_LA_LV",
+    "2026_07_MIA_NYJ",
+    "2026_07_NE_CHI",
+    "2026_07_NYG_HOU",
+    "2026_07_PIT_NO",
+    "2026_07_SF_ATL",
+    "2026_07_TB_CAR"
+  ],
+  "sources": [
+    {
+      "path": "2026_week_05.csv.gz",
+      "rows": 2687,
+      "sha256": "fc3d99ae9d4d3a40103813cab01c6fcd5affb0067c42f06fd79233a52ac2524f"
+    },
+    {
+      "path": "2026_week_06.csv.gz",
+      "rows": 2538,
+      "sha256": "f81867d20490f6d8318d3482369c683e8e97e2ecd61385e3aeb40208d72c1b2a"
+    },
+    {
+      "path": "2026_week_07.csv.gz",
+      "rows": 2358,
+      "sha256": "8abfd0793446b8746f24d773918563c5eecb0a9c899ed2fb37ad697aefe62747"
+    }
+  ],
+  "status": "awaiting full-engine replay",
+  "training_games": 29,
+  "training_through": "2026-10-19",
+  "validation_from": "2026-10-22",
+  "validation_games": 14,
+  "validation_through": "2026-10-26",
+  "version": "b028348105de5bdb"
+}

@@ -15,9 +15,13 @@ jobs:
         with:
           python-version: '3.12'
       - name: Install test dependencies
-        run: python -m pip install numpy pandas "scipy>=1.11"
+        run: python -m pip install numpy pandas requests "scipy>=1.11"
       - name: Compile simulator
         run: python -m py_compile dfs_app.py simmah_nfl_engine.py simmah_weather.py simmah_candidates.py simmah_contests.py simmah_contest_history.py simmah_classic_field.py
+      - name: Verify automatic component learning and completed-game ingestion
+        run: python -m unittest discover -s tests -p test_nfl_event_learning.py -v
+      - name: Verify NFL performance learning and leakage gates
+        run: python -m unittest discover -s tests -p test_nfl_learning.py -v
       - name: Verify football events and DFS scoring
         run: python -m unittest discover -s tests -p test_nfl_engine.py -v
       - name: Verify full-slate stacks
@@ -34,3 +38,4 @@ jobs:
         run: python -m unittest discover -s tests -p test_workflow_integration.py -v
       - name: Verify Classic opponent construction
         run: python -m unittest discover -s tests -p test_classic_field.py -v
+

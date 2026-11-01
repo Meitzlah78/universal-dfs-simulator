@@ -18,7 +18,7 @@ def canonical_targets(markets):
     return dict(sorted(targets.items()))
 
 
-def calibrate_market_inputs(pool, roles, parameters, weather, platform, targets, pilot_n=1024, steps=3):
+def calibrate_market_inputs(pool, roles, parameters, weather, platform, targets, pilot_n=1024, steps=3, learned_parameters=None):
     """Fit team yardage-efficiency inputs, never rescale fantasy points/outcomes.
 
     A separate fixed pilot seed is excluded from construction and evaluation.
@@ -33,7 +33,7 @@ def calibrate_market_inputs(pool, roles, parameters, weather, platform, targets,
     for iteration in range(steps + 1):
         _, diagnostic = simulate_stat_lines(pool, roles, np.random.default_rng(830117), pilot_n,
             weather_by_team=weather, projection_inputs=parameters, scoring_platform=platform,
-            market_gain=gains, return_diagnostics=True)
+            market_gain=gains, return_diagnostics=True,learned_parameters=learned_parameters)
         means = {team:float(np.mean(diagnostic[team]['points'])) for team in targets if team in diagnostic}
         if iteration == 0:
             initial = means.copy()
@@ -46,3 +46,4 @@ def calibrate_market_inputs(pool, roles, parameters, weather, platform, targets,
                'Bound reached':gains[team] <= .65001 or gains[team] >= 1.49999}
               for team,target in targets.items() if team in means]
     return gains, report
+

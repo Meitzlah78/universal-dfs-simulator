@@ -6,8 +6,9 @@ Rates are model assumptions/history inputs, not learned from contest uploads.
 """
 import numpy as np
 
-ENGINE_VERSION = 'shared-nfl-v5-market-environment'
+ENGINE_VERSION = 'shared-nfl-v6-validated-learning'
 STAT_KEYS = (
+    'passing_attempts', 'completions', 'rushing_attempts', 'targets',
     'passing_yards', 'passing_tds', 'interceptions', 'rushing_yards',
     'rushing_tds', 'receiving_yards', 'receiving_tds', 'receptions',
     'fumbles_lost', 'two_point_conversions', 'sacks', 'def_interceptions',
@@ -17,8 +18,10 @@ STAT_KEYS = (
 )
 
 
-def simulate_stat_lines(pool, roles, rng, n, correlation_strength=1.0, progress=None, return_diagnostics=False, weather_by_team=None, projection_inputs=None, scoring_platform="FanDuel", market_gain=None):
+def simulate_stat_lines(pool, roles, rng, n, correlation_strength=1.0, progress=None, return_diagnostics=False, weather_by_team=None, projection_inputs=None, scoring_platform="FanDuel", market_gain=None, learned_parameters=None):
     """Return name -> stat arrays; no point scaling, clipping or bootstrapping."""
+    from simmah_nfl_learning import validate_parameters
+    learned = validate_parameters(learned_parameters or {})
     from simmah_weather import weather_factors
     weather_by_team = weather_by_team or {}
     projection_inputs = projection_inputs or {}
@@ -40,6 +43,7 @@ def simulate_stat_lines(pool, roles, rng, n, correlation_strength=1.0, progress=
     player_ids = {name: i for i, name in enumerate(stats)}
     player_names = list(stats)
     selection_codes = {}
+    game_weights = {}
     by_team = {}
     for row in rows:
         team = str(row.get('Team', '')).upper().strip()
@@ -81,13 +85,13 @@ def simulate_stat_lines(pool, roles, rng, n, correlation_strength=1.0, progress=
                     projection[i]*=rec_share if field=='targets' else 1-rec_share
                 if field=='targets':
                     rec=role.get('receptions',0);targets=role.get('targets',0)
-                    catch=np.clip(rec/targets,.35,.88) if targets else .64
-                    ypr=np.clip(role.get('rec_yards',0)/max(rec,1e-6),5,20) if rec else 11.2
+                    catch=np.clip(rec/targets,.35,.88) if targets else learned['completion_rate']
+                    ypr=np.clip(role.get('rec_yards',0)/max(rec,1e-6),5,20) if rec else learned['receiving_yards']
                     points_per_target=catch*(reception_points+.1*ypr)+6*role.get('rec_tds',0)/max(targets,1)
                     projection[i]/=max(points_per_target,.2)
                 else:
                     carries=role.get('carries',0)
-                    ypc=np.clip(role.get('rush_yards',0)/max(carries,1e-6),2,8.5) if carries else 4.35
+                    ypc=np.clip(role.get('rush_yards',0)/max(carries,1e-6),2,8.5) if carries else learned['rushing_yards']
                     projection[i]/=max(.1*ypc+6*role.get('rush_tds',0)/max(carries,1),.1)
             history = np.array([max(roles.get(str(r['Name']), {}).get(field, 0), 0) for r in group])
             if not len(projection):
@@ -106,7 +110,7 @@ def simulate_stat_lines(pool, roles, rng, n, correlation_strength=1.0, progress=
         qa = qb_role.get('pass_attempts', 0)
         carries = sum(roles.get(str(r['Name']), {}).get('carries', 0) for r in runners)
         qb_carries = qb_role.get('carries', 0)
-        pass_rate = np.clip(qa / max(qa + carries + qb_carries, 1), .44, .70) if qa >= 15 else .58
+        pass_rate = np.clip(qa / max(qa + carries + qb_carries, 1), .44, .70) if qa >= 15 else learned['pass_rate']
         qb_run_share = np.clip(qb_carries / max(carries + qb_carries, 1), 0, .40)
         # Include QB carries in the finite rushing pool.
         if qb and (qb_run_share > 0 or not runners):
@@ -117,12 +121,25 @@ def simulate_stat_lines(pool, roles, rng, n, correlation_strength=1.0, progress=
                     kicker=best({'K'}), defense=best({'D', 'DST', 'DEF'}),
                     pass_rate=pass_rate, role=qb_role, pass_gain=float(projection_inputs.get(qb,{}).get('pass_gain',1.)))
 
-    def select(names, weights, count):
+    def rush_draw(mean,count):
+        df=learned['rushing_df']
+        if df:
+            return mean+learned['rushing_sd']*rng.standard_t(df,count)*np.sqrt((df-2)/df)
+        return rng.normal(mean,learned['rushing_sd'],count)
+
+    def select(names, weights, count, game_indices=None):
         if not names or not count:
             return np.array([], dtype=np.int32)
         key = tuple(names)
         if key not in selection_codes:
             selection_codes[key] = np.asarray([player_ids[name] for name in names], dtype=np.int32)
+        if learned['opportunity_concentration'] and game_indices is not None:
+            if key not in game_weights:
+                alpha=np.maximum(np.asarray(weights)*learned['opportunity_concentration'],.01)
+                game_weights[key]=rng.dirichlet(alpha,size=n)
+            cumulative=np.cumsum(game_weights[key][game_indices],axis=1)
+            chosen=(rng.random(count)[:,None]>cumulative).sum(axis=1)
+            return selection_codes[key][np.minimum(chosen,len(names)-1)]
         return selection_codes[key][rng.choice(len(names), count, p=weights)]
 
     diagnostics = {}
@@ -155,8 +172,8 @@ def simulate_stat_lines(pool, roles, rng, n, correlation_strength=1.0, progress=
         field = np.full(n, 25.)  # yards from the offense's own goal line
         down = np.ones(n, dtype=int)
         to_go = np.full(n, 10.)
-        pace = np.clip(1 + strength * rng.normal(0, .09, n), .80, 1.22)
-        environment = np.clip(1 + strength * rng.normal(0, .10, n), .75, 1.30)
+        pace = np.clip(1 + strength * rng.normal(0, learned['pace_sd'], n), .80, 1.22)
+        environment = np.clip(1 + strength * rng.normal(0, learned['environment_sd'], n), .75, 1.30)
 
         def switch(idx, new_field):
             possession[idx] = 1 - possession[idx]
@@ -169,17 +186,17 @@ def simulate_stat_lines(pool, roles, rng, n, correlation_strength=1.0, progress=
             if not len(idx):
                 return
             p = profiles[side]
-            two = rng.random(len(idx)) < .097
+            two = rng.random(len(idx)) < learned['two_point_rate']
             two_idx, kick_idx = idx[two], idx[~two]
             counters['two_attempts'][side, two_idx] += 1
             counters['pat_attempts'][side, kick_idx] += 1
-            xp_made = kick_idx[rng.random(len(kick_idx)) < .9468 * factors['kick_accuracy']]
+            xp_made = kick_idx[rng.random(len(kick_idx)) < learned['extra_point_rate'] * factors['kick_accuracy']]
             counters['pat_made'][side, xp_made] += 1
             points[side, xp_made] += 1
             chargeable[side, xp_made] += 1
             add(p['kicker'], 'extra_points_made', xp_made)
-            pass_two = rng.random(len(two_idx)) < .55
-            for passing, attempts, chance in [(True, two_idx[pass_two], .4437), (False, two_idx[~pass_two], .5466)]:
+            pass_two = rng.random(len(two_idx)) < learned['two_point_pass_share']
+            for passing, attempts, chance in [(True, two_idx[pass_two], learned['two_point_pass_success']), (False, two_idx[~pass_two], learned['two_point_run_success'])]:
                 success = attempts[rng.random(len(attempts)) < chance]
                 counters['two_made'][side, success] += 1
                 points[side, success] += 2
@@ -188,7 +205,7 @@ def simulate_stat_lines(pool, roles, rng, n, correlation_strength=1.0, progress=
                 weights = p['rec_w'] if passing else p['rush_w']
                 if passing:
                     add(p['qb'], 'two_point_conversions', success)
-                selected = select(names, weights, len(success))
+                selected = select(names, weights, len(success),success)
                 for name in names:
                     add(name, 'two_point_conversions', success[selected == player_ids[name]])
 
@@ -215,6 +232,8 @@ def simulate_stat_lines(pool, roles, rng, n, correlation_strength=1.0, progress=
                     punt = fourth[field[fourth] < 60]
                     distance = 117-field[fg]
                     probability = np.clip(.97 - .005*np.maximum(distance-30, 0) - .009*np.maximum(distance-45, 0), .35, .98)
+                    if learned['field_goal_logit_offset']:
+                        probability=1/(1+np.exp(-(np.log(probability/(1-probability))+learned['field_goal_logit_offset'])))
                     made = rng.random(len(fg)) < probability * factors['kick_accuracy']
                     made_idx = fg[made]
                     counters['fg_attempts'][side, fg] += 1
@@ -240,44 +259,47 @@ def simulate_stat_lines(pool, roles, rng, n, correlation_strength=1.0, progress=
                 sack = np.zeros(len(idx), dtype=bool)
                 caught = np.zeros(len(idx), dtype=bool)
                 if passing.any():
-                    sack = passing & (rng.random(len(idx)) < p['role'].get('matchup_sack_rate', .065))
+                    sack = passing & (rng.random(len(idx)) < p['role'].get('matchup_sack_rate', learned['sack_rate']))
                     gain[sack] = -np.clip(rng.normal(6, 3, sack.sum()), 1, 15)
                     add(defense, 'sacks', idx[sack])
                     role = p['role']; attempts = role.get('pass_attempts', 0)
-                    int_rate = np.clip(role.get('interceptions', 0)/max(attempts, 1), .006, .05) if attempts else .021
+                    int_rate = np.clip(role.get('interceptions', 0)/max(attempts, 1), .006, .05) if attempts else learned['interception_rate']
                     interception = passing & ~sack & (rng.random(len(idx)) < int_rate)
                     add(p['qb'], 'interceptions', idx[interception])
                     add(defense, 'def_interceptions', idx[interception])
+                    add(p['qb'], 'passing_attempts', idx[passing & ~sack])
                     throw = passing & ~sack & ~interception
-                    selected = select(p['receivers'], p['rec_w'], int(throw.sum()))
+                    selected = select(p['receivers'], p['rec_w'], int(throw.sum()),idx[throw])
                     if not p['receivers']:
                         # Missing salary-pool players still participate in the
                         # football game; do not fabricate DFS player records.
-                        virtual = np.flatnonzero(throw & (rng.random(len(idx)) < .64 * factors['completion'] * p['pass_gain']**.20))
+                        virtual = np.flatnonzero(throw & (rng.random(len(idx)) < learned['completion_rate'] * factors['completion'] * p['pass_gain']**.20))
                         caught[virtual] = True
-                        gain[virtual] = np.clip(rng.gamma(1.5, 11.2/1.5, len(virtual))*environment[idx[virtual]]*factors['pass_yards']*p['pass_gain']**.80, 0, 85)
+                        gain[virtual] = np.clip(rng.gamma(learned['receiving_shape'], learned['receiving_yards']/learned['receiving_shape'], len(virtual))*environment[idx[virtual]]*factors['pass_yards']*p['pass_gain']**.80, 0, 85)
                     if len(selected):
                         carrier[throw] = selected
                         for name in p['receivers']:
                             loc = np.flatnonzero(throw & (carrier == player_ids[name]))
+                            add(name, 'targets', idx[loc])
                             role = roles.get(name, {}); targets = role.get('targets', 0); rec = role.get('receptions', 0)
-                            qb_comp = np.clip(p['role'].get('completions', 0)/max(attempts, 1), .52, .76) if attempts else .64
-                            chance = np.clip((.6*(rec/targets if targets else .64)+.4*qb_comp) * factors['completion'] * p['pass_gain']**.20, .35, .88)
+                            qb_comp = np.clip(p['role'].get('completions', 0)/max(attempts, 1), .52, .76) if attempts else learned['completion_rate']
+                            chance = np.clip((.6*(rec/targets if targets else learned['completion_rate'])+.4*qb_comp) * factors['completion'] * p['pass_gain']**.20, .35, .88)
                             complete = loc[rng.random(len(loc)) < chance]
                             caught[complete] = True
-                            ypr = np.clip(role.get('rec_yards', 0)/rec, 5, 20) if rec else 11.2
-                            gain[complete] = np.clip(rng.gamma(1.5, np.clip(ypr*role.get('matchup_receiving',1.)*projection_inputs.get(name,{}).get('skill_gain',1.)*p['pass_gain']**.80,3,24)/1.5, len(complete))*environment[idx[complete]]*factors['pass_yards'], 0, 85)
+                            ypr = np.clip(role.get('rec_yards', 0)/rec, 5, 20) if rec else learned['receiving_yards']
+                            gain[complete] = np.clip(rng.gamma(learned['receiving_shape'], np.clip(ypr*role.get('matchup_receiving',1.)*projection_inputs.get(name,{}).get('skill_gain',1.)*p['pass_gain']**.80,3,24)/learned['receiving_shape'], len(complete))*environment[idx[complete]]*factors['pass_yards'], 0, 85)
+                add(p['qb'], 'completions', idx[caught])
                 running = ~passing
-                selected = select(p['runners'], p['rush_w'], int(running.sum()))
+                selected = select(p['runners'], p['rush_w'], int(running.sum()),idx[running])
                 if not p['runners']:
-                    gain[running] = np.clip(rng.normal(4.35, 5.5, int(running.sum())), -5, 65)
+                    gain[running] = np.clip(rush_draw(learned['rushing_yards'], int(running.sum())), -5, 65)
                 if len(selected):
                     carrier[running] = selected
                     for name in p['runners']:
                         loc = np.flatnonzero(running & (carrier == player_ids[name]))
                         role = roles.get(name, {}); carries = role.get('carries', 0)
-                        ypc = np.clip(role.get('rush_yards', 0)/carries, 2, 8.5) if carries else 4.35
-                        gain[loc] = np.clip(rng.normal(np.clip(ypc*role.get('matchup_rushing',1.)*projection_inputs.get(name,{}).get('skill_gain',1.),1,8.5), 5.5, len(loc))*np.sqrt(environment[idx[loc]]), -5, 65)
+                        ypc = np.clip(role.get('rush_yards', 0)/carries, 2, 8.5) if carries else learned['rushing_yards']
+                        gain[loc] = np.clip(rush_draw(np.clip(ypc*role.get('matchup_rushing',1.)*projection_inputs.get(name,{}).get('skill_gain',1.),1,8.5), len(loc))*np.sqrt(environment[idx[loc]]), -5, 65)
                 if market_gain:
                     # Yardage changes happen before TDs, first downs, player stats
                     # and opposing-DST accounting, preserving shared events.
@@ -290,11 +312,12 @@ def simulate_stat_lines(pool, roles, rng, n, correlation_strength=1.0, progress=
                     add(p['qb'], 'passing_yards', idx[loc], gain[loc])
                 for name in p['runners']:
                     loc = np.flatnonzero(running & (carrier == player_ids[name]))
+                    add(name, 'rushing_attempts', idx[loc])
                     add(name, 'rushing_yards', idx[loc], gain[loc])
                 yards_total[side, idx] += gain
                 # Only the actual ball carrier can lose a fumble.
                 carrier[sack] = player_ids.get(p['qb'], -1)
-                fumble = ~interception & ((caught | running | sack) & (carrier >= 0)) & (rng.random(len(idx)) < .0064)
+                fumble = ~interception & ((caught | running | sack) & (carrier >= 0)) & (rng.random(len(idx)) < learned['fumble_loss_rate'])
                 for code in np.unique(carrier[fumble]):
                     add(player_names[code], 'fumbles_lost', idx[fumble & (carrier == code)])
                 add(defense, 'fumble_recoveries', idx[fumble])
@@ -316,7 +339,7 @@ def simulate_stat_lines(pool, roles, rng, n, correlation_strength=1.0, progress=
                 points[1-side, safe_idx] += 2
                 turnover = interception | fumble
                 turn_idx = idx[turnover]
-                return_td = rng.random(len(turn_idx)) < .08
+                return_td = rng.random(len(turn_idx)) < learned['defensive_return_td_rate']
                 return_idx = turn_idx[return_td]
                 add(defense, 'defensive_tds', return_idx)
                 counters['defensive_tds'][1-side, return_idx] += 1
@@ -347,3 +370,4 @@ def simulate_stat_lines(pool, roles, rng, n, correlation_strength=1.0, progress=
                 stats[p['defense']]['points_allowed'] = chargeable[1-side].copy()
                 stats[p['defense']]['yards_allowed'] = yards_total[1-side].copy()
     return (stats, diagnostics) if return_diagnostics else stats
+
