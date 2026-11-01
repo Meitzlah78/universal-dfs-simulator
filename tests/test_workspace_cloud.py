@@ -143,3 +143,16 @@ class CloudWorkspaceTests(unittest.TestCase):
             self.assertEqual(backup.path_for(self.owner,ref['token']).read_bytes(),raw)
             self.assertEqual(reports[-1][0],1.)
             self.assertIn('_restore_metrics',result)
+
+    def test_failed_parallel_download_keeps_previous_archive_and_cleans_partial_file(self):
+        raw = backup.pack(self.payload())
+        ref = cloud.save({},self.owner,raw,self.ref(raw))
+        with tempfile.TemporaryDirectory() as folder, patch.object(backup,'ROOT',Path(folder)):
+            target=backup.path_for(self.owner,ref['token'])
+            target.parent.mkdir(parents=True,exist_ok=True)
+            target.write_bytes(b'previous verified archive')
+            with patch.object(FakeS3,'get_object',side_effect=OSError('interrupted download')):
+                with self.assertRaisesRegex(OSError,'interrupted download'):
+                    cloud.restore({},self.owner,ref)
+            self.assertEqual(target.read_bytes(),b'previous verified archive')
+            self.assertFalse(list(target.parent.glob('*.restore')))
