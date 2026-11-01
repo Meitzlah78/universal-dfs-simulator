@@ -1453,7 +1453,7 @@
       ]
     },
     "dk:buf-lar-user-20261012": {
-      "name": "NFL Showdown \u2014 user-provided $0.10 ladder",
+      "name": "NFL Showdown — user-provided $0.10 ladder",
       "site": "DraftKings",
       "payouts": [
         [
@@ -1569,7 +1569,7 @@
       ]
     },
     "FanDuel:7000-thu-nfl-pooch-punt-20261022": {
-      "name": "$7K Thu NFL Pooch Punt \u2014 $0.05, 150 Max",
+      "name": "$7K Thu NFL Pooch Punt — $0.05, 150 Max",
       "site": "FanDuel",
       "payouts": [
         [
@@ -1721,7 +1721,7 @@
       "capacity_status": "exact user-provided capacity"
     },
     "DraftKings:60000-first-down-ne-chi-20261022": {
-      "name": "NFL Showdown $60K First Down \u2014 $1, 20 Max",
+      "name": "NFL Showdown $60K First Down — $1, 20 Max",
       "site": "DraftKings",
       "format": "DraftKings Showdown",
       "payouts": [
@@ -1879,7 +1879,7 @@
       "verified_date": "2026-10-22"
     },
     "DraftKings:1500-dime-package-pit-no": {
-      "name": "NFL Showdown $1.5K Dime Package \u2014 $0.10, 20 Max",
+      "name": "NFL Showdown $1.5K Dime Package — $0.10, 20 Max",
       "site": "DraftKings",
       "format": "DraftKings Showdown",
       "payouts": [
@@ -2002,7 +2002,7 @@
       "verified_date": "2026-10-22"
     },
     "DraftKings:1000-quarter-jukebox-sf-atl": {
-      "name": "NFL Showdown $1K Quarter Jukebox \u2014 $0.25, 20 Max",
+      "name": "NFL Showdown $1K Quarter Jukebox — $0.25, 20 Max",
       "site": "DraftKings",
       "format": "DraftKings Showdown",
       "payouts": [
@@ -2099,7 +2099,7 @@
       "verified_date": "2026-10-22"
     },
     "DraftKings:4000-quarter-jukebox-pit-no": {
-      "name": "NFL Showdown $4K Quarter Jukebox \u2014 $0.25, 20 Max",
+      "name": "NFL Showdown $4K Quarter Jukebox — $0.25, 20 Max",
       "site": "DraftKings",
       "format": "DraftKings Showdown",
       "payouts": [
@@ -2222,7 +2222,7 @@
       "verified_date": "2026-10-22"
     },
     "DraftKings:2000-first-down-den-ari": {
-      "name": "NFL Showdown $2K First Down \u2014 $1, 20 Max",
+      "name": "NFL Showdown $2K First Down — $1, 20 Max",
       "site": "DraftKings",
       "format": "DraftKings Showdown",
       "payouts": [
@@ -2319,7 +2319,7 @@
       "verified_date": "2026-10-22"
     },
     "DraftKings:1500-first-down-tb-car": {
-      "name": "NFL Showdown $1.5K First Down \u2014 $1, 20 Max",
+      "name": "NFL Showdown $1.5K First Down — $1, 20 Max",
       "site": "DraftKings",
       "format": "DraftKings Showdown",
       "payouts": [
@@ -2416,7 +2416,7 @@
       "verified_date": "2026-10-22"
     },
     "DraftKings:20000-first-down-pit-no": {
-      "name": "NFL Showdown $20K First Down \u2014 $1, 20 Max",
+      "name": "NFL Showdown $20K First Down — $1, 20 Max",
       "site": "DraftKings",
       "format": "DraftKings Showdown",
       "payouts": [
@@ -2554,7 +2554,7 @@
       "verified_date": "2026-10-22"
     },
     "FanDuel:30000-thu-nfl-dive": {
-      "name": "$30K Thu NFL Dive ($10K to 1st) \u2014 $1, 150 Max",
+      "name": "$30K Thu NFL Dive ($10K to 1st) — $1, 150 Max",
       "site": "FanDuel",
       "format": "FanDuel Single Game",
       "payouts": [
@@ -2686,7 +2686,7 @@
       "verified_date": "2026-10-22"
     },
     "FanDuel:20000-thu-nfl-hail-mary": {
-      "name": "$20K Thu NFL Hail Mary \u2014 $0.25, 150 Max",
+      "name": "$20K Thu NFL Hail Mary — $0.25, 150 Max",
       "site": "FanDuel",
       "format": "FanDuel Single Game",
       "payouts": [
@@ -3345,6 +3345,124 @@
       "capacity_status": "exact user-provided capacity",
       "current_entries_at_capture": 260,
       "source": "User-provided complete payout table and lobby metadata",
+      "verified_date": "2026-11-01"
+    },
+    "FanDuel:10000-sun-nfl-hail-mary-47904": {
+      "name": "$10K Sun NFL Hail Mary (Only $0.25 to Enter)",
+      "site": "FanDuel",
+      "format": "FanDuel Full Roster",
+      "payouts": [
+        [
+          1,
+          1,
+          500
+        ],
+        [
+          2,
+          2,
+          200
+        ],
+        [
+          3,
+          3,
+          100
+        ],
+        [
+          4,
+          4,
+          75
+        ],
+        [
+          5,
+          5,
+          50
+        ],
+        [
+          6,
+          7,
+          30
+        ],
+        [
+          8,
+          10,
+          25
+        ],
+        [
+          11,
+          15,
+          20
+        ],
+        [
+          16,
+          20,
+          15
+        ],
+        [
+          21,
+          25,
+          10
+        ],
+        [
+          26,
+          30,
+          6
+        ],
+        [
+          31,
+          40,
+          4
+        ],
+        [
+          41,
+          50,
+          3
+        ],
+        [
+          51,
+          100,
+          2
+        ],
+        [
+          101,
+          200,
+          1.5
+        ],
+        [
+          201,
+          500,
+          1.25
+        ],
+        [
+          501,
+          1000,
+          1
+        ],
+        [
+          1001,
+          3000,
+          0.75
+        ],
+        [
+          3001,
+          6025,
+          0.6
+        ],
+        [
+          6026,
+          14375,
+          0.5
+        ]
+      ],
+      "entry_fee": 0.25,
+      "max_entries_per_user": 150,
+      "prize_pool": 10000,
+      "verified_total_payout": 10000,
+      "paid_positions": 14375,
+      "field_size": 47904,
+      "capacity_status": "exact user-provided capacity",
+      "current_entries_at_capture": 35902,
+      "your_entries_at_capture": 20,
+      "source": "User-provided complete Prizes screenshot (2026-11-01 185542) and contest metadata",
       "verified_date": "2026-11-01"
     }
   }
