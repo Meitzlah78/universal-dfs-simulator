@@ -3260,6 +3260,92 @@
       "starts_at_eastern": "2026-10-25T20:20:00-04:00",
       "source": "User-provided complete Prizes screenshot and lobby metadata",
       "verified_date": "2026-10-25"
+    },
+    "DraftKings:250-nfl-dime-package-2972": {
+      "name": "NFL $250 Dime Package [Just $0.10!]",
+      "site": "DraftKings",
+      "format": "DraftKings Classic",
+      "payouts": [
+        [
+          1,
+          1,
+          25
+        ],
+        [
+          2,
+          2,
+          15
+        ],
+        [
+          3,
+          3,
+          8
+        ],
+        [
+          4,
+          4,
+          5
+        ],
+        [
+          5,
+          5,
+          4
+        ],
+        [
+          6,
+          6,
+          3
+        ],
+        [
+          7,
+          8,
+          2
+        ],
+        [
+          9,
+          10,
+          1.5
+        ],
+        [
+          11,
+          13,
+          1
+        ],
+        [
+          14,
+          23,
+          0.75
+        ],
+        [
+          24,
+          48,
+          0.5
+        ],
+        [
+          49,
+          113,
+          0.4
+        ],
+        [
+          114,
+          283,
+          0.3
+        ],
+        [
+          284,
+          698,
+          0.2
+        ]
+      ],
+      "entry_fee": 0.1,
+      "prize_pool": 250,
+      "verified_total_payout": 250,
+      "paid_positions": 698,
+      "field_size": 2972,
+      "capacity_status": "exact user-provided capacity",
+      "current_entries_at_capture": 260,
+      "source": "User-provided complete payout table and lobby metadata",
+      "verified_date": "2026-11-01"
     }
   }
 }
