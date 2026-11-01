@@ -136,6 +136,32 @@ class PortfolioRepairTests(unittest.TestCase):
         self.assertEqual(counts['D'],1)
 
 class ExposureDiversityTests(unittest.TestCase):
+    def test_cumulative_exposure_spreads_every_position_without_qb_specific_rules(self):
+        from itertools import product
+        slots=['RB','WR','TE','DST']
+        candidates=pd.DataFrame(list(product(*[[f'{slot}{i}' for i in range(3)] for slot in slots])),columns=slots)
+        candidates['Top1']=1. # Equally ranked alternatives isolate diversification behavior.
+        selected=select_portfolio(candidates,slots,12,'Top1',diversity=50)
+        for slot in slots:
+            self.assertEqual(selected[slot].nunique(),3)
+            self.assertLessEqual(selected[slot].value_counts().max(),6)
+
+    def test_repaired_portfolio_spreads_players_without_breaking_locks_or_caps(self):
+        from simmah_portfolio_selection import _spread_repaired_portfolio
+        values=np.array([['A','B','X'],['A','B','Y'],['A','C','Z'],['A','D','W'],['A','E','F'],['A','G','H']])
+        names=np.unique(values);lookup={name:i for i,name in enumerate(names)}
+        picks=np.array([[lookup[name] for name in row] for row in values])
+        incidence=np.zeros((len(values),len(names)),int)
+        incidence[np.arange(len(values))[:,None],picks]=1
+        lower=np.zeros(len(names),int);lower[lookup['A']]=4
+        upper=np.full(len(names),2);upper[lookup['A']]=4
+        before=[0,1,2,3]
+        chosen=_spread_repaired_portfolio(before,incidence,picks,lower,upper,np.ones(6),np.ones(6,bool),.5,4,len(names))
+        counts=incidence[chosen].sum(axis=0)
+        self.assertEqual(len(set(chosen)),4)
+        self.assertTrue((counts>=lower).all());self.assertTrue((counts<=upper).all())
+        self.assertLess(np.square(counts).sum(),np.square(incidence[before].sum(axis=0)).sum())
+
     def test_higher_diversity_reduces_concentration_without_rebuilding_candidates(self):
         candidates,slots=fixture();before=candidates.copy(deep=True)
         low=select_portfolio(candidates,slots,20,'Top1',diversity=0)

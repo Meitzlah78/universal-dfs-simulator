@@ -9251,6 +9251,7 @@ with _tab_build:
                 or st.session_state.get("portfolio_control_signature") != current_control_signature
                 or st.session_state.get("portfolio_metric_used") != portfolio_metric
                 or st.session_state.get("portfolio_exposure_diversity_used") != portfolio_diversity
+                or getattr(st.session_state.get("portfolio_df"), "attrs", {}).get("portfolio_selection") != "quality-cumulative-exposure-v2"
             ):
 
                 from simmah_portfolio_selection import select_portfolio
@@ -10028,4 +10029,3 @@ with _tab_build:
 
 
 finish_workspaces(st, _loaded_slate_tabs, _pinned_slates)
-
