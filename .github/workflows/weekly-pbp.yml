@@ -1,6 +1,12 @@
 name: NFL completed games and automatic learning
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/weekly-pbp.yml"
+      - "scripts/archive_nfl_learning_games.py"
+      - "simmah_nfl_event_learning.py"
   schedule:
     # Daily after the prior evening's games; NFL season is inferred from date.
     - cron: "0 10 * * *"

@@ -27,7 +27,7 @@ class ComponentLearningTests(unittest.TestCase):
                 self.assertLess(report['training_through'],report['selection_through'])
                 self.assertLess(report['selection_through'],report['validation_from'])
                 self.assertIsNone(model_for_date(report['validation_through'],root))
-                active=model_for_date('2026-11-01',root)
+                active=model_for_date((pd.Timestamp(report['validation_through'])+pd.Timedelta(days=1)).date().isoformat(),root)
                 self.assertEqual(active['version'],report['active_version'])
                 for key,row in report['component_validation'].items():
                     if row['accepted']:
