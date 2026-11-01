@@ -3464,6 +3464,128 @@
       "your_entries_at_capture": 20,
       "source": "User-provided complete Prizes screenshot (2026-11-01 185542) and contest metadata",
       "verified_date": "2026-11-01"
+    },
+    "DraftKings:2000-showdown-dime-package-23781": {
+      "name": "NFL Showdown $2K Dime Package [Just $0.10!]",
+      "site": "DraftKings",
+      "format": "DraftKings Showdown",
+      "payouts": [
+        [
+          1,
+          1,
+          100
+        ],
+        [
+          2,
+          2,
+          75
+        ],
+        [
+          3,
+          3,
+          50
+        ],
+        [
+          4,
+          4,
+          35
+        ],
+        [
+          5,
+          5,
+          25
+        ],
+        [
+          6,
+          6,
+          20
+        ],
+        [
+          7,
+          8,
+          15
+        ],
+        [
+          9,
+          10,
+          10
+        ],
+        [
+          11,
+          13,
+          8
+        ],
+        [
+          14,
+          16,
+          6
+        ],
+        [
+          17,
+          20,
+          5
+        ],
+        [
+          21,
+          25,
+          4
+        ],
+        [
+          26,
+          30,
+          3
+        ],
+        [
+          31,
+          40,
+          2
+        ],
+        [
+          41,
+          55,
+          1.5
+        ],
+        [
+          56,
+          90,
+          1
+        ],
+        [
+          91,
+          180,
+          0.75
+        ],
+        [
+          181,
+          405,
+          0.5
+        ],
+        [
+          406,
+          920,
+          0.4
+        ],
+        [
+          921,
+          2255,
+          0.3
+        ],
+        [
+          2256,
+          5675,
+          0.2
+        ]
+      ],
+      "entry_fee": 0.1,
+      "prize_pool": 2000,
+      "verified_total_payout": 2000,
+      "paid_positions": 5675,
+      "field_size": 23781,
+      "capacity_status": "exact user-provided capacity",
+      "current_entries_at_capture": 21963,
+      "source_matchup": "PHI @ WAS",
+      "source": "User-provided full payout table and exact contest capacity",
+      "verified_date": "2026-11-01"
     }
   }
 }
