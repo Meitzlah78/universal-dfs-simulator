@@ -86,6 +86,9 @@ def restore(config, owner, reference, progress=None):
     target.parent.mkdir(parents=True, exist_ok=True)
     temporary = target.with_suffix('.'+uuid.uuid4().hex+'.restore')
     chunk = 4 * 1024 * 1024
+    # Overlap S3 latency across attachments and ranges without fetching whole
+    # matrices into RAM: eight requests, each bounded to 4 MiB.
+    workers = 8
     jobs = []
     offset = 0
     for part in index['parts']:
@@ -111,14 +114,15 @@ def restore(config, owner, reference, progress=None):
         return offset, raw
     try:
         downloaded = 0
-        with temporary.open('w+b') as stream, ThreadPoolExecutor(max_workers=4) as pool:
+        with temporary.open('w+b') as stream, ThreadPoolExecutor(max_workers=workers) as pool:
             todo = iter(jobs)
             pending = set()
-            for _ in range(min(4, len(jobs))):
+            for _ in range(min(workers, len(jobs))):
                 pending.add(pool.submit(fetch, next(todo)))
             while pending:
                 done, pending = wait(pending, return_when=FIRST_COMPLETED)
-                for future in done:
+                while done:
+                    future = done.pop()
                     offset, raw = future.result()
                     stream.seek(offset);stream.write(raw)
                     downloaded += len(raw)

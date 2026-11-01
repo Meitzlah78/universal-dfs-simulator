@@ -116,6 +116,7 @@ def _unpack(source, size):
         manifest=json.loads(bundle.read('manifest.json'))
         if manifest.get('schema')!=1: raise ValueError('Unknown workspace version')
         checked={}
+        decoded_arrays={}
         def attachment(name):
             if not re.fullmatch(r'[a-f0-9]{64}\.(npy|bin)',name): raise ValueError('Invalid workspace attachment')
             if name not in checked:
@@ -133,8 +134,13 @@ def _unpack(source, size):
                 name=node['file']
                 if not re.fullmatch(r'[a-f0-9]{64}\.npy',name):
                     raise ValueError('Invalid workspace attachment')
-                # Allocate only the final array. The NPY attachment is never cached
-                # as bytes alongside it; ZipExtFile decompresses bounded reads.
+                # pack deduplicates identical attachments across saved fields.
+                # Decode and verify each matrix once, then copy for independent
+                # mutable values instead of reading/decompressing it again.
+                if name in decoded_arrays:
+                    return decoded_arrays[name].copy(order='K')
+                # The cache holds the first final array, never an extra byte copy
+                # of the NPY attachment; subsequent fields get independent copies.
                 with bundle.open(name) as compressed:
                     stream=_HashedReader(compressed)
                     version=np.lib.format.read_magic(stream)
@@ -155,6 +161,7 @@ def _unpack(source, size):
                         offset+=len(block)
                     if stream.read(1) or stream.hash.hexdigest()!=name.split('.')[0]:
                         raise ValueError('Workspace attachment failed verification')
+                decoded_arrays[name]=result
                 return result
             if kind=='bytes': return attachment(node['file'])
             if kind=='objects':

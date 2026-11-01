@@ -10,6 +10,30 @@ from simmah_workspace_backup import pack, unpack, write_backup, load_backup
 from simmah_slate_workspaces import StoredUpload
 
 class WorkspaceBackupTest(unittest.TestCase):
+    def test_repeated_matrices_decode_once_and_remain_independent(self):
+        from unittest.mock import patch
+        for order in ('C', 'F'):
+            matrix=np.array(np.arange(12000).reshape(100,120),order=order)
+            payload={'record':{'id':'slate'},'checkpoint':{'values':{
+                'first':matrix,'second':matrix.copy(order='K'),
+                'frame':pd.DataFrame(matrix)}}}
+            raw=pack(payload)
+            opened=[]
+            original=zipfile.ZipFile.open
+            def tracked(bundle,name,*args,**kwargs):
+                if isinstance(name,str) and name.endswith('.npy'):opened.append(name)
+                return original(bundle,name,*args,**kwargs)
+            with patch.object(zipfile.ZipFile,'open',tracked):
+                values=unpack(raw)['checkpoint']['values']
+            self.assertEqual(len(opened),len(set(opened)))
+            self.assertGreater(len(opened),0)
+            np.testing.assert_array_equal(values['first'],matrix)
+            np.testing.assert_array_equal(values['second'],matrix)
+            pd.testing.assert_frame_equal(values['frame'],pd.DataFrame(matrix))
+            values['first'][0,0]=-99
+            self.assertEqual(values['second'][0,0],0)
+            self.assertEqual(values['frame'].iloc[0,0],0)
+
     def payload(self):
         frame=pd.DataFrame({'Player':['A','B'],'Eligible':[{'QB'},{'WR','TE'}], 'Salary':pd.Series([5000,None],dtype='Int64'),'Lock':pd.Series([True,pd.NA],dtype='boolean')})
         frame.attrs={'team':'NYJ','data':np.array([1,2])}
