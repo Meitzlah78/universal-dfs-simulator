@@ -159,3 +159,35 @@ class IntegrationTests(unittest.TestCase):
         self.assertEqual(len(samples['fumble_loss_rate']),80)
         self.assertEqual(samples['fumble_loss_rate'].sum(),4.)
         self.assertIn('unknown',missing['fumble_loss_rate'])
+
+class ReplayAssemblyTests(unittest.TestCase):
+    def actuals(self):
+        return pd.DataFrame([dict({'Game ID':'official-game','Kickoff':'2026-11-09T18:00:00Z',
+            'Team':r.Team,'Opponent':r.Opponent,'Name':r.Name,'Status':'FINAL'},**dict.fromkeys(STAT_KEYS,0.))
+            for r in pool().itertuples()])
+
+    def test_complete_exact_cases_pair_both_sites(self):
+        from simmah_nfl_replay_inputs import assemble_replays
+        result,report=assemble_replays(cases(),self.actuals(),source_sha256='a'*64)
+        self.assertEqual(len(result),2)
+        self.assertTrue(all(c['game_id']=='official-game' for c in result))
+        self.assertTrue(all(r['status']=='ready' for r in report))
+
+    def test_missing_players_not_inferred_as_zero(self):
+        from simmah_nfl_replay_inputs import assemble_replays
+        result,report=assemble_replays(cases(),self.actuals().iloc[1:],source_sha256='a'*64)
+        self.assertEqual(result,[]);self.assertIn('AQB',report[0]['missing_players'])
+
+    def test_missing_stats_or_nonfinal_rows_block_pairing(self):
+        from simmah_nfl_replay_inputs import assemble_replays
+        frame=self.actuals();frame.loc[0,'fumbles_lost']=np.nan
+        with self.assertRaisesRegex(ValueError,'Missing'):assemble_replays(cases(),frame,source_sha256='a'*64)
+        frame=self.actuals();frame.loc[0,'Status']='IN PROGRESS'
+        with self.assertRaisesRegex(ValueError,'FINAL'):assemble_replays(cases(),frame,source_sha256='a'*64)
+
+    def test_identity_conflict_not_fuzzy_matched(self):
+        from simmah_nfl_replay_inputs import assemble_replays
+        snapshots=cases();snapshots[0]['roles']['AQB']={'player_id':'correct-id'}
+        frame=self.actuals();frame['Player ID']='wrong-id'
+        result,report=assemble_replays(snapshots,frame,source_sha256='a'*64)
+        self.assertEqual(len(result),1);self.assertEqual(report[0]['missing_players'],['AQB'])

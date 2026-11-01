@@ -333,6 +333,7 @@ def replay_losses(cases,parameters,players,*,draws=1024,seed=791):
             gains,_=calibrate_market_inputs(pool,roles,fitted_inputs,case['weather'],case['platform'],
                 case['market_targets'],pilot_n=max(512,int(settings['pilot_n'])),learned_parameters=effective)
         stats=simulate_stat_lines(pool,roles,np.random.default_rng(seed_for_game),draws,
+            correlation_strength=float(case.get('correlation_strength',1.)),
             weather_by_team=case['weather'],projection_inputs=fitted_inputs,
             market_gain=gains,scoring_platform=case['platform'],learned_parameters=effective)
         vectors=[];truth=[]
@@ -426,7 +427,7 @@ def validate_and_promote(candidate,cases,root=ROOT,*,draws=1024,min_games=20):
     return report
 
 
-def capture_pregame_inputs(pool,roles,platform,parameters,weather,market_gain,game_starts,cache_root,now=None,incumbent=None,fit_settings=None,market_targets=None):
+def capture_pregame_inputs(pool,roles,platform,parameters,weather,market_gain,game_starts,cache_root,now=None,incumbent=None,fit_settings=None,market_targets=None,correlation_strength=1.):
     """Private dated per-game snapshots; never publish user slate inputs to Git."""
     now=pd.Timestamp.now(tz='UTC') if now is None else pd.Timestamp(now)
     if now.tzinfo is None:raise ValueError('Capture requires timezone-aware clock')
@@ -446,6 +447,7 @@ def capture_pregame_inputs(pool,roles,platform,parameters,weather,market_gain,ga
         players=pool.loc[pool.Team.astype(str).isin(teams)].copy();names=set(players.Name)
         case={'schema':SCHEMA,'game_id':times[0].date().isoformat()+'-'+'-'.join(teams),
               'kickoff':times[0].isoformat(),'frozen_at':now.isoformat(),'platform':platform,
+              'correlation_strength':float(correlation_strength),
               'incumbent_version':incumbent['version'] if incumbent else None,
               'incumbent_parameters':incumbent['parameters'] if incumbent else {},
               'pool':players.to_dict('records'),'roles':{name:value for name,value in roles.items() if name in names},

@@ -185,7 +185,8 @@ def prepare_simulations(pool,roles,platform,cache_root,count=10000,correlation_s
         from simmah_nfl_learning import capture_pregame_inputs
         replay_paths=capture_pregame_inputs(inputs,roles,platform,parameters,weather_by_team,market_gain,
                                game_starts or {},root,incumbent=model,
-                               fit_settings={"pilot_n":pilot_n,"iterations":iterations},market_targets=market_targets)
+                               fit_settings={"pilot_n":pilot_n,"iterations":iterations},market_targets=market_targets,
+                               correlation_strength=correlation_strength)
         result={}
         for index,(kind,seed) in enumerate([('evaluation',evaluation_seed),('construction',construction_seed)]):
             mark=time.perf_counter()

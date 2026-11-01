@@ -63,13 +63,17 @@ Older reduced archives omit kick results, fumble-loss and some defensive fields.
 The weekly downloader now retains those columns when supplied. Existing files
 are not backfilled with invented values. Exact completed-contest fantasy scores
 alone cannot identify underlying volume, efficiency and covariance errors;
-they do not satisfy the raw-stat promotion gate. The CLI requires complete replay
-cases; automatic raw-actual assembly from older saved contests is not implemented.
+they do not satisfy the raw-stat promotion gate. The importer pairs complete canonical FINAL raw-stat records with exact frozen
+inputs, records both source hashes, and selects the latest pregame snapshot per
+site. Missing players, fields, identities or final status block a case. Fetching
+and verifying a complete raw-stat provider feed remains outstanding; older
+contest fantasy-point files do not supply the missing football events.
 
 ## Commands
 
 ```sh
 python scripts/learn_nfl_performance.py
+python -m simmah_nfl_replay_inputs --snapshots /private/simulation_cache --actuals /private/final_raw_stats.csv --output /private/complete-cases
 python scripts/learn_nfl_performance.py --fit-replays /private/earlier-complete-cases
 python scripts/learn_nfl_performance.py --replays /private/later-complete-cases
 python -m unittest discover -s tests -p test_nfl_learning.py -v
@@ -77,10 +81,15 @@ python -m unittest discover -s tests -p test_nfl_learning.py -v
 
 A replay case has `game_id`, timezone-aware `kickoff` and `frozen_at`, `platform`,
 `pool` records, `roles`, `projection_inputs`, `weather`, `market_gain`,
-`fit_settings` (pilot_n and iterations), `market_targets`, and
+`fit_settings` (pilot_n and iterations), `market_targets`, `correlation_strength`, and
 `actual_stats` keyed by exact frozen player name. Every actual line must contain
 all `STAT_KEYS`. Captures include `incumbent_version` and `incumbent_parameters`.
 No name-based fuzzy merge or automatic zero fill is allowed.
 
 This is a first implementation of the training/validation connection. It is not
 proof of better player forecasts, realistic contest opponents or higher ROI.
+
+The raw-stat CSV importer requires `Game ID`, timezone-aware `Kickoff`, `Team`,
+`Opponent`, `Name`, explicit `Status=FINAL`, and all `STAT_KEYS` columns. Optional
+`Player ID` uses the stable provider identity saved in the historical role.
+When that identity is supplied, a mismatch cannot fall back to a display name.

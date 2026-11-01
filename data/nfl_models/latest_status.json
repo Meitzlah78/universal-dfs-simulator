@@ -25,5 +25,9 @@
   "status": "awaiting full-engine replay",
   "training_games": 29,
   "validation_games": 14,
-  "version": "b028348105de5bdb"
+  "version": "b028348105de5bdb",
+  "local_validation": {
+    "focused_tests_passed": 50,
+    "baseline_seeded_parity": "1024 outcomes, both scoring contexts, every pre-existing stat"
+  }
 }
