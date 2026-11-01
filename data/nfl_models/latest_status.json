@@ -1,5 +1,6 @@
 {
-  "active_update": false,
+  "active_component_version": "d6464a5c58186cc1",
+  "active_update": true,
   "components": {
     "completion_rate": "candidate",
     "defensive_return_td_rate": "unavailable",
@@ -13,6 +14,7 @@
     "pass_rate": "candidate",
     "receiving_shape": "candidate",
     "receiving_yards": "rejected event diagnostic",
+    "rushing_df": "awaiting full-engine training replays",
     "rushing_sd": "candidate",
     "rushing_yards": "rejected event diagnostic",
     "sack_rate": "rejected event diagnostic",
@@ -21,13 +23,11 @@
     "two_point_rate": "rejected event diagnostic",
     "two_point_run_success": "unavailable"
   },
+  "full_game_candidate_status": "awaiting full-engine replay",
+  "full_game_update_active": false,
   "next_requirement": "Later complete frozen game replays; event diagnostics alone never activate a model.",
-  "status": "awaiting full-engine replay",
+  "status": "validated event components active",
   "training_games": 29,
   "validation_games": 14,
-  "version": "b028348105de5bdb",
-  "local_validation": {
-    "focused_tests_passed": 50,
-    "baseline_seeded_parity": "1024 outcomes, both scoring contexts, every pre-existing stat"
-  }
+  "version": "41c2b5f5fa136b0b"
 }

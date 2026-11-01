@@ -1,7 +1,7 @@
 """NFL event/role candidates and full-engine temporal replay promotion.
 
-Archive-only diagnostics never authorize a live model. Promotion additionally
-requires later, complete frozen pregame replay cases and all three loss gates.
+Full-game model promotion requires complete later frozen replays. Separately
+validated conditional-event components use their own three-block activation path.
 """
 from copy import deepcopy
 from hashlib import sha256
@@ -17,13 +17,13 @@ SCHEMA = 1
 # Every tunable parameter acts before shared stat/score accounting.
 DEFAULTS = dict(pass_rate=.58, sack_rate=.065, interception_rate=.021,
     completion_rate=.64, receiving_yards=11.2, receiving_shape=1.5,
-    rushing_yards=4.35, rushing_sd=5.5, fumble_loss_rate=.0064,
+    rushing_yards=4.35, rushing_sd=5.5, rushing_df=0., fumble_loss_rate=.0064,
     extra_point_rate=.9468, two_point_rate=.097, two_point_pass_share=.55,
     two_point_pass_success=.4437, two_point_run_success=.5466,
     defensive_return_td_rate=.08, field_goal_logit_offset=0.,pace_sd=.09,environment_sd=.10,opportunity_concentration=0.)
 BOUNDS = dict(pass_rate=(.44,.70), sack_rate=(.02,.15), interception_rate=(.006,.05),
     completion_rate=(.52,.76), receiving_yards=(5.,20.), receiving_shape=(.5,5.),
-    rushing_yards=(2.,8.5), rushing_sd=(3.,9.), fumble_loss_rate=(.001,.03),
+    rushing_yards=(2.,8.5), rushing_sd=(3.,9.), rushing_df=(0.,30.), fumble_loss_rate=(.001,.03),
     extra_point_rate=(.8,.99), two_point_rate=(.02,.25), two_point_pass_share=(.2,.8),
     two_point_pass_success=(.2,.8), two_point_run_success=(.2,.8),
     defensive_return_td_rate=(.01,.3), field_goal_logit_offset=(-.5,.5),
@@ -52,6 +52,8 @@ def validate_parameters(parameters):
         raise ValueError('Unknown NFL learned parameters')
     for name,value in parameters.items():
         lo,hi=BOUNDS[name]
+        if name=='rushing_df' and value!=0 and (not isinstance(value,(int,float)) or value<=2):
+            raise ValueError('Rushing tail degrees of freedom must be zero or exceed two')
         if isinstance(value,bool) or not isinstance(value,(int,float)) or not np.isfinite(value) or not lo<=value<=hi:
             raise ValueError('Invalid NFL learned parameter: '+name)
     return dict(DEFAULTS,**parameters)
@@ -184,7 +186,7 @@ def fit_candidate(frame,sources,validation_days=7,min_games=10):
     old,missing_train=event_samples(train);actual,missing_test=event_samples(test)
     parameters={};metrics={}
     for name,baseline in DEFAULTS.items():
-        if name in {'pace_sd','environment_sd','opportunity_concentration'}:
+        if name in {'pace_sd','environment_sd','opportunity_concentration','rushing_df'}:
             metrics[name]={'status':'awaiting full-engine training replays','reason':'Shared-game dependence must be fitted against joint outcomes'};continue
         source={'receiving_shape':'receiving_yards','rushing_sd':'rushing_yards'}.get(name,name)
         if name=='field_goal_logit_offset':
@@ -294,7 +296,9 @@ def model_for_date(as_of,root=ROOT):
 def engine_digest():
     root=Path(__file__).parent
     return digest({name:sha256((root/name).read_bytes()).hexdigest() for name in
-        ('simmah_nfl_engine.py','simmah_nfl_scoring.py','simmah_nfl_learning.py')})
+        ('simmah_nfl_engine.py','simmah_nfl_scoring.py','simmah_nfl_learning.py','simmah_nfl_event_learning.py',
+         'simmah_projection_inputs.py','simmah_market_calibration.py','simmah_weather.py',
+         'simmah_matchups.py','simmah_qb_roles.py','simmah_simulation_store.py')})
 
 
 def replay_losses(cases,parameters,players,*,draws=1024,seed=791):
@@ -478,7 +482,22 @@ def slate_clock_inputs(pool):
                 except (TypeError,ValueError):continue
             if len(values)==len(rows) and len(set(values))==1:
                 starts[str(team)]=values[0].isoformat();break
-    if len(starts)!=pool.Team.nunique():return None,{}
+    if len(starts)!=pool.Team.nunique():
+        # Dated native salary fields can establish a slate day even when no
+        # verified kickoff clock was recovered. They never fabricate a clock.
+        import re
+        days=[]
+        for row in pool.to_dict('records'):
+            found=[]
+            for column in ('Game Info','Game','Start Time'):
+                text=str(row.get(column,''))
+                match=re.search(r'(?<![0-9])(20[0-9]{2}-[0-9]{2}-[0-9]{2}|[0-9]{1,2}/[0-9]{1,2}/20[0-9]{2})(?![0-9])',text)
+                if match:
+                    try:found.append(pd.Timestamp(match.group()).date().isoformat())
+                    except ValueError:pass
+            if not found or len(set(found))!=1:return None,{}
+            days.append(found[0])
+        return (min(days),{}) if days else (None,{})
     day=min(pd.Timestamp(value) for value in starts.values()).tz_convert('America/New_York').date().isoformat()
     return day,starts
 

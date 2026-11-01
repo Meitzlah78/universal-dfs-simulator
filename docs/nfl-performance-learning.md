@@ -1,95 +1,88 @@
-# NFL performance learning
+# Automatic NFL performance learning
 
-The weekly archive now records immutable **candidates**, not automatic claims of
-improvement. The first local run used 29 training games (weeks 5–6) and 14 later
-week-7 diagnostic games. No candidate is active.
+## What runs
 
-## Scope
+The daily completed-game workflow refreshes complete regular-season weeks from
+nflverse. Published schedule scores, exact scheduled-game coverage and PBP
+regulation-end markers must agree. A feed failure is recorded explicitly and
+uses existing saved archives when available; it does not stop useful learning
+from those games or fabricate new results.
 
-- Stable-ID player profiles: attempts, carries, targets, completions, receptions,
-  yards, touchdowns and interceptions. Current-team matching prevents a trade
-  from joining a player to the wrong historical team. A player needs four team
-  games before a fitted profile can affect a live role.
-- Event efficiency: passing, rushing, receiving, sacks, turnovers, conversions,
-  PATs and distance-conditioned FG accuracy. Each event uses its own denominator.
-- Spread: rushing-yard standard deviation, receiving gamma shape and per-game
-  target/carry opportunity concentration.
-- Shared outcomes: pace and yardage environment. Frozen full-engine fitting
-  evaluates volume dispersion and dependence together; final validation uses
-  another later set of games. Pairwise variogram and multivariate energy scores
-  assess cross-player dependence, including offensive/DST links.
-- Every raw stat in the existing engine's `STAT_KEYS`, including K and DST, is
-  checked at promotion. Unsupported mechanisms (notably blocked kicks), OT,
-  injury substitutions and exact special-teams return modeling remain engine
-  limitations; the learner does not implement those missing football events.
+The automatic component learner uses three chronological whole-week blocks:
+earlier training games, a later selection week, and another later validation
+week. Different components have independent data requirements. Missing kick
+results or fumble flags do not block validated rushing/receiving components.
 
-## Activation requirements
+Supported automatic components are pass/run propensity, sacks, interceptions,
+completions, fumble losses, extra points, two-point choice and success,
+turnover-return TD probability, distance-conditioned field-goal accuracy,
+receiving-yard spread, and rushing spread/tail family. Mean/role corrections and
+joint-game dependence still use the broader full-game replay path below; their
+pending status is not presented as an active improvement.
 
-1. Dated, nonoverlapping game/play archive rows with regulation-end markers.
-   An end marker is a completeness check, not independent official verification.
-2. Train on earlier complete games; event selection uses a later whole-game
-   date block. Never split plays from one game between train/test.
-3. Optional joint fitting uses still-later frozen pregame cases. Those games
-   become selection data and cannot also be promotion games.
-4. At least 20 distinct **additional** games with both DK and FD contexts,
-   pregame timestamps, full frozen pool/roles/fitter/weather/market inputs, and
-   explicit final raw stat lines for every included player. Missing values are
-   errors, never presumed zeros. QB/RB/WR/TE/K/DST must all be represented.
-5. No position/stat loss may worsen for mean error, CRPS or variance-sensitive
-   likelihood. Joint variogram loss must improve at least 0.5%, and energy score
-   must not worsen. Synthetic fixtures test these gates, not predictive accuracy.
-6. Write the accepted immutable version before atomically updating the index.
-   Existing accepted versions remain available. New versions require matching
-   incumbent snapshots. Models load only for slate dates after validation ends;
-   changed engine code requires revalidation. Model identity participates in
-   fitter/outcome cache identity and BUILD checks for changed active versions.
+Every accepted component must improve on the selection week and on the final
+week. Final checks use game-cluster bootstraps and a familywise-adjusted upper
+loss-change bound plus a minimum 0.2% gain. Distribution changes must also pass
+combined tail Brier checks (10+/20+ rushing yards, 20+/40+ receiving yards). The
+fitter never reads final-week outcomes. Final weeks are recorded in a consumed
+block ledger and cannot be repeatedly retested against successive incumbents.
+These are retrospective historical tests: protocol development and published
+stat corrections prevent claiming a prospective trial.
 
-Candidate replays rerun projection and market fitting with the proposed event
-parameters; frozen baseline fitter parameters are not reused for changed candidates.
+## First actual update from existing saved games
 
-External CSV projections remain the scoring targets. Learned values affect the
-shared play generator, projection pilot, market pilot and independent outcome
-samples consistently. No fantasy-point multipliers or ROI fitting are added.
+Week 5: 15 training games. Week 6: 14 selection games. Week 7: 14 validation games.
+The rushing family changes from a normal per-carry draw with SD 5.5 to a
+variance-standardized Student-t draw with 3 degrees of freedom and SD parameter
+6.0, before the existing physical clips and shared stat accounting.
 
-## Saved inputs and missing data
+The held-out conditional rushing CRPS improves about 2.24%; the combined tail
+Brier score improves about 2.96%. Other components are preserved unless their
+own checks pass. The accepted model loads only for slate dates after October 26.
+This is evidence about the per-carry conditional distribution, not calibrated
+whole-game fantasy points, player ceilings, contest realism or portfolio ROI.
 
-When SIM runs before confirmed tipoff, per-game pregame snapshots are retained
-under the private simulation cache and embedded in prepared manifests for the
-existing diagnostic-package archive. Missing/conflicting clocks or games already
-started do not create supposedly pregame snapshots. These files are private;
-workflow commits contain public NFL archives and aggregate model reports only.
+Accepted immutable versions and their index are committed with aggregate public
+reports. The live shared NFL simulation loads the dated accepted version into
+projection fitting, market fitting and both independent simulation samples.
+Model identity participates in cache keys. Corrupt/incompatible optional models
+fall back to an explicitly labeled baseline; old prepared outcomes cannot be
+used after the active version changes. CSV point projections remain targets.
 
-Older reduced archives omit kick results, fumble-loss and some defensive fields.
-The weekly downloader now retains those columns when supplied. Existing files
-are not backfilled with invented values. Exact completed-contest fantasy scores
-alone cannot identify underlying volume, efficiency and covariance errors;
-they do not satisfy the raw-stat promotion gate. The importer pairs complete canonical FINAL raw-stat records with exact frozen
-inputs, records both source hashes, and selects the latest pregame snapshot per
-site. Missing players, fields, identities or final status block a case. Fetching
-and verifying a complete raw-stat provider feed remains outstanding; older
-contest fantasy-point files do not supply the missing football events.
+## Broader player and full-game validation
 
-## Commands
+Stable-GSIS-ID/current-team profiles cover attempts, carries, targets, catches,
+yards and TDs. A profile needs four team games before it can affect a live role.
+Per-game opportunity concentration, pace and yardage environment are fitted
+using frozen pregame cases. Another later full-game set checks every raw stat,
+including QB/RB/WR/TE/K/DST, and joint variogram/energy scores in both DK and FD
+contexts. Candidate replays rerun projection and market fitting. These broader
+updates remain inactive until their own validation passes.
+
+Pregame snapshots are private, retained in prepared manifests and the existing
+diagnostic archive. They preserve pool, roles, fitter settings, weather,
+markets, correlation and incumbent model identity. Started/undated games never
+create supposedly pregame snapshots. A dated native salary field can establish
+an activation date without inventing kickoff clocks.
+
+The exact raw-stat importer pairs complete canonical FINAL rows with those
+snapshots, rejects missing/ambiguous identities and values, and retains source
+hashes. Older reduced PBP or contest FPTS cannot replace missing raw events.
+Automatic acquisition of a complete raw-stat feed for this broader replay layer
+remains unfinished, but it no longer prevents supported component learning.
+
+Blocked-kick mechanisms, overtime, substitutions and exact special-team return
+modeling remain limitations of the underlying engine.
 
 ```sh
+python scripts/archive_nfl_learning_games.py
+python -m simmah_nfl_event_learning
 python scripts/learn_nfl_performance.py
 python -m simmah_nfl_replay_inputs --snapshots /private/simulation_cache --actuals /private/final_raw_stats.csv --output /private/complete-cases
 python scripts/learn_nfl_performance.py --fit-replays /private/earlier-complete-cases
 python scripts/learn_nfl_performance.py --replays /private/later-complete-cases
-python -m unittest discover -s tests -p test_nfl_learning.py -v
 ```
 
-A replay case has `game_id`, timezone-aware `kickoff` and `frozen_at`, `platform`,
-`pool` records, `roles`, `projection_inputs`, `weather`, `market_gain`,
-`fit_settings` (pilot_n and iterations), `market_targets`, `correlation_strength`, and
-`actual_stats` keyed by exact frozen player name. Every actual line must contain
-all `STAT_KEYS`. Captures include `incumbent_version` and `incumbent_parameters`.
-No name-based fuzzy merge or automatic zero fill is allowed.
-
-This is a first implementation of the training/validation connection. It is not
-proof of better player forecasts, realistic contest opponents or higher ROI.
-
-The raw-stat CSV importer requires `Game ID`, timezone-aware `Kickoff`, `Team`,
-`Opponent`, `Name`, explicit `Status=FINAL`, and all `STAT_KEYS` columns. Optional
-`Player ID` uses the stable provider identity saved in the historical role.
-When that identity is supplied, a mismatch cannot fall back to a display name.
+Canonical raw rows require Game ID, timezone-aware Kickoff, Team, Opponent, Name,
+FINAL Status, and every STAT_KEYS field, including explicit structural zeros.
+Stable Player ID is preferred; a supplied ID mismatch never falls back to a name.

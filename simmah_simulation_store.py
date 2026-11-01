@@ -41,7 +41,7 @@ def _hash(raw):
 def _model_digest():
     root=Path(__file__).parent
     names=['simmah_simulation_store.py','simmah_nfl_engine.py','simmah_projection_inputs.py',
-           'simmah_nfl_scoring.py','simmah_nfl_learning.py','simmah_market_calibration.py','simmah_weather.py','simmah_qb_roles.py','simmah_matchups.py']
+           'simmah_nfl_scoring.py','simmah_nfl_event_learning.py','simmah_nfl_learning.py','simmah_market_calibration.py','simmah_weather.py','simmah_qb_roles.py','simmah_matchups.py']
     return _hash(_json({name:_hash((root/name).read_bytes()) for name in names}))
 
 
@@ -127,10 +127,16 @@ def prepare_simulations(pool,roles,platform,cache_root,count=10000,correlation_s
     this layer never fetches today's data during a replay.
     """
     from simmah_nfl_learning import model_for_date, apply_player_profiles
-    model=model_for_date(slate_date)
+    learning_error=None
+    try:model=model_for_date(slate_date)
+    except (ValueError,KeyError,OSError,TypeError) as exc:
+        model=None;learning_error=str(exc)
     learned_parameters=model['parameters'] if model else {}
     if model:roles=apply_player_profiles(roles,model['players'])
-    learning={'status':'validated update active' if model else 'baseline; no eligible validated update',
+    label=('validated event components active' if model and model.get('validation_kind')=='independent conditional-event components'
+           else 'validated full-game update active' if model else 'baseline; no eligible validated update')
+    if learning_error:label='baseline; learned model unavailable: '+learning_error
+    learning={'status':label,'accepted_components':model.get('accepted_components',[]) if model else [],
               'version':model['version'] if model else None,'slate_date':str(slate_date) if slate_date else None}
     started=time.perf_counter();count=int(count)
     if count<1 or int(pilot_n)<1 or int(iterations)<0:raise ValueError('Invalid simulation counts')
@@ -293,7 +299,8 @@ def construction_for_build(evaluation,pool,platform,cache_root,count=10000,corre
         raise ValueError('Weather inputs changed since preparation; run SIM again')
     from simmah_nfl_learning import model_for_date
     learning=metadata.get('learning',{})
-    active=model_for_date(learning.get('slate_date'))
+    try:active=model_for_date(learning.get('slate_date'))
+    except (ValueError,KeyError,OSError,TypeError):active=None
     if learning.get('version')!=(active['version'] if active else None):
         raise ValueError('NFL learned model changed; run SIM again')
     reference=prepared['evaluation']

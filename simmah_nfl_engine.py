@@ -121,6 +121,12 @@ def simulate_stat_lines(pool, roles, rng, n, correlation_strength=1.0, progress=
                     kicker=best({'K'}), defense=best({'D', 'DST', 'DEF'}),
                     pass_rate=pass_rate, role=qb_role, pass_gain=float(projection_inputs.get(qb,{}).get('pass_gain',1.)))
 
+    def rush_draw(mean,count):
+        df=learned['rushing_df']
+        if df:
+            return mean+learned['rushing_sd']*rng.standard_t(df,count)*np.sqrt((df-2)/df)
+        return rng.normal(mean,learned['rushing_sd'],count)
+
     def select(names, weights, count, game_indices=None):
         if not names or not count:
             return np.array([], dtype=np.int32)
@@ -286,14 +292,14 @@ def simulate_stat_lines(pool, roles, rng, n, correlation_strength=1.0, progress=
                 running = ~passing
                 selected = select(p['runners'], p['rush_w'], int(running.sum()),idx[running])
                 if not p['runners']:
-                    gain[running] = np.clip(rng.normal(learned['rushing_yards'], learned['rushing_sd'], int(running.sum())), -5, 65)
+                    gain[running] = np.clip(rush_draw(learned['rushing_yards'], int(running.sum())), -5, 65)
                 if len(selected):
                     carrier[running] = selected
                     for name in p['runners']:
                         loc = np.flatnonzero(running & (carrier == player_ids[name]))
                         role = roles.get(name, {}); carries = role.get('carries', 0)
                         ypc = np.clip(role.get('rush_yards', 0)/carries, 2, 8.5) if carries else learned['rushing_yards']
-                        gain[loc] = np.clip(rng.normal(np.clip(ypc*role.get('matchup_rushing',1.)*projection_inputs.get(name,{}).get('skill_gain',1.),1,8.5), learned['rushing_sd'], len(loc))*np.sqrt(environment[idx[loc]]), -5, 65)
+                        gain[loc] = np.clip(rush_draw(np.clip(ypc*role.get('matchup_rushing',1.)*projection_inputs.get(name,{}).get('skill_gain',1.),1,8.5), len(loc))*np.sqrt(environment[idx[loc]]), -5, 65)
                 if market_gain:
                     # Yardage changes happen before TDs, first downs, player stats
                     # and opposing-DST accounting, preserving shared events.

@@ -33,9 +33,14 @@ def main():
         if not eligible:raise ValueError('No earlier candidate eligible for these promotion games')
         selected=max(eligible,key=lambda trial:trial['validation_through'])
         report=validate_and_promote(selected,cases,root,draws=args.draws)
-    atomic_json(root/'latest_status.json',{'status':report['status'],'version':report['version'],
+    component_path=root/'component_status.json'
+    components=json.loads(component_path.read_text()) if component_path.exists() else {}
+    atomic_json(root/'latest_status.json',{'status':'validated event components active' if components.get('active_version') else report['status'],
+        'full_game_candidate_status':report['status'],'version':report['version'],
         'training_games':candidate['training_games'],'validation_games':candidate['validation_games'],
-        'active_update':report['status']=='accepted',
+        'active_update':bool(report['status']=='accepted' or components.get('active_version')),
+        'active_component_version':components.get('active_version'),
+        'full_game_update_active':report['status']=='accepted',
         'components':{name:metric['status'] for name,metric in candidate['event_diagnostics'].items()},
         'next_requirement':None if report['status']=='accepted' else 'Later complete frozen game replays; event diagnostics alone never activate a model.'})
     print(json.dumps({'status':report['status'],'version':report['version'],
