@@ -1,0 +1,29 @@
+{
+  "active_update": false,
+  "components": {
+    "completion_rate": "candidate",
+    "defensive_return_td_rate": "unavailable",
+    "environment_sd": "awaiting full-engine training replays",
+    "extra_point_rate": "unavailable",
+    "field_goal_logit_offset": "unavailable",
+    "fumble_loss_rate": "unavailable",
+    "interception_rate": "candidate",
+    "opportunity_concentration": "awaiting full-engine training replays",
+    "pace_sd": "awaiting full-engine training replays",
+    "pass_rate": "candidate",
+    "receiving_shape": "candidate",
+    "receiving_yards": "rejected event diagnostic",
+    "rushing_sd": "candidate",
+    "rushing_yards": "rejected event diagnostic",
+    "sack_rate": "rejected event diagnostic",
+    "two_point_pass_share": "insufficient sample",
+    "two_point_pass_success": "unavailable",
+    "two_point_rate": "rejected event diagnostic",
+    "two_point_run_success": "unavailable"
+  },
+  "next_requirement": "Later complete frozen game replays; event diagnostics alone never activate a model.",
+  "status": "awaiting full-engine replay",
+  "training_games": 29,
+  "validation_games": 14,
+  "version": "b028348105de5bdb"
+}

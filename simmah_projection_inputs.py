@@ -10,7 +10,7 @@ import pandas as pd
 VERSION='projection-event-input-fit-v1'
 
 
-def fit_projection_inputs(pool,roles,platform,scorer,pilot_n=1024,iterations=8,progress=None):
+def fit_projection_inputs(pool,roles,platform,scorer,pilot_n=1024,iterations=8,progress=None,learned_parameters=None):
     from simmah_nfl_engine import simulate_stat_lines
     rows=pool.to_dict('records')
     targets={str(r['Name']):max(0,float(r.get('Projection',0))) for r in rows}
@@ -22,7 +22,7 @@ def fit_projection_inputs(pool,roles,platform,scorer,pilot_n=1024,iterations=8,p
         # This seed is independent of the caller's evaluation/construction RNG.
         stats=simulate_stat_lines(pool,roles,np.random.default_rng(73019),pilot_n,projection_inputs=params,scoring_platform=platform,
             progress=(lambda fraction,text: progress((iteration+fraction)/(iterations+1),
-                f"Fitting projections: pass {iteration+1}/{iterations+1} — {text}")) if progress else None)
+                f"Fitting projections: pass {iteration+1}/{iterations+1} — {text}")) if progress else None,learned_parameters=learned_parameters)
         means={name:float(np.mean(scorer(dict(line,is_defense=int(positions[name] in {'D','DST','DEF'})),platform))) for name,line in stats.items()}
         if first is None:first=means.copy()
         last=means
@@ -46,3 +46,4 @@ def fit_projection_inputs(pool,roles,platform,scorer,pilot_n=1024,iterations=8,p
         'Calibration Status':'Event inputs fitted' if positions[name] in {'QB','RB','WR','TE'} else 'Unfitted defense/kicker'} for name in targets])
     if progress:progress(1.,"Projection fitting complete")
     return params,report
+
