@@ -68,7 +68,29 @@ def render_panel(st,active,format_name):
     profiles={pid:dict(p, name=payscale_name(p['name'])) for pid,p in profiles.items()}
     choices={pid:p for pid,p in profiles.items() if p['site']==site}
     st.write('### Saved payscales')
-    choice=st.selectbox('Payscale', ['']+list(choices),format_func=lambda pid:choices[pid]['name'] if pid else 'Use current contest payouts',key=key+'_choice')
+    # A format-wide widget carried the last contest's selection into another
+    # contest. Keep the widget scoped to the uploaded contest instead.
+    contest_id=str(active.get('id') or 'unselected')
+    choice_key=key+'_choice_'+contest_id
+    options=['']+list(choices)
+    exact=[]
+    for pid,profile in choices.items():
+        if profile['name']!=payscale_name(active.get('name','')):continue
+        if profile.get('format') and profile['format']!=format_name:continue
+        fee=profile.get('entry_fee');current_fee=active.get('entry_fee')
+        if fee is not None and current_fee is not None and abs(float(fee)-float(current_fee))>1e-8:continue
+        exact.append(pid)
+    # Only an unambiguous exact name/format/fee match may initialize a new
+    # selection. Explicit subsequent choices, including blank, stay in state.
+    default=exact[0] if len(exact)==1 else ''
+    if choice_key in st.session_state and st.session_state[choice_key] not in options:
+        del st.session_state[choice_key]
+    choice=st.selectbox('Payscale',options,index=options.index(default),
+        format_func=lambda pid:choices[pid]['name'] if pid else 'Use current contest payouts',key=choice_key)
+    # Existing single-game evaluation reads this application-state alias; it is
+    # no longer itself a widget key.
+    st.session_state[key+'_choice']=choice
+
     base_key=key+'_base_'+str(active.get('id',''))
     if not active.get('payout_profile_id'):
         st.session_state[base_key]=dict(active)
@@ -151,3 +173,4 @@ def reapply_showdown(st,active):
         st.session_state['contest_payout_schedule']=payout_vector(int(active['field_size']),active['payouts'])
         st.session_state['contest_payout_contest_id']=str(active['id'])
         st.session_state['contest_payout_source_name']='Selected saved payscale: '+active.get('payout_profile_name','Saved payscale')
+

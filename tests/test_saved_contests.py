@@ -21,3 +21,21 @@ class SavedContestsTests(unittest.TestCase):
             with self.assertRaises(ValueError):record({**self.contest(),**changes},'FanDuel Single Game')
 
 if __name__=='__main__':unittest.main()
+
+
+class PayscalePriorityTests(unittest.TestCase):
+    def test_new_payscale_is_not_overwritten_by_pending_backup(self):
+        from types import SimpleNamespace
+        from contextlib import nullcontext
+        from unittest.mock import patch
+        from simmah_saved_contests import render_panel
+        old={'id':'123','format':'DraftKings Classic','name':'Old backup','field_size':50000,'entry_fee':.1,'payouts':[[1,1,100]]}
+        state={'saved_contest_choice_DraftKings Classic_active':old}
+        st=SimpleNamespace(session_state=state,write=lambda *a:None,caption=lambda *a:None,
+            selectbox=lambda *a,**kw:'123',success=lambda *a:None,expander=lambda *a,**kw:nullcontext())
+        selected={'id':'123','entry_fee':.1,'field_size':2972,'payout_profile_id':'new',
+                  'payouts':[[1,1,25],[2,2,15]],'prize_pool':40}
+        with patch('simmah_saved_contests.load',return_value={'contests':[old]}),patch('simmah_payscales.render_panel',return_value=selected),patch('simmah_saved_contests.workspace_button',return_value=False),patch('simmah_saved_contests.workspace_download_button'),patch('simmah_saved_contests.workspace_file_uploader',return_value=None):
+            result=render_panel(st,{'id':'123'},'DraftKings Classic')
+        self.assertEqual(result['field_size'],2972)
+        self.assertEqual(result['payouts'],selected['payouts'])

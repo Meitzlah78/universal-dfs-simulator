@@ -115,7 +115,7 @@ def render_panel(st,active,format_name):
             else:
                 st.session_state[key+'_active']=chosen
         pending=st.session_state.get(key+'_active')
-        if pending and pending.get('id')==str(active.get('id','')):
+        if pending and pending.get('id')==str(active.get('id','')) and not active.get('payout_profile_id'):
             active=restore(active,pending,format_name)
             if format_name=='DraftKings Showdown' and active.get('payouts') and active.get('field_size'):
                 from simmah_contests import payout_vector
@@ -142,3 +142,4 @@ def render_panel(st,active,format_name):
                 save(local,catalog);st.session_state['saved_contest_catalog']=catalog;st.rerun()
             except (OSError,ValueError,TypeError,KeyError):st.error('Invalid saved-contest backup.')
     return active
+

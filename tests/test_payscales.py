@@ -52,3 +52,56 @@ class PanelTests(unittest.TestCase):
                 result=render_panel(st,active,fmt)
             self.assertTrue(result['payouts']);self.assertTrue(result['payout_profile_id'])
             self.assertEqual(result['id'],'123');self.assertEqual(result['field_size'],1000000)
+
+
+class ContestScopedSelectionTests(unittest.TestCase):
+    def ui(self):
+        from contextlib import nullcontext
+        class UI:
+            def __init__(self):self.session_state={};self.choices=[]
+            def selectbox(self,label,options,**kw):
+                key=kw['key'];value=self.session_state.get(key,options[kw.get('index',0)])
+                self.session_state[key]=value;self.choices.append((key,value));return value
+            def write(self,*a,**kw):pass
+            def caption(self,*a,**kw):pass
+            def info(self,*a,**kw):pass
+            def error(self,*a,**kw):raise AssertionError(a)
+            def number_input(self,*a,**kw):return self.session_state.get(kw['key'],kw['value'])
+            def expander(self,*a,**kw):return nullcontext()
+            def text_input(self,*a,**kw):return ''
+            def text_area(self,*a,**kw):return ''
+        return UI()
+
+    def render(self,st,active,fmt='DraftKings Classic'):
+        from unittest.mock import patch
+        from simmah_payscales import render_panel
+        with patch('simmah_payscales.workspace_button',return_value=False),patch('simmah_payscales.workspace_download_button'),patch('simmah_payscales.workspace_file_uploader',return_value=None):
+            return render_panel(st,active,fmt)
+
+    def test_exact_uploaded_dime_package_initializes_correct_capacity(self):
+        st=self.ui();active={'id':'today','name':'NFL $250 Dime Package [Just $0.10!]','entry_fee':.1,'field_size':260}
+        result=self.render(st,active)
+        self.assertEqual(result['field_size'],2972)
+        self.assertEqual(sum((b-a+1)*p for a,b,p in result['payouts']),250)
+        self.assertEqual(result['payouts'][-1],[284,698,.2])
+        self.assertEqual(st.choices[-1][0],'payscale_DraftKings Classic_choice_today')
+
+    def test_explicit_blank_and_manual_selection_survive_reruns(self):
+        st=self.ui();key='payscale_DraftKings Classic_choice_today'
+        active={'id':'today','name':'NFL $250 Dime Package [Just $0.10!]','entry_fee':.1,'field_size':2972}
+        first=self.render(st,active);self.assertTrue(first['payout_profile_id'])
+        st.session_state[key]=''
+        result=self.render(st,active);self.assertNotIn('payout_profile_id',result)
+        st.session_state[key]='DraftKings:250-nfl-dime-package-2972'
+        result=self.render(st,active);self.assertTrue(result['payout_profile_id'])
+
+    def test_second_contest_does_not_inherit_first_contest_choice(self):
+        st=self.ui();first={'id':'one','name':'NFL $250 Dime Package [Just $0.10!]','entry_fee':.1,'field_size':260}
+        result=self.render(st,first);self.assertEqual(result['field_size'],2972)
+        second=self.render(st,{'id':'two','name':'Different contest','entry_fee':3.,'field_size':200})
+        self.assertNotIn('payout_profile_id',second);self.assertEqual(second['field_size'],200)
+        self.assertEqual(self.render(st,first)['field_size'],2972)
+
+    def test_same_name_different_fee_is_not_automatically_applied(self):
+        result=self.render(self.ui(),{'id':'other','name':'NFL $250 Dime Package [Just $0.10!]','entry_fee':1.,'field_size':2972})
+        self.assertNotIn('payout_profile_id',result)
