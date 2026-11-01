@@ -75,7 +75,7 @@ def render_diversity_controls(st, platform, mode, simulation_count):
     """Portfolio exposure choice is independent of construction-scenario choice."""
     value = st.slider("Lineup exposure diversity",0,100,50,step=5,
         key=f"portfolio_exposure_diversity_{platform}_{mode}_v1",
-        help="Higher settings spread player exposure and penalize similar rosters in the final portfolio. Manual exposure limits and player locks remain authoritative. Changing this reselects existing candidates; it does not reduce simulation counts.")
+        help="Higher settings penalize cumulative exposure to every player across all positions, alongside roster overlap. The preferred cap is a ceiling, not an exposure target. Manual exposure limits and player locks remain authoritative. Changing this reselects existing candidates; it does not reduce simulation counts.")
     cap=100-.4*value
     st.caption(f"Preferred player exposure cap: {cap:.0f}%. Automatic limits may relax if needed to fill entries; manual limits stay enforced.")
     with st.expander("Advanced: candidate construction",expanded=False):

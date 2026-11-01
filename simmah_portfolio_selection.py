@@ -1,4 +1,4 @@
-"""Bounded quality/overlap selection with explicit player exposure limits.
+"""Bounded quality/exposure selection with explicit player exposure limits.
 
 This is a deterministic roster-overlap heuristic, not a contest-payout portfolio
 optimizer or a claim to reproduce SaberSim's proprietary selection method.
@@ -6,6 +6,8 @@ optimizer or a claim to reproduce SaberSim's proprietary selection method.
 import math
 import numpy as np
 import pandas as pd
+
+SELECTION_VERSION = 'quality-cumulative-exposure-v2'
 
 
 def select_portfolio(candidates, slots, count, metric, controls=None, default_max=80, diversity=None):
@@ -83,7 +85,11 @@ def select_portfolio(candidates, slots, count, metric, controls=None, default_ma
         mandatory=deficit>=remaining
         if mandatory.any():valid &= incidence[:,mandatory].sum(axis=1)==mandatory.sum()
         urgency=(incidence@deficit.astype(float))/max(remaining,1)
-        score=utility-overlap_penalty*overlap+2*urgency
+        # Marginal increase in sum(player exposure ** 2), across EVERY slot.
+        # Unlike maximum overlap with one roster, this keeps increasing each
+        # time a player is selected and does not saturate after one shared core.
+        concentration=(2*counts[:len(names)][picks].sum(axis=1)+len(slots))/count
+        score=utility-strength*concentration-overlap_penalty*overlap+2*urgency
         score[~valid]=-np.inf
         best=int(np.argmax(score))
         if not np.isfinite(score[best]):
@@ -99,13 +105,47 @@ def select_portfolio(candidates, slots, count, metric, controls=None, default_ma
         chosen,effective_auto_cap=_repair_portfolio(incidence,lower,upper,hard_upper,automatic,
             count,utility,finite,default_max)
         selection_method="integer repair"
+    if selection_method == 'integer repair' and strength > 0:
+        # Feasibility repair must not silently discard the exposure objective.
+        effective_upper=upper.copy()
+        effective_upper[automatic]=np.minimum(hard_upper[automatic],
+            max(1,math.floor(count*effective_auto_cap/100+1e-9)))
+        chosen=_spread_repaired_portfolio(chosen,incidence,picks,lower,effective_upper,
+            utility,finite,strength,count,len(names))
     result=ranked.iloc[chosen].copy().reset_index(drop=True)
-    result.attrs['portfolio_selection']='quality-overlap-exposure-v1'
+    result.attrs['portfolio_selection']=SELECTION_VERSION
     result.attrs['default_max_exposure_pct']=default_max
     result.attrs['effective_auto_cap_pct']=effective_auto_cap
     result.attrs['selection_method']=selection_method
     result.attrs['exposure_diversity_pct']=100*strength
     return result
+
+
+def _spread_repaired_portfolio(chosen,incidence,picks,lower,upper,utility,finite,strength,count,players):
+    """Bounded improving swaps, always preserving all feasibility constraints."""
+    import time
+    deadline=time.monotonic()+1.
+    chosen=list(chosen)
+    counts=incidence[chosen].sum(axis=0)
+    used=np.zeros(len(incidence),bool);used[chosen]=True
+    # Each accepted swap improves quality - strength * squared exposure/count.
+    # Two passes and a one-second budget keep large builds responsive.
+    for _ in range(2):
+        changed=False
+        for position,outgoing in enumerate(chosen):
+            if time.monotonic()>=deadline:return chosen
+            base=counts-incidence[outgoing]
+            valid=(~used)&finite&np.all(base+incidence<=upper,axis=1)&np.all(base+incidence>=lower,axis=1)
+            marginal=2*base[:players][picks].sum(axis=1)
+            old_marginal=2*base[:players][picks[outgoing]].sum()
+            gain=utility-utility[outgoing]-strength*(marginal-old_marginal)/count
+            gain[~valid]=-np.inf
+            incoming=int(np.argmax(gain))
+            if gain[incoming]>1e-9:
+                chosen[position]=incoming;counts=base+incidence[incoming]
+                used[outgoing]=False;used[incoming]=True;changed=True
+        if not changed:break
+    return chosen
 
 
 def _repair_portfolio(incidence,lower,upper,hard_upper,automatic,count,utility,finite,default_max):
