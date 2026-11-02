@@ -5957,7 +5957,8 @@ if platform == "FanDuel":
                     st.caption(f"These {len(fd_export_portfolio)} entries are the source for both downloads. Additional displayed candidates are alternatives.")
                     st.dataframe(injury_frame(st, fd_export_portfolio), use_container_width=True, hide_index=True)
                     from simmah_player_exposure import render_player_exposure
-                    render_player_exposure(st, fd_export_portfolio, fd_slots)
+                    render_player_exposure(st, fd_export_portfolio, fd_slots,
+                                           controls=fd_player_display.set_index("Name").to_dict("index"))
                     st.caption("Candidate alternatives — the assigned portfolio above is used for your entry replacement.")
 
                 if lineup_mode == "Single Game":
@@ -5976,7 +5977,8 @@ if platform == "FanDuel":
                     st.caption("These lineups are used for both the portfolio report and entry replacement.")
                     st.dataframe(injury_frame(st, fd_export_portfolio), use_container_width=True, hide_index=True)
                     from simmah_player_exposure import render_player_exposure
-                    render_player_exposure(st, fd_export_portfolio, fd_slots, "MVP")
+                    render_player_exposure(st, fd_export_portfolio, fd_slots, "MVP",
+                                           controls=fd_player_display.set_index("Name").to_dict("index"))
 
                 if _fd_multi_contest:
                     fd_export_portfolio = fd_export_portfolio.drop(columns=["CashRate", "Expected Prize ($)", "Expected Net ($)", "Expected ROI (%)", "Entry Fee ($)"], errors="ignore")
@@ -7744,7 +7746,7 @@ else:
                     else:
                         render_portfolio_roi_panel(classic_export_portfolio, classic_contest)
                     from simmah_player_exposure import render_player_exposure
-                    render_player_exposure(st, classic_export_portfolio, _classic_slots)
+                    render_player_exposure(st, classic_export_portfolio, _classic_slots, controls=control_map)
                     with _tab_build:
                         st.caption("Candidate alternatives — only rows marked Assigned to contest are included in your entry replacement.")
                         st.dataframe(injury_frame(st, classic_top_portfolio), use_container_width=True, hide_index=True)
@@ -9602,7 +9604,7 @@ with _tab_build:
 
             from simmah_player_exposure import render_player_exposure
             render_player_exposure(st, portfolio_df, portfolio_lineup_columns,
-                                  None if classic_mode else "Captain")
+                                  None if classic_mode else "Captain", controls=control_map)
 
             export_columns = [
                 "Captain", "Captain Sim Pts", "Flex1", "Flex1 Sim Pts",
