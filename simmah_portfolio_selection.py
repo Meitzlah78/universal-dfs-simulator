@@ -7,7 +7,7 @@ import math
 import numpy as np
 import pandas as pd
 
-SELECTION_VERSION = 'quality-cumulative-exposure-v2'
+SELECTION_VERSION = 'quality-role-exposure-v3'
 
 
 def select_portfolio(candidates, slots, count, metric, controls=None, default_max=80, diversity=None):
@@ -44,9 +44,9 @@ def select_portfolio(candidates, slots, count, metric, controls=None, default_ma
         maximum=manual_max if locked or manual_min>default_max else min(manual_max,default_max)
         if faded:maximum=0;manual_max=0
         automatic[i]=not locked and manual_min<=default_max
-        hard_upper[i]=0 if manual_max<=0 else max(1,math.floor(count*manual_max/100+1e-9))
+        hard_upper[i]=math.floor(count*manual_max/100+1e-9)
         lower[i]=math.ceil(count*minimum/100-1e-9)
-        upper[i]=0 if maximum<=0 else max(1,math.floor(count*maximum/100+1e-9))
+        upper[i]=min(hard_upper[i],0 if maximum<=0 else max(1,math.floor(count*maximum/100+1e-9)))
         if lower[i]>upper[i]:raise ValueError(f'Conflicting portfolio exposure limits for {name}')
     # Special-role exposure is an additional hard constraint, not part of the
     # automatic overall cap. Keep explicit CPT/MVP limits authoritative.
@@ -65,6 +65,16 @@ def select_portfolio(candidates, slots, count, metric, controls=None, default_ma
             role_lower.append(math.ceil(count*minimum/100-1e-9))
             role_upper.append(math.floor(count*maximum/100+1e-9))
         if np.any(np.asarray(role_lower)>role_upper):raise ValueError('Conflicting special-role exposure limits')
+        # FLEX means any non-CPT/MVP slot, counted once per entry.
+        flex_incidence=incidence-role_incidence
+        flex_upper=[]
+        for name in names:
+            value=pd.to_numeric(controls.get(name,{}).get('Flex Max %',100),errors='coerce')
+            maximum=float(np.clip(value if pd.notna(value) else 100,0,100))
+            flex_upper.append(math.floor(count*maximum/100+1e-9))
+        incidence=np.column_stack([incidence,flex_incidence])
+        lower=np.r_[lower,np.zeros(len(names),int)];upper=np.r_[upper,flex_upper]
+        hard_upper=np.r_[hard_upper,flex_upper];automatic=np.r_[automatic,np.zeros(len(names),bool)]
         incidence=np.column_stack([incidence,role_incidence])
         lower=np.r_[lower,role_lower];upper=np.r_[upper,role_upper]
         hard_upper=np.r_[hard_upper,role_upper];automatic=np.r_[automatic,np.zeros(len(names),bool)]
@@ -113,6 +123,8 @@ def select_portfolio(candidates, slots, count, metric, controls=None, default_ma
         chosen=_spread_repaired_portfolio(chosen,incidence,picks,lower,effective_upper,
             utility,finite,strength,count,len(names))
     result=ranked.iloc[chosen].copy().reset_index(drop=True)
+    from simmah_exposure_limits import validate_exposure_limits
+    validate_exposure_limits(result,slots,controls)
     result.attrs['portfolio_selection']=SELECTION_VERSION
     result.attrs['default_max_exposure_pct']=default_max
     result.attrs['effective_auto_cap_pct']=effective_auto_cap
