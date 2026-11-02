@@ -1,0 +1,81 @@
+{
+  "schema": 1,
+  "imports": [
+    {
+      "contest_id": "197368240",
+      "source_file": "contest-standings-197368240.zip",
+      "source_sha256": "3ccbe4262143006c5ebf9efb7ca8167dd20da45b4a818768cb6837c2d0655486",
+      "pregame_bundle": "Simmah_NFL_DraftKings_Classic_197368240_20261101T174943Z_37619c6515_Calibration_Solver_Latest_Export_eeddf04e00.zip",
+      "pregame_bundle_sha256": "836507060404682f4f938c380b2d8ace4a84bb76e3b3e33c12740c59ee798cee",
+      "platform": "DraftKings",
+      "format": "Classic",
+      "slate_date": "2026-11-01",
+      "profiles": [
+        "86181ea722d1b7cb5ce7dcefe056f54ab2ff6b37968f7290a6d17185449579ea"
+      ],
+      "lineups": 2972,
+      "published_scores_added": 208,
+      "usage": "Aggregate field profiles active after import; player scores retained for validation, not raw-event training",
+      "complete_roster_coverage": "Only fully parsed, nonempty completed rosters; null/empty entries excluded"
+    },
+    {
+      "contest_id": "135859-281259493",
+      "source_file": "135859-281259493.csv",
+      "source_sha256": "e571a300b01d978df036589f3765990ed69e2196759262bc7ea0f443af1a7b20",
+      "pregame_bundle": "Simmah_NFL_FanDuel_Full_Roster_135859-281259493_20261101T174337Z_bc9c14d20d_Calibration_Solver_Latest_Export_2c4ebee173.zip",
+      "pregame_bundle_sha256": "32df9f9c448a73ea660dadbaf2d074f926fee927fe27ff550d2f4224928dbe45",
+      "platform": "FanDuel",
+      "format": "Full Roster",
+      "slate_date": "2026-11-01",
+      "profiles": [
+        "5599a1a48eb4e634945fab05bc5039877445154bba305d9cdb61db6ee6a33510"
+      ],
+      "lineups": 563810,
+      "published_scores_added": 500,
+      "usage": "Aggregate field profiles active after import; player scores retained for validation, not raw-event training",
+      "complete_roster_coverage": "Only fully parsed, nonempty completed rosters; null/empty entries excluded"
+    },
+    {
+      "contest_id": "197302798",
+      "source_file": "contest-standings-197302798.zip",
+      "source_sha256": "2678a88046dd804387ff6511f23025d78bb6d6a8f786aad13d465248bf2a266b",
+      "pregame_bundle": "draftkings_showdown_field_comparison(1).zip",
+      "pregame_bundle_sha256": "597c2e18fd9ec46f76b080250600bae832650a009dba4d42a5b6072eaade42f0",
+      "platform": "DraftKings",
+      "format": "Showdown",
+      "slate_date": "2026-11-01",
+      "profiles": [
+        "5428368039d5cbfe2513e61242ee0b891d4d1f881efa2b6c2523786be186425f"
+      ],
+      "lineups": 23579,
+      "published_scores_added": 46,
+      "usage": "Aggregate field profiles active after import; player scores retained for validation, not raw-event training",
+      "complete_roster_coverage": "Only fully parsed, nonempty completed rosters; null/empty entries excluded"
+    },
+    {
+      "contest_id": "136032-281318044",
+      "source_file": "136032-281318044.csv",
+      "source_sha256": "d25333ef5c7afdfbb3741f55a64efc95268889fe78c7bce864337997be1e6d17",
+      "pregame_bundle": "Simmah_NFL_FanDuel_Single_Game_136032-281318044_20261102T010137Z_ee905e4f7e_Calibration_Solver.zip",
+      "pregame_bundle_sha256": "487f6691eaf463de87115befc03ee2a798369f1dfc865d3b9fe28daffc292f45",
+      "platform": "FanDuel",
+      "format": "Single Game",
+      "slate_date": "2026-11-01",
+      "profiles": [
+        "91a8a93660462c2250b9d137a0b61011d9ddec2bfee17bb43cc4087b9d884003"
+      ],
+      "lineups": 47819,
+      "published_scores_added": 45,
+      "usage": "Aggregate field profiles active after import; player scores retained for validation, not raw-event training",
+      "complete_roster_coverage": "Only fully parsed, nonempty completed rosters; null/empty entries excluded"
+    }
+  ],
+  "duplicate_sources": [
+    {
+      "source_file": "contest-standings-197368240(1).zip",
+      "same_csv_sha256_as": "contest-standings-197368240.zip",
+      "csv_sha256": "4b021a24f36327d0e56ea81fd989119971cb7077d0b03ab63a8626b78c342775",
+      "action": "not counted twice"
+    }
+  ]
+}
