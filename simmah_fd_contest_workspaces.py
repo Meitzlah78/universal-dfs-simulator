@@ -65,7 +65,7 @@ def activate_contest(state, template, mode, contest_id):
     return previous is not None
 
 
-PLAYER_CONTROLS = ('Fade', 'Lock', 'Min Exposure %', 'Max Exposure %')
+PLAYER_CONTROLS = ('Fade', 'Lock', 'Min Exposure %', 'Max Exposure %', 'MVP Max %', 'Flex Max %')
 
 
 def restore_player_controls(frame, state, mode):

@@ -783,7 +783,7 @@ def expand_showdown_field_by_ownership(sample_field, full_field_size, seed=20261
 
 
 
-def build_dk_contest_entry_export(entry_df, selected_contest_id, lineup_ids_df, expected_slots, slate_label, all_contests=False):
+def build_dk_contest_entry_export(entry_df, selected_contest_id, lineup_ids_df, expected_slots, slate_label, all_contests=False, controls=None):
     """Replace roster slots on existing DraftKings entries; never create new contest entries."""
     if entry_df is None or not isinstance(entry_df, pd.DataFrame) or entry_df.empty:
         st.error(
@@ -891,6 +891,28 @@ def build_dk_contest_entry_export(entry_df, selected_contest_id, lineup_ids_df, 
                 if player_id:
                     clean_id = str(player_id).strip().removesuffix(".0")
                     id_to_name[(clean_id, str(slot_name).strip().upper())] = str(player_name).strip()
+
+    if slate_label == "Showdown":
+        from simmah_exposure_limits import validate_exposure_limits
+        exposure_slots = ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"]
+        name_rows = []
+        for _, id_row in ids.iterrows():
+            names = []
+            for j, value in enumerate(id_row):
+                clean = str(value).strip().removesuffix(".0")
+                role = "CPT" if j == 0 else "FLEX"
+                name = id_to_name.get((clean, role))
+                if name is None:
+                    st.error("Exposure audit blocked: unknown player ID " + clean)
+                    return None
+                names.append(name)
+            name_rows.append(names)
+        try:
+            validate_exposure_limits(pd.DataFrame(name_rows, columns=exposure_slots),
+                                     exposure_slots, controls)
+        except ValueError as exc:
+            st.error(str(exc))
+            return None
 
     for j, col_index in enumerate(roster_column_indices):
         slot = str(expected_slots[j]).strip().upper()
@@ -5282,6 +5304,10 @@ if platform == "FanDuel":
         _fd_show_all_columns = st.checkbox("Show all player columns", value=False,
             key="fd_show_all_player_columns_" + lineup_mode.replace(" ", "_").lower())
         from simmah_fd_contest_workspaces import restore_player_controls, PLAYER_CONTROLS
+        if lineup_mode == "Single Game":
+            for _role_limit in ("MVP Max %", "Flex Max %"):
+                if _role_limit not in fd_player_display:
+                    fd_player_display[_role_limit] = 100
         fd_player_display = restore_player_controls(fd_player_display, st.session_state, lineup_mode)
         fd_player_display = injury_player_pool(fd_player_display)
         _fd_edited_pool = workspace_data_editor(st,
@@ -5291,11 +5317,14 @@ if platform == "FanDuel":
             column_order=None if _fd_show_all_columns else player_columns(fd_player_display),
             row_height=32,
             height=660,
-            disabled=[c for c in fd_player_display.columns if c not in {"Fade", "Lock", "Injury Status", "Min Exposure %", "Max Exposure %"}],
+            disabled=[c for c in fd_player_display.columns if c not in {"Fade", "Lock", "Injury Status", "Min Exposure %", "Max Exposure %", "MVP Max %", "Flex Max %"}],
             column_config={
                 **player_column_config(st),
                 "Name": st.column_config.TextColumn("Name"),
                 "Player": st.column_config.TextColumn("Player", pinned=True),
+                "Max Exposure %": st.column_config.NumberColumn("Overall Max %", min_value=0, max_value=100, step=5, format="%d%%"),
+                "MVP Max %": st.column_config.NumberColumn("MVP Max %", min_value=0, max_value=100, step=5, format="%d%%"),
+                "Flex Max %": st.column_config.NumberColumn("FLEX Max %", min_value=0, max_value=100, step=5, format="%d%%"),
                 "Injury Status": st.column_config.SelectboxColumn("Injury Status", options=["Active", "Questionable", "Doubtful", "Out"], required=True),
             },
             key="fd_player_pool_editor_" + lineup_mode.replace(" ", "_").lower(),
@@ -6034,7 +6063,8 @@ if platform == "FanDuel":
                             fd_entry_bytes, fd_entry_count = build_fanduel_entry_export(
                                 fd_entry_file.getvalue(), fd_export_portfolio, fd_ids,
                                 st.session_state["selected_fd_contest"], lineup_mode,
-                                all_contests=fd_all_contests, contest_ids=fd_assignment_entries[fd_id_col].astype(str).unique())
+                                all_contests=fd_all_contests, contest_ids=fd_assignment_entries[fd_id_col].astype(str).unique(),
+                                controls=fd_player_display.set_index("Name").to_dict("index"))
                             import csv as _fd_export_csv
                             import io as _fd_export_io
                             _fd_upload_rows = list(_fd_export_csv.reader(_fd_export_io.StringIO(fd_entry_bytes.decode("utf-8-sig"))))
@@ -7036,7 +7066,7 @@ else:
         # Captain exposure limits belong only to Showdown formats.
         if not (platform == "DraftKings" and lineup_mode == "Classic"):
             display_settings.extend([
-                ("Captain Min %", 0), ("Captain Max %", 100)
+                ("Captain Min %", 0), ("Captain Max %", 100), ("Flex Max %", 100)
             ])
         for setting, default in display_settings:
             if existing_control_values is not None and setting in existing_control_values.columns:
@@ -7066,7 +7096,7 @@ else:
             "Field CPT Own %", "Field MVP Own %", "Field FLEX Own %", "Field Own %",
             "Sim P10", "Sim P25", "Sim P50", "Sim P75", "Sim P90", "Sim P95", "Sim P99",
             "Cap Hit %", "Lock", "Fade",
-            "Min Exposure %", "Max Exposure %", "Captain Min %", "Captain Max %",
+            "Min Exposure %", "Max Exposure %", "Captain Min %", "Captain Max %", "Flex Max %",
         ]
         _ordered_player_pool_columns = [
             column for column in _preferred_player_pool_order if column in control_display.columns
@@ -7101,9 +7131,10 @@ else:
                 "Player": st.column_config.TextColumn("Player", pinned=True),
                 "Lock": st.column_config.CheckboxColumn("Lock", help="Force this player into lineup builds."),
                 "Min Exposure %": st.column_config.NumberColumn("Min Exp %", min_value=0, max_value=100, step=5, format="%d%%"),
-                "Max Exposure %": st.column_config.NumberColumn("Max Exp %", min_value=0, max_value=100, step=5, format="%d%%"),
+                "Max Exposure %": st.column_config.NumberColumn("Overall Max %", min_value=0, max_value=100, step=5, format="%d%%"),
                 "Captain Min %": st.column_config.NumberColumn("CPT Min %", min_value=0, max_value=100, step=5, format="%d%%"),
                 "Captain Max %": st.column_config.NumberColumn("CPT Max %", min_value=0, max_value=100, step=5, format="%d%%"),
+                "Flex Max %": st.column_config.NumberColumn("FLEX Max %", min_value=0, max_value=100, step=5, format="%d%%"),
             },
             key="player_controls_editor"
         )
@@ -7156,7 +7187,7 @@ else:
             for setting, default in [
                 ("Lock", False), ("Fade", False),
                 ("Min Exposure %", 0), ("Max Exposure %", 100),
-                ("Captain Min %", 0), ("Captain Max %", 100)
+                ("Captain Min %", 0), ("Captain Max %", 100), ("Flex Max %", 100)
             ]:
                 if setting in previous_by_name.columns:
                     control_values[setting] = control_values["Name"].map(previous_by_name[setting]).fillna(default)
@@ -7170,20 +7201,21 @@ else:
             control_values["Max Exposure %"] = 100
             control_values["Captain Min %"] = 0
             control_values["Captain Max %"] = 100
+            control_values["Flex Max %"] = 100
 
         editor_controls = edited_player_controls.set_index("Name")
         for setting in [
             "Lock", "Min Exposure %", "Max Exposure %"
         ] + (
             [] if platform == "DraftKings" and lineup_mode == "Classic"
-            else ["Captain Min %", "Captain Max %"]
+            else ["Captain Min %", "Captain Max %", "Flex Max %"]
         ):
             control_values[setting] = control_values["Name"].map(
                 editor_controls[setting]
             ).fillna(control_values[setting])
         control_values["Lock"] = control_values["Lock"].astype(bool)
         control_values["Fade"] = False
-        for setting in ["Min Exposure %", "Max Exposure %", "Captain Min %", "Captain Max %"]:
+        for setting in ["Min Exposure %", "Max Exposure %", "Captain Min %", "Captain Max %", "Flex Max %"]:
             control_values[setting] = pd.to_numeric(control_values[setting], errors="coerce").fillna(
                 0 if "Min" in setting else 100
             ).clip(0, 100)
@@ -9243,6 +9275,7 @@ with _tab_build:
                         str(name),
                         float(values.get("Max Exposure %", 100)),
                         float(values.get("Captain Max %", 100)),
+                        float(values.get("Flex Max %", 100)),
                         float(values.get("Min Exposure %", 0)),
                         float(values.get("Captain Min %", 0)),
                         bool(values.get("Lock", False)),
@@ -9257,7 +9290,7 @@ with _tab_build:
                 or st.session_state.get("portfolio_control_signature") != current_control_signature
                 or st.session_state.get("portfolio_metric_used") != portfolio_metric
                 or st.session_state.get("portfolio_exposure_diversity_used") != portfolio_diversity
-                or getattr(st.session_state.get("portfolio_df"), "attrs", {}).get("portfolio_selection") != "quality-cumulative-exposure-v2"
+                or getattr(st.session_state.get("portfolio_df"), "attrs", {}).get("portfolio_selection") != "quality-role-exposure-v3"
             ):
 
                 from simmah_portfolio_selection import select_portfolio
@@ -9675,7 +9708,7 @@ with _tab_build:
                                     selected_contest_id,
                                     lineup_ids_df,
                                     showdown_slots,
-                                    "Showdown"
+                                    "Showdown", controls=control_map
                                 )
                                 if export_df is not None:
                                     lineup_export_download(

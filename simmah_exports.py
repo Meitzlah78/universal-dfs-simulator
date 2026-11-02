@@ -4,7 +4,7 @@ import io
 import re
 
 
-def build_fanduel_entry_export(template, portfolio, player_ids, contest, mode, all_contests=False, contest_ids=None):
+def build_fanduel_entry_export(template, portfolio, player_ids, contest, mode, all_contests=False, contest_ids=None, controls=None):
     text = template.decode("utf-8-sig") if isinstance(template, bytes) else template
     rows = list(csv.reader(io.StringIO(text)))
     if not rows:
@@ -48,6 +48,8 @@ def build_fanduel_entry_export(template, portfolio, player_ids, contest, mode, a
         raise ValueError("Reserved Entry IDs must be unique positive integers.")
     if len(portfolio)<len(targets):
         raise ValueError(f"Need {len(targets)} assigned lineups to fill all reserved entries.")
+    from simmah_exposure_limits import validate_exposure_limits
+    validate_exposure_limits(portfolio.iloc[:len(targets)], slots, controls)
     prefix = target.split("-",1)[0] if "-" in target else None
     if all_contests and any(rows[i][contest_col].strip().split("-", 1)[0] != prefix for i in targets):
         raise ValueError("Combined exports require every contest to belong to the same FanDuel slate.")
