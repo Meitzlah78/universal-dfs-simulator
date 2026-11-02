@@ -1,0 +1,252 @@
+{
+  "schema": 1,
+  "sport": "NFL",
+  "slate_date": "2026-11-01",
+  "usage": "User-provided pregame optimizer benchmarks; not a complete projection pool, optimizer labels not outcomes",
+  "source_correction": "First two screenshots are RotoWire, per user correction; not DFF",
+  "independence": "DFF/FantasySportsEdge display overlapping inputs; do not count as independent source votes",
+  "lineups": [
+    {
+      "provider": "RotoWire",
+      "platform": "FanDuel",
+      "source_file": "Screenshot 2026-11-01 121937.png",
+      "source_sha256": "cd9bc03f0d94c732885ef067d2ad53ec891f67078426a951da4ed46f02077963",
+      "displayed_projection": 139.99,
+      "salary": 60000,
+      "players": [
+        "Dak Prescott",
+        "Bijan Robinson",
+        "Javonte Williams",
+        "CeeDee Lamb",
+        "Michael Wilson",
+        "Kyle Williams",
+        "T.J. Hockenson",
+        "Kyren Williams",
+        "Detroit Lions"
+      ],
+      "unmatched_actuals": [],
+      "actual_points": 111.7,
+      "grading_policy": "Sum of same-platform explicit player scores; no missing-score zero fill; not a provider-weight training verdict"
+    },
+    {
+      "provider": "RotoWire",
+      "platform": "FanDuel",
+      "source_file": "Screenshot 2026-11-01 121937.png",
+      "source_sha256": "cd9bc03f0d94c732885ef067d2ad53ec891f67078426a951da4ed46f02077963",
+      "displayed_projection": 139.98,
+      "salary": 60000,
+      "players": [
+        "Dak Prescott",
+        "Bijan Robinson",
+        "Javonte Williams",
+        "CeeDee Lamb",
+        "Michael Wilson",
+        "Kyle Williams",
+        "Hunter Henry",
+        "Kyren Williams",
+        "Detroit Lions"
+      ],
+      "unmatched_actuals": [],
+      "actual_points": 102.4,
+      "grading_policy": "Sum of same-platform explicit player scores; no missing-score zero fill; not a provider-weight training verdict"
+    },
+    {
+      "provider": "RotoWire",
+      "platform": "DraftKings",
+      "source_file": "Screenshot 2026-11-01 122024.png",
+      "source_sha256": "3d8e4d546aa90e4be32ba8861ff332659e40739ffd285d9e98f8a4c3e29d7b32",
+      "displayed_projection": 154.19,
+      "salary": 50000,
+      "players": [
+        "Dak Prescott",
+        "Bijan Robinson",
+        "Chase Brown",
+        "CeeDee Lamb",
+        "Puka Nacua",
+        "Travis Hunter",
+        "Gunnar Helm",
+        "Jonah Coleman",
+        "Broncos"
+      ],
+      "unmatched_actuals": [],
+      "actual_points": 119.8,
+      "grading_policy": "Sum of same-platform explicit player scores; no missing-score zero fill; not a provider-weight training verdict"
+    },
+    {
+      "provider": "RotoWire",
+      "platform": "DraftKings",
+      "source_file": "Screenshot 2026-11-01 122024.png",
+      "source_sha256": "3d8e4d546aa90e4be32ba8861ff332659e40739ffd285d9e98f8a4c3e29d7b32",
+      "displayed_projection": 150.62,
+      "salary": 49900,
+      "players": [
+        "Dak Prescott",
+        "Bijan Robinson",
+        "Kyren Williams",
+        "Travis Hunter",
+        "Elic Ayomanor",
+        "CeeDee Lamb",
+        "Gunnar Helm",
+        "Puka Nacua",
+        "Broncos"
+      ],
+      "unmatched_actuals": [],
+      "actual_points": 101.6,
+      "grading_policy": "Sum of same-platform explicit player scores; no missing-score zero fill; not a provider-weight training verdict"
+    },
+    {
+      "provider": "DraftEdge",
+      "platform": "DraftKings",
+      "source_file": "Screenshot 2026-11-01 122221.png",
+      "source_sha256": "f54336c214057c5890c7b90b0340baa3471a695a3edc6c9a4e7496be19b0d361",
+      "displayed_projection": 139.9,
+      "salary": 49900,
+      "players": [
+        "Jacoby Brissett",
+        "Chase Brown",
+        "Bijan Robinson",
+        "Zay Flowers",
+        "Chris Godwin Jr.",
+        "George Pickens",
+        "Greg Dulcich",
+        "Hunter Henry",
+        "Steelers"
+      ],
+      "unmatched_actuals": [],
+      "actual_points": 69.26,
+      "grading_policy": "Sum of same-platform explicit player scores; no missing-score zero fill; not a provider-weight training verdict"
+    },
+    {
+      "provider": "DFF",
+      "platform": "DraftKings",
+      "source_file": "Screenshot 2026-11-01 122330.png",
+      "source_sha256": "8308386fcadb2bc573054f024f53451e189781593cd7122476bd7df9732e7ffd",
+      "displayed_projection": 145.2,
+      "salary": 49600,
+      "players": [
+        "Dak Prescott",
+        "Chase Brown",
+        "Braelon Allen",
+        "Puka Nacua",
+        "Wan'Dale Robinson",
+        "Zay Flowers",
+        "Hunter Henry",
+        "Jonah Coleman",
+        "Broncos"
+      ],
+      "unmatched_actuals": [],
+      "actual_points": 133.3,
+      "grading_policy": "Sum of same-platform explicit player scores; no missing-score zero fill; not a provider-weight training verdict"
+    },
+    {
+      "provider": "DFF",
+      "platform": "FanDuel",
+      "source_file": "Screenshot 2026-11-01 122401.png",
+      "source_sha256": "283e5d10fc7a9b5b5226b81fe6bf2969be2b78f0be920d377c89ebfa8cc64730",
+      "displayed_projection": 135.5,
+      "salary": 60000,
+      "players": [
+        "Dak Prescott",
+        "Jahmyr Gibbs",
+        "Braelon Allen",
+        "Chris Godwin Jr.",
+        "Puka Nacua",
+        "Wan'Dale Robinson",
+        "Trey McBride",
+        "Tony Pollard",
+        "Miami Dolphins"
+      ],
+      "unmatched_actuals": [],
+      "actual_points": 156.0,
+      "grading_policy": "Sum of same-platform explicit player scores; no missing-score zero fill; not a provider-weight training verdict"
+    },
+    {
+      "provider": "FantasySportsEdge",
+      "platform": "FanDuel",
+      "source_file": "Screenshot 2026-11-01 122703.png",
+      "source_sha256": "d7196a65809ab54008c6bf14061ef51906fac9f8a1a5d2618717c203bc9f2c81",
+      "displayed_projection": 135.5,
+      "salary": 60000,
+      "players": [
+        "Dak Prescott",
+        "Jahmyr Gibbs",
+        "Braelon Allen",
+        "Puka Nacua",
+        "Wan'Dale Robinson",
+        "Chris Godwin Jr.",
+        "Trey McBride",
+        "Tony Pollard",
+        "Miami Dolphins"
+      ],
+      "unmatched_actuals": [],
+      "actual_points": 156.0,
+      "grading_policy": "Sum of same-platform explicit player scores; no missing-score zero fill; not a provider-weight training verdict"
+    },
+    {
+      "provider": "FantasySportsEdge",
+      "platform": "FanDuel",
+      "source_file": "Screenshot 2026-11-01 122713.png",
+      "source_sha256": "8b40ae111af8baff9bb009701c0bbc3d09869c20f4f434bd4c8586c31478424e",
+      "displayed_projection": 135.5,
+      "salary": 59900,
+      "players": [
+        "Dak Prescott",
+        "Jahmyr Gibbs",
+        "Braelon Allen",
+        "Puka Nacua",
+        "Michael Wilson",
+        "Wan'Dale Robinson",
+        "Trey McBride",
+        "Jonah Coleman",
+        "Miami Dolphins"
+      ],
+      "unmatched_actuals": [],
+      "actual_points": 170.0,
+      "grading_policy": "Sum of same-platform explicit player scores; no missing-score zero fill; not a provider-weight training verdict"
+    },
+    {
+      "provider": "FantasySportsEdge",
+      "platform": "DraftKings",
+      "source_file": "Screenshot 2026-11-01 122824.png",
+      "source_sha256": "6ed3d3d0b8b93c1ec4c98a26c9b4babe68596258da01f098adb07ed2eee4200c",
+      "displayed_projection": 145.3,
+      "salary": 50000,
+      "players": [
+        "Dak Prescott",
+        "Jahmyr Gibbs",
+        "Braelon Allen",
+        "Puka Nacua",
+        "Wan'Dale Robinson",
+        "Malik Washington",
+        "Hunter Henry",
+        "Jonah Coleman",
+        "Broncos"
+      ],
+      "unmatched_actuals": [],
+      "actual_points": 159.0,
+      "grading_policy": "Sum of same-platform explicit player scores; no missing-score zero fill; not a provider-weight training verdict"
+    },
+    {
+      "provider": "FantasySportsEdge",
+      "platform": "DraftKings",
+      "source_file": "Screenshot 2026-11-01 122833.png",
+      "source_sha256": "db4099d6352bfc62a4e1e94ca7846c8f51d65c015fa22dfd71d247d4bab8e6bd",
+      "displayed_projection": 145.3,
+      "salary": 49900,
+      "players": [
+        "Dak Prescott",
+        "Chase Brown",
+        "Bhayshul Tuten",
+        "Puka Nacua",
+        "Ja'Marr Chase",
+        "Wan'Dale Robinson",
+        "Hunter Henry",
+        "Jonah Coleman",
+        "Broncos"
+      ],
+      "unmatched_actuals": [],
+      "actual_points": 174.0,
+      "grading_policy": "Sum of same-platform explicit player scores; no missing-score zero fill; not a provider-weight training verdict"
+    }
+  ]
+}
