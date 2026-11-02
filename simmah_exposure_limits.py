@@ -4,12 +4,9 @@ import pandas as pd
 from simmah_player_exposure import player_exposure
 
 
-def validate_exposure_limits(portfolio, slots, controls=None):
-    """Raise with player/role/count details; never relax a manual ceiling."""
+def exposure_violations(table, count, special=None, controls=None):
+    """Structured violations used by both the visible status and export gate."""
     controls = controls or {}
-    special = next((s for s in slots if s in ("Captain", "MVP")), None)
-    table = player_exposure(portfolio, slots, special)
-    count = len(portfolio)
     errors = []
     for _, row in table.iterrows():
         name = row["Player"]
@@ -26,7 +23,18 @@ def validate_exposure_limits(portfolio, slots, controls=None):
             limit = math.floor(count * value / 100 + 1e-9)
             actual = int(row[column])
             if actual > limit:
-                errors.append(f"{name}: {label} {actual}/{count} exceeds {value:g}% (max {limit})")
+                errors.append({"player": name, "role": label, "actual": actual,
+                               "count": count, "percent": value, "limit": limit})
+    return errors
+
+
+def validate_exposure_limits(portfolio, slots, controls=None):
+    """Raise with player/role/count details; never relax a manual ceiling."""
+    special = next((s for s in slots if s in ("Captain", "MVP")), None)
+    table = player_exposure(portfolio, slots, special)
+    errors = exposure_violations(table, len(portfolio), special, controls)
     if errors:
-        raise ValueError("Exposure limits exceeded — " + "; ".join(errors))
+        messages = [f"{e['player']}: {e['role']} {e['actual']}/{e['count']} exceeds "
+                    f"{e['percent']:g}% (max {e['limit']})" for e in errors]
+        raise ValueError("Exposure limits exceeded — " + "; ".join(messages))
     return table
