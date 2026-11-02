@@ -5927,6 +5927,8 @@ if platform == "FanDuel":
                     st.write("### Assigned contest portfolio")
                     st.caption(f"These {len(fd_export_portfolio)} entries are the source for both downloads. Additional displayed candidates are alternatives.")
                     st.dataframe(injury_frame(st, fd_export_portfolio), use_container_width=True, hide_index=True)
+                    from simmah_player_exposure import render_player_exposure
+                    render_player_exposure(st, fd_export_portfolio, fd_slots)
                     st.caption("Candidate alternatives — the assigned portfolio above is used for your entry replacement.")
 
                 if lineup_mode == "Single Game":
@@ -5944,6 +5946,8 @@ if platform == "FanDuel":
                     st.write("### Assigned contest portfolio")
                     st.caption("These lineups are used for both the portfolio report and entry replacement.")
                     st.dataframe(injury_frame(st, fd_export_portfolio), use_container_width=True, hide_index=True)
+                    from simmah_player_exposure import render_player_exposure
+                    render_player_exposure(st, fd_export_portfolio, fd_slots, "MVP")
 
                 if _fd_multi_contest:
                     fd_export_portfolio = fd_export_portfolio.drop(columns=["CashRate", "Expected Prize ($)", "Expected Net ($)", "Expected ROI (%)", "Entry Fee ($)"], errors="ignore")
@@ -7707,6 +7711,8 @@ else:
                         st.caption("Shared candidate ranking uses the reference contest. Combined ROI is unavailable until each contest has its own verified payout evaluation.")
                     else:
                         render_portfolio_roi_panel(classic_export_portfolio, classic_contest)
+                    from simmah_player_exposure import render_player_exposure
+                    render_player_exposure(st, classic_export_portfolio, _classic_slots)
                     with _tab_build:
                         st.caption("Candidate alternatives — only rows marked Assigned to contest are included in your entry replacement.")
                         st.dataframe(injury_frame(st, classic_top_portfolio), use_container_width=True, hide_index=True)
@@ -9561,7 +9567,9 @@ with _tab_build:
             if not classic_mode:
                 st.caption("Simulated Opponent Copies counts matching opponents in the current simulated field, with Captain fixed and FLEX order ignored. It excludes your own entries and is not a forecast of actual contest duplicates.")
 
-            # Final portfolio exposure is shown in the Player Pool table, so no separate table is built here.
+            from simmah_player_exposure import render_player_exposure
+            render_player_exposure(st, portfolio_df, portfolio_lineup_columns,
+                                  None if classic_mode else "Captain")
 
             export_columns = [
                 "Captain", "Captain Sim Pts", "Flex1", "Flex1 Sim Pts",
