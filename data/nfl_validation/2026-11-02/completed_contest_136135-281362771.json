@@ -1,0 +1,511 @@
+{
+  "schema": 1,
+  "contest_id": "136135-281362771",
+  "slate_date": "2026-11-02",
+  "source_sha256": "271995987a0aeb41b8a926c8cffe9fbd82ab9b28ee024ac3408e1a081178a93f",
+  "frozen_build_sha256": "63ee3ca75d384e117a374e04047eeaa0d664b5dfe121f402c21057be7cec72e9",
+  "complete_entries": 71281,
+  "field_capacity": 71856,
+  "unique_rosters": 9800,
+  "own_entries": 20,
+  "own_exports_match": 20,
+  "fees": 5,
+  "estimated_winnings": 1.25,
+  "estimated_net": -3.75,
+  "cashed_entries": 2,
+  "best_rank": 2627,
+  "best_points": 106.95,
+  "results": [
+    {
+      "rank": 2627,
+      "points": 106.95,
+      "mvp": "D'Andre Swift",
+      "flex": [
+        "Caleb Williams",
+        "Chicago Bears",
+        "Cairo Santos",
+        "Luther Burden III",
+        "Sam Darnold"
+      ],
+      "estimated_prize": 0.75,
+      "matching_field_entries_including_own": 94
+    },
+    {
+      "rank": 17427,
+      "points": 100.4,
+      "mvp": "Jaxon Smith-Njigba",
+      "flex": [
+        "Sam Darnold",
+        "Caleb Williams",
+        "Cairo Santos",
+        "Tory Horton",
+        "Luther Burden III"
+      ],
+      "estimated_prize": 0.5,
+      "matching_field_entries_including_own": 426
+    },
+    {
+      "rank": 27719,
+      "points": 94.62,
+      "mvp": "Jaxon Smith-Njigba",
+      "flex": [
+        "Jason Myers",
+        "Sam Darnold",
+        "Zach Charbonnet",
+        "D'Andre Swift",
+        "Tory Horton"
+      ],
+      "estimated_prize": 0,
+      "matching_field_entries_including_own": 102
+    },
+    {
+      "rank": 29715,
+      "points": 93.67,
+      "mvp": "Caleb Williams",
+      "flex": [
+        "D'Andre Swift",
+        "AJ Barner",
+        "Colston Loveland",
+        "Jaxon Smith-Njigba",
+        "Rome Odunze"
+      ],
+      "estimated_prize": 0,
+      "matching_field_entries_including_own": 306
+    },
+    {
+      "rank": 30106,
+      "points": 93.62,
+      "mvp": "Jaxon Smith-Njigba",
+      "flex": [
+        "Sam Darnold",
+        "Zach Charbonnet",
+        "Seattle Seahawks",
+        "D'Andre Swift",
+        "Tory Horton"
+      ],
+      "estimated_prize": 0,
+      "matching_field_entries_including_own": 93
+    },
+    {
+      "rank": 30834,
+      "points": 93.32,
+      "mvp": "Jaxon Smith-Njigba",
+      "flex": [
+        "Sam Darnold",
+        "Jason Myers",
+        "Cooper Kupp",
+        "Seattle Seahawks",
+        "D'Andre Swift"
+      ],
+      "estimated_prize": 0,
+      "matching_field_entries_including_own": 247
+    },
+    {
+      "rank": 31437,
+      "points": 93.2,
+      "mvp": "Jaxon Smith-Njigba",
+      "flex": [
+        "Caleb Williams",
+        "Rome Odunze",
+        "Sam Darnold",
+        "Cairo Santos",
+        "AJ Barner"
+      ],
+      "estimated_prize": 0,
+      "matching_field_entries_including_own": 152
+    },
+    {
+      "rank": 40721,
+      "points": 88.87,
+      "mvp": "Caleb Williams",
+      "flex": [
+        "Rome Odunze",
+        "D'Andre Swift",
+        "Cooper Kupp",
+        "Colston Loveland",
+        "Luther Burden III"
+      ],
+      "estimated_prize": 0,
+      "matching_field_entries_including_own": 27
+    },
+    {
+      "rank": 45596,
+      "points": 86.37,
+      "mvp": "Caleb Williams",
+      "flex": [
+        "D'Andre Swift",
+        "Colston Loveland",
+        "Zach Charbonnet",
+        "Cairo Santos",
+        "Luther Burden III"
+      ],
+      "estimated_prize": 0,
+      "matching_field_entries_including_own": 106
+    },
+    {
+      "rank": 47804,
+      "points": 85.2,
+      "mvp": "Jaxon Smith-Njigba",
+      "flex": [
+        "Jason Myers",
+        "Caleb Williams",
+        "Rome Odunze",
+        "Sam Darnold",
+        "AJ Barner"
+      ],
+      "estimated_prize": 0,
+      "matching_field_entries_including_own": 466
+    },
+    {
+      "rank": 52610,
+      "points": 82.5,
+      "mvp": "Jaxon Smith-Njigba",
+      "flex": [
+        "Sam Darnold",
+        "Colston Loveland",
+        "Caleb Williams",
+        "AJ Barner",
+        "Jason Myers"
+      ],
+      "estimated_prize": 0,
+      "matching_field_entries_including_own": 417
+    },
+    {
+      "rank": 56667,
+      "points": 80.57,
+      "mvp": "Caleb Williams",
+      "flex": [
+        "Rome Odunze",
+        "D'Andre Swift",
+        "Cairo Santos",
+        "Colston Loveland",
+        "Jason Myers"
+      ],
+      "estimated_prize": 0,
+      "matching_field_entries_including_own": 5
+    },
+    {
+      "rank": 63160,
+      "points": 74.62,
+      "mvp": "Jaxon Smith-Njigba",
+      "flex": [
+        "Sam Darnold",
+        "Jason Myers",
+        "Seattle Seahawks",
+        "Zach Charbonnet",
+        "Cairo Santos"
+      ],
+      "estimated_prize": 0,
+      "matching_field_entries_including_own": 129
+    },
+    {
+      "rank": 65288,
+      "points": 71.92,
+      "mvp": "Jaxon Smith-Njigba",
+      "flex": [
+        "Sam Darnold",
+        "Colston Loveland",
+        "Jadarian Price",
+        "Jason Myers",
+        "Seattle Seahawks"
+      ],
+      "estimated_prize": 0,
+      "matching_field_entries_including_own": 48
+    },
+    {
+      "rank": 66552,
+      "points": 70.17,
+      "mvp": "Caleb Williams",
+      "flex": [
+        "Chicago Bears",
+        "Roschon Johnson",
+        "D'Andre Swift",
+        "Kalif Raymond",
+        "Jadarian Price"
+      ],
+      "estimated_prize": 0,
+      "matching_field_entries_including_own": 2
+    },
+    {
+      "rank": 66834,
+      "points": 69.73,
+      "mvp": "D'Andre Swift",
+      "flex": [
+        "Caleb Williams",
+        "Jadarian Price",
+        "Sam Roush",
+        "Rome Odunze",
+        "Emanuel Wilson"
+      ],
+      "estimated_prize": 0,
+      "matching_field_entries_including_own": 1
+    },
+    {
+      "rank": 69508,
+      "points": 62.45,
+      "mvp": "D'Andre Swift",
+      "flex": [
+        "Jadarian Price",
+        "Emanuel Wilson",
+        "Cairo Santos",
+        "Seattle Seahawks",
+        "Zach Charbonnet"
+      ],
+      "estimated_prize": 0,
+      "matching_field_entries_including_own": 1
+    },
+    {
+      "rank": 70000,
+      "points": 60,
+      "mvp": "Jaxon Smith-Njigba",
+      "flex": [
+        "Chicago Bears",
+        "Emanuel Wilson",
+        "Roschon Johnson",
+        "Seattle Seahawks",
+        "Cairo Santos"
+      ],
+      "estimated_prize": 0,
+      "matching_field_entries_including_own": 1
+    },
+    {
+      "rank": 70202,
+      "points": 58.67,
+      "mvp": "Caleb Williams",
+      "flex": [
+        "Luther Burden III",
+        "Kalif Raymond",
+        "Cooper Kupp",
+        "Zach Charbonnet",
+        "Jadarian Price"
+      ],
+      "estimated_prize": 0,
+      "matching_field_entries_including_own": 1
+    },
+    {
+      "rank": 71023,
+      "points": 50.72,
+      "mvp": "Zach Charbonnet",
+      "flex": [
+        "Cooper Kupp",
+        "Sam Darnold",
+        "Emanuel Wilson",
+        "Luther Burden III",
+        "Roschon Johnson"
+      ],
+      "estimated_prize": 0,
+      "matching_field_entries_including_own": 1
+    }
+  ],
+  "projection_actuals": [
+    {
+      "player": "Jaxon Smith-Njigba",
+      "projection": 22.4,
+      "sim_mean": 22.39880174600035,
+      "actual_points": 23.8,
+      "projection_source": "DFF + DraftEdge average"
+    },
+    {
+      "player": "Caleb Williams",
+      "projection": 17.14,
+      "sim_mean": 18.536209217567382,
+      "actual_points": 13.98,
+      "projection_source": "DFF"
+    },
+    {
+      "player": "Sam Darnold",
+      "projection": 15.86,
+      "sim_mean": 17.99377826028397,
+      "actual_points": 18.52,
+      "projection_source": "DFF"
+    },
+    {
+      "player": "D'Andre Swift",
+      "projection": 15.865000000000002,
+      "sim_mean": 15.755359889634777,
+      "actual_points": 26.9,
+      "projection_source": "DFF + DraftEdge average"
+    },
+    {
+      "player": "Emanuel Wilson",
+      "projection": 3.81,
+      "sim_mean": 4.164928343274515,
+      "actual_points": 0,
+      "projection_source": "DFF"
+    },
+    {
+      "player": "Zach Charbonnet",
+      "projection": 7.58,
+      "sim_mean": 8.33807662413163,
+      "actual_points": 4.4,
+      "projection_source": "DFF"
+    },
+    {
+      "player": "Jadarian Price",
+      "projection": 5.1,
+      "sim_mean": 5.477738556630492,
+      "actual_points": 4.7,
+      "projection_source": "DFF"
+    },
+    {
+      "player": "Luther Burden III",
+      "projection": 10.01,
+      "sim_mean": 9.79035485909745,
+      "actual_points": 15.1,
+      "projection_source": "DFF"
+    },
+    {
+      "player": "Rome Odunze",
+      "projection": 8.39,
+      "sim_mean": 8.344833569163978,
+      "actual_points": 10.7,
+      "projection_source": "DFF"
+    },
+    {
+      "player": "Colston Loveland",
+      "projection": 9.55,
+      "sim_mean": 9.277288310407698,
+      "actual_points": 8,
+      "projection_source": "DFF + DraftEdge average"
+    },
+    {
+      "player": "Seattle Seahawks",
+      "projection": 6.545,
+      "sim_mean": 5.4044,
+      "actual_points": 2,
+      "projection_source": "DFF + DraftEdge average"
+    },
+    {
+      "player": "Jason Myers",
+      "projection": 8.22,
+      "sim_mean": 8.3987,
+      "actual_points": 3,
+      "projection_source": "DFF"
+    },
+    {
+      "player": "Chicago Bears",
+      "projection": 6.19,
+      "sim_mean": 4.3738,
+      "actual_points": 8,
+      "projection_source": "DFF"
+    },
+    {
+      "player": "Cairo Santos",
+      "projection": 7.54,
+      "sim_mean": 8.6843,
+      "actual_points": 11,
+      "projection_source": "DFF"
+    },
+    {
+      "player": "Roschon Johnson",
+      "projection": 3.98,
+      "sim_mean": 4.011789654628023,
+      "actual_points": 3.3,
+      "projection_source": "DFF"
+    },
+    {
+      "player": "Cooper Kupp",
+      "projection": 6.07,
+      "sim_mean": 5.975943332576063,
+      "actual_points": 7.2,
+      "projection_source": "DFF"
+    },
+    {
+      "player": "Kalif Raymond",
+      "projection": 4.18,
+      "sim_mean": 4.19145071906276,
+      "actual_points": 6.3,
+      "projection_source": "DFF"
+    },
+    {
+      "player": "George Holani",
+      "projection": 1.32,
+      "sim_mean": 1.385289081831749,
+      "actual_points": 0.9,
+      "projection_source": "DFF"
+    },
+    {
+      "player": "AJ Barner",
+      "projection": 6.98,
+      "sim_mean": 6.931287942773738,
+      "actual_points": 3.3,
+      "projection_source": "DFF"
+    },
+    {
+      "player": "Tory Horton",
+      "projection": 4.45,
+      "sim_mean": 4.216794359694756,
+      "actual_points": 6.1,
+      "projection_source": "DFF"
+    },
+    {
+      "player": "Jahdae Walker",
+      "projection": 0.31,
+      "sim_mean": 0.2878704920675978,
+      "actual_points": 0,
+      "projection_source": "DFF"
+    },
+    {
+      "player": "Eric Saubert",
+      "projection": 1.13,
+      "sim_mean": 1.1272259290355633,
+      "actual_points": 0,
+      "projection_source": "DFF"
+    },
+    {
+      "player": "Zavier Scott",
+      "projection": 0.24,
+      "sim_mean": 0.2789834562357003,
+      "actual_points": 0,
+      "projection_source": "DFF"
+    },
+    {
+      "player": "Brady Russell",
+      "projection": 0.34,
+      "sim_mean": 0.3265151478850842,
+      "actual_points": 0,
+      "projection_source": "DFF"
+    },
+    {
+      "player": "Zavion Thomas",
+      "projection": 1.35,
+      "sim_mean": 1.33617218672771,
+      "actual_points": 0.9,
+      "projection_source": "DFF"
+    },
+    {
+      "player": "Sam Roush",
+      "projection": 1.77,
+      "sim_mean": 1.7465467537339592,
+      "actual_points": 0,
+      "projection_source": "DFF"
+    },
+    {
+      "player": "Irvin Charles",
+      "projection": 0.3,
+      "sim_mean": 0.254132866063714,
+      "actual_points": 0,
+      "projection_source": "DFF"
+    },
+    {
+      "player": "Stephen Carlson",
+      "projection": 0.54,
+      "sim_mean": 0.5449529933840968,
+      "actual_points": 0,
+      "projection_source": "DFF"
+    },
+    {
+      "player": "Nick Kallerup",
+      "projection": 0.28,
+      "sim_mean": 0.2622812988856435,
+      "actual_points": 0,
+      "projection_source": "DFF"
+    }
+  ],
+  "published_scores": {
+    "snapshots_added": 1,
+    "player_scores_added": 47
+  },
+  "payout_method": "User-supplied full payout ladder, split equally across tied ranks; estimate not account statement",
+  "score_role_policy": "First-listed MVP validated against every complete lineup score by existing ingestion helper; published player scores retained at base value"
+}
