@@ -1,0 +1,217 @@
+{
+  "schema": 1,
+  "contest_id": "136135-281362771",
+  "build_sha256": "63ee3ca75d384e117a374e04047eeaa0d664b5dfe121f402c21057be7cec72e9",
+  "standings_sha256": "271995987a0aeb41b8a926c8cffe9fbd82ab9b28ee024ac3408e1a081178a93f",
+  "outcomes_loaded_after_selection": true,
+  "candidate_filter": "First 250 by pregame Top1, stable ties",
+  "hindsight_exemplar_pregame_rank": 198,
+  "hard_overall_cap_entries": 16,
+  "manual_role_caps": "100%; no forced exposure targets",
+  "neutral_original_selector_trace": [
+    {
+      "step": 1,
+      "target_eligible": true,
+      "target_objective": 0.2550902019887058,
+      "selected_objective": 0.85,
+      "selected_pregame_rank": 1
+    },
+    {
+      "step": 2,
+      "target_eligible": true,
+      "target_objective": -0.17824313134462752,
+      "selected_objective": 0.5365468069032071,
+      "selected_pregame_rank": 9
+    },
+    {
+      "step": 3,
+      "target_eligible": true,
+      "target_objective": -0.32824313134462757,
+      "selected_objective": 0.40181942359091943,
+      "selected_pregame_rank": 4
+    },
+    {
+      "step": 4,
+      "target_eligible": true,
+      "target_objective": -0.4782431313446276,
+      "selected_objective": 0.026558954958325248,
+      "selected_pregame_rank": 5
+    },
+    {
+      "step": 5,
+      "target_eligible": true,
+      "target_objective": -0.6282431313446276,
+      "selected_objective": -0.12786995996164965,
+      "selected_pregame_rank": 6
+    },
+    {
+      "step": 6,
+      "target_eligible": true,
+      "target_objective": -0.7282431313446276,
+      "selected_objective": -0.32957359941659137,
+      "selected_pregame_rank": 15
+    },
+    {
+      "step": 7,
+      "target_eligible": true,
+      "target_objective": -0.9282431313446277,
+      "selected_objective": -0.4854182632096267,
+      "selected_pregame_rank": 2
+    },
+    {
+      "step": 8,
+      "target_eligible": true,
+      "target_objective": -1.0282431313446276,
+      "selected_objective": -0.6310830489632454,
+      "selected_pregame_rank": 23
+    },
+    {
+      "step": 9,
+      "target_eligible": true,
+      "target_objective": -1.1782431313446278,
+      "selected_objective": -0.7180376414875534,
+      "selected_pregame_rank": 109
+    },
+    {
+      "step": 10,
+      "target_eligible": true,
+      "target_objective": -1.3282431313446277,
+      "selected_objective": -0.8707155026179922,
+      "selected_pregame_rank": 3000
+    },
+    {
+      "step": 11,
+      "target_eligible": true,
+      "target_objective": -1.3782431313446277,
+      "selected_objective": -0.9891565608268094,
+      "selected_pregame_rank": 10
+    },
+    {
+      "step": 12,
+      "target_eligible": true,
+      "target_objective": -1.5782431313446277,
+      "selected_objective": -1.1569730064198798,
+      "selected_pregame_rank": 4637
+    },
+    {
+      "step": 13,
+      "target_eligible": true,
+      "target_objective": -1.7282431313446276,
+      "selected_objective": -1.233424433050717,
+      "selected_pregame_rank": 25
+    },
+    {
+      "step": 14,
+      "target_eligible": true,
+      "target_objective": -1.8282431313446277,
+      "selected_objective": -1.3187767705686348,
+      "selected_pregame_rank": 2944
+    },
+    {
+      "step": 15,
+      "target_eligible": true,
+      "target_objective": -1.9282431313446278,
+      "selected_objective": -1.4622214453394813,
+      "selected_pregame_rank": 101
+    },
+    {
+      "step": 16,
+      "target_eligible": true,
+      "target_objective": -2.028243131344628,
+      "selected_objective": -1.588164091062209,
+      "selected_pregame_rank": 3542
+    },
+    {
+      "step": 17,
+      "target_eligible": true,
+      "target_objective": -2.1282431313446275,
+      "selected_objective": -1.6172450718025704,
+      "selected_pregame_rank": 4732
+    },
+    {
+      "step": 18,
+      "target_eligible": true,
+      "target_objective": -2.2282431313446276,
+      "selected_objective": -1.743958790328679,
+      "selected_pregame_rank": 40
+    },
+    {
+      "step": 19,
+      "target_eligible": true,
+      "target_objective": -2.3282431313446277,
+      "selected_objective": -1.8468539191037106,
+      "selected_pregame_rank": 13
+    },
+    {
+      "step": 20,
+      "target_eligible": true,
+      "target_objective": -2.4782431313446276,
+      "selected_objective": -1.9575514115557833,
+      "selected_pregame_rank": 4320
+    }
+  ],
+  "target_eligible_every_original_step": true,
+  "deterministic_methods": {
+    "diversity_0": {
+      "contains_hindsight_exemplar": false,
+      "estimated_net": -0.5,
+      "best_rank": 2627,
+      "maximum_player_entries": 16,
+      "preferred_cap_after_any_soft_relaxation": 100.0
+    },
+    "diversity_25": {
+      "contains_hindsight_exemplar": false,
+      "estimated_net": -1.75,
+      "best_rank": 2627,
+      "maximum_player_entries": 16,
+      "preferred_cap_after_any_soft_relaxation": 90.0
+    },
+    "diversity_50": {
+      "contains_hindsight_exemplar": false,
+      "estimated_net": -1.75,
+      "best_rank": 2627,
+      "maximum_player_entries": 14,
+      "preferred_cap_after_any_soft_relaxation": 80.0
+    },
+    "diversity_75": {
+      "contains_hindsight_exemplar": false,
+      "estimated_net": -2.25,
+      "best_rank": 2627,
+      "maximum_player_entries": 13,
+      "preferred_cap_after_any_soft_relaxation": 70.0
+    },
+    "diversity_100": {
+      "contains_hindsight_exemplar": false,
+      "estimated_net": -4.0,
+      "best_rank": 15019,
+      "maximum_player_entries": 12,
+      "preferred_cap_after_any_soft_relaxation": 60
+    },
+    "combination_distance": {
+      "contains_hindsight_exemplar": false,
+      "estimated_net": -0.75,
+      "best_rank": 2064,
+      "maximum_player_entries": 15,
+      "preferred_cap_after_any_soft_relaxation": null
+    }
+  },
+  "random_baseline": {
+    "trials": 1000,
+    "attempts": 1670,
+    "seed": 20261103,
+    "uniform_unconstrained_specific_lineup_probability": 0.08,
+    "conditional_hard_cap_exemplar_inclusion_rate": 0.077,
+    "exemplar_included_trials": 77,
+    "mean_net": 1.1778960227274815,
+    "median_net": -1.3863636363636362,
+    "positive_net_trials": 215
+  },
+  "promotion_accepted": false,
+  "limitations": [
+    "Retrospective test of one already inspected game; no negative bias or durable improvement inferred from a single missed winner.",
+    "Hard overall cap fixed at 80% for all top-250 experiments; diversity slider also changes its softer preferred cap. Report records any soft relaxation.",
+    "Combination distance is a roster-distance heuristic, not coverage of true future game outcomes.",
+    "One best-scoring exemplar is tracked; it is not a requirement that any valid portfolio include it.",
+    "Actuals never enter selection or random-sample acceptance. No live setting or ranking changed."
+  ]
+}

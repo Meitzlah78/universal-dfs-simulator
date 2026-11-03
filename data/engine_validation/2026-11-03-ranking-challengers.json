@@ -1,0 +1,809 @@
+{
+  "schema": 1,
+  "kind": "Outcome-blind pregame-ranking challenger portfolios evaluated retrospectively",
+  "active_method_changed": false,
+  "reports": [
+    {
+      "schema": 1,
+      "sport": "NFL",
+      "format": "dk_showdown",
+      "contest_id": "197302901",
+      "build_sha256": "2b80b87f808e14f52c31123c405504ecbe14a50d3ba1003b3379fd97ca029324",
+      "standings_sha256": "9cfbc51d97654952c55d955f00033c401d8574516b80956b69c96341abb66efe",
+      "selector_version": "quality-role-exposure-v3",
+      "constraint_scope": "Saved player controls and diversity; identical current selector for every method.",
+      "diversity": 50,
+      "original_entries_removed": 20,
+      "candidate_count": 5000,
+      "fully_scored_candidates": 5000,
+      "metric_signal_diagnostics": {
+        "top1": {
+          "scored_candidates": 5000,
+          "spearman_score_vs_actual_points": 0.602807823311215,
+          "pregame_top5_count": 250,
+          "hindsight_top5_count_including_ties": 250,
+          "overlap_count": 72,
+          "precision_in_pregame_top5": 0.288,
+          "random_precision_baseline": 0.05,
+          "scope": "Conditional diagnostic among fully scored candidates; never used to filter challenger selection."
+        },
+        "win_rate": {
+          "scored_candidates": 5000,
+          "spearman_score_vs_actual_points": 0.5260231690692907,
+          "pregame_top5_count": 250,
+          "hindsight_top5_count_including_ties": 250,
+          "overlap_count": 52,
+          "precision_in_pregame_top5": 0.208,
+          "random_precision_baseline": 0.05,
+          "scope": "Conditional diagnostic among fully scored candidates; never used to filter challenger selection."
+        },
+        "expected_prize": {
+          "scored_candidates": 5000,
+          "spearman_score_vs_actual_points": 0.6676265978106412,
+          "pregame_top5_count": 250,
+          "hindsight_top5_count_including_ties": 250,
+          "overlap_count": 67,
+          "precision_in_pregame_top5": 0.268,
+          "random_precision_baseline": 0.05,
+          "scope": "Conditional diagnostic among fully scored candidates; never used to filter challenger selection."
+        },
+        "mean_points": {
+          "scored_candidates": 5000,
+          "spearman_score_vs_actual_points": 0.7210538986590588,
+          "pregame_top5_count": 250,
+          "hindsight_top5_count_including_ties": 250,
+          "overlap_count": 69,
+          "precision_in_pregame_top5": 0.276,
+          "random_precision_baseline": 0.05,
+          "scope": "Conditional diagnostic among fully scored candidates; never used to filter challenger selection."
+        }
+      },
+      "methods": {
+        "top1": {
+          "entries": 20,
+          "fully_scored_entries": 20,
+          "missing_published_scores": [],
+          "effective_automatic_cap": 80,
+          "estimated_joint_prizes": 1.5960264900657704,
+          "fees": 2,
+          "estimated_net": -0.40397350993422965,
+          "cashed_entries": 5,
+          "best_rank": 218,
+          "mean_actual_points": 82.41050000000001
+        },
+        "win_rate": {
+          "entries": 20,
+          "fully_scored_entries": 20,
+          "missing_published_scores": [],
+          "effective_automatic_cap": 80,
+          "estimated_joint_prizes": 1.7960264900660432,
+          "fees": 2,
+          "estimated_net": -0.2039735099339568,
+          "cashed_entries": 5,
+          "best_rank": 218,
+          "mean_actual_points": 78.906
+        },
+        "expected_prize": {
+          "entries": 20,
+          "fully_scored_entries": 20,
+          "missing_published_scores": [],
+          "effective_automatic_cap": 80,
+          "estimated_joint_prizes": 1.5960264900657704,
+          "fees": 2,
+          "estimated_net": -0.40397350993422965,
+          "cashed_entries": 5,
+          "best_rank": 218,
+          "mean_actual_points": 80.49650000000001
+        },
+        "mean_points": {
+          "entries": 20,
+          "fully_scored_entries": 20,
+          "missing_published_scores": [],
+          "effective_automatic_cap": 80,
+          "estimated_joint_prizes": 1,
+          "fees": 2,
+          "estimated_net": -1,
+          "cashed_entries": 3,
+          "best_rank": 705,
+          "mean_actual_points": 87.73550000000002
+        },
+        "balanced_rank": {
+          "entries": 20,
+          "fully_scored_entries": 20,
+          "missing_published_scores": [],
+          "effective_automatic_cap": 80,
+          "estimated_joint_prizes": 0.5999999999994543,
+          "fees": 2,
+          "estimated_net": -1.4000000000005457,
+          "cashed_entries": 3,
+          "best_rank": 4670,
+          "mean_actual_points": 91.224
+        }
+      },
+      "promotion_accepted": false,
+      "limitations": [
+        "Retrospective challenger comparison; these outcomes were already inspected, so no prospective validation is claimed.",
+        "Actuals never enter selection; candidates are not filtered using outcome availability.",
+        "All methods use identical candidate pools and constraints, but realized exposures can differ.",
+        "Current shared selector is used for all challengers; this is not an exact replay of older selector implementations.",
+        "Estimated prizes include all selected entries and opponent ties; not an account statement or evidence of future profit.",
+        "No live method activated; independent later slate validation is still required."
+      ]
+    },
+    {
+      "schema": 1,
+      "sport": "NFL",
+      "format": "fd_single",
+      "contest_id": "136135-281362771",
+      "build_sha256": "63ee3ca75d384e117a374e04047eeaa0d664b5dfe121f402c21057be7cec72e9",
+      "standings_sha256": "271995987a0aeb41b8a926c8cffe9fbd82ab9b28ee024ac3408e1a081178a93f",
+      "selector_version": "quality-role-exposure-v3",
+      "constraint_scope": "Saved player controls and diversity; identical current selector for every method.",
+      "diversity": 50,
+      "original_entries_removed": 20,
+      "candidate_count": 5000,
+      "fully_scored_candidates": 5000,
+      "metric_signal_diagnostics": {
+        "top1": {
+          "scored_candidates": 5000,
+          "spearman_score_vs_actual_points": 0.22083793792194276,
+          "pregame_top5_count": 250,
+          "hindsight_top5_count_including_ties": 252,
+          "overlap_count": 38,
+          "precision_in_pregame_top5": 0.152,
+          "random_precision_baseline": 0.0504,
+          "scope": "Conditional diagnostic among fully scored candidates; never used to filter challenger selection."
+        },
+        "win_rate": {
+          "scored_candidates": 5000,
+          "spearman_score_vs_actual_points": 0.06852457858281062,
+          "pregame_top5_count": 250,
+          "hindsight_top5_count_including_ties": 252,
+          "overlap_count": 10,
+          "precision_in_pregame_top5": 0.04,
+          "random_precision_baseline": 0.0504,
+          "scope": "Conditional diagnostic among fully scored candidates; never used to filter challenger selection."
+        },
+        "expected_prize": {
+          "scored_candidates": 5000,
+          "spearman_score_vs_actual_points": 0.3053176039359467,
+          "pregame_top5_count": 250,
+          "hindsight_top5_count_including_ties": 252,
+          "overlap_count": 14,
+          "precision_in_pregame_top5": 0.056,
+          "random_precision_baseline": 0.0504,
+          "scope": "Conditional diagnostic among fully scored candidates; never used to filter challenger selection."
+        },
+        "mean_points": {
+          "scored_candidates": 5000,
+          "spearman_score_vs_actual_points": 0.585730636572962,
+          "pregame_top5_count": 250,
+          "hindsight_top5_count_including_ties": 252,
+          "overlap_count": 43,
+          "precision_in_pregame_top5": 0.172,
+          "random_precision_baseline": 0.0504,
+          "scope": "Conditional diagnostic among fully scored candidates; never used to filter challenger selection."
+        },
+        "inverse_ownership_sum_proxy": {
+          "scored_candidates": 5000,
+          "spearman_score_vs_actual_points": -0.16550469103825724,
+          "pregame_top5_count": 250,
+          "hindsight_top5_count_including_ties": 252,
+          "overlap_count": 4,
+          "precision_in_pregame_top5": 0.016,
+          "random_precision_baseline": 0.0504,
+          "scope": "Conditional diagnostic among fully scored candidates; never used to filter challenger selection."
+        }
+      },
+      "methods": {
+        "top1": {
+          "entries": 20,
+          "fully_scored_entries": 20,
+          "missing_published_scores": [],
+          "effective_automatic_cap": 80,
+          "estimated_joint_prizes": 1.25,
+          "fees": 5,
+          "estimated_net": -3.75,
+          "cashed_entries": 2,
+          "best_rank": 2627,
+          "mean_actual_points": 80.8785
+        },
+        "win_rate": {
+          "entries": 20,
+          "fully_scored_entries": 20,
+          "missing_published_scores": [],
+          "effective_automatic_cap": 80,
+          "estimated_joint_prizes": 1.75,
+          "fees": 5,
+          "estimated_net": -3.25,
+          "cashed_entries": 3,
+          "best_rank": 3155,
+          "mean_actual_points": 79.75349999999999
+        },
+        "expected_prize": {
+          "entries": 20,
+          "fully_scored_entries": 20,
+          "missing_published_scores": [],
+          "effective_automatic_cap": 80,
+          "estimated_joint_prizes": 1.75,
+          "fees": 5,
+          "estimated_net": -3.25,
+          "cashed_entries": 3,
+          "best_rank": 3155,
+          "mean_actual_points": 79.483
+        },
+        "mean_points": {
+          "entries": 20,
+          "fully_scored_entries": 20,
+          "missing_published_scores": [],
+          "effective_automatic_cap": 80,
+          "estimated_joint_prizes": 2.5770826833076126,
+          "fees": 5,
+          "estimated_net": -2.4229173166923874,
+          "cashed_entries": 4,
+          "best_rank": 2064,
+          "mean_actual_points": 83.36850000000001
+        },
+        "balanced_rank": {
+          "entries": 20,
+          "fully_scored_entries": 20,
+          "missing_published_scores": [],
+          "effective_automatic_cap": 80,
+          "estimated_joint_prizes": 2,
+          "fees": 5,
+          "estimated_net": -3,
+          "cashed_entries": 4,
+          "best_rank": 15420,
+          "mean_actual_points": 84.1885
+        }
+      },
+      "promotion_accepted": false,
+      "limitations": [
+        "Retrospective challenger comparison; these outcomes were already inspected, so no prospective validation is claimed.",
+        "Actuals never enter selection; candidates are not filtered using outcome availability.",
+        "All methods use identical candidate pools and constraints, but realized exposures can differ.",
+        "Current shared selector is used for all challengers; this is not an exact replay of older selector implementations.",
+        "Estimated prizes include all selected entries and opponent ties; not an account statement or evidence of future profit.",
+        "No live method activated; independent later slate validation is still required."
+      ]
+    },
+    {
+      "schema": 1,
+      "sport": "NFL",
+      "format": "dk_classic",
+      "contest_id": "197368240",
+      "build_sha256": "836507060404682f4f938c380b2d8ace4a84bb76e3b3e33c12740c59ee798cee",
+      "standings_sha256": "3ccbe4262143006c5ebf9efb7ca8167dd20da45b4a818768cb6837c2d0655486",
+      "selector_version": "quality-role-exposure-v3",
+      "constraint_scope": "Saved player controls and diversity; identical current selector for every method.",
+      "diversity": 50,
+      "original_entries_removed": 20,
+      "candidate_count": 5000,
+      "fully_scored_candidates": 4939,
+      "metric_signal_diagnostics": {
+        "top1": {
+          "scored_candidates": 4939,
+          "spearman_score_vs_actual_points": 0.0991879322341343,
+          "pregame_top5_count": 247,
+          "hindsight_top5_count_including_ties": 249,
+          "overlap_count": 41,
+          "precision_in_pregame_top5": 0.1659919028340081,
+          "random_precision_baseline": 0.05041506377809273,
+          "scope": "Conditional diagnostic among fully scored candidates; never used to filter challenger selection."
+        },
+        "win_rate": {
+          "scored_candidates": 4939,
+          "spearman_score_vs_actual_points": 0.06824987853402097,
+          "pregame_top5_count": 247,
+          "hindsight_top5_count_including_ties": 249,
+          "overlap_count": 54,
+          "precision_in_pregame_top5": 0.21862348178137653,
+          "random_precision_baseline": 0.05041506377809273,
+          "scope": "Conditional diagnostic among fully scored candidates; never used to filter challenger selection."
+        },
+        "expected_prize": {
+          "scored_candidates": 4939,
+          "spearman_score_vs_actual_points": 0.1194446264685043,
+          "pregame_top5_count": 247,
+          "hindsight_top5_count_including_ties": 249,
+          "overlap_count": 46,
+          "precision_in_pregame_top5": 0.1862348178137652,
+          "random_precision_baseline": 0.05041506377809273,
+          "scope": "Conditional diagnostic among fully scored candidates; never used to filter challenger selection."
+        },
+        "mean_points": {
+          "scored_candidates": 4939,
+          "spearman_score_vs_actual_points": 0.13286216289547234,
+          "pregame_top5_count": 247,
+          "hindsight_top5_count_including_ties": 249,
+          "overlap_count": 22,
+          "precision_in_pregame_top5": 0.08906882591093117,
+          "random_precision_baseline": 0.05041506377809273,
+          "scope": "Conditional diagnostic among fully scored candidates; never used to filter challenger selection."
+        }
+      },
+      "methods": {
+        "top1": {
+          "entries": 20,
+          "fully_scored_entries": 20,
+          "missing_published_scores": [],
+          "effective_automatic_cap": 80,
+          "estimated_joint_prizes": 2.299999999999983,
+          "fees": 2,
+          "estimated_net": 0.29999999999998295,
+          "cashed_entries": 7,
+          "best_rank": 33,
+          "mean_actual_points": 143.27500000000003
+        },
+        "win_rate": {
+          "entries": 20,
+          "fully_scored_entries": 20,
+          "missing_published_scores": [],
+          "effective_automatic_cap": 80,
+          "estimated_joint_prizes": 2.1999999999999886,
+          "fees": 2,
+          "estimated_net": 0.19999999999998863,
+          "cashed_entries": 7,
+          "best_rank": 39,
+          "mean_actual_points": 140.30499999999998
+        },
+        "expected_prize": {
+          "entries": 20,
+          "fully_scored_entries": 20,
+          "missing_published_scores": [],
+          "effective_automatic_cap": 80,
+          "estimated_joint_prizes": 2.19999999999996,
+          "fees": 2,
+          "estimated_net": 0.1999999999999602,
+          "cashed_entries": 7,
+          "best_rank": 26,
+          "mean_actual_points": 139.147
+        },
+        "mean_points": {
+          "entries": 20,
+          "fully_scored_entries": 20,
+          "missing_published_scores": [],
+          "effective_automatic_cap": 80,
+          "estimated_joint_prizes": 1.4999999999999574,
+          "fees": 2,
+          "estimated_net": -0.5000000000000426,
+          "cashed_entries": 6,
+          "best_rank": 113,
+          "mean_actual_points": 133.25
+        },
+        "balanced_rank": {
+          "entries": 20,
+          "fully_scored_entries": 20,
+          "missing_published_scores": [],
+          "effective_automatic_cap": 80,
+          "estimated_joint_prizes": 2.7999999999999545,
+          "fees": 2,
+          "estimated_net": 0.7999999999999545,
+          "cashed_entries": 10,
+          "best_rank": 39,
+          "mean_actual_points": 142.71000000000004
+        }
+      },
+      "promotion_accepted": false,
+      "limitations": [
+        "Retrospective challenger comparison; these outcomes were already inspected, so no prospective validation is claimed.",
+        "Actuals never enter selection; candidates are not filtered using outcome availability.",
+        "All methods use identical candidate pools and constraints, but realized exposures can differ.",
+        "Current shared selector is used for all challengers; this is not an exact replay of older selector implementations.",
+        "Estimated prizes include all selected entries and opponent ties; not an account statement or evidence of future profit.",
+        "No live method activated; independent later slate validation is still required."
+      ]
+    },
+    {
+      "schema": 1,
+      "sport": "NFL",
+      "format": "fd_full",
+      "contest_id": "135859-281259493",
+      "build_sha256": "32df9f9c448a73ea660dadbaf2d074f926fee927fe27ff550d2f4224928dbe45",
+      "standings_sha256": "e571a300b01d978df036589f3765990ed69e2196759262bc7ea0f443af1a7b20",
+      "selector_version": "quality-role-exposure-v3",
+      "constraint_scope": "Saved player controls and diversity; identical current selector for every method.",
+      "diversity": 50,
+      "original_entries_removed": 111,
+      "candidate_count": 5000,
+      "fully_scored_candidates": 4968,
+      "metric_signal_diagnostics": {
+        "top1": {
+          "scored_candidates": 4968,
+          "spearman_score_vs_actual_points": 0.3310271420021971,
+          "pregame_top5_count": 249,
+          "hindsight_top5_count_including_ties": 249,
+          "overlap_count": 51,
+          "precision_in_pregame_top5": 0.20481927710843373,
+          "random_precision_baseline": 0.050120772946859904,
+          "scope": "Conditional diagnostic among fully scored candidates; never used to filter challenger selection."
+        },
+        "win_rate": {
+          "scored_candidates": 4968,
+          "spearman_score_vs_actual_points": 0.1909112256686308,
+          "pregame_top5_count": 249,
+          "hindsight_top5_count_including_ties": 249,
+          "overlap_count": 47,
+          "precision_in_pregame_top5": 0.18875502008032127,
+          "random_precision_baseline": 0.050120772946859904,
+          "scope": "Conditional diagnostic among fully scored candidates; never used to filter challenger selection."
+        },
+        "expected_prize": {
+          "scored_candidates": 4968,
+          "spearman_score_vs_actual_points": 0.2986767911086932,
+          "pregame_top5_count": 249,
+          "hindsight_top5_count_including_ties": 249,
+          "overlap_count": 47,
+          "precision_in_pregame_top5": 0.18875502008032127,
+          "random_precision_baseline": 0.050120772946859904,
+          "scope": "Conditional diagnostic among fully scored candidates; never used to filter challenger selection."
+        },
+        "mean_points": {
+          "scored_candidates": 4968,
+          "spearman_score_vs_actual_points": 0.37637628188183553,
+          "pregame_top5_count": 249,
+          "hindsight_top5_count_including_ties": 249,
+          "overlap_count": 18,
+          "precision_in_pregame_top5": 0.07228915662650602,
+          "random_precision_baseline": 0.050120772946859904,
+          "scope": "Conditional diagnostic among fully scored candidates; never used to filter challenger selection."
+        },
+        "inverse_ownership_sum_proxy": {
+          "scored_candidates": 4968,
+          "spearman_score_vs_actual_points": -0.3508145533494368,
+          "pregame_top5_count": 249,
+          "hindsight_top5_count_including_ties": 249,
+          "overlap_count": 1,
+          "precision_in_pregame_top5": 0.004016064257028112,
+          "random_precision_baseline": 0.050120772946859904,
+          "scope": "Conditional diagnostic among fully scored candidates; never used to filter challenger selection."
+        }
+      },
+      "methods": {
+        "top1": {
+          "entries": 111,
+          "fully_scored_entries": 111,
+          "missing_published_scores": [],
+          "effective_automatic_cap": 80,
+          "estimated_joint_prizes": 9.099999999944885,
+          "fees": 5.550000000000001,
+          "estimated_net": 3.549999999944884,
+          "cashed_entries": 68,
+          "best_rank": 763,
+          "mean_actual_points": 130.73315315315315
+        },
+        "win_rate": {
+          "entries": 111,
+          "fully_scored_entries": 111,
+          "missing_published_scores": [],
+          "effective_automatic_cap": 80,
+          "estimated_joint_prizes": 8.959999999949105,
+          "fees": 5.550000000000001,
+          "estimated_net": 3.409999999949104,
+          "cashed_entries": 67,
+          "best_rank": 763,
+          "mean_actual_points": 130.1554954954955
+        },
+        "expected_prize": {
+          "entries": 111,
+          "fully_scored_entries": 111,
+          "missing_published_scores": [],
+          "effective_automatic_cap": 80,
+          "estimated_joint_prizes": 8.85999999995056,
+          "fees": 5.550000000000001,
+          "estimated_net": 3.309999999950559,
+          "cashed_entries": 66,
+          "best_rank": 763,
+          "mean_actual_points": 129.3284684684685
+        },
+        "mean_points": {
+          "entries": 111,
+          "fully_scored_entries": 111,
+          "missing_published_scores": [],
+          "effective_automatic_cap": 80,
+          "estimated_joint_prizes": 8.079999999944448,
+          "fees": 5.550000000000001,
+          "estimated_net": 2.5299999999444474,
+          "cashed_entries": 69,
+          "best_rank": 4883,
+          "mean_actual_points": 130.303963963964
+        },
+        "balanced_rank": {
+          "entries": 111,
+          "fully_scored_entries": 111,
+          "missing_published_scores": [],
+          "effective_automatic_cap": 80,
+          "estimated_joint_prizes": 8.849999999938518,
+          "fees": 5.550000000000001,
+          "estimated_net": 3.2999999999385174,
+          "cashed_entries": 73,
+          "best_rank": 1805,
+          "mean_actual_points": 132.70324324324324
+        }
+      },
+      "promotion_accepted": false,
+      "limitations": [
+        "Retrospective challenger comparison; these outcomes were already inspected, so no prospective validation is claimed.",
+        "Actuals never enter selection; candidates are not filtered using outcome availability.",
+        "All methods use identical candidate pools and constraints, but realized exposures can differ.",
+        "Current shared selector is used for all challengers; this is not an exact replay of older selector implementations.",
+        "Estimated prizes include all selected entries and opponent ties; not an account statement or evidence of future profit.",
+        "No live method activated; independent later slate validation is still required."
+      ]
+    },
+    {
+      "schema": 1,
+      "sport": "NBA",
+      "format": "nba_dk",
+      "contest_id": "197321900",
+      "build_sha256": "ea673b2cc9ce82594763bcd9cc5fc3897e65a6d613a1f51cced429a9414d589d",
+      "standings_sha256": "6a5030036ed2b3364bf5ad021af75c8e15033904946a453f09255b3d8261cd68",
+      "selector_version": "quality-role-exposure-v3",
+      "constraint_scope": "Current NBA hard limits derived from frozen pool (overall, minute and trusted-ownership caps); historical hidden manual overrides unavailable.",
+      "diversity": 50,
+      "original_entries_removed": 17,
+      "candidate_count": 5000,
+      "fully_scored_candidates": 1023,
+      "metric_signal_diagnostics": {
+        "top1": {
+          "scored_candidates": 1023,
+          "spearman_score_vs_actual_points": 0.3287907666307856,
+          "pregame_top5_count": 52,
+          "hindsight_top5_count_including_ties": 52,
+          "overlap_count": 5,
+          "precision_in_pregame_top5": 0.09615384615384616,
+          "random_precision_baseline": 0.05083088954056696,
+          "scope": "Conditional diagnostic among fully scored candidates; never used to filter challenger selection."
+        },
+        "win_rate": {
+          "scored_candidates": 1023,
+          "spearman_score_vs_actual_points": 0.27596959418742,
+          "pregame_top5_count": 52,
+          "hindsight_top5_count_including_ties": 52,
+          "overlap_count": 4,
+          "precision_in_pregame_top5": 0.07692307692307693,
+          "random_precision_baseline": 0.05083088954056696,
+          "scope": "Conditional diagnostic among fully scored candidates; never used to filter challenger selection."
+        },
+        "expected_prize": {
+          "scored_candidates": 1023,
+          "spearman_score_vs_actual_points": 0.32175733217006225,
+          "pregame_top5_count": 52,
+          "hindsight_top5_count_including_ties": 52,
+          "overlap_count": 5,
+          "precision_in_pregame_top5": 0.09615384615384616,
+          "random_precision_baseline": 0.05083088954056696,
+          "scope": "Conditional diagnostic among fully scored candidates; never used to filter challenger selection."
+        },
+        "mean_points": {
+          "scored_candidates": 1023,
+          "spearman_score_vs_actual_points": 0.31478408450986783,
+          "pregame_top5_count": 52,
+          "hindsight_top5_count_including_ties": 52,
+          "overlap_count": 6,
+          "precision_in_pregame_top5": 0.11538461538461539,
+          "random_precision_baseline": 0.05083088954056696,
+          "scope": "Conditional diagnostic among fully scored candidates; never used to filter challenger selection."
+        }
+      },
+      "methods": {
+        "top1": {
+          "entries": 17,
+          "fully_scored_entries": 12,
+          "missing_published_scores": [
+            "Bruce Thornton",
+            "Cody Williams",
+            "Jae'Sean Tate",
+            "Micah Peavy"
+          ],
+          "effective_automatic_cap": 80,
+          "estimated_joint_prizes": null,
+          "fees": 1.7000000000000002,
+          "estimated_net": null,
+          "status": "Incomplete actuals: entire portfolio return is unknown; no lineup dropped or zero-filled"
+        },
+        "win_rate": {
+          "entries": 17,
+          "fully_scored_entries": 13,
+          "missing_published_scores": [
+            "Bruce Thornton",
+            "Cody Williams",
+            "Jae'Sean Tate"
+          ],
+          "effective_automatic_cap": 80,
+          "estimated_joint_prizes": null,
+          "fees": 1.7000000000000002,
+          "estimated_net": null,
+          "status": "Incomplete actuals: entire portfolio return is unknown; no lineup dropped or zero-filled"
+        },
+        "expected_prize": {
+          "entries": 17,
+          "fully_scored_entries": 14,
+          "missing_published_scores": [
+            "Bruce Thornton",
+            "Cody Williams",
+            "Jae'Sean Tate"
+          ],
+          "effective_automatic_cap": 80,
+          "estimated_joint_prizes": null,
+          "fees": 1.7000000000000002,
+          "estimated_net": null,
+          "status": "Incomplete actuals: entire portfolio return is unknown; no lineup dropped or zero-filled"
+        },
+        "mean_points": {
+          "entries": 17,
+          "fully_scored_entries": 15,
+          "missing_published_scores": [
+            "Bruce Thornton",
+            "Jae'Sean Tate"
+          ],
+          "effective_automatic_cap": 80,
+          "estimated_joint_prizes": null,
+          "fees": 1.7000000000000002,
+          "estimated_net": null,
+          "status": "Incomplete actuals: entire portfolio return is unknown; no lineup dropped or zero-filled"
+        },
+        "balanced_rank": {
+          "entries": 17,
+          "fully_scored_entries": 16,
+          "missing_published_scores": [
+            "Bruce Thornton"
+          ],
+          "effective_automatic_cap": 80,
+          "estimated_joint_prizes": null,
+          "fees": 1.7000000000000002,
+          "estimated_net": null,
+          "status": "Incomplete actuals: entire portfolio return is unknown; no lineup dropped or zero-filled"
+        }
+      },
+      "promotion_accepted": false,
+      "limitations": [
+        "Retrospective challenger comparison; these outcomes were already inspected, so no prospective validation is claimed.",
+        "Actuals never enter selection; candidates are not filtered using outcome availability.",
+        "All methods use identical candidate pools and constraints, but realized exposures can differ.",
+        "Current shared selector is used for all challengers; this is not an exact replay of older selector implementations.",
+        "Estimated prizes include all selected entries and opponent ties; not an account statement or evidence of future profit.",
+        "No live method activated; independent later slate validation is still required."
+      ]
+    },
+    {
+      "schema": 1,
+      "sport": "NBA",
+      "format": "nba_fd",
+      "contest_id": "136092-281336090",
+      "build_sha256": "16ccabe1f1d83f7e32e07c9f61750312f8f4394239a75b8f6300ed69b9095b77",
+      "standings_sha256": "e48badff5c892572d87c02755731ff90f28a453f38dd9c01a633263b3575f9ee",
+      "selector_version": "quality-role-exposure-v3",
+      "constraint_scope": "Current NBA hard limits derived from frozen pool (overall, minute and trusted-ownership caps); historical hidden manual overrides unavailable.",
+      "diversity": 50,
+      "original_entries_removed": 11,
+      "candidate_count": 5000,
+      "fully_scored_candidates": 5000,
+      "metric_signal_diagnostics": {
+        "top1": {
+          "scored_candidates": 5000,
+          "spearman_score_vs_actual_points": 0.35923678377307433,
+          "pregame_top5_count": 250,
+          "hindsight_top5_count_including_ties": 250,
+          "overlap_count": 39,
+          "precision_in_pregame_top5": 0.156,
+          "random_precision_baseline": 0.05,
+          "scope": "Conditional diagnostic among fully scored candidates; never used to filter challenger selection."
+        },
+        "win_rate": {
+          "scored_candidates": 5000,
+          "spearman_score_vs_actual_points": 0.25532841614369617,
+          "pregame_top5_count": 250,
+          "hindsight_top5_count_including_ties": 250,
+          "overlap_count": 37,
+          "precision_in_pregame_top5": 0.148,
+          "random_precision_baseline": 0.05,
+          "scope": "Conditional diagnostic among fully scored candidates; never used to filter challenger selection."
+        },
+        "expected_prize": {
+          "scored_candidates": 5000,
+          "spearman_score_vs_actual_points": 0.3515184802308531,
+          "pregame_top5_count": 250,
+          "hindsight_top5_count_including_ties": 250,
+          "overlap_count": 35,
+          "precision_in_pregame_top5": 0.14,
+          "random_precision_baseline": 0.05,
+          "scope": "Conditional diagnostic among fully scored candidates; never used to filter challenger selection."
+        },
+        "mean_points": {
+          "scored_candidates": 5000,
+          "spearman_score_vs_actual_points": 0.3272265228332298,
+          "pregame_top5_count": 250,
+          "hindsight_top5_count_including_ties": 250,
+          "overlap_count": 31,
+          "precision_in_pregame_top5": 0.124,
+          "random_precision_baseline": 0.05,
+          "scope": "Conditional diagnostic among fully scored candidates; never used to filter challenger selection."
+        }
+      },
+      "methods": {
+        "top1": {
+          "entries": 11,
+          "fully_scored_entries": 11,
+          "missing_published_scores": [],
+          "effective_automatic_cap": 80,
+          "estimated_joint_prizes": 0,
+          "fees": 0.55,
+          "estimated_net": -0.55,
+          "cashed_entries": 0,
+          "best_rank": 26570,
+          "mean_actual_points": 267.9727272727273
+        },
+        "win_rate": {
+          "entries": 11,
+          "fully_scored_entries": 11,
+          "missing_published_scores": [],
+          "effective_automatic_cap": 80,
+          "estimated_joint_prizes": 0,
+          "fees": 0.55,
+          "estimated_net": -0.55,
+          "cashed_entries": 0,
+          "best_rank": 24989,
+          "mean_actual_points": 261.39090909090913
+        },
+        "expected_prize": {
+          "entries": 11,
+          "fully_scored_entries": 11,
+          "missing_published_scores": [],
+          "effective_automatic_cap": 80,
+          "estimated_joint_prizes": 0,
+          "fees": 0.55,
+          "estimated_net": -0.55,
+          "cashed_entries": 0,
+          "best_rank": 24989,
+          "mean_actual_points": 263.93636363636364
+        },
+        "mean_points": {
+          "entries": 11,
+          "fully_scored_entries": 11,
+          "missing_published_scores": [],
+          "effective_automatic_cap": 80,
+          "estimated_joint_prizes": 0,
+          "fees": 0.55,
+          "estimated_net": -0.55,
+          "cashed_entries": 0,
+          "best_rank": 25129,
+          "mean_actual_points": 269.5181818181818
+        },
+        "balanced_rank": {
+          "entries": 11,
+          "fully_scored_entries": 11,
+          "missing_published_scores": [],
+          "effective_automatic_cap": 80,
+          "estimated_joint_prizes": 0,
+          "fees": 0.55,
+          "estimated_net": -0.55,
+          "cashed_entries": 0,
+          "best_rank": 29250,
+          "mean_actual_points": 267.3090909090909
+        }
+      },
+      "promotion_accepted": false,
+      "limitations": [
+        "Retrospective challenger comparison; these outcomes were already inspected, so no prospective validation is claimed.",
+        "Actuals never enter selection; candidates are not filtered using outcome availability.",
+        "All methods use identical candidate pools and constraints, but realized exposures can differ.",
+        "Current shared selector is used for all challengers; this is not an exact replay of older selector implementations.",
+        "Estimated prizes include all selected entries and opponent ties; not an account statement or evidence of future profit.",
+        "No live method activated; independent later slate validation is still required."
+      ]
+    }
+  ],
+  "monday_fanduel_winning_score_exemplar": {
+    "source_build_sha256": "63ee3ca75d384e117a374e04047eeaa0d664b5dfe121f402c21057be7cec72e9",
+    "candidate_count": 5000,
+    "top5_percent_cutoff": 250,
+    "rank_by_metric": {
+      "top1": 198,
+      "win_rate": 1813,
+      "expected_prize": 893,
+      "mean_points": 411
+    },
+    "note": "Exemplar from frozen builder audit with realized winning score; ranks use pregame saved metrics, not refitting. Top-250 inclusion is distinct from selecting 20 entries."
+  }
+}
