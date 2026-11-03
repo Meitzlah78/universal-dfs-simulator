@@ -30,4 +30,21 @@ class RankingChallengerTests(unittest.TestCase):
             pd.testing.assert_frame_equal(one,two)
             self.assertLessEqual(one.eq('F').to_numpy().sum(),1)
 
+
+sweep_spec=importlib.util.spec_from_file_location('diversity_sweep',Path(__file__).resolve().parents[1]/'scripts'/'sweep_portfolio_diversity.py')
+sweep=importlib.util.module_from_spec(sweep_spec);sweep_spec.loader.exec_module(sweep)
+
+class DiversitySweepTests(unittest.TestCase):
+    def test_distance_and_random_selection_preserve_fixed_caps(self):
+        frame=pd.DataFrame({'MVP':list('ACEABE'),'FLEX1':list('BDFCD A'.replace(' ','')),'Top1':[6,5,4,3,2,1],'actual_points':[0,1,2,3,4,1000]})
+        first=sweep.farthest_first(frame,['MVP','FLEX1'],2,1)
+        randoms,attempts=sweep.random_portfolios(frame,['MVP','FLEX1'],2,1,20,seed=33)
+        frame['actual_points']=frame.actual_points.iloc[::-1].to_numpy()
+        np.testing.assert_array_equal(first,sweep.farthest_first(frame,['MVP','FLEX1'],2,1))
+        again,_=sweep.random_portfolios(frame,['MVP','FLEX1'],2,1,20,seed=33)
+        self.assertGreaterEqual(attempts,20)
+        for one,two in zip(randoms,again):
+            np.testing.assert_array_equal(one,two)
+            self.assertLessEqual(sweep.incidence(frame.iloc[one],['MVP','FLEX1']).sum(axis=0).max(),1)
+
 if __name__=='__main__':unittest.main()

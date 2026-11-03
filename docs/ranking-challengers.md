@@ -54,3 +54,26 @@ python -m unittest discover -s tests -p test_ranking_challengers.py -v
 Both CSV and ZIP standings are supported. Tests check that changing an actual-score column cannot change selection or relax a manual cap, and that multiple own entries receive the correct joint tie share.
 
 Aggregate report: `data/engine_validation/2026-11-03-ranking-challengers.json`. Source hashes, constraints and scoring coverage remain alongside every case.
+
+## Why Monday's rank-198 exemplar was excluded
+
+An exact neutral-control trace reproduces the current selector's original full-pool selection. Rank 198 is feasible at all 20 steps. Saved manual MVP/FLEX/overall maximums are 100%, no locks/fades/minima are active, and the automatic preferred overall cap is 80% at diversity 50. No hard cap or new stack rule excludes it. It loses the combined normalized pregame Top 1%, cumulative exposure and maximum-roster-overlap objective. Its modeled Top 1% probability is about 2.09%, versus about 5.16% for the highest-ranked candidate.
+
+## Top-250 diversity and random screen
+
+The top 250 are fixed by saved pregame Top 1% scores before outcomes load. Five diversity values (0/25/50/75/100) and a farthest-first combination-distance heuristic are selected without outcomes. Every experiment has the same hard 80% overall player ceiling; the diversity slider also changes a softer preferred cap, recorded separately. None selects the rank-198 hindsight exemplar. Estimated net results for the five settings are -$0.50, -$1.75, -$1.75, -$2.25 and -$4.00; combination distance gives -$0.75.
+
+Uniform 20-of-250 samples are then rejection-sampled under that same hard cap, using seed 20261103. There are 1,000 accepted portfolios out of 1,670 draws. The specific exemplar appears in 77 portfolios (7.7%), near its unconstrained inclusion probability of 8%. Mean net on this one historical result is +$1.1779, but median net is -$1.3864; only 215/1,000 portfolios are profitable. Random sampling performs better in average return on this outcome, but neither its Monte Carlo sample size nor this one missed winner establishes a persistent bias or future edge.
+
+A universal top-250 filter is not justified: the Monday DK candidate with reference rank 13 was ranked 785th pregame, so that filter would discard it. Other saved best candidates also fall below rank 250. Capturing one known FD winner cannot define a general selection policy.
+
+The reproducible FD 20-entry sweep is:
+
+```sh
+python scripts/sweep_portfolio_diversity.py \
+  --build /path/to/frozen-fd-single-game-package.zip \
+  --standings /path/to/completed-fd-standings.csv \
+  --trials 1000 --output /path/to/diversity-sweep.json
+```
+
+Aggregate sweep and exact objective trace: `data/engine_validation/2026-11-03-fd-diversity-sweep.json`. Four CI tests now include outcome-independent distance/random sampling with fixed caps. No sweep setting is promoted.
