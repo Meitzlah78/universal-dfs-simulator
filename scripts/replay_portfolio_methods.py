@@ -123,6 +123,8 @@ def replay(build,standings,slate_group,trials=1000,seed=20261103):
     def factory(*args):
         selected,info=portfolios(*args,trials=trials,seed=seed);metadata.update(info);return selected
     report=compare(build,standings,selection_factory=factory)
+    report['constraint_scope']=report['constraint_scope'].replace('identical current selector for every method.','hard limits shared across selector, distance and random methods.')
+    report['limitations']=[line.replace('Current shared selector is used for all challengers; this is not an exact replay of older selector implementations.','Deterministic/diversity methods use the current shared selector; distance/random use separate fixed algorithms with the same hard limits. Older selector implementations are not reproduced.') for line in report['limitations']]
     methods=report['methods'];baseline=methods.get('deterministic',{}).get('estimated_net')
     for item in methods.values():
         net=item.get('estimated_net');item['paired_net_delta']=None if baseline is None or net is None else net-baseline
