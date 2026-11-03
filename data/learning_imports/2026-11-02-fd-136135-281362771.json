@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "contest_id": "136135-281362771",
+  "slate_date": "2026-11-02",
+  "source_file": "136135-281362771.csv",
+  "source_sha256": "271995987a0aeb41b8a926c8cffe9fbd82ab9b28ee024ac3408e1a081178a93f",
+  "frozen_build_sha256": "63ee3ca75d384e117a374e04047eeaa0d664b5dfe121f402c21057be7cec72e9",
+  "profile_ids": [
+    "c8e79706e5293119b81c9900fb46596e8bc65e7b8a7fe5bd14379cfb9ea07e3b"
+  ],
+  "complete_rosters": 71281,
+  "empty_or_incomplete_entries_excluded": 575,
+  "published_base_scores": 47,
+  "matched_projection_actual_rows": 29,
+  "usage": "Anonymous profile available to matching future field generation. Explicit fantasy scores and frozen pregame comparisons retained for validation; no raw-stat inference or automatic performance-model promotion.",
+  "submission_verified_by_exact_export_match": true
+}

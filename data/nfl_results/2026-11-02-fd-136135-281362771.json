@@ -1,0 +1,257 @@
+{
+  "schema": 1,
+  "snapshots": {
+    "f96e99748ba104934c4fc609ca5ae9e5c4d66964abfefe2f560e1e49e4cb6b98": {
+      "schema": 1,
+      "platform": "FanDuel",
+      "formats": [
+        "FD_SINGLE"
+      ],
+      "slate_date": "2026-11-02",
+      "source_file": "136135-281362771.csv",
+      "source_sha256": "271995987a0aeb41b8a926c8cffe9fbd82ab9b28ee024ac3408e1a081178a93f",
+      "players": [
+        {
+          "Player": "AJ Barner (136135-137953)",
+          "Player ID": "136135-137953",
+          "Actual Points": 3.3
+        },
+        {
+          "Player": "Beau Gardner (136135-141956)",
+          "Player ID": "136135-141956",
+          "Actual Points": 0
+        },
+        {
+          "Player": "Ben Sims (136135-89185)",
+          "Player ID": "136135-89185",
+          "Actual Points": 0
+        },
+        {
+          "Player": "Brady Russell (136135-87844)",
+          "Player ID": "136135-87844",
+          "Actual Points": 0
+        },
+        {
+          "Player": "Cairo Santos (136135-33714)",
+          "Player ID": "136135-33714",
+          "Actual Points": 11
+        },
+        {
+          "Player": "Caleb Williams (136135-152113)",
+          "Player ID": "136135-152113",
+          "Actual Points": 13.98
+        },
+        {
+          "Player": "Case Keenum (136135-22994)",
+          "Player ID": "136135-22994",
+          "Actual Points": 0
+        },
+        {
+          "Player": "Chicago Bears (136135-12527)",
+          "Player ID": "136135-12527",
+          "Actual Points": 8
+        },
+        {
+          "Player": "Colston Loveland (136135-166588)",
+          "Player ID": "136135-166588",
+          "Actual Points": 8
+        },
+        {
+          "Player": "Cooper Kupp (136135-79970)",
+          "Player ID": "136135-79970",
+          "Actual Points": 7.2
+        },
+        {
+          "Player": "D'Andre Swift (136135-91598)",
+          "Player ID": "136135-91598",
+          "Actual Points": 26.9
+        },
+        {
+          "Player": "Drew Lock (136135-64051)",
+          "Player ID": "136135-64051",
+          "Actual Points": 0
+        },
+        {
+          "Player": "Emanuel Wilson (136135-185861)",
+          "Player ID": "136135-185861",
+          "Actual Points": 0
+        },
+        {
+          "Player": "Emmanuel Henderson Jr. (136135-174263)",
+          "Player ID": "136135-174263",
+          "Actual Points": 0
+        },
+        {
+          "Player": "Eric Saubert (136135-79980)",
+          "Player ID": "136135-79980",
+          "Actual Points": 0
+        },
+        {
+          "Player": "George Holani (136135-114231)",
+          "Player ID": "136135-114231",
+          "Actual Points": 0.9
+        },
+        {
+          "Player": "Irvin Charles (136135-64403)",
+          "Player ID": "136135-64403",
+          "Actual Points": 0
+        },
+        {
+          "Player": "JP Richardson (136135-152014)",
+          "Player ID": "136135-152014",
+          "Actual Points": 0
+        },
+        {
+          "Player": "Jadarian Price (136135-169381)",
+          "Player ID": "136135-169381",
+          "Actual Points": 4.7
+        },
+        {
+          "Player": "Jahdae Walker (136135-193004)",
+          "Player ID": "136135-193004",
+          "Actual Points": 0
+        },
+        {
+          "Player": "Jalen Milroe (136135-154462)",
+          "Player ID": "136135-154462",
+          "Actual Points": 0
+        },
+        {
+          "Player": "Jason Myers (136135-60745)",
+          "Player ID": "136135-60745",
+          "Actual Points": 3
+        },
+        {
+          "Player": "Jaxon Smith-Njigba (136135-129458)",
+          "Player ID": "136135-129458",
+          "Actual Points": 23.8
+        },
+        {
+          "Player": "Kaden Davis (136135-170208)",
+          "Player ID": "136135-170208",
+          "Actual Points": 0
+        },
+        {
+          "Player": "Kalif Raymond (136135-70422)",
+          "Player ID": "136135-70422",
+          "Actual Points": 6.3
+        },
+        {
+          "Player": "Kyle Monangai (136135-144102)",
+          "Player ID": "136135-144102",
+          "Actual Points": 0
+        },
+        {
+          "Player": "Luther Burden III (136135-166092)",
+          "Player ID": "136135-166092",
+          "Actual Points": 15.1
+        },
+        {
+          "Player": "Malick Meiga (136135-137525)",
+          "Player ID": "136135-137525",
+          "Actual Points": 0
+        },
+        {
+          "Player": "Montorie Foster Jr. (136135-138220)",
+          "Player ID": "136135-138220",
+          "Actual Points": 0
+        },
+        {
+          "Player": "Nick Kallerup (136135-103506)",
+          "Player ID": "136135-103506",
+          "Actual Points": 0
+        },
+        {
+          "Player": "Qadir Ismail (136135-173518)",
+          "Player ID": "136135-173518",
+          "Actual Points": 0
+        },
+        {
+          "Player": "Rashid Shaheed (136135-170287)",
+          "Player ID": "136135-170287",
+          "Actual Points": 0
+        },
+        {
+          "Player": "Ricky White III (136135-138221)",
+          "Player ID": "136135-138221",
+          "Actual Points": 0
+        },
+        {
+          "Player": "Robert Henry Jr. (136135-184821)",
+          "Player ID": "136135-184821",
+          "Actual Points": 0
+        },
+        {
+          "Player": "Rome Odunze (136135-120033)",
+          "Player ID": "136135-120033",
+          "Actual Points": 10.7
+        },
+        {
+          "Player": "Roschon Johnson (136135-103187)",
+          "Player ID": "136135-103187",
+          "Actual Points": 3.3
+        },
+        {
+          "Player": "Salvon Ahmed (136135-86780)",
+          "Player ID": "136135-86780",
+          "Actual Points": 0
+        },
+        {
+          "Player": "Sam Darnold (136135-63589)",
+          "Player ID": "136135-63589",
+          "Actual Points": 18.52
+        },
+        {
+          "Player": "Sam Roush (136135-166253)",
+          "Player ID": "136135-166253",
+          "Actual Points": 0
+        },
+        {
+          "Player": "Scotty Miller (136135-61273)",
+          "Player ID": "136135-61273",
+          "Actual Points": 0
+        },
+        {
+          "Player": "Seattle Seahawks (136135-12550)",
+          "Player ID": "136135-12550",
+          "Actual Points": 2
+        },
+        {
+          "Player": "Stephen Carlson (136135-104008)",
+          "Player ID": "136135-104008",
+          "Actual Points": 0
+        },
+        {
+          "Player": "Tory Horton (136135-134837)",
+          "Player ID": "136135-134837",
+          "Actual Points": 6.1
+        },
+        {
+          "Player": "Tyson Bagent (136135-185776)",
+          "Player ID": "136135-185776",
+          "Actual Points": 0
+        },
+        {
+          "Player": "Zach Charbonnet (136135-103376)",
+          "Player ID": "136135-103376",
+          "Actual Points": 4.4
+        },
+        {
+          "Player": "Zavier Scott (136135-92677)",
+          "Player ID": "136135-92677",
+          "Actual Points": 0
+        },
+        {
+          "Player": "Zavion Thomas (136135-173994)",
+          "Player ID": "136135-173994",
+          "Actual Points": 0.9
+        }
+      ],
+      "imported_at": "2026-11-03T12:53:13.657456+00:00",
+      "status": "User-uploaded completed standings; final status not independently verified",
+      "usage": "Validation archive only; no automatic projection or parameter updates",
+      "missing_policy": "Unlisted or missing scores are unknown, never zero",
+      "coverage": "Only players explicitly listed in this file; not guaranteed full-slate coverage"
+    }
+  }
+}
