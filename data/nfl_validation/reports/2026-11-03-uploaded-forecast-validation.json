@@ -1,0 +1,240 @@
+{
+  "schema": 1,
+  "status": "retrospective validation completed; no model activated",
+  "sources": [
+    {
+      "path": "nfl_validation/2026-11-01/projection_actuals.json",
+      "sha256": "88ba67fd0a51b8eae690386a52a398aebc897b8498ab6c6c4a5797d2fe51a1ab",
+      "rows": 557
+    },
+    {
+      "path": "nfl_validation/2026-11-02/completed_contest_136135-281362771.json",
+      "sha256": "6ac5baf440fb18bdb0b8fdfc1f500ccb2cbcefbd717a1de29dfd04d99e225a6c",
+      "rows": 29
+    },
+    {
+      "path": "nfl_validation/2026-11-02/completed_contest_197302901.json",
+      "sha256": "307ffc6b79487f436155d4a7f00b4dffa9c1b25f375634f88a8e3a942b6f9cda",
+      "rows": 29
+    }
+  ],
+  "rows": 615,
+  "training_dates": [
+    "2026-11-01"
+  ],
+  "holdout_date": "2026-11-02",
+  "training_rows": 557,
+  "holdout_rows": 58,
+  "candidate_protocol": {
+    "family": "platform-specific additive point-bias correction",
+    "prior_zero_bias_observations": 20,
+    "prediction_floor": 0,
+    "parameters_fit_only_on_earlier_dates": true,
+    "protocol_was_not_preregistered": true
+  },
+  "platforms": {
+    "DraftKings": {
+      "training_rows": 234,
+      "fitted_point_adjustment": -0.09539370078740146,
+      "holdout_projection": {
+        "rows": 29,
+        "mae": 2.391034482758621,
+        "rmse": 3.3353477821040203,
+        "bias": -0.12068965517241385
+      },
+      "holdout_candidate": {
+        "rows": 29,
+        "mae": 2.3680084170513176,
+        "rmse": 3.340160303255433,
+        "bias": -0.21608335595981498
+      },
+      "holdout_sim_mean": {
+        "rows": 0
+      },
+      "holdout_mae_change": -0.023026065707303367,
+      "holdout_rmse_change": 0.004812521151412508,
+      "improves_both_point_metrics": false,
+      "all_dates_projection": {
+        "rows": 263,
+        "mae": 4.845513307984791,
+        "rmse": 6.971387721828477,
+        "bias": 0.07882129277566534
+      },
+      "all_dates_sim_mean": {
+        "rows": 204,
+        "mae": 5.549319229915612,
+        "rmse": 7.707511907978597,
+        "bias": 0.36942485828010896
+      }
+    },
+    "FanDuel": {
+      "training_rows": 323,
+      "fitted_point_adjustment": 0.047230320699708526,
+      "holdout_projection": {
+        "rows": 29,
+        "mae": 2.23,
+        "rmse": 3.164443351387085,
+        "bias": -0.02275862068965501
+      },
+      "holdout_candidate": {
+        "rows": 29,
+        "mae": 2.244657685734392,
+        "rmse": 3.164456135487363,
+        "bias": 0.024471700010053603
+      },
+      "holdout_sim_mean": {
+        "rows": 29,
+        "mae": 2.2587921420603516,
+        "rmse": 3.237222610847498,
+        "bias": 0.05916571002684151
+      },
+      "holdout_mae_change": 0.014657685734392079,
+      "holdout_rmse_change": 0.000012784100277940524,
+      "improves_both_point_metrics": false,
+      "all_dates_projection": {
+        "rows": 352,
+        "mae": 3.7903693181818183,
+        "rmse": 5.845661585740317,
+        "bias": -0.047897727272727335
+      },
+      "all_dates_sim_mean": {
+        "rows": 352,
+        "mae": 3.759385712613589,
+        "rmse": 5.817335447729989,
+        "bias": -0.043582392050629144
+      }
+    }
+  },
+  "promotion": {
+    "accepted": false,
+    "reasons": [
+      "Latest uploaded holdout is one CHI/SEA game; DK and FD are two scoring contexts, not independent games.",
+      "Bias-only fantasy-score diagnostics cannot pass existing full-engine raw-stat and joint-distribution gates.",
+      "Existing full-game promotion requires at least 20 independent complete frozen game cases with explicit raw actuals; these standings do not supply those raw actuals.",
+      "Retrospective, non-preregistered test: this date cannot become a repeatedly tuned final validation set."
+    ],
+    "active_models_modified": false
+  },
+  "frozen_monday_distribution_checks": {
+    "FanDuel": {
+      "contest_id": "136135-281362771",
+      "players": 29,
+      "draws": 10000,
+      "frozen_bundle_sha256": "63ee3ca75d384e117a374e04047eeaa0d664b5dfe121f402c21057be7cec72e9",
+      "game": "2026-11-02 CHI @ SEA",
+      "sim_mean_mae": 2.2587921420603516,
+      "sim_mean_rmse": 3.237222610847498,
+      "mean_player_crps": 1.575901000488007,
+      "central_80pct_covered_players": 27,
+      "central_90pct_covered_players": 28,
+      "above_p90_players": 1,
+      "below_p10_players": 1,
+      "joint_energy_score": 12.744702184691612,
+      "point_projection_energy_baseline": 17.041048970060494,
+      "joint_variogram_p05_score": 0.6237680675770569,
+      "uncertainty": "Descriptive one-game joint-distribution scores; players and scoring sites are dependent observations, not independent validation games. No parameters fitted or activated."
+    },
+    "DraftKings": {
+      "contest_id": "197302901",
+      "players": 29,
+      "draws": 10000,
+      "frozen_bundle_sha256": "2b80b87f808e14f52c31123c405504ecbe14a50d3ba1003b3379fd97ca029324",
+      "game": "2026-11-02 CHI @ SEA",
+      "sim_mean_mae": 2.379863474512474,
+      "sim_mean_rmse": 3.3013737252089985,
+      "mean_player_crps": 1.6753654536129856,
+      "central_80pct_covered_players": 28,
+      "central_90pct_covered_players": 28,
+      "above_p90_players": 0,
+      "below_p10_players": 1,
+      "joint_energy_score": 13.357721379064945,
+      "point_projection_energy_baseline": 17.96139749574069,
+      "joint_variogram_p05_score": 0.6662739741530979,
+      "uncertainty": "Descriptive one-game joint-distribution scores; players and scoring sites are dependent observations, not independent validation games. No parameters fitted or activated."
+    }
+  },
+  "existing_component_validation": {
+    "source": "data/nfl_models/component_status.json",
+    "version": "7467fb1aa0606829",
+    "active_version": "d6464a5c58186cc1",
+    "validation_through": "2026-11-02",
+    "training_games": 93,
+    "selection_games": 14,
+    "validation_games": 14,
+    "status": "no component passed",
+    "accepted_components": [],
+    "components": {
+      "completion_rate": {
+        "accepted": false,
+        "reason": "improvement not established",
+        "relative_gain": 0.0006149263097064993
+      },
+      "defensive_return_td_rate": {
+        "accepted": false,
+        "reason": "missing or insufficient observed events",
+        "relative_gain": null
+      },
+      "extra_point_rate": {
+        "accepted": false,
+        "reason": "rejected on selection games",
+        "relative_gain": null
+      },
+      "field_goal_logit_offset": {
+        "accepted": false,
+        "reason": "improvement not established",
+        "relative_gain": 0.03925269798880775
+      },
+      "fumble_loss_rate": {
+        "accepted": false,
+        "reason": "rejected on selection games",
+        "relative_gain": null
+      },
+      "interception_rate": {
+        "accepted": false,
+        "reason": "improvement not established",
+        "relative_gain": -0.000894469607722599
+      },
+      "pass_rate": {
+        "accepted": false,
+        "reason": "improvement not established",
+        "relative_gain": 0.0013351212124757534
+      },
+      "receiving_shape": {
+        "accepted": false,
+        "reason": "rejected on selection games",
+        "relative_gain": null
+      },
+      "rushing_distribution": {
+        "accepted": false,
+        "reason": "rejected on selection games",
+        "relative_gain": null
+      },
+      "sack_rate": {
+        "accepted": false,
+        "reason": "improvement not established",
+        "relative_gain": -0.0006740952552457305
+      },
+      "two_point_pass_share": {
+        "accepted": false,
+        "reason": "missing or insufficient observed events",
+        "relative_gain": null
+      },
+      "two_point_pass_success": {
+        "accepted": false,
+        "reason": "missing or insufficient observed events",
+        "relative_gain": null
+      },
+      "two_point_rate": {
+        "accepted": false,
+        "reason": "improvement not established",
+        "relative_gain": -0.008730990279540048
+      },
+      "two_point_run_success": {
+        "accepted": false,
+        "reason": "missing or insufficient observed events",
+        "relative_gain": null
+      }
+    },
+    "note": "Existing consumed whole-week validation result inspected; not repeatedly retested or presented as a newly independent trial."
+  }
+}
