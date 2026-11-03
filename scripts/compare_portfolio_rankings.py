@@ -57,7 +57,7 @@ def control_frame(value):
     return pd.DataFrame(json.loads(value['value'])['data']).set_index('Name').to_dict('index')
 
 
-def compare(build_path,standings_path):
+def compare(build_path,standings_path,selection_factory=None):
     raw=Path(build_path).read_bytes();outer=zipfile.ZipFile(io.BytesIO(raw));nested='original_build.zip' in outer.namelist()
     if nested:
         outer_manifest=json.loads(outer.read('manifest.json'))
@@ -104,7 +104,7 @@ def compare(build_path,standings_path):
     entry_col=next(i for i,s in enumerate(header) if s in ('entry_id','entry id'));contest_col=next(i for i,s in enumerate(header) if s in ('contest_id','contest id'))
     own_ids=[row[entry_col] for row in rows[1:] if len(row)>max(entry_col,contest_col) and row[entry_col].isdigit() and row[contest_col]==str(contest['id'])]
     if not own_ids or len(own_ids)!=len(set(own_ids)):raise ValueError('Exact original entry identities required')
-    selections=select_challengers(candidates,slots,len(own_ids),controls,diversity)
+    selections=(selection_factory or select_challengers)(candidates,slots,len(own_ids),controls,diversity)
     # Actuals are deliberately loaded only after ALL challenge selections finish.
     standings_raw=Path(standings_path).read_bytes();frames=read_standings(standings_raw,Path(standings_path).name)
     if len(frames)!=1:raise ValueError('One completed standings table required')
@@ -148,7 +148,9 @@ def compare(build_path,standings_path):
         if 'error' in item:methods[method]=item;continue
         selected=item['portfolio'];points,supported=score_candidates(selected,slots,actual,special)
         missing=sorted({name for row in selected[slots].itertuples(index=False,name=None) for name in row if name_key(name) not in actual})
-        record={'entries':len(selected),'fully_scored_entries':int(supported.sum()),'missing_published_scores':missing,'effective_automatic_cap':item['effective_automatic_cap']}
+        exposures=selected[slots].stack().value_counts()/len(selected)
+        roster_digest=hashlib.sha256(selected[slots].to_csv(index=False).encode()).hexdigest()
+        record={'selected_rosters_sha256':roster_digest,'maximum_player_exposure':float(exposures.max()),'squared_exposure_sum':float((exposures**2).sum()),'entries':len(selected),'fully_scored_entries':int(supported.sum()),'missing_published_scores':missing,'effective_automatic_cap':item.get('effective_automatic_cap')}
         if supported.all():
             ranks,prizes=joint_prizes(points,opponents,tiers)
             record.update(estimated_joint_prizes=float(prizes.sum()),fees=fees,estimated_net=float(prizes.sum()-fees),cashed_entries=int((prizes>0).sum()),best_rank=int(ranks.min()),mean_actual_points=float(points.mean()))
