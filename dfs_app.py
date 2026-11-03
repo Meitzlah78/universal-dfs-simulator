@@ -8928,7 +8928,7 @@ with _tab_build:
                     _s += _v[:,_idx[:,0]]*(scoring_multiplier-1.0); _f += _v[:,contest_idx[:,0]]*(scoring_multiplier-1.0)
                 _sorted=np.sort(_f,axis=1); _greater=total_field-np.sum(_sorted[:,:,None] <= _s[:,None,:],axis=1); _pct=1.0-_greater/max(1,total_field)
                 _counts += [np.sum(_pct>=.99),np.sum(_pct>=.95),np.sum(_pct>=.90),np.sum(_pct>=.50)]; _obs += _pct.size
-            st.session_state["field_sanity_check"]={"Lineups":_sanity_n,"Top 1%":100*_counts[0]/_obs,"Top 5%":100*_counts[1]/_obs,"Top 10%":100*_counts[2]/_obs,"Cash %":100*_counts[3]/_obs}
+            st.session_state["field_sanity_check"]={"Lineups":_sanity_n,"Top 1%":100*_counts[0]/_obs,"Top 5%":100*_counts[1]/_obs,"Top 10%":100*_counts[2]/_obs,"Top 50%":100*_counts[3]/_obs}
 
         if payout_schedule is not None:
             results_df["Expected Prize ($)"] = expected_prize_totals / selection_n_sims
@@ -8994,7 +8994,10 @@ with _tab_build:
         if isinstance(_sanity,dict):
             st.write("### Field Sanity Check")
             st.caption("20 random simulated opponent lineups. Normal baseline: about 1% / 5% / 10% for Top 1 / Top 5 / Top 10.")
-            st.dataframe(injury_frame(st, pd.DataFrame([_sanity])),use_container_width=True,hide_index=True)
+            _sanity_display = dict(_sanity)
+            if "Cash %" in _sanity_display:
+                _sanity_display["Top 50%"] = _sanity_display.pop("Cash %")
+            st.dataframe(injury_frame(st, pd.DataFrame([_sanity_display])),use_container_width=True,hide_index=True)
 
     # ============================================
 
