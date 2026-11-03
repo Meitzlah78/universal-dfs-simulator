@@ -1,0 +1,277 @@
+{
+  "schema": 1,
+  "snapshots": {
+    "bb443a5078ff9167fbb6efb50d5d12c09591a1edafd383552f2199ae57c61d1e": {
+      "schema": 1,
+      "platform": "DraftKings",
+      "formats": [
+        "DK_SHOWDOWN"
+      ],
+      "slate_date": "2026-11-02",
+      "source_file": "contest-standings-197302901.zip",
+      "source_sha256": "9cfbc51d97654952c55d955f00033c401d8574516b80956b69c96341abb66efe",
+      "players": [
+        {
+          "Player": "AJ Barner",
+          "Player ID": null,
+          "Actual Points": 4.3
+        },
+        {
+          "Player": "Bears",
+          "Player ID": null,
+          "Actual Points": 8
+        },
+        {
+          "Player": "Ben Sims",
+          "Player ID": null,
+          "Actual Points": 0
+        },
+        {
+          "Player": "Brady Russell",
+          "Player ID": null,
+          "Actual Points": 0
+        },
+        {
+          "Player": "Brittain Brown",
+          "Player ID": null,
+          "Actual Points": 0
+        },
+        {
+          "Player": "Cairo Santos",
+          "Player ID": null,
+          "Actual Points": 11
+        },
+        {
+          "Player": "Caleb Williams",
+          "Player ID": null,
+          "Actual Points": 13.98
+        },
+        {
+          "Player": "Case Keenum",
+          "Player ID": null,
+          "Actual Points": 0
+        },
+        {
+          "Player": "Cole Kmet",
+          "Player ID": null,
+          "Actual Points": 0
+        },
+        {
+          "Player": "Colston Loveland",
+          "Player ID": null,
+          "Actual Points": 12.5
+        },
+        {
+          "Player": "Cooper Kupp",
+          "Player ID": null,
+          "Actual Points": 7.7
+        },
+        {
+          "Player": "D'Andre Swift",
+          "Player ID": null,
+          "Actual Points": 27.9
+        },
+        {
+          "Player": "Drew Lock",
+          "Player ID": null,
+          "Actual Points": 0
+        },
+        {
+          "Player": "Elijah Arroyo",
+          "Player ID": null,
+          "Actual Points": 0
+        },
+        {
+          "Player": "Emanuel Wilson",
+          "Player ID": null,
+          "Actual Points": 0
+        },
+        {
+          "Player": "Emmanuel Henderson Jr.",
+          "Player ID": null,
+          "Actual Points": 0
+        },
+        {
+          "Player": "Eric Saubert",
+          "Player ID": null,
+          "Actual Points": 0
+        },
+        {
+          "Player": "George Holani",
+          "Player ID": null,
+          "Actual Points": 0.9
+        },
+        {
+          "Player": "Irvin Charles",
+          "Player ID": null,
+          "Actual Points": 0
+        },
+        {
+          "Player": "Jadarian Price",
+          "Player ID": null,
+          "Actual Points": 5.7
+        },
+        {
+          "Player": "Jahdae Walker",
+          "Player ID": null,
+          "Actual Points": 0
+        },
+        {
+          "Player": "Jalen Milroe",
+          "Player ID": null,
+          "Actual Points": 0
+        },
+        {
+          "Player": "Jason Myers",
+          "Player ID": null,
+          "Actual Points": 3
+        },
+        {
+          "Player": "Jaxon Smith-Njigba",
+          "Player ID": null,
+          "Actual Points": 26.8
+        },
+        {
+          "Player": "Kaden Davis",
+          "Player ID": null,
+          "Actual Points": 0
+        },
+        {
+          "Player": "Kalif Raymond",
+          "Player ID": null,
+          "Actual Points": 7.3
+        },
+        {
+          "Player": "Kyle Monangai",
+          "Player ID": null,
+          "Actual Points": 0
+        },
+        {
+          "Player": "Luther Burden III",
+          "Player ID": null,
+          "Actual Points": 18.6
+        },
+        {
+          "Player": "Malick Meiga",
+          "Player ID": null,
+          "Actual Points": 0
+        },
+        {
+          "Player": "Miller Moss",
+          "Player ID": null,
+          "Actual Points": 0
+        },
+        {
+          "Player": "Montorie Foster Jr.",
+          "Player ID": null,
+          "Actual Points": 0
+        },
+        {
+          "Player": "Nick Kallerup",
+          "Player ID": null,
+          "Actual Points": 0
+        },
+        {
+          "Player": "Qadir Ismail",
+          "Player ID": null,
+          "Actual Points": 0
+        },
+        {
+          "Player": "Rashid Shaheed",
+          "Player ID": null,
+          "Actual Points": 0
+        },
+        {
+          "Player": "Ricky White III",
+          "Player ID": null,
+          "Actual Points": 0
+        },
+        {
+          "Player": "Robbie Ouzts",
+          "Player ID": null,
+          "Actual Points": 0
+        },
+        {
+          "Player": "Robert Henry Jr.",
+          "Player ID": null,
+          "Actual Points": 0
+        },
+        {
+          "Player": "Rome Odunze",
+          "Player ID": null,
+          "Actual Points": 12.7
+        },
+        {
+          "Player": "Roschon Johnson",
+          "Player ID": null,
+          "Actual Points": 3.8
+        },
+        {
+          "Player": "Salvon Ahmed",
+          "Player ID": null,
+          "Actual Points": 0
+        },
+        {
+          "Player": "Sam Darnold",
+          "Player ID": null,
+          "Actual Points": 18.52
+        },
+        {
+          "Player": "Sam Roush",
+          "Player ID": null,
+          "Actual Points": 0
+        },
+        {
+          "Player": "Scotty Miller",
+          "Player ID": null,
+          "Actual Points": 0
+        },
+        {
+          "Player": "Seahawks",
+          "Player ID": null,
+          "Actual Points": 2
+        },
+        {
+          "Player": "Stephen Carlson",
+          "Player ID": null,
+          "Actual Points": 0
+        },
+        {
+          "Player": "Tory Horton",
+          "Player ID": null,
+          "Actual Points": 7.6
+        },
+        {
+          "Player": "Tyson Bagent",
+          "Player ID": null,
+          "Actual Points": 0
+        },
+        {
+          "Player": "Velus Jones Jr.",
+          "Player ID": null,
+          "Actual Points": 0
+        },
+        {
+          "Player": "Zach Charbonnet",
+          "Player ID": null,
+          "Actual Points": 5.9
+        },
+        {
+          "Player": "Zavier Scott",
+          "Player ID": null,
+          "Actual Points": 0
+        },
+        {
+          "Player": "Zavion Thomas",
+          "Player ID": null,
+          "Actual Points": 1.4
+        }
+      ],
+      "imported_at": "2026-11-03T04:27:19.751204+00:00",
+      "status": "User-uploaded completed standings; final status not independently verified",
+      "usage": "Validation archive only; no automatic projection or parameter updates",
+      "missing_policy": "Unlisted or missing scores are unknown, never zero",
+      "coverage": "Only players explicitly listed in this file; not guaranteed full-slate coverage"
+    }
+  }
+}
