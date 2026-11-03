@@ -7,8 +7,8 @@
     "environment_sd": "awaiting full-engine training replays",
     "extra_point_rate": "rejected event diagnostic",
     "field_goal_logit_offset": "candidate",
-    "fumble_loss_rate": "rejected event diagnostic",
-    "interception_rate": "candidate",
+    "fumble_loss_rate": "candidate",
+    "interception_rate": "rejected event diagnostic",
     "opportunity_concentration": "awaiting full-engine training replays",
     "pace_sd": "awaiting full-engine training replays",
     "pass_rate": "candidate",
@@ -17,17 +17,17 @@
     "rushing_df": "awaiting full-engine training replays",
     "rushing_sd": "candidate",
     "rushing_yards": "rejected event diagnostic",
-    "sack_rate": "candidate",
+    "sack_rate": "rejected event diagnostic",
     "two_point_pass_share": "insufficient sample",
     "two_point_pass_success": "insufficient sample",
-    "two_point_rate": "candidate",
+    "two_point_rate": "rejected event diagnostic",
     "two_point_run_success": "insufficient sample"
   },
   "full_game_candidate_status": "awaiting full-engine replay",
   "full_game_update_active": false,
   "next_requirement": "Later complete frozen game replays; event diagnostics alone never activate a model.",
   "status": "validated event components active",
-  "training_games": 93,
+  "training_games": 107,
   "validation_games": 14,
-  "version": "c0c6627a3451a1d9"
+  "version": "ddf50bd2c5f542aa"
 }
