@@ -1,0 +1,511 @@
+{
+  "schema": 1,
+  "contest_id": "197302901",
+  "slate_date": "2026-11-02",
+  "source_sha256": "9cfbc51d97654952c55d955f00033c401d8574516b80956b69c96341abb66efe",
+  "frozen_build_sha256": "2b80b87f808e14f52c31123c405504ecbe14a50d3ba1003b3379fd97ca029324",
+  "complete_entries": 47280,
+  "field_capacity": 47562,
+  "unique_rosters": 10770,
+  "own_entries": 20,
+  "own_exports_match": 20,
+  "fees": 2,
+  "estimated_winnings": 1.5960264900662253,
+  "estimated_net": -0.4039735099337747,
+  "cashed_entries": 5,
+  "best_rank": 218,
+  "best_points": 112.92,
+  "results": [
+    {
+      "rank": 218,
+      "points": 112.92,
+      "captain": "Jaxon Smith-Njigba",
+      "flex": [
+        "Sam Darnold",
+        "D'Andre Swift",
+        "Cooper Kupp",
+        "Tory Horton",
+        "Cairo Santos"
+      ],
+      "estimated_prize": 0.5960264900662252,
+      "matching_field_entries_including_own": 137
+    },
+    {
+      "rank": 706,
+      "points": 109.520004,
+      "captain": "Jaxon Smith-Njigba",
+      "flex": [
+        "Sam Darnold",
+        "Cairo Santos",
+        "Tory Horton",
+        "AJ Barner",
+        "D'Andre Swift"
+      ],
+      "estimated_prize": 0.4,
+      "matching_field_entries_including_own": 206
+    },
+    {
+      "rank": 5866,
+      "points": 102.42,
+      "captain": "Jaxon Smith-Njigba",
+      "flex": [
+        "Cooper Kupp",
+        "D'Andre Swift",
+        "Sam Darnold",
+        "Roschon Johnson",
+        "AJ Barner"
+      ],
+      "estimated_prize": 0.2,
+      "matching_field_entries_including_own": 137
+    },
+    {
+      "rank": 7127,
+      "points": 101.52,
+      "captain": "Jaxon Smith-Njigba",
+      "flex": [
+        "Sam Darnold",
+        "D'Andre Swift",
+        "Jason Myers",
+        "AJ Barner",
+        "Tory Horton"
+      ],
+      "estimated_prize": 0.19999999999999998,
+      "matching_field_entries_including_own": 374
+    },
+    {
+      "rank": 10460,
+      "points": 98.899994,
+      "captain": "Jaxon Smith-Njigba",
+      "flex": [
+        "Caleb Williams",
+        "Tory Horton",
+        "Luther Burden III",
+        "Sam Darnold",
+        "Stephen Carlson"
+      ],
+      "estimated_prize": 0.2,
+      "matching_field_entries_including_own": 12
+    },
+    {
+      "rank": 12700,
+      "points": 96.93,
+      "captain": "D'Andre Swift",
+      "flex": [
+        "Luther Burden III",
+        "Bears",
+        "Caleb Williams",
+        "Colston Loveland",
+        "Seahawks"
+      ],
+      "estimated_prize": 0,
+      "matching_field_entries_including_own": 22
+    },
+    {
+      "rank": 13404,
+      "points": 96.33,
+      "captain": "D'Andre Swift",
+      "flex": [
+        "Cairo Santos",
+        "Colston Loveland",
+        "AJ Barner",
+        "Caleb Williams",
+        "Rome Odunze"
+      ],
+      "estimated_prize": 0,
+      "matching_field_entries_including_own": 11
+    },
+    {
+      "rank": 19537,
+      "points": 92.7,
+      "captain": "Jaxon Smith-Njigba",
+      "flex": [
+        "Sam Darnold",
+        "Caleb Williams",
+        "Rome Odunze",
+        "Kalif Raymond",
+        "Sam Roush"
+      ],
+      "estimated_prize": 0,
+      "matching_field_entries_including_own": 56
+    },
+    {
+      "rank": 30627,
+      "points": 86.3,
+      "captain": "Jaxon Smith-Njigba",
+      "flex": [
+        "Sam Darnold",
+        "Caleb Williams",
+        "Kalif Raymond",
+        "AJ Barner",
+        "Seahawks"
+      ],
+      "estimated_prize": 0,
+      "matching_field_entries_including_own": 203
+    },
+    {
+      "rank": 30972,
+      "points": 86.22,
+      "captain": "Jaxon Smith-Njigba",
+      "flex": [
+        "Sam Darnold",
+        "Colston Loveland",
+        "Jason Myers",
+        "AJ Barner",
+        "Cooper Kupp"
+      ],
+      "estimated_prize": 0,
+      "matching_field_entries_including_own": 89
+    },
+    {
+      "rank": 38797,
+      "points": 80.619995,
+      "captain": "Jaxon Smith-Njigba",
+      "flex": [
+        "Zach Charbonnet",
+        "Sam Darnold",
+        "Jason Myers",
+        "Cairo Santos",
+        "Seahawks"
+      ],
+      "estimated_prize": 0,
+      "matching_field_entries_including_own": 26
+    },
+    {
+      "rank": 41941,
+      "points": 77.03,
+      "captain": "D'Andre Swift",
+      "flex": [
+        "Zach Charbonnet",
+        "Kalif Raymond",
+        "Sam Roush",
+        "Bears",
+        "Caleb Williams"
+      ],
+      "estimated_prize": 0,
+      "matching_field_entries_including_own": 1
+    },
+    {
+      "rank": 43328,
+      "points": 75,
+      "captain": "Jaxon Smith-Njigba",
+      "flex": [
+        "Luther Burden III",
+        "Jason Myers",
+        "Roschon Johnson",
+        "Zavion Thomas",
+        "Bears"
+      ],
+      "estimated_prize": 0,
+      "matching_field_entries_including_own": 1
+    },
+    {
+      "rank": 44731,
+      "points": 72.05,
+      "captain": "Zach Charbonnet",
+      "flex": [
+        "Luther Burden III",
+        "Jadarian Price",
+        "D'Andre Swift",
+        "Eric Saubert",
+        "Cairo Santos"
+      ],
+      "estimated_prize": 0,
+      "matching_field_entries_including_own": 1
+    },
+    {
+      "rank": 45698,
+      "points": 69,
+      "captain": "Luther Burden III",
+      "flex": [
+        "George Holani",
+        "Zavier Scott",
+        "Jadarian Price",
+        "Cooper Kupp",
+        "Jaxon Smith-Njigba"
+      ],
+      "estimated_prize": 0,
+      "matching_field_entries_including_own": 1
+    },
+    {
+      "rank": 46164,
+      "points": 66.72,
+      "captain": "Jaxon Smith-Njigba",
+      "flex": [
+        "Emanuel Wilson",
+        "Eric Saubert",
+        "Bears",
+        "Sam Darnold",
+        "Brady Russell"
+      ],
+      "estimated_prize": 0,
+      "matching_field_entries_including_own": 1
+    },
+    {
+      "rank": 46552,
+      "points": 64.77,
+      "captain": "Caleb Williams",
+      "flex": [
+        "Rome Odunze",
+        "Colston Loveland",
+        "Brady Russell",
+        "Luther Burden III",
+        "Nick Kallerup"
+      ],
+      "estimated_prize": 0,
+      "matching_field_entries_including_own": 1
+    },
+    {
+      "rank": 46592,
+      "points": 64.4,
+      "captain": "Jaxon Smith-Njigba",
+      "flex": [
+        "Rome Odunze",
+        "Jadarian Price",
+        "Seahawks",
+        "Nick Kallerup",
+        "Roschon Johnson"
+      ],
+      "estimated_prize": 0,
+      "matching_field_entries_including_own": 1
+    },
+    {
+      "rank": 47208,
+      "points": 48.93,
+      "captain": "Zach Charbonnet",
+      "flex": [
+        "Jadarian Price",
+        "Caleb Williams",
+        "Cooper Kupp",
+        "Emanuel Wilson",
+        "Rome Odunze"
+      ],
+      "estimated_prize": 0,
+      "matching_field_entries_including_own": 1
+    },
+    {
+      "rank": 47223,
+      "points": 45.93,
+      "captain": "Colston Loveland",
+      "flex": [
+        "Zach Charbonnet",
+        "Stephen Carlson",
+        "Kalif Raymond",
+        "Caleb Williams",
+        "Emanuel Wilson"
+      ],
+      "estimated_prize": 0,
+      "matching_field_entries_including_own": 1
+    }
+  ],
+  "projection_actuals": [
+    {
+      "player": "Jaxon Smith-Njigba",
+      "projection": 24.450000000000003,
+      "sim_mean": null,
+      "actual_points": 26.8,
+      "projection_source": "DFF + DraftEdge average"
+    },
+    {
+      "player": "Caleb Williams",
+      "projection": 17.6,
+      "sim_mean": null,
+      "actual_points": 13.98,
+      "projection_source": "DFF"
+    },
+    {
+      "player": "D'Andre Swift",
+      "projection": 16.65,
+      "sim_mean": null,
+      "actual_points": 27.9,
+      "projection_source": "DFF + DraftEdge average"
+    },
+    {
+      "player": "Sam Darnold",
+      "projection": 16.2,
+      "sim_mean": null,
+      "actual_points": 18.52,
+      "projection_source": "DFF"
+    },
+    {
+      "player": "Luther Burden III",
+      "projection": 12.2,
+      "sim_mean": null,
+      "actual_points": 18.6,
+      "projection_source": "DFF"
+    },
+    {
+      "player": "Colston Loveland",
+      "projection": 10.6,
+      "sim_mean": null,
+      "actual_points": 12.5,
+      "projection_source": "DFF + DraftEdge average"
+    },
+    {
+      "player": "Rome Odunze",
+      "projection": 10.1,
+      "sim_mean": null,
+      "actual_points": 12.7,
+      "projection_source": "DFF"
+    },
+    {
+      "player": "Emanuel Wilson",
+      "projection": 4.2,
+      "sim_mean": null,
+      "actual_points": 0,
+      "projection_source": "DFF"
+    },
+    {
+      "player": "Zach Charbonnet",
+      "projection": 8.5,
+      "sim_mean": null,
+      "actual_points": 5.9,
+      "projection_source": "DFF"
+    },
+    {
+      "player": "Jadarian Price",
+      "projection": 6.8,
+      "sim_mean": null,
+      "actual_points": 5.7,
+      "projection_source": "DFF"
+    },
+    {
+      "player": "Jason Myers",
+      "projection": 8.2,
+      "sim_mean": null,
+      "actual_points": 3,
+      "projection_source": "DFF"
+    },
+    {
+      "player": "Cairo Santos",
+      "projection": 7.5,
+      "sim_mean": null,
+      "actual_points": 11,
+      "projection_source": "DFF"
+    },
+    {
+      "player": "Cooper Kupp",
+      "projection": 7.5,
+      "sim_mean": null,
+      "actual_points": 7.7,
+      "projection_source": "DFF"
+    },
+    {
+      "player": "AJ Barner",
+      "projection": 8.6,
+      "sim_mean": null,
+      "actual_points": 4.3,
+      "projection_source": "DFF"
+    },
+    {
+      "player": "Seahawks",
+      "projection": 6,
+      "sim_mean": null,
+      "actual_points": 2,
+      "projection_source": "DFF"
+    },
+    {
+      "player": "Bears",
+      "projection": 6.3,
+      "sim_mean": null,
+      "actual_points": 8,
+      "projection_source": "DFF"
+    },
+    {
+      "player": "Kalif Raymond",
+      "projection": 5.3,
+      "sim_mean": null,
+      "actual_points": 7.3,
+      "projection_source": "DFF"
+    },
+    {
+      "player": "Roschon Johnson",
+      "projection": 4.6,
+      "sim_mean": null,
+      "actual_points": 3.8,
+      "projection_source": "DFF"
+    },
+    {
+      "player": "George Holani",
+      "projection": 1.6,
+      "sim_mean": null,
+      "actual_points": 0.9,
+      "projection_source": "DFF"
+    },
+    {
+      "player": "Tory Horton",
+      "projection": 5.4,
+      "sim_mean": null,
+      "actual_points": 7.6,
+      "projection_source": "DFF"
+    },
+    {
+      "player": "Zavion Thomas",
+      "projection": 1.7,
+      "sim_mean": null,
+      "actual_points": 1.4,
+      "projection_source": "DFF"
+    },
+    {
+      "player": "Eric Saubert",
+      "projection": 1.4,
+      "sim_mean": null,
+      "actual_points": 0,
+      "projection_source": "DFF"
+    },
+    {
+      "player": "Sam Roush",
+      "projection": 2.3,
+      "sim_mean": null,
+      "actual_points": 0,
+      "projection_source": "DFF"
+    },
+    {
+      "player": "Irvin Charles",
+      "projection": 0.4,
+      "sim_mean": null,
+      "actual_points": 0,
+      "projection_source": "DFF"
+    },
+    {
+      "player": "Jahdae Walker",
+      "projection": 0.3,
+      "sim_mean": null,
+      "actual_points": 0,
+      "projection_source": "DFF"
+    },
+    {
+      "player": "Nick Kallerup",
+      "projection": 0.3,
+      "sim_mean": null,
+      "actual_points": 0,
+      "projection_source": "DFF"
+    },
+    {
+      "player": "Zavier Scott",
+      "projection": 0.3,
+      "sim_mean": null,
+      "actual_points": 0,
+      "projection_source": "DFF"
+    },
+    {
+      "player": "Brady Russell",
+      "projection": 0.4,
+      "sim_mean": null,
+      "actual_points": 0,
+      "projection_source": "DFF"
+    },
+    {
+      "player": "Stephen Carlson",
+      "projection": 0.7,
+      "sim_mean": null,
+      "actual_points": 0,
+      "projection_source": "DFF"
+    }
+  ],
+  "published_scores": {
+    "snapshots_added": 1,
+    "player_scores_added": 51
+  },
+  "payout_method": "User-supplied full payout ladder, split equally across tied ranks; estimate not account statement",
+  "score_role_policy": "Captain rows excluded from base scores after verifying 1.5x FLEX score"
+}

@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "contest_id": "197302901",
+  "slate_date": "2026-11-02",
+  "source_file": "contest-standings-197302901.zip",
+  "source_sha256": "9cfbc51d97654952c55d955f00033c401d8574516b80956b69c96341abb66efe",
+  "frozen_build_sha256": "2b80b87f808e14f52c31123c405504ecbe14a50d3ba1003b3379fd97ca029324",
+  "profile_ids": [
+    "353107d379bf9df0796543a226f18661899615123d5f5eededc324be80a8a966"
+  ],
+  "complete_rosters": 47280,
+  "empty_or_incomplete_entries_excluded": 282,
+  "published_base_scores": 51,
+  "matched_projection_actual_rows": 29,
+  "usage": "Anonymous field profile available to matching future field generation. Explicit fantasy scores and frozen pregame comparisons retained for validation; no raw-stat inference or automatic performance-model promotion.",
+  "submission_verified_by_exact_export_match": true
+}
