@@ -1,0 +1,1923 @@
+{
+  "schema": 1,
+  "kind": "retrospective NFL/NBA builder versus selector and player error audit",
+  "models_modified": false,
+  "reports": [
+    {
+      "schema": 1,
+      "platform": "DraftKings",
+      "format": "dk_showdown",
+      "contest_id": "197302901",
+      "source_hashes": {
+        "build": "2b80b87f808e14f52c31123c405504ecbe14a50d3ba1003b3379fd97ca029324",
+        "standings": "9cfbc51d97654952c55d955f00033c401d8574516b80956b69c96341abb66efe"
+      },
+      "sport": "NFL",
+      "selection_evidence": "downloaded export; all rosters match final standings",
+      "scored_entries_in_reference": 47562,
+      "opponents_after_removing_exported_entries": 47542,
+      "candidate_pool": {
+        "saved": 5000,
+        "fully_scored": 5000,
+        "unscored_missing_actuals": 0,
+        "missing_actual_players_by_candidate_count": {},
+        "actual_top1_candidates": 22,
+        "actual_top10_candidates": 194,
+        "positive_prize_candidates": 510
+      },
+      "hindsight_best_single_candidate": {
+        "points": 114.77,
+        "standalone_rank": 13,
+        "standalone_prize": 11.444444444444445,
+        "pregame_top1_rank": 785,
+        "roster": {
+          "Captain": "D'Andre Swift",
+          "Flex1": "Jaxon Smith-Njigba",
+          "Flex2": "Sam Darnold",
+          "Flex3": "Tory Horton",
+          "Flex4": "Luther Burden III",
+          "Flex5": "Zavion Thomas"
+        }
+      },
+      "exported_portfolio": {
+        "entries": 20,
+        "fully_scored_saved_candidates": 20,
+        "unscored_or_outside_pool_entries": 0,
+        "missing_published_player_scores": [],
+        "all_match_saved_candidates": true,
+        "final_standings_roster_matches": 20,
+        "final_entered_best_points": 112.92,
+        "best_actual_points": 112.92,
+        "best_standalone_rank": 218,
+        "top1_entries": 1,
+        "top10_entries": 2,
+        "positive_prize_standalone_entries": 5,
+        "best_hindsight_candidate_rank": 9,
+        "median_hindsight_candidate_rank": 2364.5,
+        "hindsight_top20_candidates_selected": 1,
+        "mean_saved_top1_probability": 0.042480000000000004
+      },
+      "player_errors": {
+        "overall": {
+          "rows": 29,
+          "mae": 2.391034482758621,
+          "rmse": 3.3353477821040203,
+          "bias_prediction_minus_actual": -0.12068965517241385
+        },
+        "groups": {
+          "position": {
+            "DST": {
+              "rows": 2,
+              "mae": 2.85,
+              "rmse": 3.073271872125862,
+              "bias_prediction_minus_actual": 1.15
+            },
+            "K": {
+              "rows": 2,
+              "mae": 4.35,
+              "rmse": 4.432268042436061,
+              "bias_prediction_minus_actual": 0.8499999999999996
+            },
+            "QB": {
+              "rows": 2,
+              "mae": 2.9700000000000006,
+              "rmse": 3.040296038217332,
+              "bias_prediction_minus_actual": 0.6500000000000004
+            },
+            "RB": {
+              "rows": 8,
+              "mae": 2.6687499999999997,
+              "rmse": 4.38110288626049,
+              "bias_prediction_minus_actual": -0.14375000000000004
+            },
+            "TE": {
+              "rows": 6,
+              "mae": 1.8166666666666664,
+              "rmse": 2.233457707979565,
+              "bias_prediction_minus_actual": 1.1833333333333333
+            },
+            "WR": {
+              "rows": 9,
+              "mae": 1.8611111111111112,
+              "rmse": 2.6344406954376063,
+              "bias_prediction_minus_actual": -1.6388888888888888
+            }
+          },
+          "projection_source": {
+            "DFF": {
+              "rows": 26,
+              "mae": 2.0707692307692307,
+              "rmse": 2.681251143087438,
+              "bias_prediction_minus_actual": 0.46153846153846145
+            },
+            "DFF + DraftEdge average": {
+              "rows": 3,
+              "mae": 5.166666666666666,
+              "rmse": 6.725449179546795,
+              "bias_prediction_minus_actual": -5.166666666666666
+            }
+          },
+          "projection_band": {
+            "10 to under 20": {
+              "rows": 6,
+              "mae": 4.6816666666666675,
+              "rmse": 5.7210036998181835,
+              "bias_prediction_minus_actual": -3.475
+            },
+            "20+": {
+              "rows": 1,
+              "mae": 2.349999999999998,
+              "rmse": 2.349999999999998,
+              "bias_prediction_minus_actual": -2.349999999999998
+            },
+            "5 to under 10": {
+              "rows": 10,
+              "mae": 2.6799999999999997,
+              "rmse": 3.058103987767584,
+              "bias_prediction_minus_actual": 0.7599999999999998
+            },
+            "under 5": {
+              "rows": 12,
+              "mae": 1.0083333333333333,
+              "rmse": 1.5052685253247453,
+              "bias_prediction_minus_actual": 1.0083333333333333
+            }
+          },
+          "projected_minutes_band": {
+            "unknown": {
+              "rows": 29,
+              "mae": 2.391034482758621,
+              "rmse": 3.3353477821040203,
+              "bias_prediction_minus_actual": -0.12068965517241385
+            }
+          }
+        },
+        "largest_absolute_errors": [
+          {
+            "player": "D'Andre Swift",
+            "position": "RB",
+            "projection_source": "DFF + DraftEdge average",
+            "prediction": 16.65,
+            "actual": 27.9,
+            "projection_band": "10 to under 20",
+            "projected_minutes_band": "unknown",
+            "error": -11.25
+          },
+          {
+            "player": "Luther Burden III",
+            "position": "WR",
+            "projection_source": "DFF",
+            "prediction": 12.2,
+            "actual": 18.6,
+            "projection_band": "10 to under 20",
+            "projected_minutes_band": "unknown",
+            "error": -6.400000000000002
+          },
+          {
+            "player": "Jason Myers",
+            "position": "K",
+            "projection_source": "DFF",
+            "prediction": 8.2,
+            "actual": 3.0,
+            "projection_band": "5 to under 10",
+            "projected_minutes_band": "unknown",
+            "error": 5.199999999999999
+          },
+          {
+            "player": "AJ Barner",
+            "position": "TE",
+            "projection_source": "DFF",
+            "prediction": 8.6,
+            "actual": 4.3,
+            "projection_band": "5 to under 10",
+            "projected_minutes_band": "unknown",
+            "error": 4.3
+          },
+          {
+            "player": "Emanuel Wilson",
+            "position": "RB",
+            "projection_source": "DFF",
+            "prediction": 4.2,
+            "actual": 0.0,
+            "projection_band": "under 5",
+            "projected_minutes_band": "unknown",
+            "error": 4.2
+          },
+          {
+            "player": "Seahawks",
+            "position": "DST",
+            "projection_source": "DFF",
+            "prediction": 6.0,
+            "actual": 2.0,
+            "projection_band": "5 to under 10",
+            "projected_minutes_band": "unknown",
+            "error": 4.0
+          },
+          {
+            "player": "Caleb Williams",
+            "position": "QB",
+            "projection_source": "DFF",
+            "prediction": 17.6,
+            "actual": 13.98,
+            "projection_band": "10 to under 20",
+            "projected_minutes_band": "unknown",
+            "error": 3.620000000000001
+          },
+          {
+            "player": "Cairo Santos",
+            "position": "K",
+            "projection_source": "DFF",
+            "prediction": 7.5,
+            "actual": 11.0,
+            "projection_band": "5 to under 10",
+            "projected_minutes_band": "unknown",
+            "error": -3.5
+          },
+          {
+            "player": "Rome Odunze",
+            "position": "WR",
+            "projection_source": "DFF",
+            "prediction": 10.1,
+            "actual": 12.7,
+            "projection_band": "10 to under 20",
+            "projected_minutes_band": "unknown",
+            "error": -2.5999999999999996
+          },
+          {
+            "player": "Zach Charbonnet",
+            "position": "RB",
+            "projection_source": "DFF",
+            "prediction": 8.5,
+            "actual": 5.9,
+            "projection_band": "5 to under 10",
+            "projected_minutes_band": "unknown",
+            "error": 2.5999999999999996
+          }
+        ]
+      },
+      "limitations": [
+        "Hindsight scores diagnose builder coverage and selection opportunity; they cannot select future lineups. Candidate ranks give tied scores the same first rank.",
+        "Single-candidate ranks remove all exported own entries then insert one candidate; these prizes are not joint portfolio returns.",
+        "Exposure/stack/uniqueness constraints may prevent combining hindsight best candidates into a legal portfolio.",
+        "Missing player actuals stay unknown; unsupported candidates are excluded, never zero-filled.",
+        "Entry rows retain published points even when their lineup text is blank. Standings scores are user-asserted final.",
+        "No model parameters, rankings or candidate generation changed."
+      ]
+    },
+    {
+      "schema": 1,
+      "platform": "FanDuel",
+      "format": "fd_single",
+      "contest_id": "136135-281362771",
+      "source_hashes": {
+        "build": "63ee3ca75d384e117a374e04047eeaa0d664b5dfe121f402c21057be7cec72e9",
+        "standings": "271995987a0aeb41b8a926c8cffe9fbd82ab9b28ee024ac3408e1a081178a93f"
+      },
+      "sport": "NFL",
+      "selection_evidence": "downloaded export; all rosters match final standings",
+      "scored_entries_in_reference": 71281,
+      "opponents_after_removing_exported_entries": 71261,
+      "candidate_pool": {
+        "saved": 5000,
+        "fully_scored": 5000,
+        "unscored_missing_actuals": 0,
+        "missing_actual_players_by_candidate_count": {},
+        "actual_top1_candidates": 19,
+        "actual_top10_candidates": 130,
+        "positive_prize_candidates": 612
+      },
+      "hindsight_best_single_candidate": {
+        "points": 115.97,
+        "standalone_rank": 1,
+        "standalone_prize": 32.75,
+        "pregame_top1_rank": 198,
+        "roster": {
+          "MVP": "D'Andre Swift",
+          "FLEX1": "Cooper Kupp",
+          "FLEX2": "Sam Darnold",
+          "FLEX3": "Luther Burden III",
+          "FLEX4": "Jaxon Smith-Njigba",
+          "FLEX5": "Cairo Santos"
+        }
+      },
+      "exported_portfolio": {
+        "entries": 20,
+        "fully_scored_saved_candidates": 20,
+        "unscored_or_outside_pool_entries": 0,
+        "missing_published_player_scores": [],
+        "all_match_saved_candidates": true,
+        "final_standings_roster_matches": 20,
+        "final_entered_best_points": 106.95,
+        "best_actual_points": 106.95,
+        "best_standalone_rank": 2627,
+        "top1_entries": 0,
+        "top10_entries": 1,
+        "positive_prize_standalone_entries": 2,
+        "best_hindsight_candidate_rank": 61,
+        "median_hindsight_candidate_rank": 2752.0,
+        "hindsight_top20_candidates_selected": 0,
+        "mean_saved_top1_probability": 0.027177303003862913
+      },
+      "player_errors": {
+        "overall": {
+          "rows": 29,
+          "mae": 2.23,
+          "rmse": 3.164443351387085,
+          "bias_prediction_minus_actual": -0.02275862068965501
+        },
+        "groups": {
+          "position": {
+            "D": {
+              "rows": 2,
+              "mae": 3.1774999999999998,
+              "rmse": 3.45927196097676,
+              "bias_prediction_minus_actual": 1.3675000000000002
+            },
+            "K": {
+              "rows": 2,
+              "mae": 4.34,
+              "rmse": 4.428317965096906,
+              "bias_prediction_minus_actual": 0.8800000000000003
+            },
+            "QB": {
+              "rows": 2,
+              "mae": 2.91,
+              "rmse": 2.920719089539424,
+              "bias_prediction_minus_actual": 0.25
+            },
+            "RB": {
+              "rows": 7,
+              "mae": 2.823571428571428,
+              "rmse": 4.586566175878669,
+              "bias_prediction_minus_actual": -0.32928571428571385
+            },
+            "TE": {
+              "rows": 7,
+              "mae": 1.3271428571428572,
+              "rmse": 1.7254523216495188,
+              "bias_prediction_minus_actual": 1.3271428571428572
+            },
+            "WR": {
+              "rows": 9,
+              "mae": 1.64,
+              "rmse": 2.162472864312727,
+              "bias_prediction_minus_actual": -1.4044444444444444
+            }
+          },
+          "projection_source": {
+            "DFF": {
+              "rows": 25,
+              "mae": 1.8456000000000001,
+              "rmse": 2.3967194245468115,
+              "bias_prediction_minus_actual": 0.22720000000000018
+            },
+            "DFF + DraftEdge average": {
+              "rows": 4,
+              "mae": 4.6325,
+              "rmse": 6.0578616276702775,
+              "bias_prediction_minus_actual": -1.5849999999999995
+            }
+          },
+          "projection_band": {
+            "10 to under 20": {
+              "rows": 4,
+              "mae": 5.486249999999999,
+              "rmse": 6.417564277044678,
+              "bias_prediction_minus_actual": -3.906249999999999
+            },
+            "20+": {
+              "rows": 1,
+              "mae": 1.4000000000000021,
+              "rmse": 1.4000000000000021,
+              "bias_prediction_minus_actual": -1.4000000000000021
+            },
+            "5 to under 10": {
+              "rows": 10,
+              "mae": 2.7284999999999995,
+              "rmse": 3.0981191875071556,
+              "bias_prediction_minus_actual": 0.9865000000000002
+            },
+            "under 5": {
+              "rows": 14,
+              "mae": 1.0028571428571427,
+              "rmse": 1.4069572031261546,
+              "bias_prediction_minus_actual": 0.46428571428571436
+            }
+          },
+          "projected_minutes_band": {
+            "unknown": {
+              "rows": 29,
+              "mae": 2.23,
+              "rmse": 3.164443351387085,
+              "bias_prediction_minus_actual": -0.02275862068965501
+            }
+          }
+        },
+        "largest_absolute_errors": [
+          {
+            "player": "D'Andre Swift",
+            "position": "RB",
+            "projection_source": "DFF + DraftEdge average",
+            "prediction": 15.865000000000002,
+            "actual": 26.9,
+            "projection_band": "10 to under 20",
+            "projected_minutes_band": "unknown",
+            "error": -11.034999999999997
+          },
+          {
+            "player": "Jason Myers",
+            "position": "K",
+            "projection_source": "DFF",
+            "prediction": 8.22,
+            "actual": 3.0,
+            "projection_band": "5 to under 10",
+            "projected_minutes_band": "unknown",
+            "error": 5.220000000000001
+          },
+          {
+            "player": "Luther Burden III",
+            "position": "WR",
+            "projection_source": "DFF",
+            "prediction": 10.01,
+            "actual": 15.1,
+            "projection_band": "10 to under 20",
+            "projected_minutes_band": "unknown",
+            "error": -5.09
+          },
+          {
+            "player": "Seattle Seahawks",
+            "position": "D",
+            "projection_source": "DFF + DraftEdge average",
+            "prediction": 6.545,
+            "actual": 2.0,
+            "projection_band": "5 to under 10",
+            "projected_minutes_band": "unknown",
+            "error": 4.545
+          },
+          {
+            "player": "Emanuel Wilson",
+            "position": "RB",
+            "projection_source": "DFF",
+            "prediction": 3.81,
+            "actual": 0.0,
+            "projection_band": "under 5",
+            "projected_minutes_band": "unknown",
+            "error": 3.81
+          },
+          {
+            "player": "AJ Barner",
+            "position": "TE",
+            "projection_source": "DFF",
+            "prediction": 6.98,
+            "actual": 3.3,
+            "projection_band": "5 to under 10",
+            "projected_minutes_band": "unknown",
+            "error": 3.6800000000000006
+          },
+          {
+            "player": "Cairo Santos",
+            "position": "K",
+            "projection_source": "DFF",
+            "prediction": 7.54,
+            "actual": 11.0,
+            "projection_band": "5 to under 10",
+            "projected_minutes_band": "unknown",
+            "error": -3.46
+          },
+          {
+            "player": "Zach Charbonnet",
+            "position": "RB",
+            "projection_source": "DFF",
+            "prediction": 7.58,
+            "actual": 4.4,
+            "projection_band": "5 to under 10",
+            "projected_minutes_band": "unknown",
+            "error": 3.1799999999999997
+          },
+          {
+            "player": "Caleb Williams",
+            "position": "QB",
+            "projection_source": "DFF",
+            "prediction": 17.14,
+            "actual": 13.98,
+            "projection_band": "10 to under 20",
+            "projected_minutes_band": "unknown",
+            "error": 3.16
+          },
+          {
+            "player": "Sam Darnold",
+            "position": "QB",
+            "projection_source": "DFF",
+            "prediction": 15.86,
+            "actual": 18.52,
+            "projection_band": "10 to under 20",
+            "projected_minutes_band": "unknown",
+            "error": -2.66
+          }
+        ]
+      },
+      "limitations": [
+        "Hindsight scores diagnose builder coverage and selection opportunity; they cannot select future lineups. Candidate ranks give tied scores the same first rank.",
+        "Single-candidate ranks remove all exported own entries then insert one candidate; these prizes are not joint portfolio returns.",
+        "Exposure/stack/uniqueness constraints may prevent combining hindsight best candidates into a legal portfolio.",
+        "Missing player actuals stay unknown; unsupported candidates are excluded, never zero-filled.",
+        "Entry rows retain published points even when their lineup text is blank. Standings scores are user-asserted final.",
+        "No model parameters, rankings or candidate generation changed."
+      ]
+    },
+    {
+      "schema": 1,
+      "platform": "DraftKings",
+      "format": "dk_classic",
+      "contest_id": "197368240",
+      "source_hashes": {
+        "build": "836507060404682f4f938c380b2d8ace4a84bb76e3b3e33c12740c59ee798cee",
+        "standings": "3ccbe4262143006c5ebf9efb7ca8167dd20da45b4a818768cb6837c2d0655486"
+      },
+      "sport": "NFL",
+      "selection_evidence": "downloaded export; all rosters match final standings",
+      "scored_entries_in_reference": 2972,
+      "opponents_after_removing_exported_entries": 2952,
+      "candidate_pool": {
+        "saved": 5000,
+        "fully_scored": 4939,
+        "unscored_missing_actuals": 61,
+        "missing_actual_players_by_candidate_count": {
+          "Daniel Bellinger": 20,
+          "Nate Boerkircher": 12,
+          "Drew Sample": 8,
+          "Jack Bech": 3,
+          "Gavin Bartholomew": 3,
+          "Jeremy Ruckert": 2,
+          "Will Kacmarek": 2,
+          "Nate Adkins": 2,
+          "Jack Endries": 1,
+          "Adam Trautman": 1,
+          "Mo Alie-Cox": 1,
+          "Kaden Wetjen": 1,
+          "Michael Carter": 1,
+          "Will Mallory": 1,
+          "Ian Thomas": 1,
+          "Seydou Traore": 1,
+          "Keleki Latu": 1
+        },
+        "actual_top1_candidates": 16,
+        "actual_top10_candidates": 743,
+        "positive_prize_candidates": 2610
+      },
+      "hindsight_best_single_candidate": {
+        "points": 234.18,
+        "standalone_rank": 4,
+        "standalone_prize": 5.0,
+        "pregame_top1_rank": 524,
+        "roster": {
+          "QB": "Joe Burrow",
+          "RB1": "Jonah Coleman",
+          "RB2": "Braelon Allen",
+          "WR1": "Tee Higgins",
+          "WR2": "Wan'Dale Robinson",
+          "WR3": "Ja'Marr Chase",
+          "TE": "Gunnar Helm",
+          "FLEX": "Chase Brown",
+          "DST": "Steelers"
+        }
+      },
+      "exported_portfolio": {
+        "entries": 20,
+        "fully_scored_saved_candidates": 20,
+        "unscored_or_outside_pool_entries": 0,
+        "missing_published_player_scores": [],
+        "all_match_saved_candidates": true,
+        "final_standings_roster_matches": 20,
+        "final_entered_best_points": 217.98001,
+        "best_actual_points": 217.98,
+        "best_standalone_rank": 12,
+        "top1_entries": 2,
+        "top10_entries": 8,
+        "positive_prize_standalone_entries": 13,
+        "best_hindsight_candidate_rank": 5,
+        "median_hindsight_candidate_rank": 1840.5,
+        "hindsight_top20_candidates_selected": 4,
+        "mean_saved_top1_probability": 0.06657
+      },
+      "player_errors": {
+        "overall": {
+          "rows": 204,
+          "mae": 5.54063725490196,
+          "rmse": 7.71686410834522,
+          "bias_prediction_minus_actual": 0.11220588235294102
+        },
+        "groups": {
+          "position": {
+            "DST": {
+              "rows": 22,
+              "mae": 4.45909090909091,
+              "rmse": 5.812095538224965,
+              "bias_prediction_minus_actual": -0.6590909090909092
+            },
+            "QB": {
+              "rows": 22,
+              "mae": 8.440454545454545,
+              "rmse": 10.651266036571341,
+              "bias_prediction_minus_actual": 0.9677272727272727
+            },
+            "RB": {
+              "rows": 45,
+              "mae": 6.15888888888889,
+              "rmse": 8.887153650072673,
+              "bias_prediction_minus_actual": -1.1011111111111112
+            },
+            "TE": {
+              "rows": 38,
+              "mae": 4.6157894736842096,
+              "rmse": 5.900813949207168,
+              "bias_prediction_minus_actual": -0.1368421052631579
+            },
+            "WR": {
+              "rows": 77,
+              "mae": 5.1162337662337665,
+              "rmse": 7.236117474440013,
+              "bias_prediction_minus_actual": 0.9201298701298699
+            }
+          },
+          "projection_source": {
+            "DFF": {
+              "rows": 172,
+              "mae": 5.089767441860466,
+              "rmse": 7.055314671669795,
+              "bias_prediction_minus_actual": -0.2846511627906978
+            },
+            "DFF + DraftEdge average": {
+              "rows": 32,
+              "mae": 7.9640625,
+              "rmse": 10.586657729189133,
+              "bias_prediction_minus_actual": 2.2453125000000003
+            }
+          },
+          "projection_band": {
+            "10 to under 20": {
+              "rows": 68,
+              "mae": 7.344117647058824,
+              "rmse": 9.059614489915251,
+              "bias_prediction_minus_actual": 0.6658823529411765
+            },
+            "20+": {
+              "rows": 11,
+              "mae": 8.917272727272726,
+              "rmse": 11.72692511817453,
+              "bias_prediction_minus_actual": 0.9645454545454551
+            },
+            "5 to under 10": {
+              "rows": 79,
+              "mae": 5.1265822784810124,
+              "rmse": 7.199947257190786,
+              "bias_prediction_minus_actual": -0.45316455696202546
+            },
+            "under 5": {
+              "rows": 46,
+              "mae": 2.778260869565217,
+              "rmse": 4.565846747509068,
+              "bias_prediction_minus_actual": 0.06086956521739127
+            }
+          },
+          "projected_minutes_band": {
+            "unknown": {
+              "rows": 204,
+              "mae": 5.54063725490196,
+              "rmse": 7.71686410834522,
+              "bias_prediction_minus_actual": 0.11220588235294102
+            }
+          }
+        },
+        "largest_absolute_errors": [
+          {
+            "player": "Tyler Allgeier",
+            "position": "RB",
+            "projection_source": "DFF",
+            "prediction": 6.3,
+            "actual": 39.1,
+            "projection_band": "5 to under 10",
+            "projected_minutes_band": "unknown",
+            "error": -32.800000000000004
+          },
+          {
+            "player": "Adonai Mitchell",
+            "position": "WR",
+            "projection_source": "DFF",
+            "prediction": 5.7,
+            "actual": 30.2,
+            "projection_band": "5 to under 10",
+            "projected_minutes_band": "unknown",
+            "error": -24.5
+          },
+          {
+            "player": "Emmett Johnson",
+            "position": "RB",
+            "projection_source": "DFF",
+            "prediction": 4.3,
+            "actual": 28.3,
+            "projection_band": "under 5",
+            "projected_minutes_band": "unknown",
+            "error": -24.0
+          },
+          {
+            "player": "Tee Higgins",
+            "position": "WR",
+            "projection_source": "DFF + DraftEdge average",
+            "prediction": 16.75,
+            "actual": 40.5,
+            "projection_band": "10 to under 20",
+            "projected_minutes_band": "unknown",
+            "error": -23.75
+          },
+          {
+            "player": "Joe Burrow",
+            "position": "QB",
+            "projection_source": "DFF + DraftEdge average",
+            "prediction": 22.05,
+            "actual": 45.48,
+            "projection_band": "20+",
+            "projected_minutes_band": "unknown",
+            "error": -23.429999999999996
+          },
+          {
+            "player": "Zay Flowers",
+            "position": "WR",
+            "projection_source": "DFF + DraftEdge average",
+            "prediction": 20.05,
+            "actual": 0.0,
+            "projection_band": "20+",
+            "projected_minutes_band": "unknown",
+            "error": 20.05
+          },
+          {
+            "player": "Lamar Jackson",
+            "position": "QB",
+            "projection_source": "DFF + DraftEdge average",
+            "prediction": 19.9,
+            "actual": 0.0,
+            "projection_band": "10 to under 20",
+            "projected_minutes_band": "unknown",
+            "error": 19.9
+          },
+          {
+            "player": "Harold Fannin Jr.",
+            "position": "TE",
+            "projection_source": "DFF",
+            "prediction": 9.6,
+            "actual": 27.4,
+            "projection_band": "5 to under 10",
+            "projected_minutes_band": "unknown",
+            "error": -17.799999999999997
+          },
+          {
+            "player": "Tony Pollard",
+            "position": "RB",
+            "projection_source": "DFF",
+            "prediction": 14.3,
+            "actual": 31.7,
+            "projection_band": "10 to under 20",
+            "projected_minutes_band": "unknown",
+            "error": -17.4
+          },
+          {
+            "player": "Bhayshul Tuten",
+            "position": "RB",
+            "projection_source": "DFF",
+            "prediction": 15.7,
+            "actual": 32.9,
+            "projection_band": "10 to under 20",
+            "projected_minutes_band": "unknown",
+            "error": -17.2
+          }
+        ]
+      },
+      "limitations": [
+        "Hindsight scores diagnose builder coverage and selection opportunity; they cannot select future lineups. Candidate ranks give tied scores the same first rank.",
+        "Single-candidate ranks remove all exported own entries then insert one candidate; these prizes are not joint portfolio returns.",
+        "Exposure/stack/uniqueness constraints may prevent combining hindsight best candidates into a legal portfolio.",
+        "Missing player actuals stay unknown; unsupported candidates are excluded, never zero-filled.",
+        "Entry rows retain published points even when their lineup text is blank. Standings scores are user-asserted final.",
+        "No model parameters, rankings or candidate generation changed."
+      ]
+    },
+    {
+      "schema": 1,
+      "platform": "FanDuel",
+      "format": "fd_full",
+      "contest_id": "135859-281259493",
+      "source_hashes": {
+        "build": "32df9f9c448a73ea660dadbaf2d074f926fee927fe27ff550d2f4224928dbe45",
+        "standings": "e571a300b01d978df036589f3765990ed69e2196759262bc7ea0f443af1a7b20"
+      },
+      "sport": "NFL",
+      "selection_evidence": "downloaded export; all rosters match final standings",
+      "scored_entries_in_reference": 563810,
+      "opponents_after_removing_exported_entries": 563699,
+      "candidate_pool": {
+        "saved": 5000,
+        "fully_scored": 4968,
+        "unscored_missing_actuals": 32,
+        "missing_actual_players_by_candidate_count": {
+          "Julius Chestnut": 32
+        },
+        "actual_top1_candidates": 21,
+        "actual_top10_candidates": 730,
+        "positive_prize_candidates": 3408
+      },
+      "hindsight_best_single_candidate": {
+        "points": 213.88,
+        "standalone_rank": 763,
+        "standalone_prize": 0.75,
+        "pregame_top1_rank": 12,
+        "roster": {
+          "QB": "Joe Burrow",
+          "RB1": "Chase Brown",
+          "RB2": "Braelon Allen",
+          "WR1": "Ja'Marr Chase",
+          "WR2": "Tee Higgins",
+          "WR3": "Michael Wilson",
+          "TE": "Trey McBride",
+          "FLEX": "Jonah Coleman",
+          "D": "Detroit Lions"
+        }
+      },
+      "exported_portfolio": {
+        "entries": 111,
+        "fully_scored_saved_candidates": 111,
+        "unscored_or_outside_pool_entries": 0,
+        "missing_published_player_scores": [],
+        "all_match_saved_candidates": true,
+        "final_standings_roster_matches": 111,
+        "final_entered_best_points": 213.88,
+        "best_actual_points": 213.88,
+        "best_standalone_rank": 763,
+        "top1_entries": 7,
+        "top10_entries": 39,
+        "positive_prize_standalone_entries": 97,
+        "best_hindsight_candidate_rank": 1,
+        "median_hindsight_candidate_rank": 1606.0,
+        "hindsight_top20_candidates_selected": 6,
+        "mean_saved_top1_probability": 0.05900360360360361
+      },
+      "player_errors": {
+        "overall": {
+          "rows": 294,
+          "mae": 4.07734693877551,
+          "rmse": 6.2395550273056735,
+          "bias_prediction_minus_actual": -0.06721088435374159
+        },
+        "groups": {
+          "position": {
+            "D": {
+              "rows": 22,
+              "mae": 4.202272727272726,
+              "rmse": 5.5113209932745795,
+              "bias_prediction_minus_actual": -0.8068181818181818
+            },
+            "QB": {
+              "rows": 22,
+              "mae": 8.485909090909091,
+              "rmse": 10.689128504317749,
+              "bias_prediction_minus_actual": 1.0586363636363636
+            },
+            "RB": {
+              "rows": 68,
+              "mae": 4.566911764705882,
+              "rmse": 7.1772798181647675,
+              "bias_prediction_minus_actual": -0.7139705882352942
+            },
+            "TE": {
+              "rows": 74,
+              "mae": 2.789189189189189,
+              "rmse": 3.9942357114871077,
+              "bias_prediction_minus_actual": -0.24324324324324326
+            },
+            "WR": {
+              "rows": 108,
+              "mae": 3.7282407407407407,
+              "rmse": 5.757939365844411,
+              "bias_prediction_minus_actual": 0.3819444444444443
+            }
+          },
+          "projection_source": {
+            "DFF": {
+              "rows": 255,
+              "mae": 3.6322352941176472,
+              "rmse": 5.7646657301522835,
+              "bias_prediction_minus_actual": -0.43207843137254903
+            },
+            "DFF + DraftEdge average": {
+              "rows": 38,
+              "mae": 6.8715789473684215,
+              "rmse": 8.648185389219854,
+              "bias_prediction_minus_actual": 2.6794736842105267
+            },
+            "DraftEdge": {
+              "rows": 1,
+              "mae": 11.4,
+              "rmse": 11.4,
+              "bias_prediction_minus_actual": -11.4
+            }
+          },
+          "projection_band": {
+            "10 to under 20": {
+              "rows": 50,
+              "mae": 8.209800000000001,
+              "rmse": 9.6606559818679,
+              "bias_prediction_minus_actual": 0.8777999999999997
+            },
+            "20+": {
+              "rows": 9,
+              "mae": 8.038888888888888,
+              "rmse": 11.666300470443346,
+              "bias_prediction_minus_actual": 1.0166666666666675
+            },
+            "5 to under 10": {
+              "rows": 83,
+              "mae": 4.826506024096386,
+              "rmse": 6.352283528314553,
+              "bias_prediction_minus_actual": -0.1361445783132531
+            },
+            "under 5": {
+              "rows": 152,
+              "mae": 2.074342105263158,
+              "rmse": 3.8091907553345656,
+              "bias_prediction_minus_actual": -0.4046052631578948
+            }
+          },
+          "projected_minutes_band": {
+            "unknown": {
+              "rows": 294,
+              "mae": 4.07734693877551,
+              "rmse": 6.2395550273056735,
+              "bias_prediction_minus_actual": -0.06721088435374159
+            }
+          }
+        },
+        "largest_absolute_errors": [
+          {
+            "player": "Tyler Allgeier",
+            "position": "RB",
+            "projection_source": "DFF",
+            "prediction": 5.9,
+            "actual": 36.6,
+            "projection_band": "5 to under 10",
+            "projected_minutes_band": "unknown",
+            "error": -30.700000000000003
+          },
+          {
+            "player": "Joe Burrow",
+            "position": "QB",
+            "projection_source": "DFF + DraftEdge average",
+            "prediction": 21.35,
+            "actual": 45.48,
+            "projection_band": "20+",
+            "projected_minutes_band": "unknown",
+            "error": -24.129999999999995
+          },
+          {
+            "player": "Emmett Johnson",
+            "position": "RB",
+            "projection_source": "DFF",
+            "prediction": 3.5,
+            "actual": 25.8,
+            "projection_band": "under 5",
+            "projected_minutes_band": "unknown",
+            "error": -22.3
+          },
+          {
+            "player": "Adonai Mitchell",
+            "position": "WR",
+            "projection_source": "DFF",
+            "prediction": 4.6,
+            "actual": 26.7,
+            "projection_band": "under 5",
+            "projected_minutes_band": "unknown",
+            "error": -22.1
+          },
+          {
+            "player": "Tee Higgins",
+            "position": "WR",
+            "projection_source": "DFF",
+            "prediction": 14.3,
+            "actual": 35.5,
+            "projection_band": "10 to under 20",
+            "projected_minutes_band": "unknown",
+            "error": -21.2
+          },
+          {
+            "player": "Lamar Jackson",
+            "position": "QB",
+            "projection_source": "DFF",
+            "prediction": 20.3,
+            "actual": 0.0,
+            "projection_band": "20+",
+            "projected_minutes_band": "unknown",
+            "error": 20.3
+          },
+          {
+            "player": "Zay Flowers",
+            "position": "WR",
+            "projection_source": "DFF + DraftEdge average",
+            "prediction": 17.55,
+            "actual": 0.0,
+            "projection_band": "10 to under 20",
+            "projected_minutes_band": "unknown",
+            "error": 17.55
+          },
+          {
+            "player": "Tony Pollard",
+            "position": "RB",
+            "projection_source": "DFF",
+            "prediction": 12.9,
+            "actual": 30.2,
+            "projection_band": "10 to under 20",
+            "projected_minutes_band": "unknown",
+            "error": -17.299999999999997
+          },
+          {
+            "player": "Bhayshul Tuten",
+            "position": "RB",
+            "projection_source": "DFF",
+            "prediction": 14.7,
+            "actual": 31.9,
+            "projection_band": "10 to under 20",
+            "projected_minutes_band": "unknown",
+            "error": -17.2
+          },
+          {
+            "player": "Cam Ward",
+            "position": "QB",
+            "projection_source": "DFF",
+            "prediction": 12.9,
+            "actual": 29.26,
+            "projection_band": "10 to under 20",
+            "projected_minutes_band": "unknown",
+            "error": -16.36
+          }
+        ]
+      },
+      "limitations": [
+        "Hindsight scores diagnose builder coverage and selection opportunity; they cannot select future lineups. Candidate ranks give tied scores the same first rank.",
+        "Single-candidate ranks remove all exported own entries then insert one candidate; these prizes are not joint portfolio returns.",
+        "Exposure/stack/uniqueness constraints may prevent combining hindsight best candidates into a legal portfolio.",
+        "Missing player actuals stay unknown; unsupported candidates are excluded, never zero-filled.",
+        "Entry rows retain published points even when their lineup text is blank. Standings scores are user-asserted final.",
+        "No model parameters, rankings or candidate generation changed."
+      ]
+    },
+    {
+      "schema": 1,
+      "platform": "FanDuel",
+      "format": "fd_single",
+      "contest_id": "136032-281318044",
+      "source_hashes": {
+        "build": "487f6691eaf463de87115befc03ee2a798369f1dfc865d3b9fe28daffc292f45",
+        "standings": "d25333ef5c7afdfbb3741f55a64efc95268889fe78c7bce864337997be1e6d17"
+      },
+      "sport": "NFL",
+      "selection_evidence": "no final export available",
+      "scored_entries_in_reference": 47819,
+      "opponents_after_removing_exported_entries": 47819,
+      "candidate_pool": {
+        "saved": 3782,
+        "fully_scored": 3782,
+        "unscored_missing_actuals": 0,
+        "missing_actual_players_by_candidate_count": {},
+        "actual_top1_candidates": 21,
+        "actual_top10_candidates": 240,
+        "positive_prize_candidates": 593
+      },
+      "hindsight_best_single_candidate": {
+        "points": 86.48,
+        "standalone_rank": 1,
+        "standalone_prize": 350.0,
+        "pregame_top1_rank": 1187,
+        "roster": {
+          "MVP": "Drew Stevens",
+          "FLEX1": "Jayden Daniels",
+          "FLEX2": "Washington Commanders",
+          "FLEX3": "Treylon Burks",
+          "FLEX4": "Rachaad White",
+          "FLEX5": "Saquon Barkley"
+        }
+      },
+      "exported_portfolio": null,
+      "player_errors": {
+        "overall": {
+          "rows": 29,
+          "mae": 2.4413793103448276,
+          "rmse": 3.1733814772258313,
+          "bias_prediction_minus_actual": 0.12275862068965501
+        },
+        "groups": {
+          "position": {
+            "D": {
+              "rows": 2,
+              "mae": 3.48,
+              "rmse": 3.9225629376722564,
+              "bias_prediction_minus_actual": -1.81
+            },
+            "K": {
+              "rows": 2,
+              "mae": 4.680000000000001,
+              "rmse": 5.669426778784607,
+              "bias_prediction_minus_actual": -3.2
+            },
+            "QB": {
+              "rows": 2,
+              "mae": 4.297499999999999,
+              "rmse": 4.305509551725556,
+              "bias_prediction_minus_actual": 4.297499999999999
+            },
+            "RB": {
+              "rows": 6,
+              "mae": 1.3699999999999999,
+              "rmse": 1.4964847699414339,
+              "bias_prediction_minus_actual": -0.8633333333333332
+            },
+            "TE": {
+              "rows": 8,
+              "mae": 2.244375,
+              "rmse": 3.1645146744801167,
+              "bias_prediction_minus_actual": 0.8643750000000001
+            },
+            "WR": {
+              "rows": 9,
+              "mae": 2.19,
+              "rmse": 2.7153370979595803,
+              "bias_prediction_minus_actual": 0.36111111111111105
+            }
+          },
+          "projection_source": {
+            "DFF": {
+              "rows": 27,
+              "mae": 2.268518518518519,
+              "rmse": 3.0144325674500836,
+              "bias_prediction_minus_actual": -0.22185185185185194
+            },
+            "DFF + DraftEdge average": {
+              "rows": 2,
+              "mae": 4.775,
+              "rmse": 4.83200010347682,
+              "bias_prediction_minus_actual": 4.775
+            }
+          },
+          "projection_band": {
+            "10 to under 20": {
+              "rows": 5,
+              "mae": 3.5239999999999996,
+              "rmse": 3.8449070209824314,
+              "bias_prediction_minus_actual": 2.1199999999999997
+            },
+            "5 to under 10": {
+              "rows": 8,
+              "mae": 3.2837500000000004,
+              "rmse": 3.995533443734391,
+              "bias_prediction_minus_actual": -0.6712499999999999
+            },
+            "under 5": {
+              "rows": 16,
+              "mae": 1.681875,
+              "rmse": 2.3770951285129502,
+              "bias_prediction_minus_actual": -0.104375
+            }
+          },
+          "projected_minutes_band": {
+            "unknown": {
+              "rows": 29,
+              "mae": 2.4413793103448276,
+              "rmse": 3.1733814772258313,
+              "bias_prediction_minus_actual": 0.12275862068965501
+            }
+          }
+        },
+        "largest_absolute_errors": [
+          {
+            "player": "Drew Stevens",
+            "position": "K",
+            "projection_source": "DFF",
+            "prediction": 8.12,
+            "actual": 16.0,
+            "projection_band": "5 to under 10",
+            "projected_minutes_band": "unknown",
+            "error": -7.880000000000001
+          },
+          {
+            "player": "Treylon Burks",
+            "position": "WR",
+            "projection_source": "DFF",
+            "prediction": 4.02,
+            "actual": 9.6,
+            "projection_band": "under 5",
+            "projected_minutes_band": "unknown",
+            "error": -5.58
+          },
+          {
+            "player": "Eli Stowers",
+            "position": "TE",
+            "projection_source": "DFF",
+            "prediction": 1.28,
+            "actual": 6.8,
+            "projection_band": "under 5",
+            "projected_minutes_band": "unknown",
+            "error": -5.52
+          },
+          {
+            "player": "Dallas Goedert",
+            "position": "TE",
+            "projection_source": "DFF + DraftEdge average",
+            "prediction": 10.715,
+            "actual": 5.2,
+            "projection_band": "10 to under 20",
+            "projected_minutes_band": "unknown",
+            "error": 5.515
+          },
+          {
+            "player": "Washington Commanders",
+            "position": "D",
+            "projection_source": "DFF",
+            "prediction": 7.71,
+            "actual": 13.0,
+            "projection_band": "5 to under 10",
+            "projected_minutes_band": "unknown",
+            "error": -5.29
+          },
+          {
+            "player": "Tanner McKee",
+            "position": "QB",
+            "projection_source": "DFF",
+            "prediction": 12.54,
+            "actual": 7.98,
+            "projection_band": "10 to under 20",
+            "projected_minutes_band": "unknown",
+            "error": 4.559999999999999
+          },
+          {
+            "player": "Chig Okonkwo",
+            "position": "TE",
+            "projection_source": "DFF",
+            "prediction": 6.36,
+            "actual": 2.2,
+            "projection_band": "5 to under 10",
+            "projected_minutes_band": "unknown",
+            "error": 4.16
+          },
+          {
+            "player": "Jayden Daniels",
+            "position": "QB",
+            "projection_source": "DFF + DraftEdge average",
+            "prediction": 19.015,
+            "actual": 14.98,
+            "projection_band": "10 to under 20",
+            "projected_minutes_band": "unknown",
+            "error": 4.035
+          },
+          {
+            "player": "Dyami Brown",
+            "position": "WR",
+            "projection_source": "DFF",
+            "prediction": 3.3,
+            "actual": 0.0,
+            "projection_band": "under 5",
+            "projected_minutes_band": "unknown",
+            "error": 3.3
+          },
+          {
+            "player": "Darius Cooper",
+            "position": "WR",
+            "projection_source": "DFF",
+            "prediction": 6.04,
+            "actual": 2.9,
+            "projection_band": "5 to under 10",
+            "projected_minutes_band": "unknown",
+            "error": 3.14
+          }
+        ]
+      },
+      "limitations": [
+        "Hindsight scores diagnose builder coverage and selection opportunity; they cannot select future lineups. Candidate ranks give tied scores the same first rank.",
+        "Single-candidate ranks remove all exported own entries then insert one candidate; these prizes are not joint portfolio returns.",
+        "Exposure/stack/uniqueness constraints may prevent combining hindsight best candidates into a legal portfolio.",
+        "Missing player actuals stay unknown; unsupported candidates are excluded, never zero-filled.",
+        "Entry rows retain published points even when their lineup text is blank. Standings scores are user-asserted final.",
+        "No model parameters, rankings or candidate generation changed."
+      ]
+    },
+    {
+      "schema": 1,
+      "platform": "DraftKings",
+      "format": "nba_dk",
+      "contest_id": "197321900",
+      "source_hashes": {
+        "build": "ea673b2cc9ce82594763bcd9cc5fc3897e65a6d613a1f51cced429a9414d589d",
+        "standings": "6a5030036ed2b3364bf5ad021af75c8e15033904946a453f09255b3d8261cd68"
+      },
+      "sport": "NBA",
+      "selection_evidence": "downloaded export differs from some final entered rosters; evaluate frozen selection separately",
+      "scored_entries_in_reference": 2972,
+      "opponents_after_removing_exported_entries": 2955,
+      "candidate_pool": {
+        "saved": 5000,
+        "fully_scored": 1023,
+        "unscored_missing_actuals": 3977,
+        "missing_actual_players_by_candidate_count": {
+          "Bruce Thornton": 2331,
+          "Jae'Sean Tate": 1573,
+          "Cody Williams": 1381,
+          "Micah Peavy": 448,
+          "Kris Murray": 152,
+          "Alex Karaban": 32
+        },
+        "actual_top1_candidates": 1,
+        "actual_top10_candidates": 4,
+        "positive_prize_candidates": 28
+      },
+      "hindsight_best_single_candidate": {
+        "points": 321.25,
+        "standalone_rank": 25,
+        "standalone_prize": 0.5,
+        "pregame_top1_rank": 552,
+        "roster": {
+          "PG": "Jeremiah Fears",
+          "SG": "Ayo Dosunmu",
+          "SF": "Saddiq Bey",
+          "PF": "Cameron Boozer",
+          "C": "Victor Wembanyama",
+          "G": "James Harden",
+          "F": "Karlo Matkovic",
+          "UTIL": "Jonathan Mogbo"
+        }
+      },
+      "exported_portfolio": {
+        "entries": 17,
+        "fully_scored_saved_candidates": 16,
+        "unscored_or_outside_pool_entries": 1,
+        "missing_published_player_scores": [
+          "Bruce Thornton"
+        ],
+        "all_match_saved_candidates": true,
+        "final_standings_roster_matches": 0,
+        "final_entered_best_points": 295.5,
+        "best_actual_points": 279.75,
+        "best_standalone_rank": 538,
+        "top1_entries": 0,
+        "top10_entries": 0,
+        "positive_prize_standalone_entries": 2,
+        "best_hindsight_candidate_rank": 18,
+        "median_hindsight_candidate_rank": 156.5,
+        "hindsight_top20_candidates_selected": 1,
+        "mean_saved_top1_probability": 0.16288080862716675
+      },
+      "player_errors": {
+        "overall": {
+          "rows": 96,
+          "mae": 9.638125,
+          "rmse": 11.865627002677384,
+          "bias_prediction_minus_actual": 2.2747916666666663
+        },
+        "groups": {
+          "position": {
+            "C": {
+              "rows": 13,
+              "mae": 9.75,
+              "rmse": 11.570130309750853,
+              "bias_prediction_minus_actual": 2.7484615384615383
+            },
+            "PF": {
+              "rows": 5,
+              "mae": 7.541999999999999,
+              "rmse": 10.328631080641808,
+              "bias_prediction_minus_actual": 6.653999999999999
+            },
+            "PF/C": {
+              "rows": 11,
+              "mae": 11.759999999999998,
+              "rmse": 13.418792792200048,
+              "bias_prediction_minus_actual": -1.6927272727272729
+            },
+            "PG": {
+              "rows": 10,
+              "mae": 9.879999999999999,
+              "rmse": 10.449845931878611,
+              "bias_prediction_minus_actual": 2.183999999999999
+            },
+            "PG/SF": {
+              "rows": 2,
+              "mae": 9.854999999999999,
+              "rmse": 10.096487012817873,
+              "bias_prediction_minus_actual": -2.1949999999999985
+            },
+            "PG/SG": {
+              "rows": 13,
+              "mae": 12.858461538461539,
+              "rmse": 16.752989629867905,
+              "bias_prediction_minus_actual": 1.6415384615384612
+            },
+            "SF": {
+              "rows": 5,
+              "mae": 9.132,
+              "rmse": 9.900630282966835,
+              "bias_prediction_minus_actual": 9.132
+            },
+            "SF/PF": {
+              "rows": 16,
+              "mae": 6.383750000000001,
+              "rmse": 7.799661851644596,
+              "bias_prediction_minus_actual": -1.09375
+            },
+            "SG": {
+              "rows": 8,
+              "mae": 10.767500000000002,
+              "rmse": 12.538863584870839,
+              "bias_prediction_minus_actual": 8.555000000000001
+            },
+            "SG/SF": {
+              "rows": 13,
+              "mae": 8.602307692307692,
+              "rmse": 11.080161412320532,
+              "bias_prediction_minus_actual": 2.508461538461538
+            }
+          },
+          "projection_source": {
+            "RotoWire": {
+              "rows": 96,
+              "mae": 9.638125,
+              "rmse": 11.865627002677384,
+              "bias_prediction_minus_actual": 2.2747916666666663
+            }
+          },
+          "projection_band": {
+            "10 to under 20": {
+              "rows": 22,
+              "mae": 9.012272727272727,
+              "rmse": 10.819749408961709,
+              "bias_prediction_minus_actual": -0.3422727272727272
+            },
+            "20+": {
+              "rows": 63,
+              "mae": 10.362063492063491,
+              "rmse": 12.688710955581174,
+              "bias_prediction_minus_actual": 4.175714285714284
+            },
+            "5 to under 10": {
+              "rows": 7,
+              "mae": 6.671428571428572,
+              "rmse": 8.535547517797053,
+              "bias_prediction_minus_actual": -1.3828571428571428
+            },
+            "under 5": {
+              "rows": 4,
+              "mae": 6.870000000000001,
+              "rmse": 8.477355129991901,
+              "bias_prediction_minus_actual": -6.870000000000001
+            }
+          },
+          "projected_minutes_band": {
+            "16 to under 28": {
+              "rows": 31,
+              "mae": 8.854193548387098,
+              "rmse": 10.188996911596163,
+              "bias_prediction_minus_actual": 1.5554838709677419
+            },
+            "28+": {
+              "rows": 47,
+              "mae": 10.696382978723403,
+              "rmse": 13.299082115183099,
+              "bias_prediction_minus_actual": 4.774255319148936
+            },
+            "under 16": {
+              "rows": 18,
+              "mae": 8.225000000000001,
+              "rmse": 10.501772601698143,
+              "bias_prediction_minus_actual": -3.0127777777777776
+            }
+          }
+        },
+        "largest_absolute_errors": [
+          {
+            "player": "Ty Jerome",
+            "position": "PG/SG",
+            "projection_source": "RotoWire",
+            "prediction": 37.82,
+            "actual": 0.0,
+            "projection_band": "20+",
+            "projected_minutes_band": "28+",
+            "error": 37.82
+          },
+          {
+            "player": "Cam Spencer",
+            "position": "PG/SG",
+            "projection_source": "RotoWire",
+            "prediction": 14.59,
+            "actual": 40.25,
+            "projection_band": "10 to under 20",
+            "projected_minutes_band": "under 16",
+            "error": -25.66
+          },
+          {
+            "player": "Jabari Smith Jr.",
+            "position": "PF/C",
+            "projection_source": "RotoWire",
+            "prediction": 28.19,
+            "actual": 53.25,
+            "projection_band": "20+",
+            "projected_minutes_band": "28+",
+            "error": -25.06
+          },
+          {
+            "player": "Stephon Castle",
+            "position": "SG",
+            "projection_source": "RotoWire",
+            "prediction": 35.35,
+            "actual": 12.75,
+            "projection_band": "20+",
+            "projected_minutes_band": "28+",
+            "error": 22.6
+          },
+          {
+            "player": "Zach LaVine",
+            "position": "SG/SF",
+            "projection_source": "RotoWire",
+            "prediction": 33.89,
+            "actual": 11.5,
+            "projection_band": "20+",
+            "projected_minutes_band": "28+",
+            "error": 22.39
+          },
+          {
+            "player": "Jalen Johnson",
+            "position": "PF",
+            "projection_source": "RotoWire",
+            "prediction": 49.66,
+            "actual": 28.25,
+            "projection_band": "20+",
+            "projected_minutes_band": "28+",
+            "error": 21.409999999999997
+          },
+          {
+            "player": "Amen Thompson",
+            "position": "PG/SG",
+            "projection_source": "RotoWire",
+            "prediction": 36.52,
+            "actual": 15.25,
+            "projection_band": "20+",
+            "projected_minutes_band": "28+",
+            "error": 21.270000000000003
+          },
+          {
+            "player": "Ayo Dosunmu",
+            "position": "SG/SF",
+            "projection_source": "RotoWire",
+            "prediction": 27.73,
+            "actual": 48.25,
+            "projection_band": "20+",
+            "projected_minutes_band": "28+",
+            "error": -20.52
+          },
+          {
+            "player": "Victor Wembanyama",
+            "position": "C",
+            "projection_source": "RotoWire",
+            "prediction": 51.64,
+            "actual": 71.75,
+            "projection_band": "20+",
+            "projected_minutes_band": "28+",
+            "error": -20.11
+          },
+          {
+            "player": "Donovan Mitchell",
+            "position": "SG",
+            "projection_source": "RotoWire",
+            "prediction": 43.67,
+            "actual": 24.5,
+            "projection_band": "20+",
+            "projected_minutes_band": "28+",
+            "error": 19.17
+          }
+        ]
+      },
+      "limitations": [
+        "Hindsight scores diagnose builder coverage and selection opportunity; they cannot select future lineups. Candidate ranks give tied scores the same first rank.",
+        "Single-candidate ranks remove all exported own entries then insert one candidate; these prizes are not joint portfolio returns.",
+        "Exposure/stack/uniqueness constraints may prevent combining hindsight best candidates into a legal portfolio.",
+        "Missing player actuals stay unknown; unsupported candidates are excluded, never zero-filled.",
+        "Entry rows retain published points even when their lineup text is blank. Standings scores are user-asserted final.",
+        "No model parameters, rankings or candidate generation changed."
+      ]
+    },
+    {
+      "schema": 1,
+      "platform": "FanDuel",
+      "format": "nba_fd",
+      "contest_id": "136092-281336090",
+      "source_hashes": {
+        "build": "16ccabe1f1d83f7e32e07c9f61750312f8f4394239a75b8f6300ed69b9095b77",
+        "standings": "e48badff5c892572d87c02755731ff90f28a453f38dd9c01a633263b3575f9ee"
+      },
+      "sport": "NBA",
+      "selection_evidence": "build-time portfolio only; final submission and own entry identities unverified",
+      "scored_entries_in_reference": 66084,
+      "opponents_after_removing_exported_entries": 66084,
+      "candidate_pool": {
+        "saved": 5000,
+        "fully_scored": 5000,
+        "unscored_missing_actuals": 0,
+        "missing_actual_players_by_candidate_count": {},
+        "actual_top1_candidates": 1,
+        "actual_top10_candidates": 39,
+        "positive_prize_candidates": 300
+      },
+      "hindsight_best_single_candidate": {
+        "points": 357.8,
+        "standalone_rank": 617,
+        "standalone_prize": 0.20000000000004547,
+        "pregame_top1_rank": 97,
+        "roster": {
+          "PG": "Jeremiah Fears",
+          "SG": "Cedric Coward",
+          "SF": "Brandon Miller",
+          "PF": "Cameron Boozer",
+          "C": "Victor Wembanyama",
+          "GF": "Tyrese Maxey",
+          "FC": "Dean Wade",
+          "UTIL1": "Kingston Flemings",
+          "UTIL2": "Adem Bona"
+        }
+      },
+      "exported_portfolio": {
+        "entries": 11,
+        "fully_scored_saved_candidates": 11,
+        "unscored_or_outside_pool_entries": 0,
+        "missing_published_player_scores": [],
+        "all_match_saved_candidates": true,
+        "final_standings_roster_matches": null,
+        "final_entered_best_points": null,
+        "best_actual_points": 298.6,
+        "best_standalone_rank": 24844,
+        "top1_entries": 0,
+        "top10_entries": 0,
+        "positive_prize_standalone_entries": 0,
+        "best_hindsight_candidate_rank": 368,
+        "median_hindsight_candidate_rank": 1766.0,
+        "hindsight_top20_candidates_selected": 0,
+        "mean_saved_top1_probability": 0.060068810332644246
+      },
+      "player_errors": {
+        "overall": {
+          "rows": 120,
+          "mae": 8.936666666666667,
+          "rmse": 11.273851308817823,
+          "bias_prediction_minus_actual": 2.1566666666666667
+        },
+        "groups": {
+          "position": {
+            "C": {
+              "rows": 19,
+              "mae": 10.41736842105263,
+              "rmse": 12.93410485580864,
+              "bias_prediction_minus_actual": 1.7089473684210532
+            },
+            "C/PF": {
+              "rows": 3,
+              "mae": 10.16,
+              "rmse": 11.341678300263444,
+              "bias_prediction_minus_actual": 1.3133333333333315
+            },
+            "PF": {
+              "rows": 12,
+              "mae": 9.249999999999998,
+              "rmse": 11.656182193725925,
+              "bias_prediction_minus_actual": 1.1116666666666666
+            },
+            "PF/C": {
+              "rows": 3,
+              "mae": 5.613333333333332,
+              "rmse": 6.657461978862515,
+              "bias_prediction_minus_actual": 5.613333333333332
+            },
+            "PF/SF": {
+              "rows": 3,
+              "mae": 6.6833333333333345,
+              "rmse": 8.04220740841717,
+              "bias_prediction_minus_actual": -0.6500000000000004
+            },
+            "PG": {
+              "rows": 19,
+              "mae": 8.292105263157895,
+              "rmse": 9.772733550682306,
+              "bias_prediction_minus_actual": 0.3152631578947371
+            },
+            "PG/SG": {
+              "rows": 1,
+              "mae": 37.1,
+              "rmse": 37.1,
+              "bias_prediction_minus_actual": 37.1
+            },
+            "SF": {
+              "rows": 21,
+              "mae": 6.178571428571429,
+              "rmse": 7.925707118821219,
+              "bias_prediction_minus_actual": 1.2204761904761905
+            },
+            "SF/PF": {
+              "rows": 3,
+              "mae": 6.033333333333334,
+              "rmse": 6.432039593576313,
+              "bias_prediction_minus_actual": 6.033333333333334
+            },
+            "SF/SG": {
+              "rows": 3,
+              "mae": 5.466666666666668,
+              "rmse": 5.825215303603236,
+              "bias_prediction_minus_actual": 3.686666666666666
+            },
+            "SG": {
+              "rows": 21,
+              "mae": 10.216190476190476,
+              "rmse": 12.11490109622974,
+              "bias_prediction_minus_actual": 2.105714285714286
+            },
+            "SG/PG": {
+              "rows": 8,
+              "mae": 13.254999999999999,
+              "rmse": 14.98454120085096,
+              "bias_prediction_minus_actual": 5.117500000000001
+            },
+            "SG/SF": {
+              "rows": 4,
+              "mae": 4.155000000000001,
+              "rmse": 5.375039534738327,
+              "bias_prediction_minus_actual": 2.78
+            }
+          },
+          "projection_source": {
+            "RotoWire": {
+              "rows": 120,
+              "mae": 8.936666666666667,
+              "rmse": 11.273851308817823,
+              "bias_prediction_minus_actual": 2.1566666666666667
+            }
+          },
+          "projection_band": {
+            "10 to under 20": {
+              "rows": 28,
+              "mae": 8.705357142857144,
+              "rmse": 10.31182902579086,
+              "bias_prediction_minus_actual": 1.5425
+            },
+            "20+": {
+              "rows": 75,
+              "mae": 9.730533333333334,
+              "rmse": 12.308311067458986,
+              "bias_prediction_minus_actual": 3.3635999999999995
+            },
+            "5 to under 10": {
+              "rows": 10,
+              "mae": 5.8420000000000005,
+              "rmse": 7.267782330257285,
+              "bias_prediction_minus_actual": -0.15400000000000008
+            },
+            "under 5": {
+              "rows": 7,
+              "mae": 5.777142857142857,
+              "rmse": 7.4096867101691375,
+              "bias_prediction_minus_actual": -5.017142857142857
+            }
+          },
+          "projected_minutes_band": {
+            "16 to under 28": {
+              "rows": 36,
+              "mae": 8.429444444444444,
+              "rmse": 9.783664389628708,
+              "bias_prediction_minus_actual": 1.916666666666667
+            },
+            "28+": {
+              "rows": 57,
+              "mae": 10.111578947368422,
+              "rmse": 12.971591496994971,
+              "bias_prediction_minus_actual": 4.1957894736842105
+            },
+            "under 16": {
+              "rows": 27,
+              "mae": 7.1325925925925935,
+              "rmse": 9.05763234535956,
+              "bias_prediction_minus_actual": -1.828148148148148
+            }
+          }
+        },
+        "largest_absolute_errors": [
+          {
+            "player": "Ty Jerome",
+            "position": "PG/SG",
+            "projection_source": "RotoWire",
+            "prediction": 37.1,
+            "actual": 0.0,
+            "projection_band": "20+",
+            "projected_minutes_band": "28+",
+            "error": 37.1
+          },
+          {
+            "player": "Rudy Gobert",
+            "position": "C",
+            "projection_source": "RotoWire",
+            "prediction": 30.24,
+            "actual": 0.0,
+            "projection_band": "20+",
+            "projected_minutes_band": "28+",
+            "error": 30.24
+          },
+          {
+            "player": "Victor Wembanyama",
+            "position": "C",
+            "projection_source": "RotoWire",
+            "prediction": 50.84,
+            "actual": 75.4,
+            "projection_band": "20+",
+            "projected_minutes_band": "28+",
+            "error": -24.560000000000002
+          },
+          {
+            "player": "Cam Spencer",
+            "position": "SG",
+            "projection_source": "RotoWire",
+            "prediction": 14.16,
+            "actual": 38.5,
+            "projection_band": "10 to under 20",
+            "projected_minutes_band": "under 16",
+            "error": -24.34
+          },
+          {
+            "player": "Jabari Smith",
+            "position": "PF",
+            "projection_source": "RotoWire",
+            "prediction": 27.16,
+            "actual": 50.3,
+            "projection_band": "20+",
+            "projected_minutes_band": "28+",
+            "error": -23.139999999999997
+          },
+          {
+            "player": "Zach LaVine",
+            "position": "SG",
+            "projection_source": "RotoWire",
+            "prediction": 32.6,
+            "actual": 10.5,
+            "projection_band": "20+",
+            "projected_minutes_band": "28+",
+            "error": 22.1
+          },
+          {
+            "player": "Stephon Castle",
+            "position": "SG/PG",
+            "projection_source": "RotoWire",
+            "prediction": 33.94,
+            "actual": 12.0,
+            "projection_band": "20+",
+            "projected_minutes_band": "28+",
+            "error": 21.939999999999998
+          },
+          {
+            "player": "Jalen Johnson",
+            "position": "PF",
+            "projection_source": "RotoWire",
+            "prediction": 47.6,
+            "actual": 26.4,
+            "projection_band": "20+",
+            "projected_minutes_band": "28+",
+            "error": 21.200000000000003
+          },
+          {
+            "player": "Ayo Dosunmu",
+            "position": "SG/PG",
+            "projection_source": "RotoWire",
+            "prediction": 27.13,
+            "actual": 48.3,
+            "projection_band": "20+",
+            "projected_minutes_band": "28+",
+            "error": -21.169999999999998
+          },
+          {
+            "player": "Amen Thompson",
+            "position": "SG/PG",
+            "projection_source": "RotoWire",
+            "prediction": 36.46,
+            "actual": 16.1,
+            "projection_band": "20+",
+            "projected_minutes_band": "28+",
+            "error": 20.36
+          }
+        ]
+      },
+      "limitations": [
+        "Hindsight scores diagnose builder coverage and selection opportunity; they cannot select future lineups. Candidate ranks give tied scores the same first rank.",
+        "Single-candidate ranks remove all exported own entries then insert one candidate; these prizes are not joint portfolio returns.",
+        "Exposure/stack/uniqueness constraints may prevent combining hindsight best candidates into a legal portfolio.",
+        "Missing player actuals stay unknown; unsupported candidates are excluded, never zero-filled.",
+        "Entry rows retain published points even when their lineup text is blank. Standings scores are user-asserted final.",
+        "No model parameters, rankings or candidate generation changed."
+      ]
+    }
+  ]
+}

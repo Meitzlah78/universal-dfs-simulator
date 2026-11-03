@@ -39,3 +39,5 @@ jobs:
       - name: Verify Classic opponent construction
         run: python -m unittest discover -s tests -p test_classic_field.py -v
 
+      - name: Verify NFL and NBA builder-selector replay audits
+        run: python -m unittest discover -s tests -p test_builder_selector_audit.py -v
