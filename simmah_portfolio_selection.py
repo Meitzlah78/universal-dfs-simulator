@@ -7,7 +7,7 @@ import math
 import numpy as np
 import pandas as pd
 
-SELECTION_VERSION = 'quality-role-exposure-v3'
+SELECTION_VERSION = 'quality-role-exposure-v4-lp-repair'
 
 
 def select_portfolio(candidates, slots, count, metric, controls=None, default_max=80, diversity=None):
@@ -160,6 +160,42 @@ def _spread_repaired_portfolio(chosen,incidence,picks,lower,upper,utility,finite
     return chosen
 
 
+
+def _lp_supported_repair(matrix,lower,upper,count,objective,finite):
+    """Find a small quality-informed support before a large binary search.
+
+    A fractional relaxation never becomes a returned portfolio. Solve the
+    supported integer problem and validate it against ALL original constraints.
+    Support failure or either timeout falls back to the existing full search.
+    """
+    from scipy.optimize import linprog,milp,Bounds,LinearConstraint
+    from scipy.sparse import vstack
+    exposure=matrix[1:]
+    positive=lower>0
+    inequalities=vstack([exposure,-exposure[positive]],format='csc')
+    rhs=np.r_[upper,-lower[positive]]
+    relaxed=linprog(objective,A_ub=inequalities,b_ub=rhs,A_eq=matrix[:1],
+        b_eq=[count],bounds=np.column_stack([np.zeros(len(finite)),finite.astype(float)]),
+        method='highs',options={'time_limit':2.})
+    if relaxed.x is None:return None
+    support=np.flatnonzero((relaxed.x>1e-9)&finite)
+    if len(support)<count:return None
+    def validated(chosen):
+        if len(chosen)!=count or len(np.unique(chosen))!=count or not finite[chosen].all():return False
+        totals=np.asarray(exposure[:,chosen].sum(axis=1)).ravel()
+        return bool((totals>=lower).all() and (totals<=upper).all())
+    integer=np.flatnonzero(relaxed.x>1-1e-7)
+    if validated(integer):return integer.tolist()
+    solution=milp(objective[support],integrality=np.ones(len(support)),
+        bounds=Bounds(np.zeros(len(support)),np.ones(len(support))),
+        constraints=LinearConstraint(matrix[:,support],np.r_[count,lower],np.r_[count,upper]),
+        options={'time_limit':2.,'mip_rel_gap':.05})
+    if solution.x is not None:
+        chosen=support[np.flatnonzero(solution.x>.5)]
+        if validated(chosen):return chosen.tolist()
+    return None
+
+
 def _repair_portfolio(incidence,lower,upper,hard_upper,automatic,count,utility,finite,default_max):
     """Reconsider all early choices with a sparse integer feasibility solve.
 
@@ -177,6 +213,9 @@ def _repair_portfolio(incidence,lower,upper,hard_upper,automatic,count,utility,f
     for cap in cap_levels:
         current=upper.copy()
         current[automatic]=np.minimum(hard_upper[automatic],max(1,math.floor(count*cap/100+1e-9)))
+        if len(incidence)>512 and count>=20:
+            chosen=_lp_supported_repair(matrix,lower,current,count,objective,finite)
+            if chosen is not None:return chosen,cap
         solution=milp(objective,integrality=np.ones(len(incidence)),bounds=bounds,
             constraints=LinearConstraint(matrix,np.r_[count,lower],np.r_[count,current]),
             options={'time_limit':5.,'mip_rel_gap':.05})
@@ -250,3 +289,4 @@ def put_portfolio_first(candidates,selected,slots):
     selected_keys={tuple(row) for row in selected[slots].astype(str).itertuples(index=False,name=None)}
     rest=candidates.loc[[tuple(row) not in selected_keys for row in candidates[slots].astype(str).itertuples(index=False,name=None)]]
     return pd.concat([selected,rest],ignore_index=True)
+
