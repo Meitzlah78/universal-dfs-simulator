@@ -171,6 +171,9 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         diversity=st.slider('Exposure diversity',0,100,50,key='nba_exposure_diversity')
         st.caption('Hard portfolio caps: 60% overall; verified projected ownership + 5 percentage points where lower; below 16 projected minutes: 15%. Small portfolios round positive caps up to at least one entry. Caps never relax; selection/export stops if they cannot be met.')
         metric=st.selectbox('Rank lineups',['Top 1%','Expected ROI (%)','Expected Prize ($)'],key='nba_rank_metric')
+        from simmah_nba_parallel import worker_count
+        runtime_worker_limit=worker_count()
+        st.caption(f'Simulation worker limit on this host: {runtime_worker_limit}')
         clicked=workspace_button(st,'BUILD NBA LINEUPS',disabled=bool(error),key='nba_build')
         if error:
             st.error('NBA tournament build inputs need attention: '+error)
@@ -234,7 +237,8 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
                             {'input_identity':identity,'rank_metric_at_build':'Top 1%'},started_at=build_started_at,
                             engine_metadata={'rates':vars(engine.rates),'max_overtimes':engine.max_overtimes,
                                 'rotation_reconciliation':engine.rotation_reconciliation,
-                                'simulation_identity':engine.identity})
+                                'simulation_identity':engine.identity,'runtime_worker_limit':runtime_worker_limit,
+                                    'parallel_enabled':getattr(engine,'parallel',None),'scenario_cache_hits':built.get('scenario_cache_hits',0)})
                         built['diagnostic_package']=package_reference(package)
                         retain_package(st,package)
                         # Exact outcome arrays now live in the compressed package.

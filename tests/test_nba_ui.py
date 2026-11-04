@@ -14,6 +14,7 @@ class NBAWorkspaceTests(unittest.TestCase):
         errors=' '.join(x.value for x in at.error)
         self.assertIn('Player 0',errors);self.assertIn('Player 1',errors)
         self.assertEqual(at.session_state['test_build_calls'],0)
+        self.assertTrue(any('Simulation worker limit on this host:' in x.value for x in at.caption))
         self.assertTrue(any(button.proto.label=='DOWNLOAD SETUP DIAGNOSTIC PACKAGE' for button in at.get('download_button')))
         self.assertIn('nba_setup_diagnostic',at.session_state)
 
