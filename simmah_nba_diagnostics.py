@@ -168,6 +168,41 @@ def make_package(pool, built, template, contest, markets, settings, *, started_a
     return name,buf.getvalue(),manifest
 
 
+
+def make_selection_failure_package(pool,candidates,report,contest,settings,error):
+    """Selection-only evidence; preserve the failed pool without rerunning sims."""
+    from simmah_nba_portfolio_limits import portfolio_limits
+    from simmah_portfolio_selection import SELECTION_VERSION
+    if len(candidates)!=len(report):raise ValueError('Failed candidate scores are misaligned')
+    rules=rules_for(pool);stamp=datetime.now(timezone.utc)
+    files={
+        'inputs/player_pool.csv':pool.to_csv(index=False).encode('utf-8-sig'),
+        'inputs/player_pool.json':_json({'columns':list(pool.columns),
+            'rows':pool.to_dict(orient='records'),'attrs':pool.attrs}),
+        'inputs/contest.json':_json(contest),
+        'inputs/settings.json':_json(settings),
+        'inputs/hard_limits.json':_json(portfolio_limits(pool)),
+        'candidate_lineups.csv':_rosters(pool,candidates,rules['slots']).to_csv(index=False).encode('utf-8-sig'),
+        'candidate_scores.csv':report.to_csv(index=False).encode('utf-8-sig')}
+    root=Path(__file__).parent
+    for name in ('simmah_portfolio_selection.py','simmah_nba_portfolio_limits.py','simmah_nba_contest.py','simmah_exposure_limits.py'):
+        files['implementation/'+name]=(root/name).read_bytes()
+    manifest={'schema':1,'kind':'nba_portfolio_selection_failure','sport':'NBA',
+        'contest_id':str(contest['id']),'platform':rules['platform'],
+        'captured_at_utc':stamp.isoformat(),'selector_version':SELECTION_VERSION,
+        'failure_message':str(error),'candidate_count':len(candidates),
+        'requested_entries':settings['portfolio_count'],
+        'scope':'Exact failed portfolio-selection inputs; not a successful build or model-training result',
+        'files':{name:{'sha256':sha256(raw).hexdigest(),'bytes':len(raw)} for name,raw in files.items()}}
+    files['manifest.json']=_json(manifest)
+    buffer=io.BytesIO()
+    with zipfile.ZipFile(buffer,'w',zipfile.ZIP_DEFLATED,compresslevel=1) as archive:
+        for name,raw in files.items():archive.writestr(name,raw)
+    cid=re.sub(r'[^A-Za-z0-9_-]','_',str(contest['id']))
+    name=f'Simmah_NBA_{rules["platform"]}_{cid}_{stamp.strftime("%Y%m%dT%H%M%SZ")}_Portfolio_Failure.zip'
+    return name,buffer.getvalue(),manifest
+
+
 def retain_package(st, package):
     """Queue once for the existing private server/browser/optional-cloud archive."""
     name,raw,manifest=package
@@ -259,3 +294,4 @@ def make_setup_package(pool,template,contest,markets,error,*,source_root=None):
         for name,raw in files.items():bundle.writestr(name,raw)
     cid=re.sub(r'[^A-Za-z0-9_-]','_',str(contest['id']))
     return f'Simmah_NBA_{rules["platform"]}_{cid}_{stamp.strftime("%Y%m%dT%H%M%SZ")}_SETUP_DIAGNOSTIC.zip',buffer.getvalue(),manifest
+

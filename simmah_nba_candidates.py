@@ -4,7 +4,7 @@ from simmah_nba_rules import rules_for
 
 
 def build_candidates(pool,outcomes,target=5000,seed=83,salary_min=0,salary_cap=None,
-                     max_attempts=200000,batch_size=512,correlation=0,fixed_slots=None,excluded_indices=None):
+                     max_attempts=200000,batch_size=512,correlation=0,fixed_slots=None,excluded_indices=None,search_noise=.15):
     """Return original pool-row indices in uploaded slot order, never filler duplicates.
 
     Candidates use individual shared-slate outcomes plus modest search noise.
@@ -19,6 +19,7 @@ def build_candidates(pool,outcomes,target=5000,seed=83,salary_min=0,salary_cap=N
     if any(not isinstance(v,int) or v<1 for v in (target,max_attempts,batch_size)):
         raise ValueError('Positive integer search limits required')
     if not 0<=salary_min<=salary_cap:raise ValueError('Invalid salary range')
+    if not np.isfinite(search_noise) or not 0<=search_noise<=2:raise ValueError('Candidate search noise must be between 0 and 2')
     if not np.isfinite(correlation) or not 0<=correlation<=100:raise ValueError('Build correlation must be between 0 and 100')
     if pool['Player ID'].duplicated().any():raise ValueError('Duplicate NBA player IDs')
     projection=np.asarray(pool['Projection'],float)
@@ -78,7 +79,7 @@ def build_candidates(pool,outcomes,target=5000,seed=83,salary_min=0,salary_cap=N
         n=min(batch_size,max_attempts-attempted);attempted+=n
         score=values[rng.integers(len(values),size=n)].copy()
         scale=np.maximum(np.std(score,axis=1),1)
-        score+=rng.gumbel(size=score.shape)*scale[:,None]*.15
+        score+=rng.gumbel(size=score.shape)*scale[:,None]*search_noise
         chosen=np.full((n,size),-1,dtype=int);used=np.zeros((n,len(players)),bool)
         pair_bonus=np.zeros_like(score)
         spent=np.zeros(n);counts=np.zeros((n,teams.max()+1),int);alive=np.ones(n,bool)
@@ -134,3 +135,4 @@ def build_opponent_support(pool,outcomes,ownership,*,target=10000,seed=83):
     _,unique=np.unique(np.sort(rows,axis=1),axis=0,return_index=True)
     return {'indices':rows[np.sort(unique)][:target],
             'scenario_unique':scenario['unique'],'ownership_proposal_unique':broad['unique']}
+

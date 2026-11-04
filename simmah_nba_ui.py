@@ -12,7 +12,7 @@ from simmah_nba_projections import slate_date
 from simmah_nba_pregame import PregameEngine
 from simmah_nba_simulation_cache import CachedNBAOutcomes
 from simmah_nba_engine import EventRates
-from simmah_nba_pipeline import run_pipeline,export_portfolio
+from simmah_nba_pipeline import run_pipeline,export_portfolio,NBASelectionFailure
 from simmah_nba_contest import select_entries
 from simmah_nba_rosters import SLOT_COLUMNS
 from simmah_nba_rules import rules_for
@@ -199,6 +199,7 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
     identity=input_identity(pool,markets,contest,salary_min,correlation,pool.iloc[excluded]['Player ID'])
     saved=st.session_state.get('nba_build_result')
     if clicked:
+        st.session_state.pop('nba_selection_failure_package',None)
         build_started_clock=perf_counter()
         build_started_at=datetime.now(timezone.utc).isoformat()
         with tabs[2]:
@@ -238,6 +239,21 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
                 bar.progress(1.);message.success('NBA build complete')
             except Exception as exc:
                 st.error(f'NBA build stopped: {exc}')
+                if isinstance(exc,NBASelectionFailure):
+                    try:
+                        from simmah_nba_diagnostics import make_selection_failure_package,retain_package
+                        failed=make_selection_failure_package(pool,exc.candidates,exc.report,
+                            dict(contest,id=str(cid)),exc.settings,str(exc))
+                        st.session_state['nba_selection_failure_package']=failed
+                        retain_package(st,failed)
+                    except Exception as capture_error:
+                        st.warning('Could not preserve the failed portfolio: '+str(capture_error))
+    failed=st.session_state.get('nba_selection_failure_package')
+    if failed and failed[2]['contest_id']==str(cid):
+        with tabs[2]:
+            st.caption('Failed portfolio saved for diagnosis. Download it to share this exact build.')
+            workspace_download_button(st,'Download failed portfolio diagnostics',failed[1],failed[0],
+                'application/zip',key='nba_failed_portfolio_download_'+str(cid))
     with tabs[3]:
         from simmah_nba_late_swap import render_late_swap
         render_late_swap(st,pool,cid,salary_min,diversity,markets=markets,contest=contest,original_template=upload.getvalue())
@@ -271,6 +287,9 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
             st.caption('Build timing · '+total_note+ ' · '.join(label+f" {_timing[key]:.1f}s" for key,label in [('game_scenarios','Game scenarios'),('candidates','Candidates'),('opponent_field','Opponents'),('contest_scoring','Scoring')])+
                 f" · {built.get('scenario_cache_hits',0)}/3 scenario sets reused")
         render_exports(st,upload,cid,saved_pool,built,portfolio,platform,stale,'build',status_pool=pool,current_pool=export_pool,salary_min=salary_min,saved_contest_id=saved.get('contest_id',''))
+        if built.get('candidate_recovery'):
+            recovery=built['candidate_recovery']
+            st.caption(f"Added {recovery['added_candidates']:,} candidates to improve coverage under your exposure limits.")
         st.subheader('Candidate lineups')
         st.caption(f"{built['candidates']['unique']:,} unique candidates · {built['field']['entries']:,} modeled opponents · {built['field']['unique_rosters']:,} unique opponent rosters. Ownership and ROI are estimates.")
         candidate_rows=built['report'].copy()
@@ -313,6 +332,7 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         st.subheader('Player exposures')
         st.dataframe(exposure[['Name','Team','Injury Status','Lineups','Exposure %']],hide_index=True,width='stretch',key='nba_exposure_table',
                      column_config={'Name':st.column_config.TextColumn('Player',pinned=True)})
+
 
 
 

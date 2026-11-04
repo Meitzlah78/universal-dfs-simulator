@@ -1,5 +1,6 @@
 """Experimental NBA orchestration boundary; Streamlit-free and not live-enabled."""
 import numpy as np
+import pandas as pd
 from copy import deepcopy
 from time import perf_counter
 from simmah_nba_candidates import build_candidates,build_opponent_support
@@ -8,6 +9,15 @@ from simmah_nba_contest import evaluate_candidates,select_entries
 from simmah_nba_rosters import export_entries,SLOT_COLUMNS
 from simmah_nba_rules import rules_for
 from simmah_nba_pregame import validate_game_reports
+
+
+class NBASelectionFailure(ValueError):
+    """Preserve selection inputs when a completed simulation cannot select."""
+    def __init__(self,message,candidates,report,settings):
+        super().__init__(message)
+        self.candidates=candidates
+        self.report=report
+        self.settings=settings
 
 
 def run_pipeline(pool,outcome_factory,ownership,ownership_source,payouts,entry_fee,
@@ -108,12 +118,54 @@ def run_pipeline(pool,outcome_factory,ownership,ownership_source,payouts,entry_f
         construction_seed=seed,evaluation_seed=seed+2017,field_copies=field['copies'],score_ticks=rules_for(pool)['score_ticks'])
     timings['contest_scoring']=perf_counter()-started
     notify('Selecting portfolio')
-    if selection_mode=='flat_payout':
-        from simmah_nba_cash import select_flat_primary
-        portfolio=select_flat_primary(pool,candidates['indices'],report)
-    else:
-        portfolio=select_entries(pool,candidates['indices'],report,portfolio_count,diversity=diversity)
-    result={'selection_mode':selection_mode,'candidates':candidates,'field':field,'report':report,'portfolio':portfolio,
+    recovery=None
+    def select_current():
+        if selection_mode=='flat_payout':
+            from simmah_nba_cash import select_flat_primary
+            return select_flat_primary(pool,candidates['indices'],report)
+        return select_entries(pool,candidates['indices'],report,portfolio_count,diversity=diversity)
+    try:
+        try:portfolio=select_current()
+        except ValueError as exc:
+            repair_failure=str(exc).startswith(('Portfolio repair reached its search limit',
+                'No full unique portfolio satisfies the manual exposure limits'))
+            if selection_mode!='tournament' or not repair_failure:raise
+            notify('Expanding candidate coverage for exposure limits')
+            recovery_started=perf_counter()
+            # Search preference only: retain the same basketball outcomes,
+            # salary/position/team rules, exclusions and independent evaluation.
+            extras=build_candidates(pool,construction,target=1500,seed=seed+3001,
+                salary_min=salary_min,correlation=correlation,excluded_indices=excluded,search_noise=.6)
+            seen={tuple(sorted(row)) for row in candidates['indices']}
+            added=[]
+            for row in extras['indices']:
+                key=tuple(sorted(row))
+                if key not in seen:seen.add(key);added.append(row)
+            if not added:raise
+            added=np.asarray(added,dtype=int)
+            additional=evaluate_candidates(evaluation,added,field['indices'],payouts,entry_fee,
+                construction_seed=seed,evaluation_seed=seed+2017,field_copies=field['copies'],score_ticks=rules_for(pool)['score_ticks'])
+            attributes=dict(report.attrs)
+            report=pd.concat([report,additional],ignore_index=True)
+            report.attrs.update(attributes)
+            initial=len(candidates['indices'])
+            candidates=dict(candidates,indices=np.concatenate([candidates['indices'],added]),
+                initial_unique=initial,unique=initial+len(added),recovery_added=len(added),
+                complete=initial+len(added)>=candidate_target,
+                attempted=candidates['attempted']+extras['attempted'],
+                duplicates=candidates['duplicates']+extras['duplicates']+len(extras['indices'])-len(added),
+                rejected_incomplete_or_salary=candidates['rejected_incomplete_or_salary']+extras['rejected_incomplete_or_salary'])
+            recovery={'initial_candidates':initial,'added_candidates':len(added),'search_seed':seed+3001,
+                'search_noise':.6,'requested_extra':1500,'extra_attempted':extras['attempted'],'reason':str(exc)}
+            timings['candidate_recovery']=perf_counter()-recovery_started
+            portfolio=select_current()
+    except ValueError as exc:
+        raise NBASelectionFailure(str(exc),candidates['indices'],report,
+            {'portfolio_count':portfolio_count,'diversity':diversity,'metric':'Top 1%',
+             'selection_mode':selection_mode,'seed':seed,'salary_min':salary_min,
+             'candidate_recovery':recovery,'correlation':correlation,
+             'excluded_player_ids':pool.iloc[excluded]['Player ID'].astype(str).tolist()}) from exc
+    result={'candidate_recovery':recovery,'selection_mode':selection_mode,'candidates':candidates,'field':field,'report':report,'portfolio':portfolio,
             'timings_seconds':timings,'scenario_cache_hits':cache_hits,
             'excluded_player_ids':pool.iloc[excluded]['Player ID'].astype(str).tolist(),
             'simulation_seeds':{'construction':seed,'field':seed+1009,'evaluation':seed+2017},
@@ -126,7 +178,8 @@ def run_pipeline(pool,outcome_factory,ownership,ownership_source,payouts,entry_f
                 'field_support_target':field_support_target,'seed':seed,'diversity':diversity,
                 'salary_min':salary_min,'max_ownership_error':max_ownership_error,
                 'ownership_mode':ownership_mode,'ownership_source':ownership_source,
-                'correlation':correlation,'entry_fee':entry_fee,'portfolio_count':portfolio_count},
+                'correlation':correlation,'entry_fee':entry_fee,'portfolio_count':portfolio_count,
+                'candidate_recovery':recovery},
             'seeds':{'candidate_search':seed+1,'support_search':seed+1010,'field_copies':seed+1011}}
     return result
 
@@ -138,6 +191,7 @@ def export_portfolio(template,contest_id,pool,result,*,salary_min=0):
     validate_portfolio_limits(result['portfolio'],rules_for(pool)['slots'],limits)
     lineups=result['portfolio'][list(rules_for(pool)['slots'])].astype(str).to_numpy().tolist()
     return export_entries(template,lineups,contest_id,pool,salary_cap=rules_for(pool)['salary_cap'],max_from_team=rules_for(pool)['max_from_team'],salary_min=salary_min)
+
 
 
 
