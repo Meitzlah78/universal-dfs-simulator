@@ -3,6 +3,7 @@ from simmah_slate_workspaces import workspace_download_button
 """Experimental NBA workspace wiring; numerical work stays outside Streamlit."""
 import hashlib,json
 from datetime import datetime,timezone
+from time import perf_counter
 from pathlib import Path
 import numpy as np
 import pandas as pd
@@ -198,6 +199,7 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
     identity=input_identity(pool,markets,contest,salary_min,correlation,pool.iloc[excluded]['Player ID'])
     saved=st.session_state.get('nba_build_result')
     if clicked:
+        build_started_clock=perf_counter()
         build_started_at=datetime.now(timezone.utc).isoformat()
         with tabs[2]:
             message=st.empty();bar=st.progress(0)
@@ -229,6 +231,7 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
                     built.pop('diagnostics',None)
                 except Exception as exc:
                     st.warning('Lineups built, but diagnostic package capture failed: '+str(exc))
+                built['build_total_seconds']=perf_counter()-build_started_clock
                 saved={'identity':identity,'result':built,'engine_reports':reports,'pool':pool.copy(),'contest_id':cid,
                        'rotation_reconciliation':engine.rotation_reconciliation}
                 st.session_state['nba_build_result']=saved
@@ -264,7 +267,8 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         if stale:st.info('Inputs or build settings changed. Previous estimates remain visible; rebuild to update them. Export checks the saved lineups against current inputs.')
         if built.get('timings_seconds'):
             _timing=built['timings_seconds']
-            st.caption('Build timing · '+ ' · '.join(label+f" {_timing[key]:.1f}s" for key,label in [('game_scenarios','Game scenarios'),('candidates','Candidates'),('opponent_field','Opponents'),('contest_scoring','Scoring')])+
+            total_note=(f"Total {built['build_total_seconds']:.1f}s · " if 'build_total_seconds' in built else '')
+            st.caption('Build timing · '+total_note+ ' · '.join(label+f" {_timing[key]:.1f}s" for key,label in [('game_scenarios','Game scenarios'),('candidates','Candidates'),('opponent_field','Opponents'),('contest_scoring','Scoring')])+
                 f" · {built.get('scenario_cache_hits',0)}/3 scenario sets reused")
         render_exports(st,upload,cid,saved_pool,built,portfolio,platform,stale,'build',status_pool=pool,current_pool=export_pool,salary_min=salary_min,saved_contest_id=saved.get('contest_id',''))
         st.subheader('Candidate lineups')
@@ -309,6 +313,7 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         st.subheader('Player exposures')
         st.dataframe(exposure[['Name','Team','Injury Status','Lineups','Exposure %']],hide_index=True,width='stretch',key='nba_exposure_table',
                      column_config={'Name':st.column_config.TextColumn('Player',pinned=True)})
+
 
 
 

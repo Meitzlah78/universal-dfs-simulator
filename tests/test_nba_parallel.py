@@ -31,10 +31,24 @@ class ParallelTests(unittest.TestCase):
             engine(512,83)
             parallel.assert_not_called()
 
+    def test_extra_workers_require_cpu_and_memory_headroom(self):
+        def resource(path):
+            return '400000 100000' if str(path).endswith('cpu.max') else '2147483648'
+        cpu_api='os.process_cpu_count' if hasattr(__import__('os'),'process_cpu_count') else 'os.cpu_count'
+        with patch('simmah_nba_parallel.'+cpu_api,return_value=8),patch('simmah_nba_parallel.os.sched_getaffinity',return_value=set(range(8))),patch('simmah_nba_parallel.Path.read_text',autospec=True,side_effect=resource):
+            self.assertEqual(worker_count(),4)
+        def small(path):
+            return '400000 100000' if str(path).endswith('cpu.max') else '1073741824'
+        with patch('simmah_nba_parallel.'+cpu_api,return_value=8),patch('simmah_nba_parallel.os.sched_getaffinity',return_value=set(range(8))),patch('simmah_nba_parallel.Path.read_text',autospec=True,side_effect=small):
+            self.assertEqual(worker_count(),2)
+        with patch('simmah_nba_parallel.'+cpu_api,return_value=8),patch('simmah_nba_parallel.os.sched_getaffinity',return_value={0}),patch('simmah_nba_parallel.Path.read_text',autospec=True,side_effect=resource):
+            self.assertEqual(worker_count(),1)
+
     def test_workers_are_bounded_and_respect_quota(self):
         with patch('simmah_nba_parallel.Path.read_text',return_value='100000 100000'):
             self.assertEqual(worker_count(),1)
-        self.assertLessEqual(worker_count(),2)
+        self.assertLessEqual(worker_count(),4)
 
 
 if __name__=='__main__':unittest.main()
+

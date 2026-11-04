@@ -1,0 +1,95 @@
+{
+  "scope": "Offline six-game archived FanDuel pool. No provider fetch, browser rendering, cloud upload or live Streamlit SLA measured. Backend full run includes synthetic 101-entry export validation and local diagnostic ZIP capture.",
+  "fixture": "2026-10-31 FanDuel 136092-281336090 saved pool; 210 players; 71,856 contest capacity; synthetic 101 entry reservation for benchmark only",
+  "settings": {
+    "simulations_per_set": 10000,
+    "candidate_target": 5000,
+    "opponent_support_target": 10000,
+    "portfolio_entries": 101,
+    "seed": 83,
+    "diversity": 50,
+    "salary_min": 58000
+  },
+  "pipeline_before_two_workers": {
+    "seconds": 40.54972489600004,
+    "stage_seconds": {
+      "game_scenarios": 36.97673430099985,
+      "candidates": 0.10141158200008249,
+      "opponent_field": 0.15517976700016334,
+      "contest_scoring": 3.0176731730000483
+    },
+    "workers": 2,
+    "games": 6,
+    "simulations": 10000,
+    "candidate_target": 5000,
+    "opponent_support_target": 10000,
+    "portfolio_entries": 101,
+    "candidate_hash": "7ccfa4d83156d42c87455eb108beaa12c24f6803e6047a3fa8d5e65c0c8164e8",
+    "report_hash": "340292d7419c6f2b4aa03ed630604a8bf9132b2b033d52f38e8b684678013033",
+    "portfolio_hash": "7a5a48c88ed8451c35755ef437be824a91452d71e59f12d1cdd9c8923649c7b9",
+    "draw_hashes": {
+      "83": "9dfba99cf63183de6a5e48e14b79298c56440ac58f43d5eefc800907ebd68994",
+      "1092": "49e595429fbd8043efa0efa72ef9bca9a364ab07cbe0eb8d9b3de7e0c13a8cf5",
+      "2100": "12cf9966a5a0604386c518ca2582f3b3bb490f886c7f47cf9d99bc184643c3a3"
+    }
+  },
+  "pipeline_after_four_workers": {
+    "seconds": 28.716355840999995,
+    "stage_seconds": {
+      "game_scenarios": 24.832826062000095,
+      "candidates": 0.07473932400012018,
+      "opponent_field": 0.18461868199983655,
+      "contest_scoring": 3.3111589659999936
+    },
+    "workers": 4,
+    "games": 6,
+    "simulations": 10000,
+    "candidate_target": 5000,
+    "opponent_support_target": 10000,
+    "portfolio_entries": 101,
+    "candidate_hash": "7ccfa4d83156d42c87455eb108beaa12c24f6803e6047a3fa8d5e65c0c8164e8",
+    "report_hash": "340292d7419c6f2b4aa03ed630604a8bf9132b2b033d52f38e8b684678013033",
+    "portfolio_hash": "7a5a48c88ed8451c35755ef437be824a91452d71e59f12d1cdd9c8923649c7b9",
+    "draw_hashes": {
+      "83": "9dfba99cf63183de6a5e48e14b79298c56440ac58f43d5eefc800907ebd68994",
+      "1092": "49e595429fbd8043efa0efa72ef9bca9a364ab07cbe0eb8d9b3de7e0c13a8cf5",
+      "2100": "12cf9966a5a0604386c518ca2582f3b3bb490f886c7f47cf9d99bc184643c3a3"
+    }
+  },
+  "after_with_export_and_capture": {
+    "pipeline_seconds": 29.205572435000022,
+    "export_seconds": 0.2377576430001227,
+    "diagnostic_package_seconds": 2.71850806700013,
+    "diagnostic_package_bytes": 8996861,
+    "seconds": 32.16664393700012,
+    "stage_seconds": {
+      "game_scenarios": 25.29878570300025,
+      "candidates": 0.11670276199993168,
+      "opponent_field": 0.16972253999983877,
+      "contest_scoring": 3.3088881720000245
+    },
+    "workers": 4,
+    "games": 6,
+    "simulations": 10000,
+    "candidate_target": 5000,
+    "opponent_support_target": 10000,
+    "portfolio_entries": 101,
+    "candidate_hash": "7ccfa4d83156d42c87455eb108beaa12c24f6803e6047a3fa8d5e65c0c8164e8",
+    "report_hash": "340292d7419c6f2b4aa03ed630604a8bf9132b2b033d52f38e8b684678013033",
+    "portfolio_hash": "7a5a48c88ed8451c35755ef437be824a91452d71e59f12d1cdd9c8923649c7b9",
+    "draw_hashes": {
+      "83": "9dfba99cf63183de6a5e48e14b79298c56440ac58f43d5eefc800907ebd68994",
+      "1092": "49e595429fbd8043efa0efa72ef9bca9a364ab07cbe0eb8d9b3de7e0c13a8cf5",
+      "2100": "12cf9966a5a0604386c518ca2582f3b3bb490f886c7f47cf9d99bc184643c3a3"
+    }
+  },
+  "pipeline_reduction_percent": 29.182365812221157,
+  "exact_scores_candidates_rankings_portfolio_parity": true,
+  "under_60_seconds_on_benchmark_machine": true,
+  "limitations": [
+    "Single before/after timing pair plus an expanded after run; host load and hardware affect results.",
+    "Four workers require at least four CPU slots and cgroup memory limit >=2 GiB (or unlimited); smaller or unknown memory hosts retain previous two-worker ceiling. CPU quota and affinity may reduce workers further.",
+    "The current live Streamlit hardware quota has not been measured here. One-minute completion there is unverified.",
+    "No simulation counts, candidate counts, legality constraints, exposure caps, distributions, seeds or rankings reduced."
+  ]
+}
