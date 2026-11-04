@@ -1,0 +1,33 @@
+{
+  "scope": "Synthetic repeatable timeout reproduction plus archived candidate-pool repair benchmarks; not tonight\u2019s failing build.",
+  "before": {
+    "error": "Portfolio repair reached its search limit without a valid full portfolio. Manual exposure limits were kept; no duplicates were added.",
+    "seconds": 0.4692478070001016
+  },
+  "after": {
+    "entries": 20,
+    "max_core_entries": 10,
+    "unique_lineups": 20,
+    "seconds": 0.0332573600003343
+  },
+  "archive_cases": [
+    {
+      "platform": "FanDuel",
+      "candidates": 5000,
+      "entries": 101,
+      "seconds": 0.04366604100005134,
+      "hard_limits_valid": true,
+      "unique_indices": 101,
+      "effective_auto_cap_pct": 80
+    },
+    {
+      "platform": "DraftKings",
+      "candidates": 5000,
+      "entries": 101,
+      "seconds": 0.04070925099995293,
+      "hard_limits_valid": true,
+      "unique_indices": 101,
+      "effective_auto_cap_pct": 80
+    }
+  ]
+}
