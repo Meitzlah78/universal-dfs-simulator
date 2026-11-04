@@ -17,7 +17,16 @@ def worker_count():
         quota,period=Path('/sys/fs/cgroup/cpu.max').read_text().split()
         if quota!='max':count=min(count,max(1,math.ceil(int(quota)/int(period))))
     except (OSError,ValueError,ZeroDivisionError):pass
-    return min(2,count)
+    try:count=min(count,len(os.sched_getaffinity(0)))
+    except (AttributeError,OSError):pass
+    # Keep the existing two-worker ceiling on small/unknown hosts. Additional
+    # game processes are useful only when both CPU quota and memory allow it.
+    ceiling=2
+    try:
+        memory=Path('/sys/fs/cgroup/memory.max').read_text().strip()
+        if memory=='max' or int(memory)>=2*1024**3:ceiling=4
+    except (OSError,ValueError):pass
+    return max(1,min(ceiling,count))
 
 
 def _pool():
@@ -69,3 +78,4 @@ def simulate_parallel(engine,n,seed):
         raise
     engine.last_report=reports
     return output
+

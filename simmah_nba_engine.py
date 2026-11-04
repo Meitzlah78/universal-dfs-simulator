@@ -32,6 +32,12 @@ class EventRates:
             raise ValueError('Turnover and free throw probabilities exceed one')
 
 
+def _duplicate_court_players(selected):
+    # Five fixed slots: pair comparisons avoid sorting/copying every court row.
+    return any(np.any(selected[...,i]==selected[...,j])
+               for i in range(5) for j in range(i+1,5))
+
+
 def simulate_game(rotations, profiles, rates, seed, overtime_rotations=None, platform='FanDuel'):
     """Simulate the supplied rotations without score-driven substitutions.
 
@@ -50,7 +56,7 @@ def simulate_game(rotations, profiles, rates, seed, overtime_rotations=None, pla
     if size<5 or not len(rotation):raise ValueError('At least five players per team and one scenario required')
     for team in (0,1):
         selected=rotation[:,team]
-        if (selected<team*size).any() or (selected>=(team+1)*size).any() or np.any(np.diff(np.sort(selected,axis=-1),axis=-1)==0):
+        if (selected<team*size).any() or (selected>=(team+1)*size).any() or _duplicate_court_players(selected):
             raise ValueError('Rotation has wrong-team or duplicate on-court players')
     if len(rates)!=2:raise ValueError('One event-rate model per team required')
     for r in rates:r.validate()
@@ -61,7 +67,7 @@ def simulate_game(rotations, profiles, rates, seed, overtime_rotations=None, pla
             raise ValueError('Overtime rotations must be scenarios x teams x periods x 5 minutes x 5 players')
         for team in (0,1):
             selected=overtime[:,team]
-            if (selected<team*size).any() or (selected>=(team+1)*size).any() or np.any(np.diff(np.sort(selected,axis=-1),axis=-1)==0):
+            if (selected<team*size).any() or (selected>=(team+1)*size).any() or _duplicate_court_players(selected):
                 raise ValueError('Overtime rotation has wrong-team or duplicate players')
     rng=np.random.default_rng(seed)
     stats=np.zeros((n,2*size,len(STAT_NAMES)),np.int32)
@@ -76,7 +82,15 @@ def simulate_game(rotations, profiles, rates, seed, overtime_rotations=None, pla
         if exclude is not None:cdf[lineups==exclude[:,None]]=0
         # Uniform role allocation among eligible on-court players if all supplied
         # weights are zero; a scorer is still never his own assister.
-        np.cumsum(cdf,axis=1,out=cdf)
+        if len(ids)>=128:
+            # Five columns only: explicit left-to-right sums avoid the generic
+            # row-wise scan for large batches without changing addition order.
+            cdf[:,1]+=cdf[:,0]
+            cdf[:,2]+=cdf[:,1]
+            cdf[:,3]+=cdf[:,2]
+            cdf[:,4]+=cdf[:,3]
+        else:
+            np.cumsum(cdf,axis=1,out=cdf)
         empty=cdf[:,-1]<=0
         if empty.any():
             uniform=np.ones((int(empty.sum()),5)) if exclude is None else (lineups[empty]!=exclude[empty,None])
@@ -190,5 +204,6 @@ def simulate_game(rotations, profiles, rates, seed, overtime_rotations=None, pla
     return {'scores':scores.astype(np.float32),'stats':stats,'team_points':team_points,
         'requires_overtime':team_points[:,0]==team_points[:,1], 'overtime_periods':overtime_count, 'elapsed_seconds':elapsed, 'counters':counters,
         'engine':'experimental-nba-possession-v4-fixed-rotations'}
+
 
 
