@@ -1,0 +1,58 @@
+{
+  "scope": "Current uploaded DK pool, controlled pregame replay, not exact live contest. Assumed 20 entries/$250 Dime Time 2972-capacity ladder, seed83, correlation0, salary floor48000, diversity50. No exclusions beyond uploaded pool.",
+  "seconds": 53.55766588100005,
+  "entries": 20,
+  "candidate_count": 6495,
+  "candidate_recovery": {
+    "initial_candidates": 5000,
+    "added_candidates": 1495,
+    "search_seed": 3084,
+    "search_noise": 0.6,
+    "requested_extra": 1500,
+    "reason": "Portfolio repair reached its search limit without a valid full portfolio. Manual exposure limits were kept; no duplicates were added."
+  },
+  "hard_limits_valid": true,
+  "simulation_sets": 3,
+  "simulations_per_set": 10000,
+  "stage_timings": {
+    "game_scenarios": 36.76815693899971,
+    "candidates": 0.11671318000026076,
+    "opponent_field": 1.1778611849995286,
+    "contest_scoring": 2.2389975980004237,
+    "candidate_recovery": 1.3641309369995724
+  },
+  "pool_sha256": "4c401b078ec9c93442d3a9e1f0a2dce435463eb813bd03360c20853d3373534e",
+  "repair_only_comparison": {
+    "scope": "Reconstruction from uploaded current DK pool; not exact live scored candidates. Team markets taken from CSV; archived event-rate model; seed83, 10k construction scenarios, candidate seed84, salary floor48000, correlation0. Quality proxy=construction mean points, NOT actual Top1 ranking.",
+    "pool_sha256": "4c401b078ec9c93442d3a9e1f0a2dce435463eb813bd03360c20853d3373534e",
+    "cases": [
+      {
+        "count": 20,
+        "method": "previous",
+        "error": "Portfolio repair reached its search limit without a valid full portfolio. Manual exposure limits were kept; no duplicates were added.",
+        "seconds": 10.968708044000323
+      },
+      {
+        "count": 20,
+        "method": "expanded",
+        "error": "Portfolio repair reached its search limit without a valid full portfolio. Manual exposure limits were kept; no duplicates were added.",
+        "seconds": 11.675402103000124
+      },
+      {
+        "count": 101,
+        "method": "previous",
+        "selected": 101,
+        "hard_caps_valid": true,
+        "seconds": 0.29753454100000454
+      },
+      {
+        "count": 101,
+        "method": "expanded",
+        "selected": 101,
+        "hard_caps_valid": true,
+        "seconds": 0.33845320399996126
+      }
+    ]
+  },
+  "export_and_diagnostic_capture_timed": false
+}

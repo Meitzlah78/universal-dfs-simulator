@@ -7,7 +7,7 @@ import math
 import numpy as np
 import pandas as pd
 
-SELECTION_VERSION = 'quality-role-exposure-v4-lp-repair'
+SELECTION_VERSION = 'quality-role-exposure-v5-expanded-repair'
 
 
 def select_portfolio(candidates, slots, count, metric, controls=None, default_max=80, diversity=None):
@@ -186,13 +186,23 @@ def _lp_supported_repair(matrix,lower,upper,count,objective,finite):
         return bool((totals>=lower).all() and (totals<=upper).all())
     integer=np.flatnonzero(relaxed.x>1-1e-7)
     if validated(integer):return integer.tolist()
-    solution=milp(objective[support],integrality=np.ones(len(support)),
-        bounds=Bounds(np.zeros(len(support)),np.ones(len(support))),
-        constraints=LinearConstraint(matrix[:,support],np.r_[count,lower],np.r_[count,upper]),
-        options={'time_limit':2.,'mip_rel_gap':.05})
-    if solution.x is not None:
-        chosen=support[np.flatnonzero(solution.x>.5)]
-        if validated(chosen):return chosen.tolist()
+    # A fractional optimum's positive support need not contain ANY integer
+    # portfolio. Include low reduced-cost alternatives before the full retry.
+    reduced=getattr(getattr(relaxed,'lower',None),'marginals',None)
+    reduced=np.asarray(reduced,float) if reduced is not None else objective
+    if reduced.shape!=objective.shape:reduced=objective
+    alternatives=np.flatnonzero(finite)
+    order=np.lexsort((alternatives,objective[alternatives],np.nan_to_num(reduced[alternatives],nan=np.inf)))
+    expanded=np.union1d(support,alternatives[order[:max(512,4*count)]])
+    for active in (support,expanded):
+        if active is expanded and np.array_equal(active,support):continue
+        solution=milp(objective[active],integrality=np.ones(len(active)),
+            bounds=Bounds(np.zeros(len(active)),np.ones(len(active))),
+            constraints=LinearConstraint(matrix[:,active],np.r_[count,lower],np.r_[count,upper]),
+            options={'time_limit':1.,'mip_rel_gap':.05})
+        if solution.x is not None:
+            chosen=active[np.flatnonzero(solution.x>.5)]
+            if validated(chosen):return chosen.tolist()
     return None
 
 
@@ -289,4 +299,5 @@ def put_portfolio_first(candidates,selected,slots):
     selected_keys={tuple(row) for row in selected[slots].astype(str).itertuples(index=False,name=None)}
     rest=candidates.loc[[tuple(row) not in selected_keys for row in candidates[slots].astype(str).itertuples(index=False,name=None)]]
     return pd.concat([selected,rest],ignore_index=True)
+
 

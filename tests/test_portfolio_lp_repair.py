@@ -30,13 +30,14 @@ class LPRepairTests(unittest.TestCase):
         self.assertIn(3,chosen)
         self.assertTrue((incidence[chosen].sum(axis=0)<=1).all())
 
-    def test_infeasible_fractional_support_does_not_prove_full_infeasibility(self):
+    def test_fractional_support_expands_to_find_missing_integer_alternative(self):
         triangle=np.array([[1,1,0],[1,0,1],[0,1,1]])
         incidence=np.zeros((7,6),int);incidence[:3,:3]=triangle;incidence[3:6,3:]=triangle
         matrix=vstack([csc_matrix(np.ones((1,7))),csc_matrix(incidence.T)],format='csc')
         result=_lp_supported_repair(matrix,np.zeros(6),np.ones(6),3,np.r_[-np.ones(6),0.],np.ones(7,bool))
-        self.assertIsNone(result)
-        self.assertTrue((incidence[[0,3,6]].sum(axis=0)<=1).all())
+        self.assertEqual(len(result),3)
+        self.assertIn(6,result)
+        self.assertTrue((incidence[result].sum(axis=0)<=1).all())
 
     def test_relaxation_timeout_returns_to_full_search(self):
         matrix=csc_matrix(np.ones((2,3)))
@@ -50,3 +51,4 @@ class LPRepairTests(unittest.TestCase):
             self.assertIsNone(_lp_supported_repair(matrix,np.zeros(3),np.ones(3),2,np.array([-1.,-1.,-1.,0.]),np.ones(4,bool)))
 
 if __name__=='__main__':unittest.main()
+
