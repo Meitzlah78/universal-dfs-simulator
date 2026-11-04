@@ -302,7 +302,7 @@
       "sha256": "51228ddf90888d10af1918be8d80a3110c8010b264f050464eab8c1ca9932e8b"
     }
   ],
-  "status": "no component passed",
+  "status": "already evaluated; waiting for new independent week",
   "training_games": 93,
   "training_through": "2026-10-19",
   "validation_from": "2026-10-29",
