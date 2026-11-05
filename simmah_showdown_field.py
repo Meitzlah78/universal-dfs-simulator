@@ -7,7 +7,7 @@ import pandas as pd
 SLOTS=['Captain','Flex1','Flex2','Flex3','Flex4','Flex5']
 
 
-def build_unique_field(pool,flex_weights,captain_weights,target,salary_cap=50000,min_salary=48000,rng=None,progress=None):
+def build_unique_field(pool,flex_weights,captain_weights,target,salary_cap=50000,min_salary=48000,rng=None,progress=None,ensure_role_support=False):
     rng=rng if rng is not None else np.random.default_rng(123)
     p=pool.reset_index(drop=True);n=len(p);target=max(0,int(target))
     empty=pd.DataFrame(columns=SLOTS+['Salary'])
@@ -21,7 +21,7 @@ def build_unique_field(pool,flex_weights,captain_weights,target,salary_cap=50000
         if w.shape!=(n,) or not np.isfinite(w).all() or (w<0).any() or not w.any():raise ValueError('Invalid opponent preferences')
     fw=fw/fw.sum();cw=cw/cw.sum()
     if n*comb(n-1,5)>8000000:raise ValueError('Too many Showdown combinations; narrow the positive-projection pool')
-    picks=[];costs=[];mass=[]
+    picks=[];costs=[];mass=[];reserved=[];offset=0
     for captain in range(n):
         if progress:progress(captain/n,f'Enumerating legal Showdown rosters: {captain+1}/{n} Captains')
         if cw[captain]<=0:continue
@@ -35,12 +35,29 @@ def build_unique_field(pool,flex_weights,captain_weights,target,salary_cap=50000
         # rejection must not turn a cheap Captain into the most popular Captain.
         logs=np.log(np.maximum(fw[combos],1e-300)).sum(axis=1)
         w=np.exp(logs-logs.max());w/=w.sum()
+        if ensure_role_support:
+            reserved.append(offset+int(np.argmax(w)))
+        offset += len(combos)
         mass.append(cw[captain]*w)
         picks.append(np.column_stack([np.full(len(combos),captain,dtype=np.int32),combos]));costs.append(sums)
     if not picks:return empty
     picks=np.concatenate(picks);costs=np.concatenate(costs);mass=np.concatenate(mass);mass/=mass.sum()
     size=min(target,len(picks))
-    chosen=rng.choice(len(picks),size=size,replace=False,p=mass)
+    if ensure_role_support:
+        # Reserve legal support for every nonzero role, not a minimum ownership
+        # count. Final calibrated resampling can assign zero entries to tiny shares.
+        for player in np.flatnonzero(fw > 0):
+            if not any(player in picks[row,1:] for row in reserved):
+                rows=np.flatnonzero((picks[:,1:]==player).any(axis=1))
+                if len(rows):reserved.append(int(rows[np.argmax(mass[rows])]))
+        reserved=np.unique(reserved)
+        if len(reserved)>size:raise ValueError('Opponent sample too small to retain role support')
+        remaining=mass.copy();remaining[reserved]=0
+        remaining/=remaining.sum() if remaining.sum() else 1
+        extra=rng.choice(len(picks),size=size-len(reserved),replace=False,p=remaining) if size>len(reserved) else np.array([],int)
+        chosen=np.concatenate([reserved,extra])
+    else:
+        chosen=rng.choice(len(picks),size=size,replace=False,p=mass)
     result=pd.DataFrame(names[picks[chosen]],columns=SLOTS);result['Salary']=costs[chosen].astype(int)
     result.attrs.update(legal_combinations=len(picks),requested_unique=target,unique_sample=len(result))
     if progress:progress(1.,f'{len(result):,} unique legal Showdown opponents ready')
@@ -66,3 +83,4 @@ def expand_field(sample_field,full_field_size,seed=20261012):
     indices=np.concatenate([np.arange(len(sample)),rng.integers(0,len(sample),count-len(sample))])
     rng.shuffle(indices)
     return sample.iloc[indices].reset_index(drop=True)
+

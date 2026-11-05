@@ -50,3 +50,9 @@ jobs:
 
       - name: Verify FantasyLabs ownership imports on DK and FD NFL formats
         run: python -m unittest discover -s tests -p test_fantasylabs_ownership.py -v
+
+
+      - name: Verify final single-game role ownership and legal field support
+        run: python -m unittest discover -s tests -p test_role_field_ownership.py -v
+      - name: Verify existing Showdown proposal and cache behavior
+        run: python -m unittest discover -s tests -p "test_showdown_field*.py" -v

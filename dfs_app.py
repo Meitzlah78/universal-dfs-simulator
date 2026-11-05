@@ -23,9 +23,11 @@ st.set_page_config(
 
 import importlib
 import simmah_runtime_release as runtime_release
-if getattr(runtime_release, '_active_release', None) != 'nba-late-swap-portfolio-20261105-r1':
+if (getattr(runtime_release, '_active_release', None) != 'nba-late-swap-portfolio-20261105-r1'
+        or not hasattr(runtime_release, 'activate_role_ownership_release')):
     runtime_release = importlib.reload(runtime_release)
 runtime_release.activate_nba_release('nba-late-swap-portfolio-20261105-r1')
+runtime_release.activate_role_ownership_release('role-marginals-v1')
 
 if st.query_params.get('simmah_qa') == 'storage':
     import importlib
@@ -777,18 +779,16 @@ def build_showdown_opponent_field(available_players, simulation_df, players_df,
         if progress_bar is not None:
             progress_bar.progress(min(.99, fraction), text=text)
     field = build_unique_field(pool, flex_weights, captain_weights, proposals,
-        salary_cap=salary_cap, min_salary=48000, rng=rng, progress=report)
+        salary_cap=salary_cap, min_salary=(0 if pool.attrs.get("fantasylabs_ownership") else 48000),
+        rng=rng, progress=report, ensure_role_support=bool(pool.attrs.get("fantasylabs_ownership")))
     result = apply_learned_field(field, players_df, ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"],
         "DraftKings", "Showdown", contest, requested, rng)
     result.attrs.update(field.attrs, unique_sample=len(result), requested_unique=requested)
     if pool.attrs.get("fantasylabs_ownership"):
-        from simmah_fantasylabs_ownership import field_report
-        _fl_report = field_report(result, pool)
+        from simmah_role_field_ownership import restore_role_support
+        result = restore_role_support(result, field, pool, ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"])
         result.attrs["fantasylabs_ownership"] = pool.attrs["fantasylabs_ownership"]
-        st.caption("FantasyLabs CPT/FLEX ownership used as opponent proposal preferences; achieved frequencies may differ after legal-roster and construction selection.")
-        with st.expander("FantasyLabs targets versus generated opponent ownership", expanded=False):
-            st.dataframe(_fl_report, hide_index=True, width="stretch")
-        st.session_state["ownership_comparison_data_DraftKings_Showdown"] = _fl_report
+        st.caption("FantasyLabs opponent proposals use the full legal salary range; your own build salary limits are unchanged. CPT/FLEX ownership is fitted after contest-size expansion.")
     return result
 
 
@@ -5668,11 +5668,20 @@ if platform == "FanDuel":
                         opponent_rows = _fd_batched_field.to_dict("records")
                     else:
                         from simmah_single_field import build_fanduel_single_field
-                        _fd_single_field = build_fanduel_single_field(
-                            fd_pool, fd_mvp_weights, fd_flex_weights, _fd_generation_target,
-                            fd_salary_range, rng=rng,
-                            progress=lambda fraction,text: fd_field_progress.progress(fraction,text=text),
-                        )
+                        if fd_pool.attrs.get("fantasylabs_ownership"):
+                            from simmah_showdown_field import build_unique_field
+                            _fl_fd_pool = fd_pool.copy()
+                            _fl_fd_pool["CaptainSalary"] = pd.to_numeric(_fl_fd_pool["Salary"]) * 1.5
+                            _fd_single_field = build_unique_field(_fl_fd_pool, fd_flex_weights, fd_mvp_weights,
+                                _fd_generation_target, salary_cap=60000, min_salary=0, rng=rng,
+                                progress=lambda fraction,text: fd_field_progress.progress(fraction,text=text),
+                                ensure_role_support=True).rename(columns={"Captain":"MVP", **{"Flex"+str(i):"FLEX"+str(i) for i in range(1,6)}})
+                        else:
+                            _fd_single_field = build_fanduel_single_field(
+                                fd_pool, fd_mvp_weights, fd_flex_weights, _fd_generation_target,
+                                fd_salary_range, rng=rng,
+                                progress=lambda fraction,text: fd_field_progress.progress(fraction,text=text),
+                            )
                         opponent_rows = _fd_single_field.to_dict("records")
                 fd_field_progress.empty()
                 _fd_field_input = pd.DataFrame(opponent_rows)
@@ -5681,10 +5690,14 @@ if platform == "FanDuel":
                 opponent_df = apply_learned_field(_fd_field_input, fd_pool, fd_slots, "FanDuel", lineup_mode,
                     st.session_state.get("selected_fd_contest", {}), fd_opponent_target, rng)
                 if lineup_mode == "Single Game" and fd_pool.attrs.get("fantasylabs_ownership"):
-                    from simmah_fantasylabs_ownership import field_report
-                    with st.expander("FantasyLabs targets versus generated opponent ownership", expanded=False):
-                        st.dataframe(field_report(opponent_df, fd_pool), hide_index=True, width="stretch")
-                    st.caption("FantasyLabs MVP/FLEX ownership used as proposal preferences; achieved frequencies are measured above, not assumed.")
+                    from simmah_role_field_ownership import calibrate_role_ownership, restore_role_support
+                    opponent_df = restore_role_support(opponent_df, _fd_field_input, fd_pool, fd_slots)
+                    opponent_df, _fl_fd_report = calibrate_role_ownership(opponent_df, fd_pool, fd_slots, target=fd_opponent_target)
+                    st.session_state["ownership_comparison_data_FanDuel_Single_Game"] = _fl_fd_report
+                    _fl_fd_fit = opponent_df.attrs["role_ownership_calibration"]
+                    with st.expander("FantasyLabs targets versus final opponent ownership", expanded=False):
+                        st.dataframe(_fl_fd_report, hide_index=True, width="stretch")
+                    st.caption(f"Final MVP/FLEX ownership fit: largest error {_fl_fd_fit['final_max_error_pp']:.2f} pp. Opponents use the full legal salary range; your build limits are unchanged. Eligible shares normalize to 100% MVP and 500% FLEX; raw inputs remain visible.")
                 st.session_state["fd_contest_field_" + lineup_mode.replace(" ", "_").lower()] = opponent_df
                 st.session_state["fd_contest_field_ready_" + lineup_mode.replace(" ", "_").lower()] = not opponent_df.empty
                 if not opponent_df.empty:
@@ -8052,16 +8065,36 @@ with _tab_build:
         except (TypeError, ValueError):
             own_entries = 0
         full_opponent_count = max(1, full_field_size - own_entries)
-        contest_field_df = expand_showdown_field_by_ownership(
-            contest_field_sample_df, full_opponent_count
-        )
+        try:
+            contest_field_df = expand_showdown_field_by_ownership(
+                contest_field_sample_df, full_opponent_count
+            )
+            if players_df.attrs.get("fantasylabs_ownership"):
+                from simmah_role_field_ownership import calibrate_role_ownership
+                _fl_pool = players_df.loc[players_df["Name"].isin(available_players)].copy()
+                # Fit after learned construction and final expansion; no later
+                # ownership reweighting may undo the fitted role frequencies.
+                contest_field_df, _fl_report = calibrate_role_ownership(
+                    contest_field_df, _fl_pool, ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"])
+                st.session_state["ownership_comparison_data_DraftKings_Showdown"] = _fl_report
+                _fl_fit = contest_field_df.attrs["role_ownership_calibration"]
+                st.caption(f"Final CPT/FLEX ownership fit: largest error {_fl_fit['final_max_error_pp']:.2f} pp. Eligible-player shares are normalized separately to 100% CPT and 500% FLEX; raw inputs remain in the comparison.")
+                with st.expander("FantasyLabs targets versus final opponent ownership", expanded=False):
+                    st.dataframe(_fl_report, hide_index=True, width="stretch")
+        except ValueError as exc:
+            for _stale in ("contest_field_df", "contest_field_ready", "contest_results_df", "portfolio_df", "final_lineups"):
+                st.session_state.pop(_stale, None)
+            workflow_status.error(f"Opponent ownership fit stopped: {exc}")
+            workspace_stop(st, _loaded_slate_tabs, _pinned_slates)
 
         st.session_state["contest_field_sample_df"] = contest_field_sample_df
         st.session_state["contest_field_df"] = contest_field_df
         st.session_state["contest_field_count"] = len(contest_field_df)
         st.session_state["contest_field_ready"] = len(contest_field_df) > 0
 
-        if selected_contest:
+        if players_df.attrs.get("fantasylabs_ownership"):
+            st.info(f"Built {len(contest_field_sample_df):,} legal representative rosters, then fitted CPT/FLEX ownership across {len(contest_field_df):,} estimated opponent entries. Repeated opponent rosters are allowed; real duplicate frequencies are not independently validated.")
+        elif selected_contest:
             st.info(
                 f"Contest selected from your entry CSV: {selected_contest.get('name', 'DraftKings contest')} "
                 f"(ID {selected_contest.get('id', 'unknown')}). Your uploaded file has "
@@ -10117,4 +10150,5 @@ with _tab_build:
 
 
 finish_workspaces(st, _loaded_slate_tabs, _pinned_slates)
+
 
