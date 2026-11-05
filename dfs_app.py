@@ -5781,7 +5781,6 @@ if platform == "FanDuel":
                         fd_step4_progress.empty()
                         st.warning("SIM is running the lineup build and contest comparison together.")
                     else:
-                        scores = opponent_df["ProjectedPoints"].to_numpy(dtype=float)
                         compared = add_lineup_field_ownership(user_lineups.copy())
                         if lineup_mode == "Full Roster":
                             from simmah_contests import evaluate_contest
@@ -10150,5 +10149,6 @@ with _tab_build:
 
 
 finish_workspaces(st, _loaded_slate_tabs, _pinned_slates)
+
 
 
