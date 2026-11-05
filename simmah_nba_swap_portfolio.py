@@ -18,6 +18,11 @@ def exposure_bounds(pool, originals, locked, controls=None):
         pid=str(row['Player ID']);cfg=limits[pid]
         cap=0 if cfg.get('Fade') else float(cfg['Max Exposure %'])
         maximum=0 if cap<=0 else max(1,math.floor(count*cap/100+1e-9))
+        # Explicit user ceilings never gain a one-entry rounding exception.
+        manual=(controls or {}).get(pid,{})
+        if 'Max Exposure %' in manual:
+            value=pd.to_numeric(manual['Max Exposure %'],errors='coerce')
+            if pd.notna(value):maximum=min(maximum,math.floor(count*float(np.clip(value,0,100))/100+1e-9))
         minimum=math.ceil(count*float(cfg.get('Min Exposure %',0))/100-1e-9)
         if inherited[index]>maximum:
             warnings.append({'Player ID':pid,'Player':str(row['Name']),

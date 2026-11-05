@@ -28,6 +28,9 @@ class SwapPortfolioTests(unittest.TestCase):
         controls={'2':{'Fade':True},'3':{'Min Exposure %':25}}
         selected,_=select_swap_portfolio(p,o,l,c,g,e,[10,9,8,10,9,8],controls=controls)
         self.assertNotIn(2,c[selected]);self.assertIn(3,c[selected])
+        selected,_=select_swap_portfolio(p,o,l,c,g,e,[10,9,8,10,9,8],
+            controls={'2':{'Max Exposure %':10}},diversity=0)
+        self.assertNotIn(2,c[selected])
         with self.assertRaisesRegex(ValueError,'No full portfolio'):
             select_swap_portfolio(p,o,l,c,g,e,[10,9,8,10,9,8],controls={'2':{'Fade':True},'3':{'Fade':True}})
 
