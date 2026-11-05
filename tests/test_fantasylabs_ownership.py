@@ -106,5 +106,21 @@ class FantasyLabsTests(unittest.TestCase):
             self.assertNotIn('fd_contest_comparison_'+mode,state);self.assertNotIn('fd_lineups_'+mode,state)
             self.assertEqual(state['fd_simulation_df_'+mode],'sim');self.assertNotIn(('slate',),state['fd_saved_builds'])
 
+    def test_live_opponent_weights_prefer_import_over_old_selection_columns(self):
+        import ast,types
+        from pathlib import Path
+        from unittest.mock import patch
+        tree=ast.parse(Path('dfs_app.py').read_text())
+        fn=next(n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name=='opponent_field_selection_weights')
+        namespace={'np':np,'pd':pd}
+        fake=types.ModuleType('simmah_game_lines');fake.field_market_factors=lambda pool,markets:np.ones(len(pool))
+        with patch.dict('sys.modules',{'simmah_game_lines':fake}):
+            exec(compile(ast.Module(body=[fn],type_ignores=[]),'<live field weights>','exec'),namespace)
+            p,f=self.fixture();result,_=self.apply(p,f)
+            result['Ownership Selection Weight']=1.;result['Projected Own %']=2.
+            weights=namespace['opponent_field_selection_weights'](result,np.ones(len(result)))
+        np.testing.assert_array_equal(weights,[60]*10)
+
 if __name__=='__main__':unittest.main()
+
 

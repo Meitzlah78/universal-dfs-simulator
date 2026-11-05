@@ -488,6 +488,8 @@ def opponent_field_selection_weights(pool, fallback_scores):
         "ownership selection weight", "projected own %", "ownership %", "projected ownership",
         "projected own", "ownership", "own%", "own"
     ) if k in lookup), None)
+    if pool.attrs.get("fantasylabs_ownership"):
+        own_col = "Projected Ownership"
     if own_col is not None:
         ownership = pd.to_numeric(pool[own_col].astype(str).str.strip().str.replace("%", "", regex=False), errors="coerce").replace([np.inf, -np.inf], np.nan).fillna(0.0).to_numpy(dtype=float)
         ownership = np.clip(ownership, 0.0, None)
