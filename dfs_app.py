@@ -5713,12 +5713,12 @@ if platform == "FanDuel":
                         _fd_field_proj = numeric_column(opponent_df, "ProjectedPoints").dropna()
                         _fd_field_salary = numeric_column(opponent_df, "Salary").dropna()
                         _fd_user_proj = (
-                            pd.to_numeric(_fd_sanity_user.get("ProjectedPoints"), errors="coerce").dropna()
+                            numeric_column(_fd_sanity_user, "ProjectedPoints").dropna()
                             if isinstance(_fd_sanity_user, pd.DataFrame) and not _fd_sanity_user.empty
                             else pd.Series(dtype=float)
                         )
                         _fd_user_salary = (
-                            pd.to_numeric(_fd_sanity_user.get("Salary"), errors="coerce").dropna()
+                            numeric_column(_fd_sanity_user, "Salary").dropna()
                             if isinstance(_fd_sanity_user, pd.DataFrame) and not _fd_sanity_user.empty
                             else pd.Series(dtype=float)
                         )
