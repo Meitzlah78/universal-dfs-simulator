@@ -1,3 +1,4 @@
+from simmah_opponent_diagnostics import numeric_column, with_roster_projections
 from simmah_session_state import safe_state_items
 from simmah_slate_workspaces import workspace_data_editor
 from simmah_slate_workspaces import workspace_button
@@ -5698,6 +5699,7 @@ if platform == "FanDuel":
                     with st.expander("FantasyLabs targets versus final opponent ownership", expanded=False):
                         st.dataframe(_fl_fd_report, hide_index=True, width="stretch")
                     st.caption(f"Final MVP/FLEX ownership fit: largest error {_fl_fd_fit['final_max_error_pp']:.2f} pp. Opponents use the full legal salary range; your build limits are unchanged. Eligible shares normalize to 100% MVP and 500% FLEX; raw inputs remain visible.")
+                opponent_df = with_roster_projections(opponent_df, fd_pool, fd_slots, [1.5,1,1,1,1,1] if lineup_mode == "Single Game" else None)
                 st.session_state["fd_contest_field_" + lineup_mode.replace(" ", "_").lower()] = opponent_df
                 st.session_state["fd_contest_field_ready_" + lineup_mode.replace(" ", "_").lower()] = not opponent_df.empty
                 if not opponent_df.empty:
@@ -5708,15 +5710,15 @@ if platform == "FanDuel":
                     # trusting finish rates or ROI. FanDuel-only; DraftKings is untouched.
                     if lineup_mode == "Full Roster":
                         _fd_sanity_user = st.session_state.get(fd_build_key)
-                        _fd_field_proj = pd.to_numeric(opponent_df.get("ProjectedPoints"), errors="coerce").dropna()
-                        _fd_field_salary = pd.to_numeric(opponent_df.get("Salary"), errors="coerce").dropna()
+                        _fd_field_proj = numeric_column(opponent_df, "ProjectedPoints").dropna()
+                        _fd_field_salary = numeric_column(opponent_df, "Salary").dropna()
                         _fd_user_proj = (
-                            pd.to_numeric(_fd_sanity_user.get("ProjectedPoints"), errors="coerce").dropna()
+                            numeric_column(_fd_sanity_user, "ProjectedPoints").dropna()
                             if isinstance(_fd_sanity_user, pd.DataFrame) and not _fd_sanity_user.empty
                             else pd.Series(dtype=float)
                         )
                         _fd_user_salary = (
-                            pd.to_numeric(_fd_sanity_user.get("Salary"), errors="coerce").dropna()
+                            numeric_column(_fd_sanity_user, "Salary").dropna()
                             if isinstance(_fd_sanity_user, pd.DataFrame) and not _fd_sanity_user.empty
                             else pd.Series(dtype=float)
                         )
@@ -5891,10 +5893,12 @@ if platform == "FanDuel":
                     _fd_field_key = "fd_contest_field_" + lineup_mode.replace(" ", "_").lower()
                     _fd_persist_field = st.session_state.get(_fd_field_key)
                     if isinstance(_fd_persist_field, pd.DataFrame) and not _fd_persist_field.empty:
-                        _fd_field_proj = pd.to_numeric(_fd_persist_field.get("ProjectedPoints"), errors="coerce").dropna()
-                        _fd_field_salary = pd.to_numeric(_fd_persist_field.get("Salary"), errors="coerce").dropna()
-                        _fd_my_proj = pd.to_numeric(fd_rank_source.get("ProjectedPoints"), errors="coerce").dropna()
-                        _fd_my_salary = pd.to_numeric(fd_rank_source.get("Salary"), errors="coerce").dropna()
+                        _fd_persist_field = with_roster_projections(_fd_persist_field, fd_players, fd_slots, [1.5,1,1,1,1,1] if lineup_mode == "Single Game" else None)
+                        st.session_state[_fd_field_key] = _fd_persist_field
+                        _fd_field_proj = numeric_column(_fd_persist_field, "ProjectedPoints").dropna()
+                        _fd_field_salary = numeric_column(_fd_persist_field, "Salary").dropna()
+                        _fd_my_proj = numeric_column(fd_rank_source, "ProjectedPoints").dropna()
+                        _fd_my_salary = numeric_column(fd_rank_source, "Salary").dropna()
 
                         with st.expander("Advanced — opponent field", expanded=False):
                             st.write("### Opponent Field")
@@ -5933,8 +5937,8 @@ if platform == "FanDuel":
 
                             with st.container():
                                 _fd_opponent_show = _fd_persist_field.copy()
-                                _fd_opponent_show["ProjectedPoints"] = pd.to_numeric(_fd_opponent_show.get("ProjectedPoints"), errors="coerce")
-                                _fd_opponent_show["Salary"] = pd.to_numeric(_fd_opponent_show.get("Salary"), errors="coerce")
+                                _fd_opponent_show["ProjectedPoints"] = numeric_column(_fd_opponent_show, "ProjectedPoints")
+                                _fd_opponent_show["Salary"] = numeric_column(_fd_opponent_show, "Salary")
                                 _fd_opponent_show = _fd_opponent_show.sort_values("ProjectedPoints", ascending=False, na_position="last")
                                 st.caption("Showing the 100 highest-projected simulated opponent lineups. Download contains the full opponent field, including duplicates.")
                                 st.dataframe(injury_frame(st, _fd_opponent_show.head(100)), use_container_width=True, hide_index=True)
@@ -10149,6 +10153,7 @@ with _tab_build:
 
 
 finish_workspaces(st, _loaded_slate_tabs, _pinned_slates)
+
 
 
 
