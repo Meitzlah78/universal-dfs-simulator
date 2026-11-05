@@ -1,0 +1,15 @@
+# FantasyLabs NFL ownership snapshot trial
+
+In Roster / Projections, open **FantasyLabs ownership** and upload the matching snapshot CSV. Supported formats: DraftKings Showdown and Classic; FanDuel Single Game and Full Roster. This is a manual, private snapshot import. It stores no provider account password and performs no unattended retrieval.
+
+The CSV schema is `Source,Source URL,Captured UTC,Source update label,Site,Slate date,Matchup,Team,Role,Player,Projected Ownership %,Optimal %`. Source must be `FantasyLabs SimLabs`. Percentages are numbers from 0 to 100. Exact team and normalized player identities must match the salary slate; missing eligible ownership blocks the field path. Duplicate identities and roles are rejected. Defense names and a small explicit suffix/name alias mapping are supported; no fuzzy matching.
+
+Single-game snapshots require CPT + FLEX on DK or MVP + FLEX on FD (AnyFLEX is accepted). Role ownership is used separately as opponent proposal preferences. Optimal percentages are comparison columns only, never ownership, projections, or exposure targets. The existing legal-roster generator and learned construction adjustments may produce different achieved frequencies; inspect the targets-versus-generated ownership report before trusting contest estimates. The importer does not claim exact marginal calibration.
+
+Full-roster snapshots use overall player ownership. Raw percentages are retained without rescaling and passed to the existing full-roster field calibration/reporting path. NFL roster totals must be within 9 percentage points (1%) of 900%; this is an approximate trial gate, not the stricter offline ownership-ingestion gate. Single-game role totals must be within 0.2 percentage points of 100% and 500%. Rounded provider values need not sum exactly. Large calibration residuals remain visible in the existing report.
+
+Verify the actual salary-slate game date. A source calendar selection is not proof of the main-slate game date. Undated snapshots require explicit confirmation; if the salary file also lacks a date, enter and confirm the actual game date. Team/date checks cannot distinguish every overlapping slate with identical teams; selecting the correct slate remains necessary.
+
+The capture timestamp and provider's displayed Sims-update label are shown separately. The Sims-update label is not a verified ownership-update timestamp. Refresh snapshots for injury news. Changing or removing an import clears dependent contest comparisons and assigned portfolios; old outputs are retained in a recovery session-state copy. DK game simulations and candidate rosters remain available. FD requires a fresh build because its cached lineup table can contain derived ranking metrics.
+
+No premium provider CSVs are included in the repository. Keep captured data private. Tests use synthetic players and cover both sites, both roster formats, role separation, date/site/team validation, unknowns, and stale-comparison invalidation. A successful mapping test is not proof of predictive quality or a completed live contest rebuild.
