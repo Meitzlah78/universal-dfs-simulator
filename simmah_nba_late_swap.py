@@ -128,8 +128,21 @@ def swap_entries(template, contest_id, pool, *, now=None, salary_min=0, diversit
     for number,row in enumerate(originals):
         pattern=tuple((slot,int(index)) for slot,index in enumerate(row) if locked[index])
         groups.setdefault(pattern,[]).append(number)
+    # These are search utilities, not simulated fantasy outcomes. Broaden the
+    # fast proposal pool so per-entry greedy choices do not make caps fail.
+    from simmah_nba_candidates import build_candidates
+    rng=np.random.default_rng(617)
+    utilities=np.nan_to_num(proj,nan=0,posinf=0,neginf=0)[None,:]+rng.gumbel(size=(128,n))*max(float(np.nanstd(proj)),5.)
     for pattern,numbers in groups.items():
         start=len(candidates);seen=set()
+        if len(pattern)<size and seconds>0:
+            target=max(64,8*len(numbers))
+            built=build_candidates(pool,utilities,target=target,seed=618+len(candidates),
+                salary_min=salary_min,fixed_slots=dict(pattern),excluded_indices=np.flatnonzero(locked),
+                max_attempts=min(10000,max(512,20*target)))
+            for row in built['indices']:
+                key=tuple(sorted(row))
+                if key not in seen:candidates.append(row);seen.add(key)
         for number in numbers:
             for row in (np.asarray([lookup[p] for p in output[number]]),originals[number]):
                 try:validate_swap(pool,originals[number],row,locked,salary_min)
@@ -208,6 +221,8 @@ def revalidate_current_locks(pool,result,now=None):
     lookup={str(pid):i for i,pid in enumerate(pool['Player ID'])}
     updated=dict(result);updated['lineups']=[list(row) for row in result['lineups']]
     updated['report']=result['report'].copy()
+    if 'selected_candidate_indices' in result:
+        updated['selected_candidate_indices']=list(result['selected_candidate_indices'])
     unchanged=0
     for number,(entry,lineup) in enumerate(zip(result['original_entries'],result['lineups'])):
         original=np.array([lookup[str(pid)] for pid in entry[4:4+size]])
@@ -217,6 +232,8 @@ def revalidate_current_locks(pool,result,now=None):
         except ValueError as exc:
             unchanged+=1
             updated['lineups'][number]=[str(pid) for pid in entry[4:4+size]]
+            if 'selected_candidate_indices' in updated:updated['selected_candidate_indices'][number]=None
+            if 'Candidate index' in updated['report']:updated['report'].loc[number,'Candidate index']=np.nan
             updated['report'].loc[number,'Status']='Kept original — lock check invalidated swap'
             updated['report'].loc[number,'Lock check']=str(exc)
             updated['report'].loc[number,'Changes']=0

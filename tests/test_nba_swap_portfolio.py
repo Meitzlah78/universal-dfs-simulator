@@ -114,4 +114,17 @@ class SwapPortfolioTests(unittest.TestCase):
             for number,index in enumerate(result['selected_candidate_indices']):
                 self.assertEqual(result['lineups'][number],result['candidate_player_ids'][index])
 
+    def test_tipoff_reconciliation_clears_replaced_candidate_reference(self):
+        from test_nba_late_swap import LateSwapTests
+        from simmah_nba_late_swap import revalidate_current_locks
+        f=LateSwapTests();f.setUp();changed=list(f.ids);changed[1]=f.pool.iloc[9]['Player ID']
+        result={'lineups':[changed],'original_entries':[f.rows[1][:13]],
+            'selected_candidate_indices':[7],
+            'report':pd.DataFrame({'Candidate index':[7],'Status':['Sim-selected'],'Changes':[1]})}
+        current=revalidate_current_locks(f.pool,result,now=f.now+pd.Timedelta(hours=3))
+        self.assertEqual(current['lineups'][0],f.ids)
+        self.assertIsNone(current['selected_candidate_indices'][0])
+        self.assertTrue(pd.isna(current['report'].iloc[0]['Candidate index']))
+        self.assertEqual(result['selected_candidate_indices'],[7])
+
 if __name__=='__main__':unittest.main()
