@@ -40,7 +40,7 @@ def refresh_pool(pool, fetch_rw=None):
 
 def input_signature(pool, locked):
     """Only open-game changes require a new solve; tipoffs also invalidate it."""
-    cols=[c for c in ('Player ID','Projection','Injury Status','Projected Minutes','Game Start') if c in pool]
+    cols=[c for c in ('Player ID','Projection','Injury Status','Projected Minutes','Game Start','RotoWire Projected Own %','Eligible') if c in pool]
     payload=pool.loc[~locked,cols].sort_values('Player ID').to_json()
     return hashlib.sha256((payload+str(list(map(bool,locked)))).encode()).hexdigest()
 
@@ -75,12 +75,18 @@ def render_auto_swap(st,pool,data,contest_id,salary_min,diversity,markets,contes
                             salary_min=salary_min,diversity=diversity,pregame_locked=pregame_locked)
                     else:result=swap_entries(data,contest_id,fresh,salary_min=salary_min,diversity=diversity)
                 state.update(signature=signature,result=result)
+                from simmah_nba_swap_archive import retain_swap_run
+                retain_swap_run(st,fresh,contest_id,result)
             state['checked']=pd.Timestamp.now(tz='America/New_York').strftime('%I:%M:%S %p ET')
             st.session_state[key]=state
             st.caption('Automatic news/projection check: '+state['checked'])
             current=revalidate_current_locks(fresh,state['result'])
             if current['entries_preserved_by_lock_check']:
                 st.warning('Tipoff invalidated some proposed swaps; those entries remain exactly as uploaded.')
+            from simmah_nba_swap_archive import render_swap_archive
+            render_swap_archive(st,contest_id)
+            for warning in current.get('selection',{}).get('locked_overages',[]):
+                st.warning(f"{warning['Player']}: {warning['Locked entries']} entries already locked; configured maximum {warning['Configured maximum entries']}.")
             if current.get('field_warning'):st.warning(current['field_warning'])
             if current.get('status'):st.caption(current['status'])
             changed=int((current['report']['Changes']>0).sum())
@@ -89,9 +95,13 @@ def render_auto_swap(st,pool,data,contest_id,salary_min,diversity,markets,contes
             st.dataframe(display_lineups(fresh,pd.DataFrame(current['lineups'],columns=rules['slots'])),hide_index=True,width='stretch')
             output=export_swaps(data,contest_id,fresh,current)
             workspace_download_button(st,'DOWNLOAD '+('DK' if platform.upper() in ('DRAFTKINGS','DK') else 'FD')+' LATE SWAP (AUTO)',
-                output,late_swap_filename(fresh,contest_id,automatic=True),'text/csv',key='nba_auto_swap_download',on_click='ignore')
+                output,late_swap_filename(fresh,contest_id,automatic=True),'text/csv',key='nba_auto_swap_download',on_click='ignore',
+                export_checkpoint={'format':platform+' NBA','contest_id':str(contest_id),'kind':'late_swap',
+                    'player_pool':fresh.copy(deep=True),'original_entries':data,'late_swap':current,
+                    'portfolio':pd.DataFrame(current['lineups'],columns=rules['slots'])})
         except Exception as exc:
             # Do not display a stale download after a feed failure or failed solve.
             st.error('Auto late swap paused; no current export prepared: '+str(exc))
             st.caption('The next automatic check will retry. Your uploaded entries have not been changed.')
     st.fragment(run_every=60)(monitor)()
+

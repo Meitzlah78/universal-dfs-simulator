@@ -24,7 +24,7 @@ def final_scores(actuals,pool,required):
 
 def simulate_swap_entries(template,contest_id,pool,outcome_factory,field,payouts,entry_fee,
                           actuals=None,*,now=None,salary_min=0,diversity=50,
-                          simulations=10000,candidate_target=5000,seed=617,progress=None,pregame_locked=False):
+                          simulations=10000,candidate_target=5000,seed=617,progress=None,pregame_locked=False,controls=None):
     """Use independent construction/evaluation draws; preserve exact locked slots.
 
     outcome_factory(count,seed,open_indices) simulates ONLY unstarted games and
@@ -58,7 +58,11 @@ def simulate_swap_entries(template,contest_id,pool,outcome_factory,field,payouts
         groups.setdefault(pattern,[]).append(entry_index)
     candidates=[];by_pattern={};search=[]
     for group_number,(pattern,entry_indices) in enumerate(groups.items()):
-        if len(pattern)==size:continue
+        if len(pattern)==size:
+            start=len(candidates)
+            candidates.extend(originals[entry_indices].copy())
+            by_pattern[pattern]=np.arange(start,len(candidates))
+            continue
         target=max(len(entry_indices),int(np.ceil(candidate_target/len(groups))))
         built=build_candidates(pool,construction,target=target,seed=seed+1+group_number,
             salary_min=salary_min,fixed_slots=dict(pattern),excluded_indices=np.flatnonzero(locked))
@@ -77,24 +81,28 @@ def simulate_swap_entries(template,contest_id,pool,outcome_factory,field,payouts
     if np.array_equal(construction[:,open_ids],evaluation[:,open_ids]):raise ValueError('Independent remaining-game evaluation outcomes required')
     report=evaluate_candidates(evaluation,candidates,field_ids,payouts,entry_fee,
         construction_seed=seed,evaluation_seed=seed+2017,field_copies=copies,score_ticks=rules['score_ticks'])
-    used=np.zeros(len(pool));seen=set();output=[];diagnostics=[]
-    metric=report['Top 1%'].to_numpy(float)
-    for entry,row in zip(entries,originals):
-        pattern=tuple((slot,int(index)) for slot,index in enumerate(row) if locked[index])
-        eligible=by_pattern.get(pattern,np.array([],dtype=int));chosen=row;selected=None
-        if len(eligible):
-            utility=metric[eligible]-float(diversity)/100*used[candidates[eligible]].sum(axis=1)
-            for candidate_index in eligible[np.argsort(-utility,kind='stable')]:
-                candidate=candidates[candidate_index]
-                if tuple(sorted(candidate)) in seen:continue
-                validate_swap(pool,row,candidate,locked,salary_min)
-                chosen=candidate;selected=int(candidate_index);break
-        seen.add(tuple(sorted(chosen)));used[chosen]+=1
+    from simmah_nba_swap_portfolio import select_swap_portfolio
+    if progress:progress('Selecting late-swap portfolio with hard exposure limits')
+    selected,selection=select_swap_portfolio(pool,originals,locked,candidates,by_pattern,groups,
+        report['Top 1%'].to_numpy(float),diversity=diversity,controls=controls)
+    output=[];diagnostics=[]
+    for number,(entry,row) in enumerate(zip(entries,originals)):
+        index=int(selected[number]);chosen=candidates[index]
+        validate_swap(pool,row,chosen,locked,salary_min)
         output.append(pool.iloc[chosen]['Player ID'].astype(str).tolist())
-        diagnostics.append({'Entry ID':entry[0],'Status':'Sim-selected' if selected is not None else 'Kept original',
-            'Locked slots':len(pattern),'Changes':int((chosen!=row).sum()),
+        diagnostics.append({'Entry ID':entry[0],'Candidate index':index,'Status':'Sim-selected',
+            'Locked slots':int(locked[row].sum()),'Changes':int((chosen!=row).sum()),
             'Salary':int(pool.iloc[chosen]['Salary'].sum()),
-            'Conditional Top 1%':None if selected is None else float(metric[selected])})
+            'Conditional Top 1%':float(report.iloc[index]['Top 1%'])})
     return {'lineups':output,'report':pd.DataFrame(diagnostics),'original_entries':entries,
-            'candidate_report':report,'search':search,'simulations_per_set':simulations,
+            'candidate_report':report,'candidate_player_ids':pool['Player ID'].astype(str).to_numpy()[candidates].tolist(),
+            'candidate_groups':[list(map(int,by_pattern[g])) for g in groups],
+            'group_entry_indices':[list(map(int,groups[g])) for g in groups],
+            'selected_candidate_indices':selected.tolist(),'selection':selection,'controls':controls,
+            'inputs_snapshot':pool.copy(deep=True),'locked_at_selection':locked.tolist(),
+            'field_snapshot':{'indices':field_ids.copy(),'copies':copies.copy()},
+            'payouts':np.asarray(payouts).copy(),'entry_fee':float(entry_fee),'actuals_snapshot':actuals,
+            'settings':{'seed':seed,'evaluation_seed':seed+2017,'salary_min':salary_min,'diversity':diversity,
+                'pregame_locked':pregame_locked,'candidate_target':candidate_target,'simulations':simulations,
+                'selection_clock_utc':str(pd.Timestamp.now(tz='UTC') if now is None else pd.Timestamp(now))},'search':search,'simulations_per_set':simulations,
             'status':('Pregame-assumption late swap: started players stay locked; their outcomes remain uncertain. Live scores and game progress are NOT used.' if pregame_locked else 'Experimental conditional Top 1% selection against saved field; final locked-game scores supplied')}

@@ -65,7 +65,7 @@ def entry_rows(template, contest_id, pool):
     return entries
 
 
-def swap_entries(template, contest_id, pool, *, now=None, salary_min=0, diversity=50, seconds=10):
+def swap_entries(template, contest_id, pool, *, now=None, salary_min=0, diversity=50, seconds=10, controls=None):
     """Optimize open slots with HiGHS; preserve failed/time-limited entries unchanged.
 
     No game outcomes or live ROI are inferred. Started OUT/zero players remain
@@ -121,7 +121,54 @@ def swap_entries(template, contest_id, pool, *, now=None, salary_min=0, diversit
         output.append([pool.iloc[i]['Player ID'] for i in chosen])
         diagnostics.append({'Entry ID':entry[0],'Status':status,'Locked slots':int(frozen.sum()),
                             'Changes':int((chosen!=original).sum()),'Salary':int(salary[chosen].sum())})
-    return {'lineups':output,'report':pd.DataFrame(diagnostics),'original_entries':entries}
+    # Jointly reconsider the generated proposals and legal uploaded rosters.
+    from simmah_nba_swap_portfolio import select_swap_portfolio
+    originals=np.asarray([[lookup[p] for p in entry[4:4+size]] for entry in entries])
+    groups={};by_pattern={};candidates=[]
+    for number,row in enumerate(originals):
+        pattern=tuple((slot,int(index)) for slot,index in enumerate(row) if locked[index])
+        groups.setdefault(pattern,[]).append(number)
+    # These are search utilities, not simulated fantasy outcomes. Broaden the
+    # fast proposal pool so per-entry greedy choices do not make caps fail.
+    from simmah_nba_candidates import build_candidates
+    rng=np.random.default_rng(617)
+    utilities=np.nan_to_num(proj,nan=0,posinf=0,neginf=0)[None,:]+rng.gumbel(size=(128,n))*max(float(np.nanstd(proj)),5.)
+    for pattern,numbers in groups.items():
+        start=len(candidates);seen=set()
+        if len(pattern)<size and seconds>0:
+            target=max(64,8*len(numbers))
+            built=build_candidates(pool,utilities,target=target,seed=618+len(candidates),
+                salary_min=salary_min,fixed_slots=dict(pattern),excluded_indices=np.flatnonzero(locked),
+                max_attempts=min(10000,max(512,20*target)))
+            for row in built['indices']:
+                key=tuple(sorted(row))
+                if key not in seen:candidates.append(row);seen.add(key)
+        for number in numbers:
+            for row in (np.asarray([lookup[p] for p in output[number]]),originals[number]):
+                try:validate_swap(pool,originals[number],row,locked,salary_min)
+                except ValueError:continue
+                key=tuple(sorted(row))
+                if key not in seen or len(pattern)==size:
+                    candidates.append(row);seen.add(key)
+        by_pattern[pattern]=np.arange(start,len(candidates))
+    if not candidates:raise ValueError('No legal late-swap candidates; original entries remain unchanged')
+    candidates=np.asarray(candidates,int)
+    scores=np.nan_to_num(proj,nan=0,posinf=0,neginf=0)[candidates].sum(axis=1)
+    selected,selection=select_swap_portfolio(pool,originals,locked,candidates,by_pattern,groups,
+        scores,diversity=diversity,controls=controls,seconds=2)
+    output=[]
+    for number,index in enumerate(selected):
+        chosen=candidates[index];output.append(pool.iloc[chosen]['Player ID'].astype(str).tolist())
+        diagnostics[number].update({'Candidate index':int(index),'Changes':int((chosen!=originals[number]).sum()),
+            'Salary':int(salary[chosen].sum()),'Status':'Portfolio-selected'})
+    return {'lineups':output,'report':pd.DataFrame(diagnostics),'original_entries':entries,
+        'candidate_player_ids':pool['Player ID'].astype(str).to_numpy()[candidates].tolist(),
+        'candidate_report':pd.DataFrame({'Projected Points':scores}),
+        'candidate_groups':[list(map(int,by_pattern[g])) for g in groups],
+        'group_entry_indices':[list(map(int,groups[g])) for g in groups],
+        'selected_candidate_indices':selected.tolist(),'selection':selection,'controls':controls,
+        'inputs_snapshot':pool.copy(deep=True),'locked_at_selection':locked.tolist(),
+        'settings':{'salary_min':salary_min,'diversity':diversity,'method':'fast projection'}}
 
 
 def validate_swap(pool, original, candidate, locked, salary_min=0):
@@ -152,6 +199,10 @@ def export_swaps(template, contest_id, pool, result, *, now=None):
         candidate=np.array([lookup[p] for p in lineup])
         # Unchanged entries are always preserved, even if already invalid.
         if not np.array_equal(original,candidate):validate_swap(pool,original,candidate,locked)
+    from simmah_nba_swap_portfolio import audit_swap_portfolio
+    originals=np.asarray([[lookup[p] for p in e[4:4+size]] for e in entries])
+    selected=np.asarray([[lookup[p] for p in row] for row in result['lineups']])
+    audit_swap_portfolio(pool,originals,selected,locked,result.get('controls'))
     rows=list(csv.reader(io.StringIO(template.decode('utf-8-sig'))))
     replacements={entry[0]:lineup for entry,lineup in zip(entries,result['lineups'])}
     for row in rows[1:]:
@@ -170,6 +221,8 @@ def revalidate_current_locks(pool,result,now=None):
     lookup={str(pid):i for i,pid in enumerate(pool['Player ID'])}
     updated=dict(result);updated['lineups']=[list(row) for row in result['lineups']]
     updated['report']=result['report'].copy()
+    if 'selected_candidate_indices' in result:
+        updated['selected_candidate_indices']=list(result['selected_candidate_indices'])
     unchanged=0
     for number,(entry,lineup) in enumerate(zip(result['original_entries'],result['lineups'])):
         original=np.array([lookup[str(pid)] for pid in entry[4:4+size]])
@@ -179,6 +232,8 @@ def revalidate_current_locks(pool,result,now=None):
         except ValueError as exc:
             unchanged+=1
             updated['lineups'][number]=[str(pid) for pid in entry[4:4+size]]
+            if 'selected_candidate_indices' in updated:updated['selected_candidate_indices'][number]=None
+            if 'Candidate index' in updated['report']:updated['report'].loc[number,'Candidate index']=np.nan
             updated['report'].loc[number,'Status']='Kept original — lock check invalidated swap'
             updated['report'].loc[number,'Lock check']=str(exc)
             updated['report'].loc[number,'Changes']=0
@@ -234,7 +289,7 @@ def render_late_swap(st,pool,contest_id,salary_min,diversity,markets=None,contes
                     actuals=pd.read_csv(io.BytesIO(actual_bytes),dtype={'Player ID':str})
                 except (ValueError,UnicodeError) as exc:
                     st.error('Cannot read final scores: '+str(exc));return
-        st.caption(f'For contests that allow late swap. Upload your latest filled {platform} entries. Started games stay frozen in their exact slots. Fast mode uses current projections and exposure diversity, with a 10-second search budget. Sim mode reruns unstarted games; its runtime is longer.')
+        st.caption(f'For contests that allow late swap. Upload your latest filled {platform} entries. Started games stay frozen in their exact slots. Fast mode uses current projections and exposure diversity, with a bounded search budget. Sim mode reruns unstarted games; its runtime is longer.')
         upload=workspace_file_uploader(st,'Current '+platform+' NBA entries',type=['csv'],key='nba_late_swap_upload')
         if upload is None:return
         try:
@@ -263,12 +318,21 @@ def render_late_swap(st,pool,contest_id,salary_min,diversity,markets=None,contes
                     else:
                         result=swap_entries(data,contest_id,pool,salary_min=salary_min,diversity=diversity)
                 st.session_state['nba_late_swap_result']=(signature,result,time.monotonic()-started)
+                try:
+                    from simmah_nba_swap_archive import retain_swap_run
+                    retain_swap_run(st,pool,contest_id,result)
+                except Exception as exc:
+                    st.warning('Late-swap audit archive could not be saved: '+str(exc))
             saved=st.session_state.get('nba_late_swap_result')
             if saved and saved[0]==signature:
                 result=saved[1]
                 st.caption(f'Completed in {saved[2]:.2f} seconds. Review unchanged entries before uploading.')
+                from simmah_nba_swap_archive import render_swap_archive
+                render_swap_archive(st,contest_id)
                 if result.get('status'):st.caption(result['status'])
                 if result.get('field_warning'):st.warning(result['field_warning'])
+                for warning in result.get('selection',{}).get('locked_overages',[]):
+                    st.warning(f"{warning['Player']}: {warning['Locked entries']} entries already locked; configured maximum {warning['Configured maximum entries']}. Started players cannot be removed.")
                 def download_current():
                     try:
                         current=revalidate_current_locks(pool,result)
@@ -306,7 +370,8 @@ def run_simulated_late_swap(template,contest_id,pool,markets,contest,saved,actua
     original=saved['pool']
     if rules_for(original)['platform']!=rules_for(pool)['platform'] or set(original['Player ID'].astype(str))!=set(pool['Player ID'].astype(str)):
         raise ValueError('Saved opponent field does not match the current salary slate')
-    locked=locked_players(pool)
+    kwargs['now']=kwargs.get('now') or pd.Timestamp.now(tz='UTC')
+    locked=locked_players(pool,kwargs['now'])
     # Check actuals before expensive simulations, including every field/entry lock.
     lookup={str(pid):i for i,pid in enumerate(pool['Player ID'])}
     remap=np.array([lookup[str(pid)] for pid in original['Player ID']])
@@ -339,9 +404,12 @@ def run_simulated_late_swap(template,contest_id,pool,markets,contest,saved,actua
         return values
     result=simulate_swap_entries(template,contest_id,pool,factory,field,payout_vector(contest),contest['entry_fee'],
         actuals=actuals,**kwargs)
+    result['saved_pregame_pool']=original.copy(deep=True)
+    result['markets_snapshot']=markets
     if field.get('ownership_fit_warning'):
         result['field_warning']='Conditional ranks use an estimated opponent field: '+field['ownership_fit_warning']
     return result
+
 
 
 

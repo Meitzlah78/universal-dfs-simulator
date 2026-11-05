@@ -11,7 +11,8 @@ _NBA_MODULES=(
     'simmah_workspace_persistence','simmah_slate_workspaces',
     'simmah_nba_official_lineups','simmah_nba_confirmed','simmah_nba_lineups',
     'simmah_nba_projections','simmah_nba_dk_import','simmah_nba_import',
-    'simmah_nba_rosters','simmah_nba_markets','simmah_nba_pregame','simmah_nba_pipeline','simmah_nba_late_swap',
+    'simmah_nba_rosters','simmah_nba_markets','simmah_nba_pregame','simmah_nba_pipeline',
+    'simmah_nba_swap_portfolio','simmah_nba_swap_archive','simmah_nba_late_swap',
     'simmah_nba_sim_late_swap','simmah_nba_auto_swap','simmah_nba_ui',
 )
 
