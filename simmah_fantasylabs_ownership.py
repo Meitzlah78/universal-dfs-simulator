@@ -137,7 +137,7 @@ def field_report(field,pool):
 
 def invalidate_field(state,signature,fingerprint,site='DraftKings',mode='single_game'):
     key='fantasylabs_ownership_trial_identity_'+site+'_'+mode
-    current=(signature,fingerprint)
+    current=(signature,fingerprint,'role-marginals-v1')
     previous=state.get(key)
     state[key]=current
     if previous==current or (previous is None and fingerprint is None):return False
@@ -192,7 +192,8 @@ def render_snapshot(st,pool,site='DraftKings',mode='single_game'):
         totals=' · '.join(k+' '+f'{v:.2f}%' for k,v in meta['raw_totals'].items())
         st.success(f"Matched {meta['matched_players']} players · "+totals)
         st.caption('Captured: '+', '.join(meta['captured_utc'])+' · '+', '.join(meta['source_update_label']))
-        st.warning('The displayed Sims update is not a verified ownership-update timestamp. Refresh for injury news before building. Field preferences do not guarantee matching achieved ownership.')
+        st.warning('The displayed Sims update is not a verified ownership-update timestamp. Refresh for injury news before building. Single-game fields fit eligible role targets after construction; inspect the final comparison. This does not validate real duplication or projection accuracy.')
         columns=[c for c in result if c=='Name' or c.startswith(('Projected ','FantasyLabs '))]
         st.dataframe(result[columns],hide_index=True,width='stretch')
         return result
+

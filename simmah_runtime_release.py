@@ -34,3 +34,19 @@ def activate_nba_release(release):
             module=sys.modules.get(name)
             if module is not None:importlib.reload(module)
         _active_release=release
+
+
+_active_role_ownership_release = None
+
+def activate_role_ownership_release(release):
+    """Refresh the NFL role fit helpers once, without changing saved inputs."""
+    global _active_role_ownership_release
+    with _lock:
+        if _active_role_ownership_release == release:
+            return
+        for name in ('simmah_showdown_field', 'simmah_role_field_ownership', 'simmah_fantasylabs_ownership'):
+            module = sys.modules.get(name)
+            if module is not None:
+                importlib.reload(module)
+        _active_role_ownership_release = release
+
