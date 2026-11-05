@@ -14,8 +14,27 @@ class NBAWorkspaceTests(unittest.TestCase):
         errors=' '.join(x.value for x in at.error)
         self.assertIn('Player 0',errors);self.assertIn('Player 1',errors)
         self.assertEqual(at.session_state['test_build_calls'],0)
+        self.assertTrue(any('Simulation worker limit on this host:' in x.value for x in at.caption))
         self.assertTrue(any(button.proto.label=='DOWNLOAD SETUP DIAGNOSTIC PACKAGE' for button in at.get('download_button')))
         self.assertIn('nba_setup_diagnostic',at.session_state)
+
+    def test_failed_first_build_keeps_timing_visible_on_both_sites(self):
+        from streamlit.testing.v1 import AppTest
+        for platform in ('DraftKings','FanDuel'):
+            with self.subTest(platform=platform):
+                at=AppTest.from_file(str(Path(__file__).with_name('nba_ui_fixture.py')))
+                at.session_state['fixture_platform']=platform
+                at.session_state['fixture_reject_export']=True
+                at.run(timeout=20).button(key='nba_build').click().run(timeout=20)
+                self.assertFalse(at.exception)
+                timing=at.session_state['nba_last_build_timing']
+                self.assertEqual(timing['status'],'stopped')
+                self.assertEqual(timing['stopped_stage'],'Validating entries')
+                self.assertEqual(timing['platform'],platform)
+                self.assertTrue(any('Build timing · Stopped · Total' in x.value for x in at.caption))
+                at.run(timeout=20)
+                self.assertFalse(at.exception)
+                self.assertTrue(any('Build timing · Stopped · Total' in x.value for x in at.caption))
 
     def test_failed_export_never_replaces_previous_build(self):
         from streamlit.testing.v1 import AppTest
@@ -53,6 +72,8 @@ class NBAWorkspaceTests(unittest.TestCase):
         self.assertEqual(at.session_state['test_build_calls'],1)
         self.assertEqual(len(at.session_state['nba_build_result']['result']['portfolio']),5)
         self.assertIn('diagnostic_package',at.session_state['nba_build_result']['result'])
+        self.assertEqual(at.session_state['nba_last_build_timing']['status'],'complete')
+        self.assertTrue(any('Build timing · Complete · Total' in x.value for x in at.caption))
         self.assertTrue(any(button.proto.label=='DOWNLOAD CALIBRATION & SOLVER PACKAGE' for button in at.get('download_button')))
         self.assertFalse(any('capture failed' in item.value for item in at.warning))
         at.slider(key='nba_exposure_diversity').set_value(100).run(timeout=20)
@@ -126,5 +147,6 @@ class NBAWorkspaceTests(unittest.TestCase):
         self.assertFalse(at.exception)
         self.assertEqual(at.session_state['test_build_calls'],1)
         self.assertTrue(any('EXPORT TO DRAFTKINGS' in button.proto.label for button in at.get('download_button')))
+
 
 

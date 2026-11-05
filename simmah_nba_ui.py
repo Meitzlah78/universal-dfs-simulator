@@ -4,6 +4,7 @@ from simmah_slate_workspaces import workspace_download_button
 import hashlib,json
 from datetime import datetime,timezone
 from time import perf_counter
+from simmah_nba_build_timing import BuildTiming
 from pathlib import Path
 import numpy as np
 import pandas as pd
@@ -170,6 +171,9 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         diversity=st.slider('Exposure diversity',0,100,50,key='nba_exposure_diversity')
         st.caption('Hard portfolio caps: 60% overall; verified projected ownership + 5 percentage points where lower; below 16 projected minutes: 15%. Small portfolios round positive caps up to at least one entry. Caps never relax; selection/export stops if they cannot be met.')
         metric=st.selectbox('Rank lineups',['Top 1%','Expected ROI (%)','Expected Prize ($)'],key='nba_rank_metric')
+        from simmah_nba_parallel import worker_count
+        runtime_worker_limit=worker_count()
+        st.caption(f'Simulation worker limit on this host: {runtime_worker_limit}')
         clicked=workspace_button(st,'BUILD NBA LINEUPS',disabled=bool(error),key='nba_build')
         if error:
             st.error('NBA tournament build inputs need attention: '+error)
@@ -203,51 +207,74 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         build_started_clock=perf_counter()
         build_started_at=datetime.now(timezone.utc).isoformat()
         with tabs[2]:
+            timer=BuildTiming()
+            build_status='stopped';stopped_stage=None
             message=st.empty();bar=st.progress(0)
             stages={'Simulating candidate scenarios':.05,'Building independent opponent support':.35,
-                    'Scoring independent evaluation scenarios':.65,'Selecting portfolio':.95}
+                    'Scoring independent evaluation scenarios':.65,'Selecting portfolio':.95,
+                    'Expanding candidate coverage for exposure limits':.95,
+                    'Validating entries':.96,'Saving diagnostic package':.98}
             def progress(text):
+                if text in stages:
+                    timer.advance(text);bar.progress(stages[text])
                 message.write(text)
-                if text in stages:bar.progress(stages[text])
-            try:
-                built=run_pipeline(pool,engine,ownership['weights'],
-                    ownership['source'],
-                    payout_vector(contest),selected['entry_fee'],count,diversity=diversity,
-                    salary_min=salary_min,correlation=correlation,ownership_mode=ownership['mode'],progress=progress,
-                    excluded_indices=excluded,capture_diagnostics=True)
-                reports=engine.last_report
-                # A completed portfolio must serialize and pass site legality
-                # before replacing the last successful build or showing success.
-                export_portfolio(upload.getvalue(),cid,pool,built)
-                from simmah_nba_diagnostics import make_package,retain_package,package_reference
+            with st.spinner('Building NBA portfolio — elapsed time',show_time=True):
                 try:
-                    package=make_package(pool,built,upload.getvalue(),dict(contest,id=str(cid),date=day),markets,
-                        {'input_identity':identity,'rank_metric_at_build':'Top 1%'},started_at=build_started_at,
-                        engine_metadata={'rates':vars(engine.rates),'max_overtimes':engine.max_overtimes,
-                            'rotation_reconciliation':engine.rotation_reconciliation,
-                            'simulation_identity':engine.identity})
-                    built['diagnostic_package']=package_reference(package)
-                    retain_package(st,package)
-                    # Exact outcome arrays now live in the compressed package.
-                    built.pop('diagnostics',None)
-                except Exception as exc:
-                    st.warning('Lineups built, but diagnostic package capture failed: '+str(exc))
-                built['build_total_seconds']=perf_counter()-build_started_clock
-                saved={'identity':identity,'result':built,'engine_reports':reports,'pool':pool.copy(),'contest_id':cid,
-                       'rotation_reconciliation':engine.rotation_reconciliation}
-                st.session_state['nba_build_result']=saved
-                bar.progress(1.);message.success('NBA build complete')
-            except Exception as exc:
-                st.error(f'NBA build stopped: {exc}')
-                if isinstance(exc,NBASelectionFailure):
+                    built=run_pipeline(pool,engine,ownership['weights'],
+                        ownership['source'],
+                        payout_vector(contest),selected['entry_fee'],count,diversity=diversity,
+                        salary_min=salary_min,correlation=correlation,ownership_mode=ownership['mode'],progress=progress,
+                        excluded_indices=excluded,capture_diagnostics=True)
+                    reports=engine.last_report
+                    # A completed portfolio must serialize and pass site legality
+                    # before replacing the last successful build or showing success.
+                    progress('Validating entries')
+                    export_portfolio(upload.getvalue(),cid,pool,built)
+                    from simmah_nba_diagnostics import make_package,retain_package,package_reference
+                    progress('Saving diagnostic package')
                     try:
-                        from simmah_nba_diagnostics import make_selection_failure_package,retain_package
-                        failed=make_selection_failure_package(pool,exc.candidates,exc.report,
-                            dict(contest,id=str(cid)),exc.settings,str(exc))
-                        st.session_state['nba_selection_failure_package']=failed
-                        retain_package(st,failed)
-                    except Exception as capture_error:
-                        st.warning('Could not preserve the failed portfolio: '+str(capture_error))
+                        package=make_package(pool,built,upload.getvalue(),dict(contest,id=str(cid),date=day),markets,
+                            {'input_identity':identity,'rank_metric_at_build':'Top 1%'},started_at=build_started_at,
+                            engine_metadata={'rates':vars(engine.rates),'max_overtimes':engine.max_overtimes,
+                                'rotation_reconciliation':engine.rotation_reconciliation,
+                                'simulation_identity':engine.identity,'runtime_worker_limit':runtime_worker_limit,
+                                    'parallel_enabled':getattr(engine,'parallel',None),'scenario_cache_hits':built.get('scenario_cache_hits',0)})
+                        built['diagnostic_package']=package_reference(package)
+                        retain_package(st,package)
+                        # Exact outcome arrays now live in the compressed package.
+                        built.pop('diagnostics',None)
+                    except Exception as exc:
+                        st.warning('Lineups built, but diagnostic package capture failed: '+str(exc))
+                    built['build_total_seconds']=perf_counter()-build_started_clock
+                    saved={'identity':identity,'result':built,'engine_reports':reports,'pool':pool.copy(),'contest_id':cid,
+                           'rotation_reconciliation':engine.rotation_reconciliation}
+                    st.session_state['nba_build_result']=saved
+                    build_status='complete'
+                    bar.progress(1.);message.success('NBA build complete')
+                except Exception as exc:
+                    stopped_stage=timer.stage
+                    st.error(f'NBA build stopped: {exc}')
+                    if isinstance(exc,NBASelectionFailure):
+                        try:
+                            from simmah_nba_diagnostics import make_selection_failure_package,retain_package
+                            failed=make_selection_failure_package(pool,exc.candidates,exc.report,
+                                dict(contest,id=str(cid)),exc.settings,str(exc))
+                            st.session_state['nba_selection_failure_package']=failed
+                            retain_package(st,failed)
+                        except Exception as capture_error:
+                            st.warning('Could not preserve the failed portfolio: '+str(capture_error))
+                finally:
+                    from simmah_nba_parallel import worker_count
+                    st.session_state['nba_last_build_timing']=timer.snapshot(build_status,
+                        identity=identity,contest_id=str(cid),platform=platform,
+                        stopped_stage=stopped_stage,worker_limit=worker_count())
+    last_timing=st.session_state.get('nba_last_build_timing')
+    if last_timing and last_timing.get('identity')==identity:
+        with tabs[2]:
+            label='Complete' if last_timing['status']=='complete' else 'Stopped'
+            stage=last_timing.get('stopped_stage') or last_timing['stage']
+            st.caption(f"Build timing · {label} · Total {last_timing['total_seconds']:.1f}s · Last stage: {stage} · Worker limit: {last_timing['worker_limit']}")
+            st.caption('Stage timing · '+' · '.join(f"{name}: {seconds:.1f}s" for name,seconds in last_timing['phase_seconds'].items()))
     failed=st.session_state.get('nba_selection_failure_package')
     if failed and failed[2]['contest_id']==str(cid):
         with tabs[2]:
@@ -284,7 +311,7 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         if built.get('timings_seconds'):
             _timing=built['timings_seconds']
             total_note=(f"Total {built['build_total_seconds']:.1f}s · " if 'build_total_seconds' in built else '')
-            st.caption('Build timing · '+total_note+ ' · '.join(label+f" {_timing[key]:.1f}s" for key,label in [('game_scenarios','Game scenarios'),('candidates','Candidates'),('opponent_field','Opponents'),('contest_scoring','Scoring')])+
+            st.caption('Engine timing · '+total_note+ ' · '.join(label+f" {_timing[key]:.1f}s" for key,label in [('game_scenarios','Game scenarios'),('candidates','Candidates'),('opponent_field','Opponents'),('contest_scoring','Scoring')])+
                 f" · {built.get('scenario_cache_hits',0)}/3 scenario sets reused")
         render_exports(st,upload,cid,saved_pool,built,portfolio,platform,stale,'build',status_pool=pool,current_pool=export_pool,salary_min=salary_min,saved_contest_id=saved.get('contest_id',''))
         if built.get('candidate_recovery'):
@@ -332,6 +359,7 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         st.subheader('Player exposures')
         st.dataframe(exposure[['Name','Team','Injury Status','Lineups','Exposure %']],hide_index=True,width='stretch',key='nba_exposure_table',
                      column_config={'Name':st.column_config.TextColumn('Player',pinned=True)})
+
 
 
 
