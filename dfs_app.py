@@ -457,6 +457,9 @@ def fetch_footballguys_ownership(site):
 
 def attach_main_slate_ownership(pool, site):
     from simmah_footballguys import apply_footballguys, has_uploaded_ownership
+    if pool.attrs.get("fantasylabs_ownership"):
+        from simmah_fantasylabs_ownership import full_preferences
+        full_preferences(pool)
     if has_uploaded_ownership(pool):
         st.caption("Uploaded ownership retained; automatic ownership skipped.")
         return pool
@@ -761,6 +764,9 @@ def build_showdown_opponent_field(available_players, simulation_df, players_df,
                 fallback = captain_weights / max(captain_weights.sum(), 1e-12) * 100
                 captain_weights = np.where(valid, supplied, fallback)
                 break
+    if pool.attrs.get("fantasylabs_ownership"):
+        from simmah_fantasylabs_ownership import role_preferences
+        flex_weights, captain_weights = role_preferences(pool)
     requested = int(target)
     contest = st.session_state.get("selected_dk_contest", {})
     proposals = learned_field_proposal_target("DraftKings", "Showdown", contest, 6, requested, players_df)
@@ -773,6 +779,14 @@ def build_showdown_opponent_field(available_players, simulation_df, players_df,
     result = apply_learned_field(field, players_df, ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"],
         "DraftKings", "Showdown", contest, requested, rng)
     result.attrs.update(field.attrs, unique_sample=len(result), requested_unique=requested)
+    if pool.attrs.get("fantasylabs_ownership"):
+        from simmah_fantasylabs_ownership import field_report
+        _fl_report = field_report(result, pool)
+        result.attrs["fantasylabs_ownership"] = pool.attrs["fantasylabs_ownership"]
+        st.caption("FantasyLabs CPT/FLEX ownership used as opponent proposal preferences; achieved frequencies may differ after legal-roster and construction selection.")
+        with st.expander("FantasyLabs targets versus generated opponent ownership", expanded=False):
+            st.dataframe(_fl_report, hide_index=True, width="stretch")
+        st.session_state["ownership_comparison_data_DraftKings_Showdown"] = _fl_report
     return result
 
 
@@ -5044,6 +5058,9 @@ if platform == "FanDuel":
                 f"Players loaded successfully. Projections are available for {fd_valid_projection_count} of {len(fd_players)} players; "
                 "players without a posted external projection will stay out of builds until a refresh finds one."
             )
+        from simmah_fantasylabs_ownership import render_snapshot
+        with _tab_roster:
+            fd_players = render_snapshot(st, fd_players, site="FanDuel", mode=("single_game" if lineup_mode == "Single Game" else "full_roster"))
         fd_players = exclude_zero_projection_players(fd_players, "FanDuel " + lineup_mode)
         fd_players = apply_injury_statuses(fd_players, "injury_status_fd_" + lineup_mode.replace(" ", "_").lower())
         fd_players = resolve_quarterback_roles_for_build(fd_players, "FanDuel " + lineup_mode)
@@ -5501,6 +5518,11 @@ if platform == "FanDuel":
                 st.session_state[fd_build_key] = fd_saved["lineups"]
             st.session_state[fd_active_key] = fd_signature
 
+        from simmah_fantasylabs_ownership import invalidate_field
+        _fl_fd_fingerprint = fd_players.attrs.get("fantasylabs_ownership", {}).get("sha256")
+        if invalidate_field(st.session_state, fd_signature, _fl_fd_fingerprint, site="FanDuel", mode=("single_game" if lineup_mode == "Single Game" else "full_roster")):
+            st.info("Ownership input changed. Run a fresh FanDuel build and contest comparison. Previous outputs were retained for recovery.")
+
         if lineup_mode == "Single Game":
             st.caption(
                 "FanDuel Single Game: 1 MVP (1.5x points and salary) plus 5 FLEX players. "
@@ -5605,6 +5627,10 @@ if platform == "FanDuel":
             else:
                 fd_flex_weights = fd_weights.copy()
 
+            if lineup_mode == "Single Game" and fd_pool.attrs.get("fantasylabs_ownership"):
+                from simmah_fantasylabs_ownership import role_preferences
+                fd_flex_weights, fd_mvp_weights = role_preferences(fd_pool)
+
             rng = np.random.default_rng(123)
             opponent_rows = []
             seen_opponents = set()
@@ -5652,6 +5678,11 @@ if platform == "FanDuel":
                     _fd_field_input.attrs.update(_fd_batched_field.attrs)
                 opponent_df = apply_learned_field(_fd_field_input, fd_pool, fd_slots, "FanDuel", lineup_mode,
                     st.session_state.get("selected_fd_contest", {}), fd_opponent_target, rng)
+                if lineup_mode == "Single Game" and fd_pool.attrs.get("fantasylabs_ownership"):
+                    from simmah_fantasylabs_ownership import field_report
+                    with st.expander("FantasyLabs targets versus generated opponent ownership", expanded=False):
+                        st.dataframe(field_report(opponent_df, fd_pool), hide_index=True, width="stretch")
+                    st.caption("FantasyLabs MVP/FLEX ownership used as proposal preferences; achieved frequencies are measured above, not assumed.")
                 st.session_state["fd_contest_field_" + lineup_mode.replace(" ", "_").lower()] = opponent_df
                 st.session_state["fd_contest_field_ready_" + lineup_mode.replace(" ", "_").lower()] = not opponent_df.empty
                 if not opponent_df.empty:
@@ -6649,6 +6680,10 @@ else:
 
         players_df = apply_game_weather_context(players_df, uploaded_df if "uploaded_df" in locals() else players_df)
 
+        from simmah_fantasylabs_ownership import render_snapshot
+        with _tab_roster:
+            players_df = render_snapshot(st, players_df, site="DraftKings", mode=("single_game" if lineup_mode == "Showdown" else "full_roster"))
+
         # Keep the full DraftKings salary-file pool visible even when some players do not yet have projections.
         all_dk_players_df = players_df.copy()
 
@@ -6729,6 +6764,11 @@ else:
                     st.session_state.pop("classic_lineups", None)
                     st.session_state.pop("classic_pool_signature", None)
                     st.info("The saved Classic lineups were cleared because they included players no longer in the current player pool. Build fresh lineups.")
+
+        from simmah_fantasylabs_ownership import invalidate_field
+        _fl_fingerprint = all_dk_players_df.attrs.get("fantasylabs_ownership", {}).get("sha256")
+        if invalidate_field(st.session_state, slate_signature, _fl_fingerprint, mode=("single_game" if lineup_mode == "Showdown" else "full_roster")):
+            st.info("Ownership input changed. Rebuild the opponent field and contest results; game outcomes and candidates were retained.")
 
         # ================================
         # SIMULATION
@@ -10075,3 +10115,4 @@ with _tab_build:
 
 
 finish_workspaces(st, _loaded_slate_tabs, _pinned_slates)
+
