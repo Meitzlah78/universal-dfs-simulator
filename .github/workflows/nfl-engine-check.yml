@@ -56,3 +56,7 @@ jobs:
         run: python -m unittest discover -s tests -p test_role_field_ownership.py -v
       - name: Verify existing Showdown proposal and cache behavior
         run: python -m unittest discover -s tests -p "test_showdown_field*.py" -v
+
+
+      - name: Verify live FanDuel contest scoring with roster-only opponent fields
+        run: python -m unittest discover -s tests -p test_fd_scoring_route.py -v
