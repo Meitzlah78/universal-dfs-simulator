@@ -21,12 +21,29 @@ def active_players(pool):
     return active
 
 
+def ownership_values(pool):
+    """Preserve reported values; estimate only the small unreported residual."""
+    column=ownership_column(pool)
+    raw=pd.to_numeric(pool.get(column,pd.Series(np.nan,index=pool.index)),errors='coerce')
+    meta=pool.attrs.get('fantasylabs_nba_ownership',{})
+    if column!=COLUMN and meta.get('missing_ownership_policy')=='share unreported residual equally':
+        missing=active_players(pool)&raw.isna().to_numpy()
+        if missing.any():
+            expected=100*len(rules_for(pool)['slots'])
+            residual=max(0.,expected-float(meta['raw_total']))
+            raw=raw.copy()
+            raw.loc[missing]=residual/int(missing.sum())
+    return raw
+
+
 def field_ownership_inputs(pool):
     expected=100*len(rules_for(pool)['slots'])
     active=active_players(pool)
     column=ownership_column(pool)
     source='FantasyLabs imported slate ownership' if column!=COLUMN else 'RotoWire dedicated slate ownership'
-    raw=pd.to_numeric(pool.get(column,pd.Series(np.nan,index=pool.index)),errors='coerce').to_numpy(float)
+    raw=ownership_values(pool).to_numpy(float)
+    if column!=COLUMN and pool.attrs.get('fantasylabs_nba_ownership',{}).get('missing_eligible_players'):
+        source+=' with estimated residual ownership for unreported players'
     reason=None
     if not active.any():reason='no eligible players'
     elif not np.isfinite(raw[active]).all():reason='missing dedicated ownership values'
