@@ -1,7 +1,7 @@
 """Hard limits on selected NBA entries, independently checked before CSV export."""
 import math
 import pandas as pd
-from simmah_nba_ownership import field_ownership_inputs, COLUMN
+from simmah_nba_ownership import field_ownership_inputs, ownership_column
 
 
 def portfolio_limits(pool, controls=None):
@@ -11,7 +11,7 @@ def portfolio_limits(pool, controls=None):
     for _,row in pool.iterrows():
         pid=str(row['Player ID']);cap=60.
         if trusted:
-            own=pd.to_numeric(row.get(COLUMN),errors='coerce')
+            own=pd.to_numeric(row.get(ownership_column(pool)),errors='coerce')
             if pd.notna(own):cap=min(cap,float(own)+5.)
         if 'Projected Minutes' in pool:
             minutes=pd.to_numeric(row.get('Projected Minutes'),errors='coerce')

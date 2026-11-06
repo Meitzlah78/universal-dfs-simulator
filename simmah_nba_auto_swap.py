@@ -40,7 +40,7 @@ def refresh_pool(pool, fetch_rw=None):
 
 def input_signature(pool, locked):
     """Only open-game changes require a new solve; tipoffs also invalidate it."""
-    cols=[c for c in ('Player ID','Projection','Injury Status','Projected Minutes','Game Start','RotoWire Projected Own %','Eligible') if c in pool]
+    cols=[c for c in ('Player ID','Projection','Injury Status','Projected Minutes','Game Start','RotoWire Projected Own %','FantasyLabs Projected Own %','Eligible') if c in pool]
     payload=pool.loc[~locked,cols].sort_values('Player ID').to_json()
     return hashlib.sha256((payload+str(list(map(bool,locked)))).encode()).hexdigest()
 

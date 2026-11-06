@@ -216,6 +216,10 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
             pool=apply_game_context(pool,_context_result['values'])
         except (ValueError,OSError,KeyError,TypeError):
             with tabs[1]:st.caption('NBA game times / market feed unavailable; existing salary-file and projection metadata retained.')
+    from simmah_nba_ownership_upload import render_upload as render_ownership_upload
+    with tabs[1]:
+        with st.expander('FantasyLabs ownership — NBA', expanded=True):
+            pool = render_ownership_upload(st, pool, platform, day)
     markets = extract_markets(pool)
     slate['markets'] = markets
     slate['players'] = pool
@@ -271,6 +275,7 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
         if ownership_check['mode']!='projected':st.warning(ownership_check['status'])
         leading_columns = ['Name', 'Starter Confirmed', 'Injury Status', 'Position', 'Team',
                            'Opponent', 'Salary', 'Projection', 'Projection Source',
+                           'FantasyLabs Projected Own %', 'FantasyLabs Optimal %',
                            'RotoWire Projected Own %', 'Projected Minutes', 'Minutes Source']
         column_order = [column for column in leading_columns if column in pool.columns]
         column_order += [column for column in pool.columns if column not in leading_columns]
