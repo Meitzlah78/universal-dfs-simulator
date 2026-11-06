@@ -50,6 +50,8 @@ def render_exports(st,upload,cid,pool,built,portfolio,platform,stale,location,st
             workspace_download_button(st,'DOWNLOAD CALIBRATION & SOLVER PACKAGE',data,
                 package['filename'],'application/zip',key='nba_diagnostic_download_'+location,on_click='ignore')
             st.caption('One file for this saved build: opponent field, player inputs, simulations, solver details and contest identity.')
+            from simmah_nba_outcome_audit import render_audit
+            render_audit(st,data,location)
         else:st.caption('Diagnostic package is awaiting archive recovery. Check Saved files below.')
     else:
         st.caption('Rebuild once to capture a complete calibration and solver package.')
