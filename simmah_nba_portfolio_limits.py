@@ -1,21 +1,21 @@
 """Hard limits on selected NBA entries, independently checked before CSV export."""
 import math
 import pandas as pd
-from simmah_nba_ownership import field_ownership_inputs, ownership_values
+from simmah_nba_ownership import field_ownership_inputs, ownership_values, validated_import
 
 
 def portfolio_limits(pool, controls=None, *, count=None):
     if count is not None and (not isinstance(count,int) or count<1):
         raise ValueError('Positive integer NBA portfolio count required')
     ownership=field_ownership_inputs(pool)
-    trusted=ownership['mode']=='projected'
+    trusted=validated_import(pool) or ownership['mode']=='projected'
     values=ownership_values(pool)
     limits={}
     for index,row in pool.iterrows():
         pid=str(row['Player ID']);cap=60.
         if trusted:
             own=values.loc[index]
-            if pd.notna(own):cap=min(cap,float(own)+5.)
+            if pd.notna(own) and 0<=float(own)<=100:cap=min(cap,float(own)+5.)
         if 'Projected Minutes' in pool:
             minutes=pd.to_numeric(row.get('Projected Minutes'),errors='coerce')
             if pd.isna(minutes) or minutes<=0:cap=0.

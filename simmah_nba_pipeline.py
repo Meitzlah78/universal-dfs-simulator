@@ -75,7 +75,7 @@ def run_pipeline(pool,outcome_factory,ownership,ownership_source,payouts,entry_f
     started=perf_counter()
     if np.array_equal(construction,field_outcomes):raise ValueError('Opponent scenarios repeat construction scenarios')
     if ownership_mode=='projected':
-        support=build_opponent_support(pool,field_outcomes,ownership,target=field_support_target,seed=seed+1010)
+        support=build_opponent_support(pool,field_outcomes,ownership,target=field_support_target,seed=seed+1010,entries=len(payouts)-1)
     else:
         support=build_candidates(pool,field_outcomes,target=field_support_target,seed=seed+1010)
     fallback_reason=None
@@ -108,6 +108,7 @@ def run_pipeline(pool,outcome_factory,ownership,ownership_source,payouts,entry_f
             field['ownership_target']=np.asarray(ownership,float).copy()
     else:
         field=sample_popularity_field(support['indices'],ownership,len(payouts)-1,seed+1011,ownership_source)
+        field['ownership_fit_warning']='Input ownership is not a complete validated target: '+ownership_source
     timings['opponent_field']=perf_counter()-started
     notify('Scoring independent evaluation scenarios')
     evaluation=draw(seed+2017)

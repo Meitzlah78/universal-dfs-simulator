@@ -111,3 +111,29 @@ st.session_state['result']=render_upload(st,st.session_state['pool'],'DraftKings
             self.assertAlmostEqual(inputs['weights'][0],frame.loc[0,'Projected Ownership %'])
             self.assertAlmostEqual(portfolio_limits(result)['10']['Max Exposure %'],5+2/29)
             pd.testing.assert_frame_equal(result[pool.columns],pool)
+
+    def test_exclusions_condition_field_but_never_disable_imported_caps(self):
+        for platform in ('DraftKings','FanDuel'):
+            pool,frame=self.fixture(platform)
+            extra_pool=pool.copy();extra_frame=frame.copy()
+            extra_pool['Player ID']=[str(i) for i in range(10,20)]
+            extra_pool['Name']='Other '+extra_pool['Name']
+            extra_frame['Player']='Other '+extra_frame['Player']
+            attrs=dict(pool.attrs)
+            pool=pd.concat([pool,extra_pool],ignore_index=True);pool.attrs=attrs
+            frame=pd.concat([frame,extra_frame],ignore_index=True)
+            frame['Projected Ownership %']=frame['Projected Ownership %']/2
+            result,_=self.apply(pool,frame)
+            reported=result[IMPORTED_COLUMN].copy()
+            result.loc[0,'Projected Minutes']=0
+            inputs=field_ownership_inputs(result)
+            self.assertEqual(inputs['mode'],'projected')
+            self.assertTrue(inputs['conditional_estimate'])
+            self.assertEqual(inputs['weights'][0],0)
+            self.assertAlmostEqual(inputs['weights'].sum(),800 if platform=='DraftKings' else 900)
+            pd.testing.assert_series_equal(result[IMPORTED_COLUMN],reported)
+            result.loc[1:5,'Projected Minutes']=0
+            self.assertEqual(field_ownership_inputs(result)['mode'],'relative popularity')
+            # Field fallback cannot erase the user's per-player ceilings.
+            result.loc[6,IMPORTED_COLUMN]=1
+            self.assertEqual(portfolio_limits(result)['6']['Max Exposure %'],6)
