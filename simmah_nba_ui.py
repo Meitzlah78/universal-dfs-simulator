@@ -22,9 +22,12 @@ from simmah_portfolio import portfolio_roi_totals
 def input_identity(pool,markets,contest,salary_min,correlation=0,excluded_player_ids=()):
     from simmah_nba_pregame import ROLE_COLUMNS
     columns=[c for c in ['Player ID','Position','Salary','Team','Opponent','Projection','Injury Status',
-                         'Projected Minutes','Eligible',*ROLE_COLUMNS,'RotoWire Projected Own %'] if c in pool]
+                         'Projected Minutes','Eligible',*ROLE_COLUMNS,'RotoWire Projected Own %',
+                         'FantasyLabs Projected Own %'] if c in pool]
     content={'pool':pool[columns].to_json(orient='split',double_precision=10),'markets':markets,
              'contest':contest,'salary_min':salary_min,'field_model_version':5,'overtime_period_limit':10}
+    if pool.attrs.get('fantasylabs_nba_ownership'):
+        content['ownership_snapshot']=pool.attrs['fantasylabs_nba_ownership']['sha256']
     if correlation:content['build_correlation']=correlation
     if len(excluded_player_ids):content['excluded_player_ids']=sorted(map(str,excluded_player_ids))
     return hashlib.sha256(json.dumps(content,sort_keys=True).encode()).hexdigest()
@@ -310,9 +313,11 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
                 st.write(saved['engine_reports'])
                 st.caption(built['field']['ownership_source'])
                 report=pd.DataFrame({'Name':labeled_pool['Name'],'Estimated Field Own %':built['field']['ownership_sampled']})
-                if 'RotoWire Projected Own %' in saved_pool:
-                    report['RotoWire Projected Own %']=pd.to_numeric(saved_pool['RotoWire Projected Own %'],errors='coerce')
-                    report['Field minus RotoWire (pp)']=report['Estimated Field Own %']-report['RotoWire Projected Own %']
+                from simmah_nba_ownership import ownership_column
+                own_column=ownership_column(saved_pool)
+                if own_column in saved_pool:
+                    report[own_column]=pd.to_numeric(saved_pool[own_column],errors='coerce')
+                    report['Field minus projected (pp)']=report['Estimated Field Own %']-report[own_column]
                 st.dataframe(report,hide_index=True,width="stretch",key="nba_ownership_table",
                              column_config={'Name':st.column_config.TextColumn('Player',pinned=True)})
     with tabs[3]:
