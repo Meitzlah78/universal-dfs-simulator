@@ -11,7 +11,7 @@ VERSION='nba-grouped-late-swap-v1'
 
 
 def exposure_bounds(pool, originals, locked, controls=None):
-    limits=portfolio_limits(pool,controls);count=len(originals)
+    count=len(originals);limits=portfolio_limits(pool,controls,count=count)
     inherited=np.bincount(originals.ravel(),minlength=len(pool))*locked
     lower=[];upper=[];warnings=[]
     for index,row in pool.iterrows():

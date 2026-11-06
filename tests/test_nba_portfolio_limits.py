@@ -41,3 +41,37 @@ class LimitsTests(unittest.TestCase):
         p=self.pool('DraftKings');slots=rules_for(p)['slots']
         ids=np.array([[0,*range(1+i,8+i)] for i in range(20)])
         with self.assertRaises(ValueError):select_entries(p,ids,pd.DataFrame({'Top 1%':range(20)}),20)
+
+    def test_small_portfolio_automatic_rounding_preserves_manual_ceilings(self):
+        for site in ('DraftKings','FanDuel'):
+            pool=self.pool(site)
+            own=800 if site=='DraftKings' else 900
+            pool['RotoWire Projected Own %']=(own-.01)/29
+            pool.loc[0,'RotoWire Projected Own %']=.01
+            automatic=portfolio_limits(pool,count=19)
+            self.assertAlmostEqual(automatic['0']['Max Exposure %'],100/19)
+            manual=portfolio_limits(pool,{'0':{'Max Exposure %':5}},count=19)
+            self.assertEqual(manual['0']['Max Exposure %'],5)
+            once=pd.DataFrame({'UTIL':['0']+['1']*18})
+            # Validate only the low-cap player's column, with all other rows
+            # assigned distinct players, so no unrelated cap can mask the test.
+            once['UTIL']=[str(i) for i in range(19)]
+            validate_portfolio_limits(once,['UTIL'],automatic)
+            with self.assertRaisesRegex(ValueError,'exposure cap exceeded'):
+                validate_portfolio_limits(once,['UTIL'],manual)
+            pool.loc[0,'Projected Minutes']=0
+            self.assertEqual(portfolio_limits(pool,count=19)['0']['Max Exposure %'],0)
+
+    def test_selection_uses_one_appearance_for_positive_automatic_caps(self):
+        pool=self.pool('DraftKings')
+        pool['RotoWire Projected Own %']=(800-.01)/29
+        pool.loc[0,'RotoWire Projected Own %']=.01
+        rng=np.random.default_rng(731)
+        candidates=np.array([rng.choice(30,8,replace=False) for _ in range(300)])
+        # Make the one low-ownership appearance preferred, and test that it is
+        # not silently faded when selecting fewer than twenty entries.
+        report=pd.DataFrame({'Top 1%':[(100 if 0 in row else 0)+rng.random() for row in candidates]})
+        chosen=select_entries(pool,candidates,report,19,diversity=0)
+        self.assertEqual((chosen[list(rules_for(pool)['slots'])].astype(str)=='0').sum().sum(),1)
+        manual=select_entries(pool,candidates,report,19,diversity=0,controls={'0':{'Max Exposure %':5}})
+        self.assertEqual((manual[list(rules_for(pool)['slots'])].astype(str)=='0').sum().sum(),0)

@@ -181,7 +181,7 @@ def make_selection_failure_package(pool,candidates,report,contest,settings,error
             'rows':pool.to_dict(orient='records'),'attrs':pool.attrs}),
         'inputs/contest.json':_json(contest),
         'inputs/settings.json':_json(settings),
-        'inputs/hard_limits.json':_json(portfolio_limits(pool)),
+        'inputs/hard_limits.json':_json(portfolio_limits(pool,count=int(settings['portfolio_count']))),
         'candidate_lineups.csv':_rosters(pool,candidates,rules['slots']).to_csv(index=False).encode('utf-8-sig'),
         'candidate_scores.csv':report.to_csv(index=False).encode('utf-8-sig')}
     root=Path(__file__).parent
