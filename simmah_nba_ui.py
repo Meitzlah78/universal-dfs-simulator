@@ -25,7 +25,7 @@ def input_identity(pool,markets,contest,salary_min,correlation=0,excluded_player
                          'Projected Minutes','Eligible',*ROLE_COLUMNS,'RotoWire Projected Own %',
                          'FantasyLabs Projected Own %'] if c in pool]
     content={'pool':pool[columns].to_json(orient='split',double_precision=10),'markets':markets,
-             'contest':contest,'salary_min':salary_min,'field_model_version':5,'overtime_period_limit':10}
+             'contest':contest,'salary_min':salary_min,'portfolio_limits_version':2,'field_model_version':5,'overtime_period_limit':10}
     if pool.attrs.get('fantasylabs_nba_ownership'):
         content['ownership_snapshot']=pool.attrs['fantasylabs_nba_ownership']['sha256']
     if correlation:content['build_correlation']=correlation

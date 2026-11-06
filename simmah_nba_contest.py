@@ -81,7 +81,7 @@ def select_entries(pool,candidates,report,count,diversity=50,controls=None,metri
     for slot,column in enumerate(rules_for(pool)['slots']):
         rows[column]=pool.iloc[indices[:,slot]]['Player ID'].astype(str).to_numpy()
     from simmah_nba_portfolio_limits import portfolio_limits, validate_portfolio_limits
-    limits=portfolio_limits(pool,controls)
+    limits=portfolio_limits(pool,controls,count=int(count))
     selected=select_portfolio(rows,list(rules_for(pool)['slots']),count,metric,
                             controls=limits,diversity=diversity)
     validate_portfolio_limits(selected,rules_for(pool)['slots'],limits)
