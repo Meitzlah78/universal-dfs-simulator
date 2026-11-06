@@ -56,7 +56,9 @@ class NBAOwnershipUploadTests(unittest.TestCase):
         pool,frame=self.fixture();frame.loc[0,'Player']='Player 1'
         with self.assertRaisesRegex(ValueError,'duplicate'):self.apply(pool,frame)
         pool,frame=self.fixture();pool.loc[0,'Name']='Missing Player'
-        with self.assertRaisesRegex(ValueError,'missing for eligible'):self.apply(pool,frame)
+        result,meta=self.apply(pool,frame)
+        self.assertEqual(meta['missing_eligible_players'],['Missing Player'])
+        self.assertEqual(field_ownership_inputs(result)['mode'],'relative popularity')
         pool,frame=self.fixture();frame['Projected Ownership %']=10
         with self.assertRaisesRegex(ValueError,'total'):self.apply(pool,frame)
 
@@ -76,6 +78,7 @@ import streamlit as st
 from simmah_nba_ownership_upload import render_upload
 st.session_state['result']=render_upload(st,st.session_state['pool'],'DraftKings','2026-11-06')
 ''')
+        pool.loc[10]=['10','Unreported Player','GSW',20,20,'Active',80]
         app.session_state['pool']=pool
         app.run()
         self.assertFalse(app.exception)
@@ -85,7 +88,26 @@ st.session_state['result']=render_upload(st,st.session_state['pool'],'DraftKings
         app.run()
         self.assertFalse(app.exception)
         self.assertIn('10 matched players',app.success[0].value)
+        self.assertIn('absent from this snapshot',app.warning[0].value)
         self.assertIn(IMPORTED_COLUMN,app.session_state['result'])
         app.button(key='nba_ownership_upload_DraftKings_remove_restored').click().run()
         self.assertFalse(app.exception)
         self.assertNotIn(IMPORTED_COLUMN,app.session_state['result'])
+
+    def test_unreported_eligible_players_share_only_residual_and_keep_raw_blank(self):
+        for platform in ('DraftKings','FanDuel'):
+            pool,frame=self.fixture(platform)
+            frame.loc[0,'Projected Ownership %']-=2
+            for i in range(10,39):
+                pool.loc[i]=[str(i),f'Unreported {i}','GSW',20,20,'Active',80]
+            result,meta=self.apply(pool,frame)
+            self.assertEqual(len(meta['missing_eligible_players']),29)
+            self.assertTrue(result.loc[10:,IMPORTED_COLUMN].isna().all())
+            self.assertTrue(result.loc[10:,OPTIMAL_COLUMN].isna().all())
+            inputs=field_ownership_inputs(result)
+            self.assertEqual(inputs['mode'],'projected')
+            self.assertIn('estimated residual',inputs['source'])
+            self.assertAlmostEqual(inputs['weights'][10:].sum(),2)
+            self.assertAlmostEqual(inputs['weights'][0],frame.loc[0,'Projected Ownership %'])
+            self.assertAlmostEqual(portfolio_limits(result)['10']['Max Exposure %'],5+2/29)
+            pd.testing.assert_frame_equal(result[pool.columns],pool)

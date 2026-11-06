@@ -54,12 +54,12 @@ def apply_snapshot(pool, data, platform, day):
     result[OPTIMAL_COLUMN] = [optimal.get(k,np.nan) for k in pool_keys]
     from simmah_nba_ownership import active_players
     missing = active_players(result) & result[IMPORTED_COLUMN].isna().to_numpy()
-    if missing.any():
-        raise ValueError('Ownership missing for eligible players: '+', '.join(result.loc[missing,'Name'].astype(str)))
     meta = {'sha256':hashlib.sha256(data).hexdigest(),'site':platform,'date':str(day),
             'source':'FantasyLabs SimLabs','source_update':sorted(set(frame['Source Update ET'])),
             'captured_utc':sorted(set(frame['Captured UTC'])),'raw_total':total,
             'matched_players':sum(k in values for k in pool_keys),
+            'missing_eligible_players':result.loc[missing,'Name'].astype(str).tolist(),
+            'missing_ownership_policy':'share unreported residual equally',
             'unmatched_source_players':[r.Player for r,k in zip(frame.itertuples(),keys) if k not in set(pool_keys)]}
     result.attrs['fantasylabs_nba_ownership'] = meta
     return result, meta
@@ -83,6 +83,10 @@ def render_upload(st, pool, platform, day):
     st.success(f"FantasyLabs ownership loaded: {meta['matched_players']} matched players · {platform} · {day}")
     st.caption('Displayed Sims update: '+', '.join(meta['source_update'])+
                '. This is not a separately verified ownership-update time. Rebuild to apply a changed snapshot.')
+    if meta['missing_eligible_players']:
+        residual=max(0.,100*len(rules_for(platform=platform)['slots'])-meta['raw_total'])
+        st.warning(f"{len(meta['missing_eligible_players'])} eligible players are absent from this snapshot. Their reported ownership stays blank. For field modeling only, the remaining {residual:.2f} percentage points are shared equally among them; these are estimates, not FantasyLabs values.")
+        st.caption('Unreported players: '+', '.join(meta['missing_eligible_players']))
     if meta['unmatched_source_players']:
         st.caption('Source players absent from this salary pool: '+', '.join(meta['unmatched_source_players']))
     return result
