@@ -19,7 +19,7 @@ from simmah_nba_rules import rules_for
 from simmah_portfolio import portfolio_roi_totals
 
 
-def input_identity(pool,markets,contest,salary_min,correlation=0,excluded_player_ids=()):
+def input_identity(pool,markets,contest,salary_min,correlation=0,excluded_player_ids=(),salary_aware=False):
     from simmah_nba_pregame import ROLE_COLUMNS
     columns=[c for c in ['Player ID','Position','Salary','Team','Opponent','Projection','Injury Status',
                          'Projected Minutes','Eligible',*ROLE_COLUMNS,'RotoWire Projected Own %',
@@ -28,6 +28,7 @@ def input_identity(pool,markets,contest,salary_min,correlation=0,excluded_player
              'contest':contest,'salary_min':salary_min,'portfolio_limits_version':3,'field_model_version':6,'overtime_period_limit':10}
     if pool.attrs.get('fantasylabs_nba_ownership'):
         content['ownership_snapshot']=pool.attrs['fantasylabs_nba_ownership']['sha256']
+    if salary_aware:content['salary_aware_search']=1
     if correlation:content['build_correlation']=correlation
     if len(excluded_player_ids):content['excluded_player_ids']=sorted(map(str,excluded_player_ids))
     return hashlib.sha256(json.dumps(content,sort_keys=True).encode()).hexdigest()
@@ -168,6 +169,9 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         excluded=excluded_player_indices(pool,excluded_games,excluded_teams)
         if len(excluded):st.caption(f'{len(excluded)} players excluded from your next build. Opponents still use the full slate.')
         salary_min=st.number_input('Minimum salary',min_value=0,max_value=rules['salary_cap'],value=58000 if platform=='FanDuel' else 48000,step=500,key='nba_min_salary' if platform=='FanDuel' else 'nba_min_salary_DraftKings')
+        salary_aware=st.checkbox('Account for salary when choosing each player (trial)',value=False,
+            key='nba_salary_aware_'+platform,
+            help='Give the builder credit for salary left for later slots. Game scores, opponent lineups and exposure limits stay the same.')
         correlation=st.slider('Build correlation',0,100,0,key='nba_build_correlation',
             help='Extra preference for positively correlated player combinations measured from the shared game simulations. 0 = no extra bonus; 100 = strongest bonus. Game simulations remain correlated at every setting.')
         diversity=st.slider('Exposure diversity',0,100,50,key='nba_exposure_diversity')
@@ -199,7 +203,7 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
     with tabs[2]:
         from simmah_nba_cash import render_cash_check
         render_cash_check(st,pool,engine,ownership,salary_min,excluded,day)
-    identity=input_identity(pool,markets,contest,salary_min,correlation,pool.iloc[excluded]['Player ID'])
+    identity=input_identity(pool,markets,contest,salary_min,correlation,pool.iloc[excluded]['Player ID'],salary_aware)
     saved=st.session_state.get('nba_build_result')
     if clicked:
         st.session_state.pop('nba_selection_failure_package',None)
@@ -217,7 +221,7 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
                     ownership['source'],
                     payout_vector(contest),selected['entry_fee'],count,diversity=diversity,
                     salary_min=salary_min,correlation=correlation,ownership_mode=ownership['mode'],progress=progress,
-                    excluded_indices=excluded,capture_diagnostics=True)
+                    excluded_indices=excluded,capture_diagnostics=True,salary_aware=salary_aware)
                 reports=engine.last_report
                 # A completed portfolio must serialize and pass site legality
                 # before replacing the last successful build or showing success.
