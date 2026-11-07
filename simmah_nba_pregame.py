@@ -81,18 +81,26 @@ class PregameEngine:
                     total=float(minutes.sum())
                     inactive_mask=injured.to_numpy() & (rotation_minutes>0)
                     inactive_minutes=float(rotation_minutes[inactive_mask].sum())
-                    raw_total=float(rotation_minutes.sum())
-                    injury_budget=(np.isfinite(rotation_minutes).all()
-                        and (rotation_minutes>=0).all() and (rotation_minutes<=48).all()
+                    # Salary files can include unmatched, unprojected reserves.
+                    # An unknown on one of those rows is not an observed minute,
+                    # but must not erase a documented OUT-player budget.
+                    raw_total=float(np.nansum(rotation_minutes))
+                    ignored_blank=(~np.isfinite(projection)&~np.asarray(rotation_only,bool)&np.isnan(rotation_minutes))
+                    usable=np.isfinite(rotation_minutes)|ignored_blank
+                    injury_budget=(usable.all() and ((rotation_minutes>=0)|ignored_blank).all()
+                        and ((rotation_minutes<=48)|ignored_blank).all()
                         and 192<=total<228 and 0<inactive_minutes<=48
                         and 228<=raw_total<=252
                         and abs(raw_total-total-inactive_minutes)<1e-6)
+                    manual_budget=(team in self.pool.attrs.get('nba_estimated_rotation_teams',[])
+                                   and 210<=total<228 and usable.all())
                     if (len(active)>=6 and (minutes>0).all() and (minutes<=48).all()
-                            and (228<=total<=252 or injury_budget)):
+                            and (228<=total<=252 or injury_budget or manual_budget)):
                         adjusted=allocate_minutes(minutes[None,:])[0]
                         self.rotation_reconciliation.append({'team':team,'provider_total':total,
                             'simulation_total':float(adjusted.sum()),
-                            'basis':'inactive-player budget reconciliation' if injury_budget else 'small provider budget discrepancy',
+                            'basis':'inactive-player budget reconciliation' if injury_budget else (
+                                'user-approved short rotation estimate' if manual_budget else 'small provider budget discrepancy'),
                             'provider_total_before_inactive_exclusions':raw_total,
                             'excluded_inactive_minutes':inactive_minutes,
                             'excluded_inactive_players':[{'id':str(row['Player ID']),

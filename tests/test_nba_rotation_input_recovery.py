@@ -153,3 +153,23 @@ class RotationBudgetTests(unittest.TestCase):
 
 if __name__=='__main__':unittest.main()
 
+
+class ShortRotationRecoveryTests(unittest.TestCase):
+    def test_unreported_reserve_no_longer_erases_documented_out_minutes(self):
+        p,r=RotationBudgetTests().fixture(215)
+        extra=[dict(p.iloc[0],**{'Player ID':name,'Projected Minutes':m,'Projection':np.nan,'Injury Status':status})
+               for name,m,status in [('out',25.,'OUT'),('unreported',np.nan,'Active')]]
+        p=pd.concat([p,pd.DataFrame(extra)],ignore_index=True)
+        e=PregameEngine(p,[],r)
+        self.assertEqual(e.rotation_reconciliation[0]['basis'],'inactive-player budget reconciliation')
+        group=e.games[0][1][0]
+        self.assertEqual(len(group[0]),10)
+        self.assertAlmostEqual(group[1].sum(),240)
+    def test_explicit_estimate_is_team_scoped_and_never_fills_missing_player_minutes(self):
+        p,r=RotationBudgetTests().fixture(215)
+        p.attrs['nba_estimated_rotation_teams']=['PHX']
+        with self.assertRaisesRegex(ValueError,'240 required'):PregameEngine(p,[],r)
+        p.attrs['nba_estimated_rotation_teams']=['GS']
+        e=PregameEngine(p,[],r);self.assertEqual(e.rotation_reconciliation[0]['basis'],'user-approved short rotation estimate')
+        p.loc[1,'Projected Minutes']=np.nan
+        with self.assertRaisesRegex(ValueError,'positive projected rotation'):PregameEngine(p,[],r)
