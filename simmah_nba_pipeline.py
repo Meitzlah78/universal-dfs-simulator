@@ -136,7 +136,7 @@ def run_pipeline(pool,outcome_factory,ownership,ownership_source,payouts,entry_f
             # Search preference only: retain the same basketball outcomes,
             # salary/position/team rules, exclusions and independent evaluation.
             extras=build_candidates(pool,construction,target=1500,seed=seed+3001,
-                salary_min=salary_min,correlation=correlation,excluded_indices=excluded,search_noise=.6,salary_aware=salary_aware)
+                salary_min=salary_min,correlation=correlation,excluded_indices=excluded,search_noise=.6,salary_aware=True)
             seen={tuple(sorted(row)) for row in candidates['indices']}
             added=[]
             for row in extras['indices']:
@@ -157,7 +157,7 @@ def run_pipeline(pool,outcome_factory,ownership,ownership_source,payouts,entry_f
                 duplicates=candidates['duplicates']+extras['duplicates']+len(extras['indices'])-len(added),
                 rejected_incomplete_or_salary=candidates['rejected_incomplete_or_salary']+extras['rejected_incomplete_or_salary'])
             recovery={'initial_candidates':initial,'added_candidates':len(added),'search_seed':seed+3001,
-                'search_noise':.6,'requested_extra':1500,'extra_attempted':extras['attempted'],'reason':str(exc)}
+                'search_noise':.6,'salary_aware':True,'requested_extra':1500,'extra_attempted':extras['attempted'],'reason':str(exc)}
             timings['candidate_recovery']=perf_counter()-recovery_started
             portfolio=select_current()
     except ValueError as exc:

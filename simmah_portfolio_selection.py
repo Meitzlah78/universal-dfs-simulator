@@ -10,10 +10,11 @@ import pandas as pd
 SELECTION_VERSION = 'quality-role-exposure-v5-expanded-repair'
 
 
-def select_portfolio(candidates, slots, count, metric, controls=None, default_max=80, diversity=None):
+def select_portfolio(candidates, slots, count, metric, controls=None, default_max=80, diversity=None, *, automatic_caps=True):
     count=int(count);controls=controls or {}
     strength=.5 if diversity is None else float(np.clip(diversity,0,100))/100
     if diversity is not None:default_max=100-40*strength
+    if not automatic_caps:default_max=100
     overlap_penalty=.7*strength
     if count<1:raise ValueError('Portfolio size must be positive')
     if candidates.empty or metric not in candidates:raise ValueError('Ranked candidates are unavailable')
@@ -223,7 +224,7 @@ def _repair_portfolio(incidence,lower,upper,hard_upper,automatic,count,utility,f
     for cap in cap_levels:
         current=upper.copy()
         current[automatic]=np.minimum(hard_upper[automatic],max(1,math.floor(count*cap/100+1e-9)))
-        if len(incidence)>512 and count>=20:
+        if len(incidence)>512 and count>=2:
             chosen=_lp_supported_repair(matrix,lower,current,count,objective,finite)
             if chosen is not None:return chosen,cap
         solution=milp(objective,integrality=np.ones(len(incidence)),bounds=bounds,

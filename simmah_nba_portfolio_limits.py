@@ -7,6 +7,9 @@ from simmah_nba_ownership import field_ownership_inputs, ownership_values, valid
 def portfolio_limits(pool, controls=None, *, count=None):
     if count is not None and (not isinstance(count,int) or count<1):
         raise ValueError('Positive integer NBA portfolio count required')
+    if pool.attrs.get('nba_uncapped'):
+        # Explicit per-player instructions, if supplied, remain authoritative.
+        return {str(pid):{'Max Exposure %':100.,**(controls or {}).get(str(pid),{})} for pid in pool['Player ID']}
     ownership=field_ownership_inputs(pool)
     trusted=validated_import(pool) or ownership['mode']=='projected'
     values=ownership_values(pool)

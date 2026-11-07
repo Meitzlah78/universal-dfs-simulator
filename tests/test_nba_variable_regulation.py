@@ -27,3 +27,13 @@ class VariableRegulationTests(unittest.TestCase):
         before=simulation_identity(PregameEngine(pool,markets,rates))
         pool.attrs['nba_variable_minutes']=True
         self.assertNotEqual(before,simulation_identity(PregameEngine(pool,markets,rates)))
+
+    def test_wider_draw_preserves_mean_and_budget(self):
+        from simmah_nba_minutes import draw_wider_minutes
+        means=np.array([48,38,36,33,26,24,18,10,6,1,0],float)
+        v=draw_wider_minutes(means,20000,83)
+        np.testing.assert_allclose(v.sum(axis=1),240)
+        np.testing.assert_allclose(v.mean(axis=0),means,atol=.2)
+        self.assertTrue(((v>=0)&(v<=48)).all())
+        self.assertTrue((v[:,0]==48).all() and (v[:,-1]==0).all())
+        self.assertGreater(np.quantile(v[:,7],.99),np.quantile(draw_regulation_minutes(means,20000,83)[:,7],.99))

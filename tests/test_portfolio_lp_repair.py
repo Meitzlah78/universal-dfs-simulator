@@ -52,3 +52,10 @@ class LPRepairTests(unittest.TestCase):
 
 if __name__=='__main__':unittest.main()
 
+
+class NoAutomaticCapsTests(unittest.TestCase):
+    def test_shared_player_can_fill_every_unique_entry_at_max_diversity(self):
+        frame=pd.DataFrame({'S0':['A']*20,'S1':list(map(str,range(20))),'q':np.arange(20)})
+        selected=select_portfolio(frame,['S0','S1'],19,'q',diversity=100,automatic_caps=False)
+        self.assertEqual((selected.S0=='A').sum(),19)
+        self.assertEqual(selected.S1.nunique(),19)
