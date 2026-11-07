@@ -44,3 +44,18 @@ class BuildCorrelationTests(unittest.TestCase):
         np.testing.assert_array_equal(outcomes,original)
         for setting in [-1,101,float('nan')]:
             with self.assertRaises(ValueError):build_candidates(p,outcomes,target=10,correlation=setting)
+
+class OwnershipProposalTests(unittest.TestCase):
+    def test_fresh_proposals_expand_support_without_changing_outcomes(self):
+        from simmah_nba_candidates import build_opponent_support
+        pool,outcomes=CandidateTests().fixture()
+        original=outcomes.copy()
+        weights=np.full(len(pool),900/len(pool))
+        result=build_opponent_support(pool,outcomes,weights,target=100,entries=1000)
+        self.assertEqual(result['expanded_support_target'],2000)
+        ids=result['indices']
+        self.assertGreater(len(ids),1000)
+        self.assertEqual(len(ids),len(np.unique(np.sort(ids,axis=1),axis=0)))
+        for row in ids:
+            validate_lineup(pool,pool.iloc[row]['Player ID'].tolist(),salary_cap=60000,max_from_team=4)
+        np.testing.assert_array_equal(outcomes,original)

@@ -36,6 +36,16 @@ def ownership_values(pool):
     return raw
 
 
+def validated_import(pool):
+    """The original snapshot validation survives later player exclusions."""
+    meta=pool.attrs.get('fantasylabs_nba_ownership',{})
+    expected=100*len(rules_for(pool)['slots'])
+    total=meta.get('raw_total')
+    return (ownership_column(pool)!=COLUMN and meta.get('source')=='FantasyLabs SimLabs'
+            and isinstance(total,(int,float)) and np.isfinite(total)
+            and abs(total-expected)<=expected*.01)
+
+
 def field_ownership_inputs(pool):
     expected=100*len(rules_for(pool)['slots'])
     active=active_players(pool)
@@ -50,14 +60,20 @@ def field_ownership_inputs(pool):
     elif ((raw[active]<0)|(raw[active]>100)).any():reason='ownership outside 0–100%'
     target=np.where(active,raw,0.)
     total=float(target.sum()) if np.isfinite(target).all() else None
-    if reason is None and abs(total-expected)>expected*.01:
+    coverage_complete=abs(float(np.nansum(raw))-expected)<=expected*.01
+    conditional=(reason is None and validated_import(pool) and coverage_complete
+                 and expected*.9<=total<expected*.99)
+    if reason is None and abs(total-expected)>expected*.01 and not conditional:
         reason=f'eligible ownership total {total:.1f}% differs from {expected}% for this roster'
     if reason is None:
         target=target*(expected/total)
         if (target>100).any():reason='rounding adjustment would exceed 100%'
     if reason is None:
-        return {'weights':target,'mode':'projected','source':f'{source}; total {total:.1f}% rounded to {expected}%',
-                'raw_total':total,'expected_total':expected,'status':'External ownership targets; field fit still requires residual checks.'}
+        adjustment=(f'conditional estimate after exclusions: {total:.1f}% scaled to {expected}%' if conditional
+                    else f'total {total:.1f}% rounded to {expected}%')
+        return {'weights':target,'mode':'projected','source':source+'; '+adjustment,
+                'conditional_estimate':conditional,'adjustment_factor':expected/total,
+                'raw_total':total,'expected_total':expected,'status':('Ownership targets proportionally redistributed after exclusions; estimated, not a new provider forecast. Field fit still requires residual checks.' if conditional else 'External ownership targets; field fit still requires residual checks.')}
     # A failed percentage-total check does not erase complete, bounded
     # popularity inputs. Keep their relative values without calling them
     # calibrated ownership percentages or scaling them into apparent validity.

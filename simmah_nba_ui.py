@@ -25,7 +25,7 @@ def input_identity(pool,markets,contest,salary_min,correlation=0,excluded_player
                          'Projected Minutes','Eligible',*ROLE_COLUMNS,'RotoWire Projected Own %',
                          'FantasyLabs Projected Own %'] if c in pool]
     content={'pool':pool[columns].to_json(orient='split',double_precision=10),'markets':markets,
-             'contest':contest,'salary_min':salary_min,'portfolio_limits_version':2,'field_model_version':5,'overtime_period_limit':10}
+             'contest':contest,'salary_min':salary_min,'portfolio_limits_version':3,'field_model_version':6,'overtime_period_limit':10}
     if pool.attrs.get('fantasylabs_nba_ownership'):
         content['ownership_snapshot']=pool.attrs['fantasylabs_nba_ownership']['sha256']
     if correlation:content['build_correlation']=correlation
@@ -318,6 +318,9 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
                 if own_column in saved_pool:
                     report[own_column]=pd.to_numeric(saved_pool[own_column],errors='coerce')
                     report['Field minus projected (pp)']=report['Estimated Field Own %']-report[own_column]
+                if 'ownership_target' in built['field']:
+                    report['Adjusted field target %']=built['field']['ownership_target']
+                    report['Field minus target (pp)']=report['Estimated Field Own %']-report['Adjusted field target %']
                 st.dataframe(report,hide_index=True,width="stretch",key="nba_ownership_table",
                              column_config={'Name':st.column_config.TextColumn('Player',pinned=True)})
     with tabs[3]:

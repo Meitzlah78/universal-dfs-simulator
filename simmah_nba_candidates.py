@@ -4,13 +4,17 @@ from simmah_nba_rules import rules_for
 
 
 def build_candidates(pool,outcomes,target=5000,seed=83,salary_min=0,salary_cap=None,
-                     max_attempts=200000,batch_size=512,correlation=0,fixed_slots=None,excluded_indices=None,search_noise=.15):
+                     max_attempts=200000,batch_size=512,correlation=0,fixed_slots=None,excluded_indices=None,search_noise=.15,proposal_weights=None):
     """Return original pool-row indices in uploaded slot order, never filler duplicates.
 
     Candidates use individual shared-slate outcomes plus modest search noise.
     This is bounded heuristic search, not an exhaustive optimizer or portfolio
     selector. Evaluation must use separately simulated outcomes.
     """
+    if proposal_weights is not None:
+        proposal_weights=np.asarray(proposal_weights,float)
+        if proposal_weights.shape!=(len(pool),) or not np.isfinite(proposal_weights).all() or (proposal_weights<0).any():
+            raise ValueError('Finite nonnegative proposal weights aligned to pool required')
     rules=rules_for(pool);eligibility=rules['eligibility'];size=len(rules['slots'])
     salary_cap=rules['salary_cap'] if salary_cap is None else salary_cap
     values=np.asarray(outcomes,float)
@@ -77,7 +81,12 @@ def build_candidates(pool,outcomes,target=5000,seed=83,salary_min=0,salary_cap=N
     rng=np.random.default_rng(seed);seen=set();answer=[];attempted=0;incomplete=0;duplicates=0
     while attempted<max_attempts and len(answer)<target:
         n=min(batch_size,max_attempts-attempted);attempted+=n
-        score=values[rng.integers(len(values),size=n)].copy()
+        if proposal_weights is None:
+            score=values[rng.integers(len(values),size=n)].copy()
+        else:
+            # Fresh proposals each batch: reusing a finite bank creates an
+            # artificial ceiling on distinct full-contest opponent rosters.
+            score=np.log(np.maximum(proposal_weights[original],.001))[None,:]+rng.gumbel(size=(n,len(players)))
         scale=np.maximum(np.std(score,axis=1),1)
         score+=rng.gumbel(size=score.shape)*scale[:,None]*search_noise
         chosen=np.full((n,size),-1,dtype=int);used=np.zeros((n,len(players)),bool)
@@ -116,7 +125,7 @@ def build_candidates(pool,outcomes,target=5000,seed=83,salary_min=0,salary_cap=N
 
 
 
-def build_opponent_support(pool,outcomes,ownership,*,target=10000,seed=83):
+def build_opponent_support(pool,outcomes,ownership,*,target=10000,seed=83,entries=None):
     """Mix scenario rosters with broad ownership proposals before marginal fit.
 
     Proposal scores only determine which legal rosters are available. They do
@@ -126,13 +135,21 @@ def build_opponent_support(pool,outcomes,ownership,*,target=10000,seed=83):
     weights=np.asarray(ownership,float)
     if weights.shape!=(len(pool),) or not np.isfinite(weights).all() or (weights<0).any():
         raise ValueError('Finite ownership proposal weights aligned to pool required')
-    scenario_target=max(1,target//2)
+    requested=target
+    if entries is not None:
+        target=max(target,min(200000,2*int(entries)))
+    scenario_target=max(1,min(2000,target//5))
     scenario=build_candidates(pool,outcomes,target=scenario_target,seed=seed)
     rng=np.random.default_rng(seed+37)
     proposal=np.log(np.maximum(weights,.1))[None,:]+2*rng.gumbel(size=(1024,len(pool)))
-    broad=build_candidates(pool,proposal,target=max(1,target-scenario_target),seed=seed+38)
-    rows=np.concatenate([scenario['indices'],broad['indices']],axis=0)
+    broad_target=max(1,min(3000,target//5))
+    broad=build_candidates(pool,proposal,target=broad_target,seed=seed+38)
+    focused=build_candidates(pool,outcomes,target=max(1,target-scenario_target-broad_target),
+        seed=seed+39,search_noise=0,proposal_weights=weights,
+        max_attempts=max(200000,3*target))
+    rows=np.concatenate([scenario['indices'],broad['indices'],focused['indices']],axis=0)
     _,unique=np.unique(np.sort(rows,axis=1),axis=0,return_index=True)
     return {'indices':rows[np.sort(unique)][:target],
-            'scenario_unique':scenario['unique'],'ownership_proposal_unique':broad['unique']}
+            'scenario_unique':scenario['unique'],'ownership_proposal_unique':broad['unique'],
+            'focused_unique':focused['unique'],'requested_support':requested,'expanded_support_target':target}
 
