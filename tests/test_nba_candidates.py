@@ -59,3 +59,14 @@ class OwnershipProposalTests(unittest.TestCase):
         for row in ids:
             validate_lineup(pool,pool.iloc[row]['Player ID'].tolist(),salary_cap=60000,max_from_team=4)
         np.testing.assert_array_equal(outcomes,original)
+
+class SalarySearchTests(unittest.TestCase):
+    def test_search_discounts_slate_price_without_mutating_scenarios(self):
+        pool,outcomes=CandidateTests().fixture()
+        original=outcomes.copy()
+        # Fixture projections increase .25 points for every $80.
+        adjusted=outcomes-(.25/80)*(pool.Salary.to_numpy()-pool.Salary.mean())
+        trial=build_candidates(pool,outcomes,target=100,seed=3,salary_aware=True)
+        reference=build_candidates(pool,adjusted,target=100,seed=3)
+        np.testing.assert_array_equal(trial['indices'],reference['indices'])
+        np.testing.assert_array_equal(outcomes,original)

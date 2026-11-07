@@ -24,7 +24,7 @@ def run_pipeline(pool,outcome_factory,ownership,ownership_source,payouts,entry_f
                  portfolio_count,*,simulations=10000,candidate_target=5000,
                  field_support_target=10000,seed=83,diversity=50,salary_min=0,
                  max_ownership_error=5,progress=None,ownership_mode="projected",correlation=0,
-                 excluded_indices=None,capture_diagnostics=False,selection_mode='tournament'):
+                 excluded_indices=None,capture_diagnostics=False,selection_mode='tournament',salary_aware=False):
 
     """Generate three independent scenario sets and retain scored candidates.
 
@@ -67,7 +67,7 @@ def run_pipeline(pool,outcome_factory,ownership,ownership_source,payouts,entry_f
     construction=draw(seed)
     started=perf_counter()
     candidates=build_candidates(pool,construction,target=candidate_target,seed=seed+1,salary_min=salary_min,correlation=correlation,
-                                excluded_indices=excluded)
+                                excluded_indices=excluded,salary_aware=salary_aware)
     timings['candidates']=perf_counter()-started
     if candidates['unique']<portfolio_count:raise ValueError('Insufficient unique NBA candidates for reserved entries')
     notify('Building independent opponent support')
@@ -136,7 +136,7 @@ def run_pipeline(pool,outcome_factory,ownership,ownership_source,payouts,entry_f
             # Search preference only: retain the same basketball outcomes,
             # salary/position/team rules, exclusions and independent evaluation.
             extras=build_candidates(pool,construction,target=1500,seed=seed+3001,
-                salary_min=salary_min,correlation=correlation,excluded_indices=excluded,search_noise=.6)
+                salary_min=salary_min,correlation=correlation,excluded_indices=excluded,search_noise=.6,salary_aware=salary_aware)
             seen={tuple(sorted(row)) for row in candidates['indices']}
             added=[]
             for row in extras['indices']:
@@ -164,7 +164,7 @@ def run_pipeline(pool,outcome_factory,ownership,ownership_source,payouts,entry_f
         raise NBASelectionFailure(str(exc),candidates['indices'],report,
             {'portfolio_count':portfolio_count,'diversity':diversity,'metric':'Top 1%',
              'selection_mode':selection_mode,'seed':seed,'salary_min':salary_min,
-             'candidate_recovery':recovery,'correlation':correlation,
+             'candidate_recovery':recovery,'salary_aware':salary_aware,'correlation':correlation,
              'excluded_player_ids':pool.iloc[excluded]['Player ID'].astype(str).tolist()}) from exc
     result={'candidate_recovery':recovery,'selection_mode':selection_mode,'candidates':candidates,'field':field,'report':report,'portfolio':portfolio,
             'timings_seconds':timings,'scenario_cache_hits':cache_hits,
@@ -180,7 +180,7 @@ def run_pipeline(pool,outcome_factory,ownership,ownership_source,payouts,entry_f
                 'salary_min':salary_min,'max_ownership_error':max_ownership_error,
                 'ownership_mode':ownership_mode,'ownership_source':ownership_source,
                 'correlation':correlation,'entry_fee':entry_fee,'portfolio_count':portfolio_count,
-                'candidate_recovery':recovery},
+                'candidate_recovery':recovery,'salary_aware':salary_aware},
             'seeds':{'candidate_search':seed+1,'support_search':seed+1010,'field_copies':seed+1011}}
     return result
 

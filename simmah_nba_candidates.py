@@ -4,7 +4,7 @@ from simmah_nba_rules import rules_for
 
 
 def build_candidates(pool,outcomes,target=5000,seed=83,salary_min=0,salary_cap=None,
-                     max_attempts=200000,batch_size=512,correlation=0,fixed_slots=None,excluded_indices=None,search_noise=.15,proposal_weights=None):
+                     max_attempts=200000,batch_size=512,correlation=0,fixed_slots=None,excluded_indices=None,search_noise=.15,proposal_weights=None,salary_aware=False):
     """Return original pool-row indices in uploaded slot order, never filler duplicates.
 
     Candidates use individual shared-slate outcomes plus modest search noise.
@@ -60,6 +60,16 @@ def build_candidates(pool,outcomes,target=5000,seed=83,salary_min=0,salary_cap=N
         np.fill_diagonal(positive_correlation,0)
     salary=np.asarray(players['Salary'],float)
     if not np.isfinite(salary).all() or (salary<=0).any():raise ValueError('Positive salaries required')
+    if salary_aware and np.ptp(salary)>0:
+        # Estimate the price of one more salary dollar on this slate.
+        # Discount it only in search utilities; evaluation uses raw game scores.
+        centered_salary=salary-salary.mean()
+        points=projection[original]
+        valid=np.isfinite(points)&(points>0)
+        x=salary[valid]-salary[valid].mean() if valid.any() else np.array([])
+        if x@x>0:
+            slope=max(0.,float(x@(points[valid]-points[valid].mean())/(x@x)))
+            values=values-slope*centered_salary
     positions=[set(str(p).split('/')) for p in players['Position']]
     eligible=np.array([[bool(p & allowed) for p in positions] for allowed in eligibility])
     if not eligible.any(axis=1).all():raise ValueError('A roster slot has no eligible NBA players')
