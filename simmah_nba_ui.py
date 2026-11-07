@@ -28,6 +28,7 @@ def input_identity(pool,markets,contest,salary_min,correlation=0,excluded_player
              'contest':contest,'salary_min':salary_min,'portfolio_limits_version':3,'field_model_version':6,'overtime_period_limit':10}
     if pool.attrs.get('fantasylabs_nba_ownership'):
         content['ownership_snapshot']=pool.attrs['fantasylabs_nba_ownership']['sha256']
+    if pool.attrs.get('nba_variable_minutes'):content['variable_regulation_minutes']=1
     if salary_aware:content['salary_aware_search']=1
     if correlation:content['build_correlation']=correlation
     if len(excluded_player_ids):content['excluded_player_ids']=sorted(map(str,excluded_player_ids))
@@ -90,6 +91,11 @@ def render_exports(st,upload,cid,pool,built,portfolio,platform,stale,location,st
 
 def render_workspace(st,slate,upload,tabs,controls,markets):
     pool=slate['players'];rules=rules_for(pool);platform=rules['platform'];slots=rules['slots'];contests={c['id']:c for c in slate['contests']}
+    with controls:
+        variable_minutes=st.checkbox('Vary regulation minutes by trial',value=False,key='nba_variable_minutes_'+platform,
+            help='Experimental: players exchange minutes with teammates in each simulation. Team minutes stay at 240; projected player minutes are preserved on average.')
+    pool=pool.copy()
+    pool.attrs['nba_variable_minutes']=variable_minutes
     with tabs[0]:
         cid=st.selectbox('NBA contest',list(contests),format_func=lambda x:contests[x]['name'],key='nba_selected_contest')
     selected=contests[cid];count=selected['owned_entries'];error=None;contest=None;engine=None;day=None

@@ -60,3 +60,35 @@ def simulate_minutes(rotation, n, seed, blowout=None):
     bench=np.full((n,5),max(residual/5,1e-8))
     minutes=allocate_minutes(np.column_stack([weights,bench]))
     return minutes[:,:len(mean)],minutes[:,len(mean):].sum(axis=1)
+
+
+def draw_regulation_minutes(means, trials, seed):
+    """Exchange minutes between teammates, preserving each projection in expectation.
+
+    Four rounds of random pairs; each bounded transfer has zero conditional
+    mean. Variance scales are trial assumptions, not fitted coaching effects.
+    """
+    means=np.asarray(means,float)
+    if (means.ndim!=1 or not np.isfinite(means).all() or (means<0).any()
+            or (means>48).any() or abs(means.sum()-240)>1e-6 or trials<1):
+        raise ValueError('Complete 240-minute regulation team and positive trials required')
+    v=np.tile(means,(trials,1))
+    active=np.flatnonzero((means>0)&(means<48))
+    width=len(active)//2
+    if not width:return v
+    # High-minute players have smaller swings. A partner with a tight
+    # role limits the transfer. No multiplication of bench mean minutes.
+    sd=np.interp(means,[0,10,24,36,48],[0,5,5,3,0])
+    rng=np.random.default_rng(seed)
+    row=np.arange(trials)[:,None]
+    for _ in range(4):
+        order=active[np.argsort(rng.random((trials,len(active))),axis=1)]
+        a,b=order[:,:width],order[:,width:2*width]
+        step=np.minimum(sd[a],sd[b])/2
+        plus=np.minimum(np.minimum(48-v[row,a],v[row,b]),step)
+        minus=np.minimum(np.minimum(v[row,a],48-v[row,b]),step)
+        prob=np.divide(minus,plus+minus,out=np.zeros_like(minus),where=plus+minus>0)
+        transfer=np.where(rng.random(prob.shape)<prob,plus,-minus)
+        v[row,a]+=transfer
+        v[row,b]-=transfer
+    return np.clip(v,0,48)
