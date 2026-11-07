@@ -1078,6 +1078,217 @@
           "prize": 0.1
         }
       ]
+    },
+    "nba-2500-11890": {
+      "name": "NBA $2.5K Quarter Jukebox [Just $0.25!]",
+      "platform": "DraftKings",
+      "capacity": 11890,
+      "entry_fee": 0.25,
+      "prize_pool": 2500,
+      "payout_tiers": [
+        {
+          "first": 1,
+          "last": 1,
+          "prize": 125
+        },
+        {
+          "first": 2,
+          "last": 2,
+          "prize": 80
+        },
+        {
+          "first": 3,
+          "last": 3,
+          "prize": 50
+        },
+        {
+          "first": 4,
+          "last": 4,
+          "prize": 35
+        },
+        {
+          "first": 5,
+          "last": 5,
+          "prize": 25
+        },
+        {
+          "first": 6,
+          "last": 6,
+          "prize": 20
+        },
+        {
+          "first": 7,
+          "last": 8,
+          "prize": 15
+        },
+        {
+          "first": 9,
+          "last": 10,
+          "prize": 10
+        },
+        {
+          "first": 11,
+          "last": 13,
+          "prize": 8
+        },
+        {
+          "first": 14,
+          "last": 16,
+          "prize": 6
+        },
+        {
+          "first": 17,
+          "last": 20,
+          "prize": 5
+        },
+        {
+          "first": 21,
+          "last": 25,
+          "prize": 4
+        },
+        {
+          "first": 26,
+          "last": 45,
+          "prize": 3
+        },
+        {
+          "first": 46,
+          "last": 105,
+          "prize": 2
+        },
+        {
+          "first": 106,
+          "last": 230,
+          "prize": 1.5
+        },
+        {
+          "first": 231,
+          "last": 555,
+          "prize": 1
+        },
+        {
+          "first": 556,
+          "last": 1335,
+          "prize": 0.75
+        },
+        {
+          "first": 1336,
+          "last": 2846,
+          "prize": 0.5
+        }
+      ],
+      "source": "User-supplied Nov 7, 2026 DraftKings contest payout table"
+    },
+    "fd-fadeaway-10000-47904": {
+      "name": "$10K Sat NBA Fadeaway (Only $0.25 to Enter)",
+      "platform": "FanDuel",
+      "capacity": 47904,
+      "entry_fee": 0.25,
+      "prize_pool": 10000,
+      "max_entries": 150,
+      "payout_tiers": [
+        {
+          "first": 1,
+          "last": 1,
+          "prize": 500
+        },
+        {
+          "first": 2,
+          "last": 2,
+          "prize": 200
+        },
+        {
+          "first": 3,
+          "last": 3,
+          "prize": 100
+        },
+        {
+          "first": 4,
+          "last": 4,
+          "prize": 75
+        },
+        {
+          "first": 5,
+          "last": 5,
+          "prize": 50
+        },
+        {
+          "first": 6,
+          "last": 7,
+          "prize": 30
+        },
+        {
+          "first": 8,
+          "last": 10,
+          "prize": 25
+        },
+        {
+          "first": 11,
+          "last": 15,
+          "prize": 20
+        },
+        {
+          "first": 16,
+          "last": 20,
+          "prize": 15
+        },
+        {
+          "first": 21,
+          "last": 25,
+          "prize": 10
+        },
+        {
+          "first": 26,
+          "last": 30,
+          "prize": 6
+        },
+        {
+          "first": 31,
+          "last": 40,
+          "prize": 4
+        },
+        {
+          "first": 41,
+          "last": 50,
+          "prize": 3
+        },
+        {
+          "first": 51,
+          "last": 100,
+          "prize": 2
+        },
+        {
+          "first": 101,
+          "last": 200,
+          "prize": 1.5
+        },
+        {
+          "first": 201,
+          "last": 500,
+          "prize": 1.25
+        },
+        {
+          "first": 501,
+          "last": 1000,
+          "prize": 1
+        },
+        {
+          "first": 1001,
+          "last": 3000,
+          "prize": 0.75
+        },
+        {
+          "first": 3001,
+          "last": 6025,
+          "prize": 0.6
+        },
+        {
+          "first": 6026,
+          "last": 14375,
+          "prize": 0.5
+        }
+      ],
+      "source": "User-supplied Nov 7, 2026 FanDuel Prizes screenshot"
     }
   }
 }
