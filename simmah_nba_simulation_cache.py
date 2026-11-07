@@ -27,7 +27,7 @@ def simulation_identity(engine):
                  'simmah_nba_projection_anchor.py','simmah_nba_rotation_schedule.py','simmah_nba_scoring.py','simmah_nba_parallel.py',
                  'simmah_nba_minutes.py'):
         implementation.update(Path(__file__).with_name(name).read_bytes())
-    payload={'version':2,'variable_regulation_minutes':bool(engine.pool.attrs.get('nba_variable_minutes')),'platform':engine.platform,'max_overtimes':engine.max_overtimes,
+    payload={'version':2,'estimated_teams':sorted(engine.pool.attrs.get('nba_estimated_rotation_teams',[])),'variable_regulation_minutes':bool(engine.pool.attrs.get('nba_variable_minutes')),'platform':engine.platform,'max_overtimes':engine.max_overtimes,
         'implementation':implementation.hexdigest(),
         'pool':sha256(pd.util.hash_pandas_object(inputs,index=False).to_numpy().tobytes()).hexdigest(),
         'dtypes':list(map(str,inputs.dtypes)),

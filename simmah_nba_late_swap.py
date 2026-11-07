@@ -390,6 +390,7 @@ def run_simulated_late_swap(template,contest_id,pool,markets,contest,saved,actua
             else:
                 sub=pool.iloc[open_indices].copy().reset_index(drop=True)
             sub.attrs.update(pool.attrs)
+            sub.attrs['nba_estimated_rotation_teams']=original.attrs.get('nba_estimated_rotation_teams',[])
             sub.attrs['nba_variable_minutes']=bool(original.attrs.get('nba_variable_minutes'))
             teams=set(sub['Team'].map(team_key))
             lines=[m for m in (markets or []) if set(map(team_key,m['teams']))<=teams]

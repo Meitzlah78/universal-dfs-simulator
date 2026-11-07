@@ -29,6 +29,8 @@ def input_identity(pool,markets,contest,salary_min,correlation=0,excluded_player
     if pool.attrs.get('fantasylabs_nba_ownership'):
         content['ownership_snapshot']=pool.attrs['fantasylabs_nba_ownership']['sha256']
     if pool.attrs.get('nba_variable_minutes'):content['variable_regulation_minutes']=1
+    if pool.attrs.get('nba_estimated_rotation_teams'):
+        content['estimated_rotation_teams']=sorted(pool.attrs['nba_estimated_rotation_teams'])
     if salary_aware:content['salary_aware_search']=1
     if correlation:content['build_correlation']=correlation
     if len(excluded_player_ids):content['excluded_player_ids']=sorted(map(str,excluded_player_ids))
@@ -94,7 +96,12 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
     with controls:
         variable_minutes=st.checkbox('Vary regulation minutes by trial',value=False,key='nba_variable_minutes_'+platform,
             help='Experimental: players exchange minutes with teammates in each simulation. Team minutes stay at 240; projected player minutes are preserved on average.')
+        from simmah_nba_projections import team_key
+        estimated_teams=st.multiselect('Allow estimated rotation minutes for teams',sorted({team_key(t) for t in pool['Team']}),
+            key='nba_estimated_rotation_teams_'+platform+'_'+str(slate.get('date','')),
+            help='Only for a known rotation totaling 210 to under 228 minutes. Spread the shortfall across available rotation players, capped at 48. Original player projections stay visible.')
     pool=pool.copy()
+    pool.attrs['nba_estimated_rotation_teams']=estimated_teams
     pool.attrs['nba_variable_minutes']=variable_minutes
     with tabs[0]:
         cid=st.selectbox('NBA contest',list(contests),format_func=lambda x:contests[x]['name'],key='nba_selected_contest')
@@ -143,6 +150,8 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
                 ', '.join(f"{row['team']} ({row['provider_total']:g} provider minutes)" for row in engine.rotation_reconciliation)+
                 '. Source minutes and player point projections are preserved; only simulation playing-time shares are reconciled.')
             for row in engine.rotation_reconciliation:
+                if row.get('basis')=='user-approved short rotation estimate':
+                    with tabs[0]:st.warning(f"{row['team']}: you enabled an estimate for {240-row['provider_total']:g} unassigned minutes. Refresh the provider rotation when available.")
                 if row.get('basis')=='inactive-player budget reconciliation':
                     with tabs[0]:st.warning(row['team']+' provider rotation still assigned '+
                         f"{row['excluded_inactive_minutes']:g} minutes to OUT players: "+

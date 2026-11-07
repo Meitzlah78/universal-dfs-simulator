@@ -24,10 +24,10 @@ st.set_page_config(
 
 import importlib
 import simmah_runtime_release as runtime_release
-if (getattr(runtime_release, '_active_release', None) != 'nba-variable-regulation-minutes-20261107-r1'
+if (getattr(runtime_release, '_active_release', None) != 'nba-short-rotation-recovery-20261107-r1'
         or not hasattr(runtime_release, 'activate_role_ownership_release')):
     runtime_release = importlib.reload(runtime_release)
-runtime_release.activate_nba_release('nba-variable-regulation-minutes-20261107-r1')
+runtime_release.activate_nba_release('nba-short-rotation-recovery-20261107-r1')
 runtime_release.activate_role_ownership_release('role-marginals-v1')
 
 if st.query_params.get('simmah_qa') == 'storage':
