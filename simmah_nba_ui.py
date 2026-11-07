@@ -31,6 +31,8 @@ def input_identity(pool,markets,contest,salary_min,correlation=0,excluded_player
     if pool.attrs.get('nba_variable_minutes'):content['variable_regulation_minutes']=1
     if pool.attrs.get('nba_estimated_rotation_teams'):
         content['estimated_rotation_teams']=sorted(pool.attrs['nba_estimated_rotation_teams'])
+    if pool.attrs.get('nba_wider_minutes'):content['wider_minutes']=1
+    if pool.attrs.get('nba_uncapped'):content['nba_uncapped']=True
     if salary_aware:content['salary_aware_search']=1
     if correlation:content['build_correlation']=correlation
     if len(excluded_player_ids):content['excluded_player_ids']=sorted(map(str,excluded_player_ids))
@@ -94,15 +96,21 @@ def render_exports(st,upload,cid,pool,built,portfolio,platform,stale,location,st
 def render_workspace(st,slate,upload,tabs,controls,markets):
     pool=slate['players'];rules=rules_for(pool);platform=rules['platform'];slots=rules['slots'];contests={c['id']:c for c in slate['contests']}
     with controls:
+        use_caps=st.checkbox('Apply automatic NBA exposure caps',value=False,key='nba_apply_caps_'+platform,
+            help='Off: a player can appear in every entry. On: use the overall, projected ownership and minutes caps.')
         variable_minutes=st.checkbox('Vary regulation minutes by trial',value=False,key='nba_variable_minutes_'+platform,
             help='Experimental: players exchange minutes with teammates in each simulation. Team minutes stay at 240; projected player minutes are preserved on average.')
+        wider_minutes=variable_minutes and st.checkbox('Wider bench minutes (trial)',value=False,
+            key='nba_wider_minutes_'+platform,help='Adds an occasional larger shift for players projected below 18 minutes.')
         from simmah_nba_projections import team_key
         estimated_teams=st.multiselect('Allow estimated rotation minutes for teams',sorted({team_key(t) for t in pool['Team']}),
             key='nba_estimated_rotation_teams_'+platform+'_'+str(slate.get('date','')),
             help='Only for a known rotation totaling 210 to under 228 minutes. Spread the shortfall across available rotation players, capped at 48. Original player projections stay visible.')
     pool=pool.copy()
     pool.attrs['nba_estimated_rotation_teams']=estimated_teams
+    pool.attrs['nba_uncapped']=not use_caps
     pool.attrs['nba_variable_minutes']=variable_minutes
+    pool.attrs['nba_wider_minutes']=wider_minutes
     with tabs[0]:
         cid=st.selectbox('NBA contest',list(contests),format_func=lambda x:contests[x]['name'],key='nba_selected_contest')
     selected=contests[cid];count=selected['owned_entries'];error=None;contest=None;engine=None;day=None
@@ -190,7 +198,8 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         correlation=st.slider('Build correlation',0,100,0,key='nba_build_correlation',
             help='Extra preference for positively correlated player combinations measured from the shared game simulations. 0 = no extra bonus; 100 = strongest bonus. Game simulations remain correlated at every setting.')
         diversity=st.slider('Exposure diversity',0,100,50,key='nba_exposure_diversity')
-        st.caption('Hard portfolio caps: 60% overall; verified projected ownership + 5 percentage points where lower; below 16 projected minutes: 15%. Small portfolios round positive caps up to at least one entry. Caps never relax; selection/export stops if they cannot be met.')
+        if not use_caps:st.caption('No automatic player exposure limits. Diversity still favors less overlap; every selected lineup must be unique.')
+        else:st.caption('Hard portfolio caps: 60% overall; verified projected ownership + 5 percentage points where lower; below 16 projected minutes: 15%. Small portfolios round positive caps up to at least one entry. Caps never relax; selection/export stops if they cannot be met.')
         metric=st.selectbox('Rank lineups',['Top 1%','Expected ROI (%)','Expected Prize ($)'],key='nba_rank_metric')
         clicked=workspace_button(st,'BUILD NBA LINEUPS',disabled=bool(error),key='nba_build')
         if error:

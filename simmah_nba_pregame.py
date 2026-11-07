@@ -5,7 +5,7 @@ from simmah_nba_rotation_schedule import build_rotation
 from simmah_nba_markets import simulate_market_game
 from simmah_nba_engine import simulate_game
 from simmah_nba_projection_anchor import fit_player_means
-from simmah_nba_minutes import allocate_minutes,draw_regulation_minutes
+from simmah_nba_minutes import allocate_minutes,draw_regulation_minutes,draw_wider_minutes
 
 ROLE_COLUMNS=['Historical '+r+' Rate' for r in ('Shot','Assist','Rebound','Steal','Block')]
 
@@ -151,7 +151,8 @@ class PregameEngine:
                 profiles[team,:len(ids)]=roles
                 overtime.append(np.stack([build_rotation(np.tile(padded*5/48,(n,1)),seed+game_index*97+team+10000+ot*11,team*size,period_minutes=5) for ot in range(self.max_overtimes)],axis=1))
                 rotation_seed=seed+game_index*97+team
-                minute_draws=(draw_regulation_minutes(padded,n,np.random.SeedSequence([seed,game_index,team,731]))
+                minute_sampler=draw_wider_minutes if self.pool.attrs.get('nba_wider_minutes') else draw_regulation_minutes
+                minute_draws=(minute_sampler(padded,n,np.random.SeedSequence([seed,game_index,team,731]))
                               if self.pool.attrs.get('nba_variable_minutes') else np.tile(padded,(n,1)))
                 rotations.append(build_rotation(minute_draws,rotation_seed,team*size))
             rotation=np.stack(rotations,axis=1);ot=np.stack(overtime,axis=1)
@@ -193,7 +194,7 @@ class PregameEngine:
             player_means=result['scores'].mean(axis=0,dtype=np.float64).reshape(2,size)
             active=targets>0;error=abs(player_means-targets)[active]
             reports.append({'teams':market['teams'],'calibration':calibration,
-                            'player_anchor':anchor,'variable_regulation_minutes':bool(self.pool.attrs.get('nba_variable_minutes')),
+                            'player_anchor':anchor,'wider_minutes':bool(self.pool.attrs.get('nba_wider_minutes')),'variable_regulation_minutes':bool(self.pool.attrs.get('nba_variable_minutes')),
                             'evaluation_player_mean_mae':float(error.mean()),
                             'evaluation_player_mean_max_error':float(error.max()),
                             'overtime_fraction':float((result['overtime_periods']>0).mean()),

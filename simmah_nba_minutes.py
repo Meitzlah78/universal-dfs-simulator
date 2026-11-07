@@ -92,3 +92,25 @@ def draw_regulation_minutes(means, trials, seed):
         v[row,a]+=transfer
         v[row,b]-=transfer
     return np.clip(v,0,48)
+
+
+def draw_wider_minutes(means,trials,seed):
+    """One extra mean-neutral reserve/donor exchange after normal variability."""
+    means=np.asarray(means,float)
+    seq=seed if isinstance(seed,np.random.SeedSequence) else np.random.SeedSequence(seed)
+    v=draw_regulation_minutes(means,trials,seq)
+    rng=np.random.default_rng(np.random.SeedSequence(seq.entropy,spawn_key=(*seq.spawn_key,0),pool_size=seq.pool_size))
+    reserve=np.flatnonzero((means>0)&(means<18))
+    donor=np.flatnonzero((means>=18)&(means<48))
+    ranks=min(len(reserve),len(donor))
+    if not ranks:return v
+    rows=np.arange(trials)
+    r=reserve[np.argsort(rng.random((trials,len(reserve))),axis=1)]
+    d=donor[np.argsort(rng.random((trials,len(donor))),axis=1)]
+    for k in range(ranks):
+        i,j=r[:,k],d[:,k]
+        swing=np.minimum.reduce([np.full(trials,12.),48-v[rows,i],v[rows,j],4*v[rows,i],4*(48-v[rows,j])])
+        transfer=swing*np.where(rng.random(trials)<.2,1.,-.25)
+        v[rows,i]+=transfer
+        v[rows,j]-=transfer
+    return v

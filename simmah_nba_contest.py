@@ -83,7 +83,7 @@ def select_entries(pool,candidates,report,count,diversity=50,controls=None,metri
     from simmah_nba_portfolio_limits import portfolio_limits, validate_portfolio_limits
     limits=portfolio_limits(pool,controls,count=int(count))
     selected=select_portfolio(rows,list(rules_for(pool)['slots']),count,metric,
-                            controls=limits,diversity=diversity)
+                            controls=limits,diversity=diversity,automatic_caps=not pool.attrs.get('nba_uncapped',False))
     validate_portfolio_limits(selected,rules_for(pool)['slots'],limits)
     selected.attrs['nba_hard_exposure_limits']=limits
     return selected
