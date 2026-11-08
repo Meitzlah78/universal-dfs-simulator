@@ -5,6 +5,25 @@ from scipy.special import logsumexp
 from scipy.sparse import csr_matrix
 
 
+def _draw_copies(entries, probability, seed):
+    """Preserve ordinary seeded draws; repair only roundoff at the last bin."""
+    try:
+        return np.random.default_rng(seed).multinomial(entries, probability)
+    except ValueError:
+        p = np.asarray(probability, dtype=np.float64)
+        if (p.ndim != 1 or not len(p) or not np.isfinite(p).all()
+                or (p < 0).any() or abs(p.sum() - 1) > 1e-10):
+            raise
+        # NumPy takes the last probability as the remainder. Give it the
+        # largest mass, so a tiny final bin cannot vanish into rounding.
+        order = np.arange(len(p))
+        largest = int(p.argmax())
+        order[largest], order[-1] = order[-1], order[largest]
+        counts = np.empty(len(p), dtype=np.int64)
+        counts[order] = np.random.default_rng(seed).multinomial(entries, p[order] / p.sum())
+        return counts
+
+
 def build_field(lineups,ownership,entries,seed=83,source=None,max_iterations=100):
     """Fit candidate probabilities to full nine-slot ownership targets.
 
@@ -39,7 +58,7 @@ def build_field(lineups,ownership,entries,seed=83,source=None,max_iterations=100
                  options={'maxiter':max_iterations,'ftol':1e-12,'gtol':1e-7})
     logits=incidence@fit.x;probability=np.exp(logits-logsumexp(logits))
     expected=100*(probability@incidence)
-    copies=np.random.default_rng(seed).multinomial(entries,probability)
+    copies=_draw_copies(entries,probability,seed)
     actual=100*(copies@incidence)/entries
     selected=copies>0
     return {'indices':ids[selected],'copies':copies[selected],
@@ -75,7 +94,7 @@ def sample_popularity_field(lineups,popularity,entries,seed=83,source=None,stren
     probability=np.exp(logits-logsumexp(logits))
     incidence=csr_matrix((np.ones(ids.size),(np.repeat(np.arange(len(ids)),ids.shape[1]),ids.ravel())),
                          shape=(len(ids),len(raw)))
-    copies=np.random.default_rng(seed).multinomial(entries,probability)
+    copies=_draw_copies(entries,probability,seed)
     keep=copies>0
     return {'indices':ids[keep],'copies':copies[keep],
             'ownership_expected':100*(probability@incidence),

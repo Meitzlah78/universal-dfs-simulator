@@ -33,3 +33,15 @@ class NBAFieldTests(unittest.TestCase):
         self.assertIn('Estimated',r['ownership_source'])
         self.assertNotIn('ownership_target',r)
         self.assertTrue(0<r['largest_roster_probability']<=1)
+
+    def test_roundoff_at_tiny_final_bin(self):
+        from simmah_nba_field import _draw_copies
+        p = np.array([0., .8, .2 + 1e-11, 1e-25])
+        with self.assertRaises(ValueError):
+            np.random.default_rng(83).multinomial(20000, p)
+        counts = _draw_copies(20000, p, 83)
+        self.assertEqual(counts.sum(), 20000)
+        np.testing.assert_allclose(counts / 20000, p, atol=.012)
+        np.testing.assert_array_equal(counts, _draw_copies(20000, p, 83))
+        with self.assertRaises(ValueError):
+            _draw_copies(100, np.array([.8, .3, 0.]), 83)
