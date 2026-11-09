@@ -1,9 +1,9 @@
 {
-  "checked_at": "2026-11-08T09:38:31.726873-05:00",
-  "through_date": "2026-11-07",
-  "lookback_days": 38,
+  "checked_at": "2026-11-09T12:58:40.851606-05:00",
+  "through_date": "2026-11-08",
+  "lookback_days": 39,
   "downloaded": 7,
-  "already_archived": 189,
+  "already_archived": 196,
   "failures": [
     {
       "date": "2026-10-05",
