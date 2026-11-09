@@ -3867,6 +3867,120 @@
       "your_entries_at_capture": 20,
       "source": "User-provided complete Prizes screenshot (2026-11-05 180140)",
       "verified_date": "2026-11-05"
+    },
+    "DraftKings:7500-quarter-jukebox-buf-min": {
+      "name": "NFL Showdown $7.5K Quarter Jukebox [Just $0.25!] (BUF @ MIN)",
+      "site": "DraftKings",
+      "format": "DraftKings Showdown",
+      "payouts": [
+        [
+          1,
+          1,
+          300
+        ],
+        [
+          2,
+          2,
+          200
+        ],
+        [
+          3,
+          3,
+          125
+        ],
+        [
+          4,
+          4,
+          80
+        ],
+        [
+          5,
+          5,
+          55
+        ],
+        [
+          6,
+          10,
+          30
+        ],
+        [
+          11,
+          15,
+          25
+        ],
+        [
+          16,
+          20,
+          20
+        ],
+        [
+          21,
+          25,
+          15
+        ],
+        [
+          26,
+          30,
+          10
+        ],
+        [
+          31,
+          40,
+          8
+        ],
+        [
+          41,
+          50,
+          6
+        ],
+        [
+          51,
+          60,
+          5
+        ],
+        [
+          61,
+          75,
+          4
+        ],
+        [
+          76,
+          130,
+          3
+        ],
+        [
+          131,
+          295,
+          2
+        ],
+        [
+          296,
+          645,
+          1.5
+        ],
+        [
+          646,
+          1560,
+          1
+        ],
+        [
+          1561,
+          3800,
+          0.75
+        ],
+        [
+          3801,
+          8550,
+          0.5
+        ]
+      ],
+      "entry_fee": 0.25,
+      "prize_pool": 7500,
+      "verified_total_payout": 7500,
+      "paid_positions": 8550,
+      "field_size": 35671,
+      "source": "User-provided full payout table and entry count",
+      "verified_date": "2026-11-09"
     }
   }
 }
