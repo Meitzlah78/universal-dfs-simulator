@@ -1,5 +1,5 @@
 {
-  "checked_at": "2026-11-09T20:18:56.046354+00:00",
+  "checked_at": "2026-11-10T17:23:22.314128+00:00",
   "completed_weeks": [
     1,
     2,
@@ -8,17 +8,18 @@
     5,
     6,
     7,
-    8
+    8,
+    9
   ],
-  "games": 121,
+  "games": 136,
   "season": 2026,
   "sources": [
     {
-      "sha256": "bfdc4fa36708b0616daf9da66de0c725ab4815e2a8a46ada3f018b5c00c11fed",
+      "sha256": "da49d4cd14811cb623529f9361eb7306dff4c5cfee466776534212e21aeb204b",
       "url": "https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2026.csv"
     },
     {
-      "sha256": "3e093109782714d98a3b7082669238bfcf7ab92052915d056da16e01d28d76c8",
+      "sha256": "c781b126a5c331c563d4bc0572aaac5306556525fa1800f7e30dda395e234643",
       "url": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv"
     }
   ],
