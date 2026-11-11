@@ -1,8 +1,39 @@
 import unittest
+from unittest.mock import patch
+from types import SimpleNamespace
 import numpy as np
 from simmah_nba_field import build_field
 
 class NBAFieldTests(unittest.TestCase):
+    def test_failed_exact_fit_recovers_within_tolerance_on_both_sites(self):
+        import simmah_nba_field as field
+        optimize=field.minimize
+        for size in (8,9):
+            ids=np.array([list(range(size)),list(range(size-1))+[size]])
+            target=np.r_[np.full(size-1,99.6),[50+.2*(size-1)]*2]
+            stalled=SimpleNamespace(x=np.r_[np.zeros(size),100.],success=False,
+                                    message='Iteration limit reached')
+            def solve(*args,**kwargs):
+                return stalled if 'bounds' not in kwargs else optimize(*args,**kwargs)
+            with patch.object(field,'minimize',side_effect=solve):
+                result=build_field(ids,target,50000,source='fixture',max_error_pct=5)
+            self.assertGreater(result['initial_max_expected_error_pct'],40)
+            self.assertLess(result['max_expected_error_pct'],2.51)
+            self.assertEqual(result['fit_method'],'ownership-band entropy recovery')
+            self.assertTrue(result['optimizer_converged'])
+            self.assertEqual(result['copies'].sum(),50000)
+            np.testing.assert_array_equal(result['ownership_target'],target)
+            self.assertTrue(all(tuple(row) in set(map(tuple,ids)) for row in result['indices']))
+            probabilities=result['fit_state']['probabilities']
+            self.assertAlmostEqual(probabilities.sum(),1)
+            self.assertTrue(np.isfinite(probabilities).all())
+
+    def test_infeasible_support_still_reports_error_after_recovery(self):
+        ids=np.array([list(range(8)),list(range(1,9))])
+        result=build_field(ids,np.full(9,800/9),1000,source='infeasible')
+        self.assertGreater(result['max_expected_error_pct'],5)
+        self.assertEqual(result['copies'].sum(),1000)
+
     def support(self):
         rng=np.random.default_rng(7)
         return np.array([rng.choice(20,9,replace=False) for _ in range(100)])
