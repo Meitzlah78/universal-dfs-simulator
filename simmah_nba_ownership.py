@@ -8,6 +8,8 @@ COLUMN='RotoWire Projected Own %'
 
 def ownership_column(pool):
     from simmah_nba_ownership_upload import IMPORTED_COLUMN
+    if 'DraftDashboard Projected Own %' in pool:
+        return 'DraftDashboard Projected Own %'
     return IMPORTED_COLUMN if IMPORTED_COLUMN in pool else COLUMN
 
 
@@ -41,7 +43,7 @@ def validated_import(pool):
     meta=pool.attrs.get('fantasylabs_nba_ownership',{})
     expected=100*len(rules_for(pool)['slots'])
     total=meta.get('raw_total')
-    return (ownership_column(pool)!=COLUMN and meta.get('source')=='FantasyLabs SimLabs'
+    return (ownership_column(pool)!=COLUMN and meta.get('source') in {'FantasyLabs SimLabs','DraftDashboard'}
             and isinstance(total,(int,float)) and np.isfinite(total)
             and abs(total-expected)<=expected*.01)
 
@@ -51,6 +53,8 @@ def field_ownership_inputs(pool):
     active=active_players(pool)
     column=ownership_column(pool)
     source='FantasyLabs imported slate ownership' if column!=COLUMN else 'RotoWire dedicated slate ownership'
+    if column=='DraftDashboard Projected Own %':
+        source='DraftDashboard imported slate ownership'
     raw=ownership_values(pool).to_numpy(float)
     if column!=COLUMN and pool.attrs.get('fantasylabs_nba_ownership',{}).get('missing_eligible_players'):
         source+=' with estimated residual ownership for unreported players'
