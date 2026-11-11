@@ -85,6 +85,10 @@ def build_candidates(pool,outcomes,target=5000,seed=83,salary_min=0,salary_cap=N
     order=[slot for slot in order if slot not in fixed]
     minimum=np.array([salary[eligible[j]].min() for j in order])
     remaining_minimum=np.array([minimum[k+1:].sum() for k in range(len(order))])
+    # Per-slot maxima can reuse a player, so this is an optimistic bound.
+    # It only removes picks that cannot possibly reach the floor.
+    maximum = [salary[eligible[slot]].max() for slot in order]
+    remaining_maximum = [sum(maximum[k + 1:]) for k in range(len(order))]
     if rules['min_games']>1:
         game_keys=[str(tuple(sorted((str(r.Team),str(r.Opponent))))) for r in players.itertuples()]
         _,game_ids=np.unique(game_keys,return_inverse=True)
@@ -108,6 +112,8 @@ def build_candidates(pool,outcomes,target=5000,seed=83,salary_min=0,salary_cap=N
         for k,slot in enumerate(order):
             allowed=eligible[slot][None,:]&~used&(counts[:,teams]<rules['max_from_team'])
             allowed &= spent[:,None]+salary[None,:]+remaining_minimum[k]<=salary_cap
+            if salary_min > 0:
+                allowed &= spent[:, None] + salary[None, :] + remaining_maximum[k] >= salary_min
             possible=allowed.any(axis=1);alive &= possible
             utility=score if correlation==0 else score+(correlation/100)*.5*scale[:,None]*pair_bonus/max(k,1)
             pick=np.argmax(np.where(allowed,utility,-np.inf),axis=1)
