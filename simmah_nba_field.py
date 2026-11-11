@@ -24,7 +24,7 @@ def _draw_copies(entries, probability, seed):
         return counts
 
 
-def build_field(lineups,ownership,entries,seed=83,source=None,max_iterations=100):
+def build_field(lineups,ownership,entries,seed=83,source=None,max_iterations=100,max_error_pct=5):
     """Fit candidate probabilities to full nine-slot ownership targets.
 
     ownership is a complete percent vector (sum 900), aligned to outcome player
@@ -41,6 +41,8 @@ def build_field(lineups,ownership,entries,seed=83,source=None,max_iterations=100
         raise ValueError('Invalid or repeated player in opponent lineup')
     if not isinstance(entries,int) or entries<1 or not source or max_iterations<1:
         raise ValueError('Positive field size, fitting budget and ownership source required')
+    if not np.isfinite(max_error_pct) or not 0<max_error_pct<=100:
+        raise ValueError('Ownership fitting tolerance must be positive and at most 100 percentage points')
     # Flexible-slot permutations are one roster support point, not additional
     # independent probabilities for the same lineup.
     _,unique=np.unique(np.sort(ids,axis=1),axis=0,return_index=True)
@@ -58,6 +60,39 @@ def build_field(lineups,ownership,entries,seed=83,source=None,max_iterations=100
                  options={'maxiter':max_iterations,'ftol':1e-12,'gtol':1e-7})
     logits=incidence@fit.x;probability=np.exp(logits-logsumexp(logits))
     expected=100*(probability@incidence)
+    initial_error=float(abs(expected-target).max())
+    fit_method='exact-target entropy fit'
+    if initial_error>max_error_pct:
+        # Finite support can admit a close fit without admitting exact marginals.
+        # The split dual solves maximum entropy inside a band around each target.
+        # Keep the best measured residual if a recovery solve exhausts its budget.
+        players=len(target)
+        for band_pct in (max_error_pct/2,max_error_pct*.99):
+            band=band_pct/100
+            def band_loss(parameters):
+                theta=parameters[:players]-parameters[players:]
+                logits=incidence@theta
+                normalizer=logsumexp(logits)
+                weights=np.exp(logits-normalizer)
+                gradient=weights@incidence-desired
+                return (normalizer-desired@theta+band*parameters.sum(),
+                        np.r_[gradient+band,-gradient+band])
+            recovery=minimize(band_loss,np.zeros(2*players),method='L-BFGS-B',jac=True,
+                bounds=[(0,None)]*(2*players),
+                options={'maxiter':max_iterations,'maxls':40,'ftol':1e-12,'gtol':1e-7})
+            theta=recovery.x[:players]-recovery.x[players:]
+            logits=incidence@theta
+            weights=np.exp(logits-logsumexp(logits))
+            recovered_expected=100*(weights@incidence)
+            error=float(abs(recovered_expected-target).max())
+            if np.isfinite(error) and error<float(abs(expected-target).max()):
+                probability=weights
+                expected=recovered_expected
+                recovery.x=theta
+                fit=recovery
+                fit_method='ownership-band entropy recovery'
+            if float(abs(expected-target).max())<=max_error_pct:
+                break
     copies=_draw_copies(entries,probability,seed)
     actual=100*(copies@incidence)/entries
     selected=copies>0
@@ -65,6 +100,8 @@ def build_field(lineups,ownership,entries,seed=83,source=None,max_iterations=100
             'ownership_target':target,'ownership_expected':expected,'ownership_sampled':actual,
             'max_expected_error_pct':float(abs(expected-target).max()),
             'optimizer_converged':bool(fit.success),'optimizer_message':str(fit.message),
+            'fit_method':fit_method,'initial_max_expected_error_pct':initial_error,
+            'fit_tolerance_pct':float(max_error_pct),
             'fit_state':{'indices':ids,'probabilities':probability,'theta':fit.x},
             'entries':entries,'unique_rosters':int(selected.sum()),'ownership_source':source,
             'status':'experimental marginal ownership fit on supplied legal support; inspect residuals'}
@@ -133,5 +170,3 @@ def ownership_support_diagnostic(lineups,ownership,tolerance=5):
         result.update(status='feasible' if error<=tolerance+1e-6 else 'support-limited',
                       minimum_max_error_pct=error)
     return result
-
-
