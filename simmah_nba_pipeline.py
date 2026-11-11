@@ -81,7 +81,8 @@ def run_pipeline(pool,outcome_factory,ownership,ownership_source,payouts,entry_f
     fallback_reason=None
     if ownership_mode=='projected':
         try:
-            field=build_field(support['indices'],ownership,len(payouts)-1,seed+1011,ownership_source)
+            field=build_field(support['indices'],ownership,len(payouts)-1,seed+1011,ownership_source,
+                              max_error_pct=max_ownership_error)
             residual=field['max_expected_error_pct']
             if residual>max_ownership_error:
                 fallback_reason=f"Projected ownership fit missed by {residual:.2f} percentage points (limit {max_ownership_error:g})."
@@ -192,10 +193,3 @@ def export_portfolio(template,contest_id,pool,result,*,salary_min=0):
     validate_portfolio_limits(result['portfolio'],rules_for(pool)['slots'],limits)
     lineups=result['portfolio'][list(rules_for(pool)['slots'])].astype(str).to_numpy().tolist()
     return export_entries(template,lineups,contest_id,pool,salary_cap=rules_for(pool)['salary_cap'],max_from_team=rules_for(pool)['max_from_team'],salary_min=salary_min)
-
-
-
-
-
-
-
