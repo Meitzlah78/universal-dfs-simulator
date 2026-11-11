@@ -21,17 +21,22 @@ TEAMS = dict(zip(
 
 def apply_snapshot(pool, data, platform, day):
     frame = pd.read_csv(io.BytesIO(data), dtype=str, keep_default_na=False)
+    dashboard = set(frame.get('Source', [])) == {'DraftDashboard'}
+    source = 'DraftDashboard' if dashboard else 'FantasyLabs SimLabs'
+    column = 'DraftDashboard Projected Own %' if dashboard else IMPORTED_COLUMN
     required = {'Player','Team','Position','Projected Ownership %','Optimal %','Site','Sport',
                 'Slate Date','Source','Source Update ET','Captured UTC'}
+    if dashboard:
+        required.discard('Optimal %')
     if not required <= set(frame) or frame.empty:
-        raise ValueError('Choose the FantasyLabs NBA ownership snapshot CSV, not an entries or points file.')
+        raise ValueError('Choose the NBA ownership snapshot CSV, not an entries or points file.')
     if set(frame['Site']) != {platform} or set(frame['Sport']) != {'NBA'}:
         raise ValueError('Ownership file belongs to a different site or sport.')
     if set(frame['Slate Date']) != {str(day)}:
         raise ValueError('Ownership file date differs from the current NBA slate.')
-    if set(frame['Source']) != {'https://www.fantasylabs.com/nba/simlabs/'}:
+    if not dashboard and set(frame['Source']) != {'https://www.fantasylabs.com/nba/simlabs/'}:
         raise ValueError('Expected a FantasyLabs NBA SimLabs snapshot.')
-    for col in ('Projected Ownership %','Optimal %'):
+    for col in (['Projected Ownership %'] if dashboard else ['Projected Ownership %','Optimal %']):
         frame[col] = pd.to_numeric(frame[col].str.rstrip('%'), errors='coerce')
         if not (np.isfinite(frame[col]) & frame[col].between(0,100)).all():
             raise ValueError('Ownership and Optimal% must be finite numbers from 0 to 100.')
@@ -48,14 +53,18 @@ def apply_snapshot(pool, data, platform, day):
     if len(set(pool_keys)) != len(pool_keys):
         raise ValueError('Salary slate has ambiguous player/team names; ownership cannot be matched safely.')
     values = dict(zip(keys,frame['Projected Ownership %']))
-    optimal = dict(zip(keys,frame['Optimal %']))
     result = pool.copy(deep=True)
-    result[IMPORTED_COLUMN] = [values.get(k,np.nan) for k in pool_keys]
-    result[OPTIMAL_COLUMN] = [optimal.get(k,np.nan) for k in pool_keys]
+    result.drop(columns=[IMPORTED_COLUMN, OPTIMAL_COLUMN, 'DraftDashboard Projected Own %'], errors='ignore', inplace=True)
+    result[column] = [values.get(k,np.nan) for k in pool_keys]
+    if not dashboard:
+        optimal = dict(zip(keys,frame['Optimal %']))
+        result[OPTIMAL_COLUMN] = [optimal.get(k,np.nan) for k in pool_keys]
     from simmah_nba_ownership import active_players
-    missing = active_players(result) & result[IMPORTED_COLUMN].isna().to_numpy()
+    missing = active_players(result) & result[column].isna().to_numpy()
+    if dashboard and missing.any():
+        raise ValueError('DraftDashboard file is missing eligible players: '+', '.join(result.loc[missing,'Name'].astype(str)))
     meta = {'sha256':hashlib.sha256(data).hexdigest(),'site':platform,'date':str(day),
-            'source':'FantasyLabs SimLabs','source_update':sorted(set(frame['Source Update ET'])),
+            'source':source,'source_update':sorted(set(frame['Source Update ET'])),
             'captured_utc':sorted(set(frame['Captured UTC'])),'raw_total':total,
             'matched_players':sum(k in values for k in pool_keys),
             'missing_eligible_players':result.loc[missing,'Name'].astype(str).tolist(),
@@ -68,8 +77,8 @@ def apply_snapshot(pool, data, platform, day):
 def render_upload(st, pool, platform, day):
     from simmah_slate_workspaces import workspace_file_uploader
     st.subheader('NBA ownership')
-    st.caption('Optional FantasyLabs ownership overrides RotoWire ownership. Point projections and minutes stay unchanged. Optimal% is comparison-only.')
-    upload = workspace_file_uploader(st, 'FantasyLabs NBA ownership CSV', type=['csv'],
+    st.caption('Optional imported ownership overrides RotoWire ownership. Point projections and minutes stay unchanged. Optimal% is comparison-only.')
+    upload = workspace_file_uploader(st, 'NBA ownership CSV (DraftDashboard or FantasyLabs)', type=['csv'],
         key='nba_ownership_upload_'+platform,
         help='Use the matching DraftKings or FanDuel NBA snapshot for this slate date.')
     if upload is None:
@@ -80,8 +89,8 @@ def render_upload(st, pool, platform, day):
         st.error('NBA ownership upload not applied: '+str(exc))
         st.stop()
         return pool
-    st.success(f"FantasyLabs ownership loaded: {meta['matched_players']} matched players · {platform} · {day}")
-    st.caption('Displayed Sims update: '+', '.join(meta['source_update'])+
+    st.success(f"{meta['source']} ownership loaded: {meta['matched_players']} matched players · {platform} · {day}")
+    st.caption('Source update: '+', '.join(meta['source_update'])+
                '. This is not a separately verified ownership-update time. Rebuild to apply a changed snapshot.')
     if meta['missing_eligible_players']:
         residual=max(0.,100*len(rules_for(platform=platform)['slots'])-meta['raw_total'])
