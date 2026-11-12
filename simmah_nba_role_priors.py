@@ -59,6 +59,17 @@ def apply_position_priors(pool,model,slate_day):
         if c not in result:result[c]=np.nan
         else:result[c]=pd.to_numeric(result[c],errors='coerce').to_numpy(dtype=float,na_value=np.nan)
     previous_sources=result.get('Role Rate Source')
+    # Rebuild from frozen provider rates, never relabel a challenger as provider history.
+    originals=result.attrs.get('nba_individual_source_rates',{})
+    for i,row in result.iterrows():
+        if str(row.get('Role Rate Source','')).startswith('Validated individual challenger '):
+            from simmah_nba_learning import name_key
+            original=originals.get(name_key(row.get('Name','')))
+            if original is None:
+                result.loc[i,ROLE_COLUMNS]=np.nan
+            else:
+                result.loc[i,ROLE_COLUMNS]=original
+
     result['Role Rate Source']='Missing'
     for i,row in result.iterrows():
         existing=np.asarray([row[c] for c in ROLE_COLUMNS],float)
@@ -81,7 +92,14 @@ def apply_position_priors(pool,model,slate_day):
         if rates.shape!=(5,) or not np.isfinite(rates).all() or (rates<0).any() or rates.sum()<=0:raise ValueError('Invalid historical position prior')
         for c,value in zip(ROLE_COLUMNS,rates):result.at[i,c]=value
         result.at[i,'Role Rate Source']='Position prior ('+'/'.join(groups)+'); '+model['before']
-    from simmah_nba_learning import apply_learned_roles
+    from datetime import datetime, timezone
+    from simmah_nba_individual_learning import frozen_snapshot, apply_individual
+    from simmah_nba_learning import apply_learned_roles, MODEL_ROOT
+    snapshot=frozen_snapshot(result,datetime.now(timezone.utc).isoformat())
+    if snapshot['players']:
+        result.attrs['nba_individual_rate_snapshot']=snapshot
+        result.attrs['nba_individual_source_rates']={**originals,**{k:v['rates'] for k,v in snapshot['players'].items()}}
+    result=apply_individual(result,slate_day,MODEL_ROOT)
     return apply_learned_roles(result,slate_day)
 
 
