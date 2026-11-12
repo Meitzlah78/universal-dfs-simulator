@@ -40,14 +40,15 @@ def activate_nba_release(release):
         _active_release=release
 
 
-NFL_PROJECTION_RELEASE = 'public-json-headers-v1'
+NFL_PROJECTION_RELEASE = 'final-context-fit-v2'
 _active_role_ownership_release = None
 _active_role_ownership_fingerprint = None
 
 def activate_role_ownership_release(release):
     """Refresh the NFL role fit helpers once, without changing saved inputs."""
     global _active_role_ownership_release, _active_role_ownership_fingerprint
-    modules=('simmah_showdown_field', 'simmah_role_field_ownership', 'simmah_fantasylabs_ownership', 'simmah_rotowire')
+    modules=('simmah_showdown_field', 'simmah_role_field_ownership', 'simmah_fantasylabs_ownership', 'simmah_rotowire',
+             'simmah_projection_inputs','simmah_market_calibration','simmah_simulation_store')
     # Cloud may rerun the entrypoint without restarting imported modules. A
     # source digest also covers fixes that accidentally reuse a release marker.
     root=Path(__file__).resolve().parent

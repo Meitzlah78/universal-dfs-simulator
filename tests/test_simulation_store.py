@@ -61,6 +61,29 @@ class SimulationStoreTest(unittest.TestCase):
                 b=prepare_simulations(pool,roles,'FanDuel',root,count=16,pilot_n=16,iterations=0)
             self.assertNotEqual(a['metadata']['fit_key'],b['metadata']['fit_key'])
 
+    def test_market_adjustment_is_refitted_in_final_context_and_cached(self):
+        from simmah_projection_inputs import fit_projection_inputs
+        pool,roles=fixture();weather={'A':{'wind_mph':18,'status':'Available'}}
+        gains={'A':1.25,'B':1.1}
+        with tempfile.TemporaryDirectory() as root:
+            with patch('simmah_market_calibration.calibrate_market_inputs',return_value=(gains,[])), \
+                 patch('simmah_simulation_store.fit_projection_inputs',wraps=fit_projection_inputs) as fit:
+                result=prepare_simulations(pool,roles,'DraftKings',root,count=32,pilot_n=16,iterations=0,
+                    correlation_strength=.4,weather_by_team=weather,market_targets={'A':(20.,)})
+                self.assertEqual(fit.call_count,2)
+                for call in fit.call_args_list:
+                    self.assertEqual(call.kwargs['correlation_strength'],.4)
+                    self.assertIn('A',call.kwargs['weather_by_team'])
+                self.assertEqual(fit.call_args.kwargs['market_gain'],gains)
+                self.assertIn('initial_parameters',fit.call_args.kwargs)
+            with patch('simmah_simulation_store.fit_projection_inputs',side_effect=AssertionError('refit')):
+                warm=prepare_simulations(pool,roles,'DraftKings',root,count=32,pilot_n=16,iterations=0,
+                    correlation_strength=.4,weather_by_team=weather,market_targets={'A':(20.,)})
+            pd.testing.assert_frame_equal(result['evaluation'],warm['evaluation'])
+            changed=prepare_simulations(pool,roles,'DraftKings',root,count=32,pilot_n=16,iterations=0,
+                correlation_strength=.3,weather_by_team=weather)
+            self.assertNotEqual(result['metadata']['fit_key'],changed['metadata']['fit_key'])
+
     def test_corrupt_cache_fails_explicitly(self):
         pool,roles=fixture()
         with tempfile.TemporaryDirectory() as root:

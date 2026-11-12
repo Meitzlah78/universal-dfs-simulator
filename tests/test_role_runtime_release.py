@@ -9,16 +9,17 @@ class RoleReleaseTests(unittest.TestCase):
         try:
             release._active_role_ownership_release=None
             release._active_role_ownership_fingerprint=None
-            modules={name:object() for name in ('simmah_showdown_field','simmah_role_field_ownership','simmah_fantasylabs_ownership','simmah_rotowire')}
+            modules={name:object() for name in ('simmah_showdown_field','simmah_role_field_ownership','simmah_fantasylabs_ownership','simmah_rotowire',
+                'simmah_projection_inputs','simmah_market_calibration','simmah_simulation_store')}
             with patch.dict(release.sys.modules,modules), patch.object(release.importlib,'reload') as reload:
                 with patch.object(release.Path,'read_bytes',return_value=b'old'):
                     release.activate_role_ownership_release('same-marker')
-                    self.assertEqual(reload.call_count,4)
+                    self.assertEqual(reload.call_count,7)
                     release.activate_role_ownership_release('same-marker')
-                    self.assertEqual(reload.call_count,4)
+                    self.assertEqual(reload.call_count,7)
                 with patch.object(release.Path,'read_bytes',return_value=b'fixed'):
                     release.activate_role_ownership_release('same-marker')
-                    self.assertEqual(reload.call_count,8)
+                    self.assertEqual(reload.call_count,14)
         finally:
             release._active_role_ownership_release,release._active_role_ownership_fingerprint=saved
 

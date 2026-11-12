@@ -9,7 +9,7 @@ from scipy.optimize import minimize
 from scipy.sparse import csr_matrix
 from scipy.special import logsumexp
 
-ENGINE = 'role-marginals-v4'
+ENGINE = 'role-marginals-v5'
 
 
 def impossible_salary_roles(pool, slots, salary_cap):

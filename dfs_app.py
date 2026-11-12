@@ -27,11 +27,11 @@ import simmah_runtime_release as runtime_release
 if (getattr(runtime_release, '_active_release', None) != 'nba-uncapped-wider-minutes-20261107-r1'
         or not hasattr(runtime_release, 'activate_role_ownership_release')
         or not hasattr(runtime_release, '_active_role_ownership_fingerprint')
-        or getattr(runtime_release, 'NFL_PROJECTION_RELEASE', None) != 'public-json-headers-v1'):
+        or getattr(runtime_release, 'NFL_PROJECTION_RELEASE', None) != 'final-context-fit-v2'):
     runtime_release = importlib.reload(runtime_release)
 runtime_release.activate_nba_release('nba-uncapped-wider-minutes-20261107-r1')
-runtime_release.activate_role_ownership_release('role-marginals-v4')
-st.caption('Ownership build: role-marginals-v4')
+runtime_release.activate_role_ownership_release('role-marginals-v5')
+st.caption('Ownership build: role-marginals-v5')
 
 if st.query_params.get('simmah_qa') == 'storage':
     import importlib
@@ -4364,7 +4364,7 @@ def render_saved_market_calibration(platform_name, mode_name, pool):
     if not rows or saved_names != set(pool["Name"].astype(str)):
         return
     with st.expander("Advanced — market scoring calibration", expanded=False):
-        st.caption("Market target is the implied team score from the spread and total. Pilot mean is the scoring average after calibration; it need not match exactly.")
+        st.caption("Market target is the implied team score from the spread and total. Pilot mean precedes the final player refit. Final projection-fitted mean measures the resulting evaluation games; player targets take priority when the inputs conflict.")
         report = pd.DataFrame(rows)
         st.dataframe(report, hide_index=True, use_container_width=True)
         workspace_download_button(st,"DOWNLOAD MARKET CALIBRATION", report.to_csv(index=False).encode("utf-8"),
@@ -4683,6 +4683,12 @@ def simulate_fd_play_by_play(players_df, rng, n=SIMULATION_COUNT, correlation_st
         progress=lambda fraction,text: progress.progress(fraction,text=text))
     st.caption("NFL performance learning: " + prepared["metadata"]["learning"]["status"] +
                ((" · " + prepared["metadata"]["learning"]["version"]) if prepared["metadata"]["learning"].get("version") else ""))
+    _market_conflicts=[row for row in prepared['metadata'].get('market_report',[])
+                       if abs(row.get('Final market residual',0))>3.]
+    if _market_conflicts:
+        st.warning('Player projections and market scoring targets remain inconsistent after the final-context refit: '+
+            '; '.join(row['Team']+f" {row['Final projection-fitted mean']:.1f} simulated vs {row['Market target']:.1f} market points" for row in _market_conflicts)+
+            '. ROI estimates remain unvalidated; see Advanced — market scoring calibration.')
     result = prepared["evaluation"].copy()
     result.attrs["preparation_key"] = prepared["metadata"]["key"]
     _projection_fit_report = prepared["fit_report"]

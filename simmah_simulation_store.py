@@ -67,7 +67,7 @@ def _cache_lock(path):
         finally:fcntl.flock(handle.fileno(),fcntl.LOCK_UN)
 
 
-def _fit(pool,roles,platform,root,key,pilot_n,iterations,progress,learned_parameters=None):
+def _fit(pool,roles,platform,root,key,pilot_n,iterations,progress,learned_parameters=None,correlation_strength=1.,weather=None,market_targets=None):
     path=root/'fits'/(key+'.json')
     with _cache_lock(root/'locks'/('fit-'+key+'.lock')):
         if path.exists():
@@ -76,15 +76,25 @@ def _fit(pool,roles,platform,root,key,pilot_n,iterations,progress,learned_parame
                 if payload['key']!=key or _hash(_json(payload))!=envelope['sha256']:
                     raise CacheIntegrityError('Projection-fit cache checksum mismatch')
                 report=pd.DataFrame(**payload['report'])
-                return payload['parameters'],report,True
+                return payload['parameters'],report,True,payload.get('market_gain',{}),payload.get('market_report',[])
             except (KeyError,TypeError,json.JSONDecodeError) as exc:
                 raise CacheIntegrityError('Unreadable projection-fit cache') from exc
         parameters,report=fit_projection_inputs(pool,roles,platform,score_nfl_stat_line,
-            pilot_n=pilot_n,iterations=iterations,progress=progress,learned_parameters=learned_parameters)
-        payload={'key':key,'parameters':parameters,
+            pilot_n=pilot_n,iterations=iterations,progress=progress,learned_parameters=learned_parameters,
+            correlation_strength=correlation_strength,weather_by_team=weather)
+        from simmah_market_calibration import calibrate_market_inputs
+        market_gain,market_report=calibrate_market_inputs(pool,roles,parameters,weather,platform,
+            market_targets or {},pilot_n=max(512,int(pilot_n)),learned_parameters=learned_parameters,
+            correlation_strength=correlation_strength)
+        if market_gain:
+            parameters,report=fit_projection_inputs(pool,roles,platform,score_nfl_stat_line,
+                pilot_n=pilot_n,iterations=iterations,progress=progress,learned_parameters=learned_parameters,
+                correlation_strength=correlation_strength,weather_by_team=weather,market_gain=market_gain,
+                initial_parameters=parameters)
+        payload={'key':key,'parameters':parameters,'market_gain':market_gain,'market_report':market_report,
                  'report':report.astype(object).where(pd.notna(report),None).to_dict(orient='split')}
         _atomic_write(path,_json({'payload':payload,'sha256':_hash(_json(payload))}))
-        return parameters,report,False
+        return parameters,report,False,market_gain,market_report
 
 
 def _read_prepared(directory,key,names,count):
@@ -169,7 +179,8 @@ def prepare_simulations(pool,roles,platform,cache_root,count=10000,correlation_s
     from simmah_market_calibration import canonical_targets, calibrate_market_inputs
     market_targets=canonical_targets(market_targets)
     fit_spec={'schema':SCHEMA,'model_digest':_model_digest(),'players':inputs.to_dict('records'),
-              'roles':roles,'learning':learning,'learned_parameters':learned_parameters,'platform':platform,'pilot_n':pilot_n,'iterations':iterations}
+              'roles':roles,'learning':learning,'learned_parameters':learned_parameters,'platform':platform,'pilot_n':pilot_n,'iterations':iterations,
+              'correlation_strength':correlation_strength,'weather':weather_by_team,'market_targets':market_targets}
     fit_key=_hash(_json(fit_spec))
     spec={'schema':SCHEMA,'fit_key':fit_key,'count':count,'correlation_strength':correlation_strength,
           'weather':weather_by_team,'market_targets':market_targets,'evaluation_seed':int(evaluation_seed),'construction_seed':int(construction_seed)}
@@ -184,10 +195,10 @@ def prepare_simulations(pool,roles,platform,cache_root,count=10000,correlation_s
                 'timings':{'load_seconds':time.perf_counter()-started}}
             return cached
         timings={};mark=time.perf_counter()
-        parameters,report,fit_hit=_fit(inputs,roles,platform,root,fit_key,pilot_n,iterations,
-            (lambda f,t:progress(.3*f,t)) if progress else None,learned_parameters)
+        parameters,report,fit_hit,market_gain,market_report=_fit(inputs,roles,platform,root,fit_key,pilot_n,iterations,
+            (lambda f,t:progress(.3*f,t)) if progress else None,learned_parameters,
+            correlation_strength,weather_by_team,market_targets)
         timings['fit_seconds']=time.perf_counter()-mark
-        market_gain,market_report=calibrate_market_inputs(inputs,roles,parameters,weather_by_team,platform,market_targets,pilot_n=max(512,int(pilot_n)),learned_parameters=learned_parameters)
         from simmah_nfl_learning import capture_pregame_inputs
         replay_paths=capture_pregame_inputs(inputs,roles,platform,parameters,weather_by_team,market_gain,
                                game_starts or {},root,incumbent=model,
@@ -197,9 +208,16 @@ def prepare_simulations(pool,roles,platform,cache_root,count=10000,correlation_s
         for index,(kind,seed) in enumerate([('evaluation',evaluation_seed),('construction',construction_seed)]):
             mark=time.perf_counter()
             if progress:progress(.3+.35*index,'Preparing '+kind+' outcomes')
-            stats=simulate_stat_lines(inputs,roles,np.random.default_rng(seed),count,correlation_strength,
+            stats,game_diagnostics=simulate_stat_lines(inputs,roles,np.random.default_rng(seed),count,correlation_strength,
+                return_diagnostics=True,
                 weather_by_team=weather_by_team,projection_inputs=parameters,scoring_platform=platform,market_gain=market_gain,learned_parameters=learned_parameters,
                 progress=(lambda fraction,text:progress(.3+.35*index+.35*fraction,text)) if progress else None)
+            if kind=='evaluation':
+                for market_row in market_report:
+                    team=market_row['Team']
+                    if team in game_diagnostics:
+                        market_row['Final projection-fitted mean']=float(np.mean(game_diagnostics[team]['points']))
+                        market_row['Final market residual']=market_row['Final projection-fitted mean']-market_row['Market target']
             values={}
             for row in inputs.itertuples():
                 line=dict(stats[row.Name],is_defense=int(row.Position.upper().split('/')[0] in {'D','DEF','DST'}))

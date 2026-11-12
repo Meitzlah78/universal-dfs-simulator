@@ -7,20 +7,24 @@ Parameter bounds and residuals are explicit; this does not guarantee exact means
 import numpy as np
 import pandas as pd
 
-VERSION='projection-event-input-fit-v1'
+VERSION='projection-event-input-fit-v2-final-context'
 
 
-def fit_projection_inputs(pool,roles,platform,scorer,pilot_n=1024,iterations=8,progress=None,learned_parameters=None):
+def fit_projection_inputs(pool,roles,platform,scorer,pilot_n=1024,iterations=8,progress=None,learned_parameters=None,
+                          correlation_strength=1.,weather_by_team=None,market_gain=None,initial_parameters=None):
     from simmah_nfl_engine import simulate_stat_lines
     rows=pool.to_dict('records')
     targets={str(r['Name']):max(0,float(r.get('Projection',0))) for r in rows}
     positions={str(r['Name']):str(r.get('Position','')).upper().split('/')[0] for r in rows}
     params={name:{'pass_gain':1.,'opportunity':1.,'skill_gain':1.} for name in targets}
+    if initial_parameters:
+        params={name:dict(values,**initial_parameters.get(name,{})) for name,values in params.items()}
     first=None;last=None;best_loss=float("inf");best_params=None;best_means=None
     for iteration in range(iterations+1):
         # Common pilot seed reduces Monte Carlo noise between parameter updates.
         # This seed is independent of the caller's evaluation/construction RNG.
         stats=simulate_stat_lines(pool,roles,np.random.default_rng(73019),pilot_n,projection_inputs=params,scoring_platform=platform,
+            correlation_strength=correlation_strength,weather_by_team=weather_by_team,market_gain=market_gain,
             progress=(lambda fraction,text: progress((iteration+fraction)/(iterations+1),
                 f"Fitting projections: pass {iteration+1}/{iterations+1} — {text}")) if progress else None,learned_parameters=learned_parameters)
         means={name:float(np.mean(scorer(dict(line,is_defense=int(positions[name] in {'D','DST','DEF'})),platform))) for name,line in stats.items()}
