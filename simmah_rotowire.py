@@ -4,7 +4,7 @@ import math
 import re
 from datetime import date
 from urllib.parse import urlencode
-from urllib.request import urlopen
+from urllib.request import Request, urlopen
 
 BASE = 'https://www.rotowire.com/daily/nfl/api/'
 FORMATS = {'DraftKings Classic':(1,'Classic'), 'DraftKings Showdown':(1,'Showdown'),
@@ -82,7 +82,9 @@ def parse_projections(players, payload, teams, dates):
 def download(platform, teams, dates, opener=urlopen):
     site,_=FORMATS[platform]
     def get(endpoint,params):
-        with opener(BASE+endpoint+'?'+urlencode(params),timeout=12) as response:
+        request=Request(BASE+endpoint+'?'+urlencode(params),headers={
+            'User-Agent':'Simmah/1.0', 'Accept':'application/json'})
+        with opener(request,timeout=12) as response:
             return json.load(response)
     slate=select_slate(get('slate-list.php',{'siteID':site}),platform,teams,dates)
     sid=slate['slateID']

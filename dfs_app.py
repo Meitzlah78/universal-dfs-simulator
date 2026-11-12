@@ -26,11 +26,12 @@ import importlib
 import simmah_runtime_release as runtime_release
 if (getattr(runtime_release, '_active_release', None) != 'nba-uncapped-wider-minutes-20261107-r1'
         or not hasattr(runtime_release, 'activate_role_ownership_release')
-        or not hasattr(runtime_release, '_active_role_ownership_fingerprint')):
+        or not hasattr(runtime_release, '_active_role_ownership_fingerprint')
+        or getattr(runtime_release, 'NFL_PROJECTION_RELEASE', None) != 'public-json-headers-v1'):
     runtime_release = importlib.reload(runtime_release)
 runtime_release.activate_nba_release('nba-uncapped-wider-minutes-20261107-r1')
-runtime_release.activate_role_ownership_release('role-marginals-v3')
-st.caption('Ownership build: role-marginals-v3')
+runtime_release.activate_role_ownership_release('role-marginals-v4')
+st.caption('Ownership build: role-marginals-v4')
 
 if st.query_params.get('simmah_qa') == 'storage':
     import importlib
@@ -2389,10 +2390,10 @@ def download_rotowire_projections(platform_name, target_teams, slate_dates):
     from simmah_rotowire import download
     try:
         return download(platform_name, target_teams, slate_dates)
-    except Exception:
-        # Streamlit does not cache exceptions. Retain a failed lookup for this
-        # exact slate so every widget change does not retry the same slow host.
-        return {}, None
+    except Exception as exc:
+        # Retain failures for this slate, including their reason. An unavailable
+        # source must not look like a successful empty player table.
+        return {}, f'{type(exc).__name__}: {exc}'
 
 
 def apply_external_projection_sources(players_frame, dff_file, draftedge_file, platform_name='DraftKings'):
@@ -2408,8 +2409,22 @@ def apply_external_projection_sources(players_frame, dff_file, draftedge_file, p
                   (('DFF', dff, dff_file), ('DraftEdge', draftedge, draftedge_file))
                   if upload is not None})
     st.session_state['projection_refresh_targets'] = refresh_targets
-    rotowire, rotowire_status = {}, "skipped: uploaded CSV priority"
-    if dff_file is None and draftedge_file is None:
+    uploaded_sources=[values for values,upload in ((dff,dff_file),(draftedge,draftedge_file)) if upload is not None]
+    def supplied_number(values,key):
+        try:
+            value=float(values.get(key))
+            return value if np.isfinite(value) and value>=0 else None
+        except (TypeError,ValueError):return None
+    # Upload priority is per player. An incomplete upload must not disable the
+    # backup source for every other player on the slate. Posted zeros are known.
+    missing_for_fallback=[]
+    for name in target_names:
+        key=normalize_projection_player_name(name)
+        if any(supplied_number(values,key) is not None for values in uploaded_sources):continue
+        if not any((supplied_number(values,key) or 0)>0 for values in (dff,draftedge)):
+            missing_for_fallback.append(name)
+    rotowire, rotowire_status = {}, "not needed: uploaded coverage complete"
+    if not uploaded_sources or missing_for_fallback:
         from simmah_rotowire import salary_dates
         from datetime import datetime
         dates = salary_dates(result)
@@ -2420,7 +2435,7 @@ def apply_external_projection_sources(players_frame, dff_file, draftedge_file, p
         try:
             rotowire, rw_slate = download_rotowire_projections(platform_name, target_teams, dates)
             rotowire_status = ("automatic download, slate " + str(rw_slate) + date_note
-                               if rotowire else "unavailable: no verified matching slate or download failed" + date_note)
+                               if rotowire else "unavailable: " + str(rw_slate or "no verified matching slate or download failed") + date_note)
         except Exception:
             rotowire_status = "unavailable: no verified matching slate or download failed" + date_note
     source_maps = (("DFF", dff), ("DraftEdge", draftedge), ("RotoWire", rotowire))
@@ -2437,6 +2452,8 @@ def apply_external_projection_sources(players_frame, dff_file, draftedge_file, p
         key = normalize_projection_player_name(row.get("Name", ""))
         available = []
         for source_name, values in source_maps:
+            if source_name=='RotoWire' and any(supplied_number(uploaded,key) is not None for uploaded in uploaded_sources):
+                continue
             value = values.get(key)
             if value is None and str(row.get("Position", "")).upper() in ("D", "DST", "DEF"):
                 nickname = defense_names.get(str(row.get("Team", "")).upper(), "")
@@ -7967,6 +7984,12 @@ with _tab_build:
             from simmah_role_field_ownership import impossible_salary_roles
             _ownership_check_pool = players_df.loc[players_df['Name'].isin(available_players)].copy()
             _ownership_check_pool['CaptainSalary'] = _ownership_check_pool['Name'].map(captain_salary_map)
+            _ownership_missing_roles = _ownership_check_pool.loc[
+                _ownership_check_pool[['Projected CPT Own %','Projected Flex Ownership']]
+                .apply(pd.to_numeric,errors='coerce').isna().any(axis=1),'Name'].astype(str).tolist()
+            if _ownership_missing_roles:
+                workflow_status.error('Ownership preflight: projections are available, but the imported ownership CSV is missing CPT/FLEX shares for: '+', '.join(_ownership_missing_roles)+'. Refresh the ownership CSV to include these players. No ownership was invented.')
+                workspace_stop(st, _loaded_slate_tabs, _pinned_slates)
             _ownership_failures = impossible_salary_roles(
                 _ownership_check_pool, ['Captain','Flex1','Flex2','Flex3','Flex4','Flex5'], SALARY_CAP)
             if not _ownership_failures.empty:

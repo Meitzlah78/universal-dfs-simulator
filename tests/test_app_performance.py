@@ -41,7 +41,7 @@ class PerformanceTest(unittest.TestCase):
     def test_optional_feed_failures_are_cached_until_retry(self):
         for name, module, call, expected in [
             ('download_rotowire_projections', 'simmah_rotowire.download',
-             ('DraftKings Classic', ('NYJ', 'NE'), ('2026-10-25',)), ({}, None)),
+             ('DraftKings Classic', ('NYJ', 'NE'), ('2026-10-25',)), ({}, 'TimeoutError: offline')),
             ('automatic_game_lines_cached', 'simmah_auto_game_lines.download_lines',
              (('NYJ @ NE',), ('2026-10-25',)), {}),
         ]:
