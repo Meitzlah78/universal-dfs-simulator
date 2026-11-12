@@ -8081,11 +8081,13 @@ with _tab_build:
                 _fl_pool = players_df.loc[players_df["Name"].isin(available_players)].copy()
                 # Fit after learned construction and final expansion; no later
                 # ownership reweighting may undo the fitted role frequencies.
+                _fl_pool['Salary'] = _fl_pool['Name'].map(salary_map)
+                _fl_pool['CaptainSalary'] = _fl_pool['Name'].map(captain_salary_map)
                 _fl_slots = ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"]
                 contest_field_df = restore_role_support(
                     contest_field_df, contest_field_sample_df, _fl_pool, _fl_slots)
                 contest_field_df, _fl_report = calibrate_role_ownership(
-                    contest_field_df, _fl_pool, _fl_slots, target=full_opponent_count)
+                    contest_field_df, _fl_pool, _fl_slots, target=full_opponent_count, support_salary_cap=SALARY_CAP)
                 st.session_state["ownership_comparison_data_DraftKings_Showdown"] = _fl_report
                 _fl_fit = contest_field_df.attrs["role_ownership_calibration"]
                 st.caption(f"Final CPT/FLEX ownership fit: largest error {_fl_fit['final_max_error_pp']:.2f} pp. Eligible-player shares are normalized separately to 100% CPT and 500% FLEX; raw inputs remain in the comparison.")

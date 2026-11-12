@@ -74,6 +74,30 @@ class RoleOwnershipTests(unittest.TestCase):
         restored=restore_role_support(selected,field,pool,slots)
         self.assertTrue(restored.Captain.eq('H').any())
         self.assertEqual(len(restored),len(selected)+1)
+    def test_missing_role_is_rebuilt_using_final_targets_and_verified_salaries(self):
+        pool,field,slots=self.fixture()
+        pool.loc[0,'Name']='Malik Nabers'
+        field=field.replace('A','Malik Nabers')
+        selected=field[field.Captain!='Malik Nabers'].copy()
+        with self.assertRaisesRegex(ValueError,'Malik Nabers'):
+            calibrate_role_ownership(selected,pool,slots)
+        result,report=calibrate_role_ownership(selected,pool,slots,target=12000,support_salary_cap=50000)
+        self.assertTrue(result.Captain.eq('Malik Nabers').any())
+        self.assertTrue(result.Salary.le(50000).all())
+        self.assertEqual(len(result),12000)
+        self.assertLess(result.attrs['role_ownership_calibration']['final_max_error_pp'],.5)
+        self.assertGreater(result.attrs['role_ownership_calibration']['repair_proposal_rosters'],0)
+
+    def test_repair_survives_zero_role_pruning(self):
+        pool,field,slots=self.fixture()
+        legal=field[~field[slots[1:]].eq('H').any(axis=1)]
+        pool['Projected CPT Own %']=[100*legal.Captain.eq(n).mean() for n in pool.Name]
+        pool['Projected Flex Ownership']=[100*legal[slots[1:]].eq(n).any(axis=1).mean() for n in pool.Name]
+        forbidden=field[field[slots[1:]].eq('H').any(axis=1)]
+        result,_=calibrate_role_ownership(forbidden,pool,slots,target=12000,support_salary_cap=50000)
+        self.assertFalse(result[slots[1:]].eq('H').any().any())
+        self.assertLess(result.attrs['role_ownership_calibration']['final_max_error_pp'],.5)
+
     def test_contest_downsampling_restores_role_support_before_fit(self):
         pool,field,slots=self.fixture()
         selected=expand_field(field,20)

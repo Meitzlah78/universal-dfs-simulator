@@ -28,7 +28,7 @@ def build_unique_field(pool,flex_weights,captain_weights,target,salary_cap=50000
         other=[i for i in range(n) if i!=captain]
         combos=np.asarray(list(combinations(other,5)),dtype=np.int32)
         sums=captain_salary[captain]+salary[combos].sum(axis=1)
-        valid=(sums>=min_salary)&(sums<=salary_cap)&(teams[combos]!=teams[captain]).any(axis=1)
+        valid=(sums>=min_salary)&(sums<=salary_cap)&(teams[combos]!=teams[captain]).any(axis=1)&(fw[combos]>0).all(axis=1)
         combos=combos[valid];sums=sums[valid]
         if not len(combos):continue
         # Normalize FLEX preferences within each legal Captain group. Salary

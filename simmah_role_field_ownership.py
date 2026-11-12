@@ -12,7 +12,7 @@ from scipy.special import logsumexp
 ENGINE = 'role-marginals-v2'
 
 
-def calibrate_role_ownership(field, pool, slots, target=None, seed=20261105, tolerance_pp=.5):
+def calibrate_role_ownership(field, pool, slots, target=None, seed=20261105, tolerance_pp=.5, support_salary_cap=None):
     if field is None or field.empty:
         raise ValueError('Role ownership calibration requires legal opponent proposals')
     count = len(field) if target is None else int(target)
@@ -56,6 +56,24 @@ def calibrate_role_ownership(field, pool, slots, target=None, seed=20261105, tol
     picks = picks.astype(int)
     if any(len(set(row)) != 6 for row in picks):
         raise ValueError('Duplicate player in opponent roster')
+    repaired_support = 0
+    if support_salary_cap is not None:
+        # Earlier representatives can become forbidden after the eligible-target
+        # projection zeros another player's role. Repair against FINAL targets.
+        role_indices=picks.copy();role_indices[:,1:]+=n
+        legal=(desired.ravel()[role_indices]>0).all(axis=1)
+        present=np.zeros(2*n,dtype=bool);present[role_indices[legal].ravel()]=True
+        if ((desired.ravel()>0)&~present).any():
+            from simmah_showdown_field import build_unique_field, SLOTS
+            if not {'Salary','CaptainSalary','Team'}<=set(pool):
+                raise ValueError('Verified role salaries required to repair legal proposal support')
+            extra=build_unique_field(pool,desired[1],desired[0],max(10000,2*n),
+                salary_cap=support_salary_cap,min_salary=0,
+                rng=np.random.default_rng(seed),ensure_role_support=True)
+            extra=extra.rename(columns=dict(zip(SLOTS,slots)))
+            repaired_support=len(extra)
+            field=pd.concat([field,extra],ignore_index=True)
+            picks=field[slots].apply(lambda col:col.astype(str).map(index)).to_numpy(int)
     keys = pd.MultiIndex.from_arrays([picks[:,0], *np.sort(picks[:,1:],axis=1).T])
     codes, _ = pd.factorize(keys, sort=False)
     first = np.flatnonzero(~pd.Series(codes).duplicated().to_numpy())
@@ -111,7 +129,7 @@ def calibrate_role_ownership(field, pool, slots, target=None, seed=20261105, tol
         'normalized_role_totals':[100.,500.],
         'eligibility_adjustment_max_pp':float(np.max(np.abs(desired-independent))*100),'fitted_max_error_pp':fit_error,'final_max_error_pp':error,
         'final_mean_error_pp':float(np.abs(actual-wanted).mean()*100),'support_rosters':len(rows),
-        'field_entries':count,'unique_rosters':int(np.unique(selected).size),
+        'field_entries':count,'repair_proposal_rosters':repaired_support,'unique_rosters':int(np.unique(selected).size),
         'construction_policy':'learned roster frequencies used as prior; ownership fitted last',
         'duplication_policy':'fitted roster resampling; real duplicate frequencies not independently validated'}
     return result, report
