@@ -74,6 +74,21 @@ class FantasyLabsTests(unittest.TestCase):
         result,_=self.apply(p,f);self.assertTrue(result[CPT].notna().all())
         bad=f.copy();bad.loc[0,'Player']='Unrelated Player'
         with self.assertRaisesRegex(ValueError,'not uniquely matched'):self.apply(p,bad)
+    def test_greg_desrosiers_matches_draftkings_gregory_in_both_roles(self):
+        p,f=self.fixture()
+        p.loc[0,'Name']='Gregory Desrosiers'
+        f.loc[f.Player=='Player 0','Player']='Greg Desrosiers'
+        result,meta=self.apply(p,f)
+        self.assertEqual(result.loc[0,CPT],10.)
+        self.assertEqual(result.loc[0,FLEX],50.)
+        self.assertEqual(meta['matched_players'],10)
+        # An alias still requires the same team and an unambiguous salary identity.
+        bad=f.copy();bad.loc[bad.Player=='Greg Desrosiers','Team']='BAL'
+        with self.assertRaisesRegex(ValueError,'Greg Desrosiers'):self.apply(p,bad)
+        duplicate=p.iloc[:1].copy();duplicate['Name']='Greg Desrosiers'
+        with self.assertRaisesRegex(ValueError,'Ambiguous'):
+            self.apply(pd.concat([p,duplicate],ignore_index=True),f)
+
     def test_missing_unprojected_salary_rows_remain_unknown_and_no_eligible_fallback(self):
         p,f=self.fixture();extra=p.iloc[:1].copy();extra['Name']='Unknown reserve';extra['Projection']=0
         p=pd.concat([p,extra],ignore_index=True)

@@ -66,7 +66,7 @@ def apply_snapshot(pool,raw,site='DraftKings',mode='single_game',confirmed_undat
     for col in (['Projected Ownership %'] if dashboard else ['Projected Ownership %','Optimal %']):
         frame[col]=pd.to_numeric(frame[col].str.rstrip('%'),errors='coerce')
         if not (np.isfinite(frame[col])&frame[col].between(0,100)).all():raise ValueError('Invalid or missing ownership/optimal percentage')
-    aliases={'matthewhibner':'matthibner'}
+    aliases={'matthewhibner':'matthibner','gregdesrosiers':'gregorydesrosiers'}
     identities=list(zip(poolteams,pool['Name'].map(name_key).replace(aliases)))
     if len(set(identities))!=len(pool):raise ValueError('Ambiguous salary-pool player names')
     index={key:i for i,key in enumerate(identities)}
