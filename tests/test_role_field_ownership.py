@@ -74,6 +74,30 @@ class RoleOwnershipTests(unittest.TestCase):
         restored=restore_role_support(selected,field,pool,slots)
         self.assertTrue(restored.Captain.eq('H').any())
         self.assertEqual(len(restored),len(selected)+1)
+    def test_contest_downsampling_restores_role_support_before_fit(self):
+        pool,field,slots=self.fixture()
+        selected=expand_field(field,20)
+        # Simulate a role lost when proposals are reduced to contest capacity.
+        selected=selected[selected.Captain!='H'].copy()
+        restored=restore_role_support(selected,field,pool,slots)
+        self.assertTrue(restored.Captain.eq('H').any())
+        # Use full support to verify calibration keeps the requested final count.
+        restored=restore_role_support(field[field.Captain!='H'],field,pool,slots)
+        result,_=calibrate_role_ownership(restored,pool,slots,target=12000)
+        self.assertEqual(len(result),12000)
+        import ast
+        from pathlib import Path
+        tree=ast.parse(Path('dfs_app.py').read_text())
+        fit=next(node for node in ast.walk(tree) if isinstance(node,ast.Call)
+                 and isinstance(node.func,ast.Name) and node.func.id=='calibrate_role_ownership'
+                 and any(isinstance(arg,ast.Name) and arg.id=='contest_field_df' for arg in node.args))
+        self.assertTrue(any(k.arg=='target' and isinstance(k.value,ast.Name)
+                            and k.value.id=='full_opponent_count' for k in fit.keywords))
+        restores=[node for node in ast.walk(tree) if isinstance(node,ast.Call)
+                  and isinstance(node.func,ast.Name) and node.func.id=='restore_role_support'
+                  and any(isinstance(arg,ast.Name) and arg.id=='contest_field_sample_df' for arg in node.args)]
+        self.assertTrue(any(node.lineno<fit.lineno for node in restores))
+
     def test_proposal_support_does_not_require_every_roster_in_final_field(self):
         pool,_,slots=self.fixture();pool['Projected CPT Own %']=[99.999]+[.001/7]*7
         field=build_unique_field(pool,np.ones(8),pool['Projected CPT Own %'],40,min_salary=0,ensure_role_support=True)

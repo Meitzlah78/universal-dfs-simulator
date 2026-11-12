@@ -46,6 +46,8 @@ def calibrate_role_ownership(field, pool, slots, target=None, seed=20261105, tol
                 or np.max(np.abs(desired.sum(axis=1)-[1.,5.])) > 1e-7
                 or (desired.sum(axis=0)>1+1e-7).any()):
             raise ValueError('Eligible role targets have no feasible six-player allocation; check the eligible pool')
+    # SLSQP may leave numerical dust on a binding zero boundary.
+    desired[np.abs(desired) < 1e-10] = 0.
     names = pool.Name.astype(str).tolist(); index = {name:i for i,name in enumerate(names)}
     n = len(names)
     picks = field[slots].apply(lambda col:col.astype(str).map(index)).to_numpy()
