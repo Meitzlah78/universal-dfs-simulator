@@ -25,10 +25,12 @@ st.set_page_config(
 import importlib
 import simmah_runtime_release as runtime_release
 if (getattr(runtime_release, '_active_release', None) != 'nba-uncapped-wider-minutes-20261107-r1'
-        or not hasattr(runtime_release, 'activate_role_ownership_release')):
+        or not hasattr(runtime_release, 'activate_role_ownership_release')
+        or not hasattr(runtime_release, '_active_role_ownership_fingerprint')):
     runtime_release = importlib.reload(runtime_release)
 runtime_release.activate_nba_release('nba-uncapped-wider-minutes-20261107-r1')
-runtime_release.activate_role_ownership_release('role-marginals-v2')
+runtime_release.activate_role_ownership_release('role-marginals-v3')
+st.caption('Ownership build: role-marginals-v3')
 
 if st.query_params.get('simmah_qa') == 'storage':
     import importlib

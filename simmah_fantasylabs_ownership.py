@@ -150,7 +150,7 @@ def field_report(field,pool):
 
 def invalidate_field(state,signature,fingerprint,site='DraftKings',mode='single_game'):
     key='fantasylabs_ownership_trial_identity_'+site+'_'+mode
-    current=(signature,fingerprint,'role-marginals-v2')
+    current=(signature,fingerprint,'role-marginals-v3')
     previous=state.get(key)
     state[key]=current
     if previous==current or (previous is None and fingerprint is None):return False

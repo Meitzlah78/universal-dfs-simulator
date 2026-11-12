@@ -9,7 +9,7 @@ from scipy.optimize import minimize
 from scipy.sparse import csr_matrix
 from scipy.special import logsumexp
 
-ENGINE = 'role-marginals-v2'
+ENGINE = 'role-marginals-v3'
 
 
 def calibrate_role_ownership(field, pool, slots, target=None, seed=20261105, tolerance_pp=.5, support_salary_cap=None):
@@ -88,8 +88,12 @@ def calibrate_role_ownership(field, pool, slots, target=None, seed=20261105, tol
         (np.repeat(np.arange(len(rows)),6),role_picks.ravel())),shape=(len(rows),2*n))
     support = np.asarray(matrix.sum(axis=0)).ravel() > 0
     if ((desired.ravel() > 0) & ~support).any():
-        missing = [names[i % n] for i in np.flatnonzero((desired.ravel()>0)&~support)]
-        raise ValueError('Missing legal proposal support for role targets: '+', '.join(missing))
+        missing = [names[i % n]+' ('+('CPT/MVP' if i<n else 'FLEX')+')'
+                   for i in np.flatnonzero((desired.ravel()>0)&~support)]
+        eligible = ', '.join(names)
+        raise ValueError('Missing legal proposal support for role targets: '+', '.join(missing)
+                         +f'. Build {ENGINE}; eligible players ({n}): '+eligible
+                         +f'; repair proposals: {repaired_support}; salary cap: {support_salary_cap}')
     logprior = np.log(prior / prior.sum())
     wanted = desired.ravel()
     def objective(theta):

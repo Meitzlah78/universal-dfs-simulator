@@ -1,5 +1,7 @@
 """Activate a coordinated NBA code release in a long-lived Streamlit process."""
 import importlib
+import hashlib
+from pathlib import Path
 import sys
 import threading
 
@@ -39,16 +41,25 @@ def activate_nba_release(release):
 
 
 _active_role_ownership_release = None
+_active_role_ownership_fingerprint = None
 
 def activate_role_ownership_release(release):
     """Refresh the NFL role fit helpers once, without changing saved inputs."""
-    global _active_role_ownership_release
+    global _active_role_ownership_release, _active_role_ownership_fingerprint
+    modules=('simmah_showdown_field', 'simmah_role_field_ownership', 'simmah_fantasylabs_ownership')
+    # Cloud may rerun the entrypoint without restarting imported modules. A
+    # source digest also covers fixes that accidentally reuse a release marker.
+    root=Path(__file__).resolve().parent
+    fingerprint=tuple(hashlib.sha256((root/(name+'.py')).read_bytes()).hexdigest() for name in modules)
     with _lock:
-        if _active_role_ownership_release == release:
+        if (_active_role_ownership_release == release
+                and _active_role_ownership_fingerprint == fingerprint):
             return
-        for name in ('simmah_showdown_field', 'simmah_role_field_ownership', 'simmah_fantasylabs_ownership'):
+        importlib.invalidate_caches()
+        for name in modules:
             module = sys.modules.get(name)
             if module is not None:
                 importlib.reload(module)
         _active_role_ownership_release = release
+        _active_role_ownership_fingerprint = fingerprint
 
