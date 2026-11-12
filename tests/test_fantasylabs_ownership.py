@@ -103,7 +103,8 @@ class FantasyLabsTests(unittest.TestCase):
         self.assertIn('authorized_slate_exclusions',result.attrs)
         role_preferences(result)
         pd.testing.assert_frame_equal(p,before)
-        for site,mode in [('FanDuel','single_game'),('DraftKings','full_roster')]:
+        self.assertEqual(len(apply_authorized_slate_exclusions(p,'FanDuel','single_game')),9)
+        for site,mode in [('FanDuel','full_roster'),('DraftKings','full_roster')]:
             self.assertEqual(len(apply_authorized_slate_exclusions(p,site,mode)),10)
         other=p.copy();other['Game Info']='WAS@NYG 11/19/2026 08:15PM ET'
         self.assertEqual(len(apply_authorized_slate_exclusions(other)),10)
@@ -144,6 +145,34 @@ class FantasyLabsTests(unittest.TestCase):
         pool=pd.DataFrame({'Name':['Player'], 'Team':['WAS'], FLEX:[20.]})
         pool.attrs['fantasylabs_ownership']={'site':'FanDuel'}
         with self.assertRaisesRegex(ValueError,r'Player \(WAS, MVP\)'):role_preferences(pool)
+    def test_missing_ownership_exclusion_requires_explicit_selection(self):
+        from simmah_fantasylabs_ownership import render_role_exclusions,missing_role_players
+        from types import SimpleNamespace
+        pool=pd.DataFrame({'Name':['Covered','Unknown'], 'Team':['WAS','NYG'],
+            FLEX:[30.,np.nan], 'Projected MVP Ownership':[0.,np.nan]})
+        pool.attrs['fantasylabs_ownership']={'site':'FanDuel','format':'single_game','slate_date':'2026-11-12'}
+        self.assertEqual(missing_role_players(pool),['Unknown'])
+        st=SimpleNamespace(warning=lambda *a:None,info=lambda *a:None,
+            multiselect=lambda *a,**k:[])
+        self.assertIs(render_role_exclusions(st,pool),pool)
+        st.multiselect=lambda *a,**k:['Unknown']
+        filtered=render_role_exclusions(st,pool)
+        self.assertEqual(filtered.Name.tolist(),['Covered'])
+        self.assertEqual(filtered.attrs['ownership_excluded_players'],['Unknown'])
+        self.assertEqual(pool.Name.tolist(),['Covered','Unknown'])
+        self.assertTrue(pd.isna(pool[FLEX].iloc[1]))
+
+    def test_fd_fidone_exclusion_is_scoped_to_this_single_game_slate(self):
+        from simmah_fantasylabs_ownership import apply_authorized_slate_exclusions
+        pool=pd.DataFrame({'Name':['John Bates','Thomas Fidone II'], 'Team':['WAS','NYG']})
+        pool.attrs['slate_date']='2026-11-12'
+        result=apply_authorized_slate_exclusions(pool,site='FanDuel')
+        self.assertEqual(result.Name.tolist(),['John Bates'])
+        self.assertEqual(pool.Name.tolist(),['John Bates','Thomas Fidone II'])
+        tomorrow=pool.copy();tomorrow.attrs['slate_date']='2026-11-13'
+        self.assertEqual(len(apply_authorized_slate_exclusions(tomorrow,site='FanDuel')),2)
+        self.assertEqual(len(apply_authorized_slate_exclusions(pool,site='FanDuel',mode='full_roster')),2)
+
     def test_removing_or_changing_source_invalidates_only_downstream_outputs(self):
         state={'simulation_df':'sim','candidates_df':'candidates','contest_field_df':'old','portfolio_df':'old portfolio'}
         self.assertTrue(invalidate_field(state,('slate',),'first'))
