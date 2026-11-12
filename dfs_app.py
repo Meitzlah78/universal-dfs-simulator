@@ -6672,7 +6672,6 @@ else:
 
 
 
-        players_df = apply_injury_statuses(players_df, "injury_status_dk_" + lineup_mode.replace(" ", "_").lower())
 
         # External projections only: do not calculate or use internal fallback projections.
         players_df["Projection"] = np.nan
@@ -6701,6 +6700,9 @@ else:
         from simmah_fantasylabs_ownership import render_snapshot
         with _tab_roster:
             players_df = render_snapshot(st, players_df, site="DraftKings", mode=("single_game" if lineup_mode == "Showdown" else "full_roster"))
+
+        # Match ownership against the complete salary slate before excluding OUT players.
+        players_df = apply_injury_statuses(players_df, "injury_status_dk_" + lineup_mode.replace(" ", "_").lower())
 
         # Keep the full DraftKings salary-file pool visible even when some players do not yet have projections.
         all_dk_players_df = players_df.copy()

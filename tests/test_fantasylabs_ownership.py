@@ -27,6 +27,32 @@ class FantasyLabsTests(unittest.TestCase):
         self.assertNotIn('Max Exposure %',result)
         self.assertEqual(meta['matched_players'],10)
         self.assertIsNone(meta['ownership_updated_utc'])
+    def test_dk_import_matches_out_salary_players_before_injury_exclusion(self):
+        import ast
+        from pathlib import Path
+        p,f=self.fixture()
+        p.loc[0,'Name']='Cam Skattebo'
+        f.loc[f.Player=='Player 0','Player']='Cam Skattebo'
+        p['Injury Status']='Active';p.loc[0,'Injury Status']='Out'
+        # Reproduce the old failure, then check the full-slate import retains shares.
+        with self.assertRaisesRegex(ValueError,'Cam Skattebo'):
+            self.apply(p.iloc[1:].reset_index(drop=True),f)
+        result,meta=self.apply(p,f)
+        eligible=result[result['Injury Status']!='Out'].reset_index(drop=True)
+        self.assertNotIn('Cam Skattebo',eligible.Name.tolist())
+        fw,cw=role_preferences(eligible)
+        np.testing.assert_array_equal(fw,[50]*9)
+        np.testing.assert_array_equal(cw,[10]*9)
+        self.assertEqual(meta['raw_totals'],{'CPT':100.,'FLEX':500.})
+        tree=ast.parse(Path('dfs_app.py').read_text())
+        calls={}
+        for node in ast.walk(tree):
+            if (isinstance(node,ast.Call) and isinstance(node.func,ast.Name)
+                    and node.func.id in {'render_snapshot','apply_injury_statuses'}
+                    and any(isinstance(arg,ast.Name) and arg.id=='players_df' for arg in node.args)):
+                calls[node.func.id]=node.lineno
+        self.assertLess(calls['render_snapshot'],calls['apply_injury_statuses'])
+
     def test_wrong_site_slate_teams_and_duplicates_block(self):
         p,f=self.fixture()
         for col,value in [('Site','FanDuel'),('Slate date','2026-11-06'),('Team','NYJ')]:
