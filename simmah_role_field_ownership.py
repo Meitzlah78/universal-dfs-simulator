@@ -9,7 +9,7 @@ from scipy.optimize import minimize
 from scipy.sparse import csr_matrix
 from scipy.special import logsumexp
 
-ENGINE = 'role-marginals-v1'
+ENGINE = 'role-marginals-v2'
 
 
 def calibrate_role_ownership(field, pool, slots, target=None, seed=20261105, tolerance_pp=.5):
@@ -26,8 +26,26 @@ def calibrate_role_ownership(field, pool, slots, target=None, seed=20261105, tol
     # raw inputs intact and explicitly report this eligible-pool normalization.
     totals = raw.sum(axis=1)
     desired = raw * np.array([1., 5.])[:, None] / totals[:, None]
+    independent = desired.copy()
     if (desired.sum(axis=0) > 1 + 1e-9).any():
-        raise ValueError('Eligible role targets require a player more than once per roster')
+        # Exclusions can make separate role normalization impossible. Project
+        # onto legal per-player marginals, preserving posted zero role shares.
+        n_players = raw.shape[1]
+        bounds = [(0., 1. if value > 0 else 0.) for value in raw.ravel()]
+        constraints = [
+            {'type':'eq', 'fun':lambda x: x.reshape(2,-1).sum(axis=1)-[1.,5.],
+             'jac':lambda x: np.kron(np.eye(2),np.ones((1,n_players)))},
+            {'type':'ineq', 'fun':lambda x: 1.-x.reshape(2,-1).sum(axis=0),
+             'jac':lambda x: -np.tile(np.eye(n_players),(1,2))}]
+        projected = minimize(lambda x: (.5*np.square(x-independent.ravel()).sum(),
+                             x-independent.ravel()), independent.ravel(), jac=True,
+                             bounds=bounds, constraints=constraints, method='SLSQP',
+                             options={'ftol':1e-12,'maxiter':500})
+        desired = projected.x.reshape(2,-1)
+        if (not projected.success or not np.isfinite(desired).all()
+                or np.max(np.abs(desired.sum(axis=1)-[1.,5.])) > 1e-7
+                or (desired.sum(axis=0)>1+1e-7).any()):
+            raise ValueError('Eligible role targets have no feasible six-player allocation; check the eligible pool')
     names = pool.Name.astype(str).tolist(); index = {name:i for i,name in enumerate(names)}
     n = len(names)
     picks = field[slots].apply(lambda col:col.astype(str).map(index)).to_numpy()
@@ -82,12 +100,14 @@ def calibrate_role_ownership(field, pool, slots, target=None, seed=20261105, tol
     if error > rounding_limit:
         raise ValueError(f'Final role ownership differs by {error:.2f} pp after integer allocation; increase opponent count')
     report=pd.DataFrame({'Name':names,'Raw special own %':raw[0],'Raw FLEX own %':raw[1],
+        'Independent special target %':independent[0]*100,'Independent FLEX target %':independent[1]*100,
         'Eligible special target %':desired[0]*100,'Eligible FLEX target %':desired[1]*100,
         'Final special own %':actual[:n]*100,'Final FLEX own %':actual[n:]*100,
         'Special difference pp':(actual[:n]-desired[0])*100,'FLEX difference pp':(actual[n:]-desired[1])*100})
     result.attrs.update(field.attrs)
     result.attrs['role_ownership_calibration']={'engine':ENGINE,'raw_eligible_role_totals':totals.tolist(),
-        'normalized_role_totals':[100.,500.],'fitted_max_error_pp':fit_error,'final_max_error_pp':error,
+        'normalized_role_totals':[100.,500.],
+        'eligibility_adjustment_max_pp':float(np.max(np.abs(desired-independent))*100),'fitted_max_error_pp':fit_error,'final_max_error_pp':error,
         'final_mean_error_pp':float(np.abs(actual-wanted).mean()*100),'support_rosters':len(rows),
         'field_entries':count,'unique_rosters':int(np.unique(selected).size),
         'construction_policy':'learned roster frequencies used as prior; ownership fitted last',

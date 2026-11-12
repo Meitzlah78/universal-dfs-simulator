@@ -41,7 +41,20 @@ class RoleOwnershipTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'Complete'):calibrate_role_ownership(field,bad,slots)
         with self.assertRaisesRegex(ValueError,'support'):calibrate_role_ownership(field[field.Captain!='A'],pool,slots)
         bad=pool.copy();bad['Projected CPT Own %']=0.;bad.loc[0,'Projected CPT Own %']=100
-        with self.assertRaisesRegex(ValueError,'more than once'):calibrate_role_ownership(field,bad,slots)
+        result,report=calibrate_role_ownership(field,bad,slots,target=12000)
+        self.assertTrue(result.Captain.eq('A').all())
+        self.assertFalse(result[slots[1:]].eq('A').any().any())
+        self.assertAlmostEqual(report['Eligible special target %'].sum(),100)
+        self.assertAlmostEqual(report['Eligible FLEX target %'].sum(),500)
+        self.assertTrue((report['Eligible special target %']+report['Eligible FLEX target %']<=100.00001).all())
+        self.assertGreater(result.attrs['role_ownership_calibration']['eligibility_adjustment_max_pp'],0)
+    def test_eligibility_adjustment_cannot_invent_zero_role_support(self):
+        pool,field,slots=self.fixture()
+        pool['Projected CPT Own %']=[100.]+[0.]*7
+        pool['Projected Flex Ownership']=[100.]*5+[0.]*3
+        with self.assertRaisesRegex(ValueError,'no feasible'):
+            calibrate_role_ownership(field,pool,slots)
+
     def test_jointly_infeasible_support_is_rejected(self):
         pool,field,slots=self.fixture()
         field=field[field[slots].isin(list('ABCD')).sum(axis=1)<=3]
