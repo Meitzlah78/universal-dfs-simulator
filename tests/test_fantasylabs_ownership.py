@@ -89,6 +89,27 @@ class FantasyLabsTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'Ambiguous'):
             self.apply(pd.concat([p,duplicate],ignore_index=True),f)
 
+    def test_authorized_fidone_exclusion_is_scoped_to_tonights_dk_slate(self):
+        from simmah_fantasylabs_ownership import apply_authorized_slate_exclusions
+        p,f=self.fixture();p['Team']=p.Team.replace({'JAX':'WAS','BAL':'NYG'})
+        p['Game Info']='WAS@NYG 11/12/2026 08:15PM ET'
+        p.loc[1,'Name']='Thomas Fidone II'
+        p['Projected CPT Own %']=10.;p['Projected Flex Ownership']=50.
+        p.loc[1,['Projected CPT Own %','Projected Flex Ownership']]=np.nan
+        before=p.copy(deep=True)
+        result=apply_authorized_slate_exclusions(p)
+        self.assertNotIn('Thomas Fidone II',result.Name.tolist())
+        self.assertEqual(len(result),9)
+        self.assertIn('authorized_slate_exclusions',result.attrs)
+        role_preferences(result)
+        pd.testing.assert_frame_equal(p,before)
+        for site,mode in [('FanDuel','single_game'),('DraftKings','full_roster')]:
+            self.assertEqual(len(apply_authorized_slate_exclusions(p,site,mode)),10)
+        other=p.copy();other['Game Info']='WAS@NYG 11/19/2026 08:15PM ET'
+        self.assertEqual(len(apply_authorized_slate_exclusions(other)),10)
+        other=p.copy();other['Team']=other.Team.replace({'WAS':'DAL'})
+        self.assertEqual(len(apply_authorized_slate_exclusions(other)),10)
+
     def test_all_unmatched_players_and_roles_are_reported_together(self):
         p,f=self.fixture()
         f.loc[f.Player=='Player 0','Player']='Missing One'

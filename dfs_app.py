@@ -6722,6 +6722,13 @@ else:
         with _tab_roster:
             players_df = render_snapshot(st, players_df, site="DraftKings", mode=("single_game" if lineup_mode == "Showdown" else "full_roster"))
 
+        from simmah_fantasylabs_ownership import apply_authorized_slate_exclusions
+        players_df = apply_authorized_slate_exclusions(players_df, site='DraftKings',
+            mode=('single_game' if lineup_mode=='Showdown' else 'full_roster'))
+        _authorized_exclusions=players_df.attrs.get('authorized_slate_exclusions',{})
+        if _authorized_exclusions:
+            st.info('Explicitly excluded from candidate and opponent pools for '+_authorized_exclusions['slate_date']+': '+', '.join(_authorized_exclusions['players']))
+
         # Match ownership against the complete salary slate before excluding OUT players.
         players_df = apply_injury_statuses(players_df, "injury_status_dk_" + lineup_mode.replace(" ", "_").lower())
 

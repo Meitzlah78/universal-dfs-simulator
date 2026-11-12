@@ -117,6 +117,22 @@ def apply_snapshot(pool,raw,site='DraftKings',mode='single_game',confirmed_undat
     return result,metadata
 
 
+def apply_authorized_slate_exclusions(pool,site='DraftKings',mode='single_game'):
+    """Apply Mark's explicit one-slate exclusion; never treat missing shares as zero."""
+    if site!='DraftKings' or mode!='single_game':return pool
+    try:day=slate_date(pool)
+    except ValueError:return pool
+    teams=set(pool['Team'].astype(str).str.strip().str.upper().replace({'WSH':'WAS'}))
+    if day!='2026-11-12' or teams!={'WAS','NYG'}:return pool
+    excluded=pool['Name'].map(name_key).eq('thomasfidone') & pool['Team'].astype(str).str.upper().eq('NYG')
+    if not excluded.any():return pool
+    result=pool.loc[~excluded].copy().reset_index(drop=True)
+    result.attrs['authorized_slate_exclusions']={
+        'slate_date':day,'site':site,'format':mode,'players':pool.loc[excluded,'Name'].astype(str).tolist(),
+        'scope':'candidate and opponent pools','reason':'user-authorized exclusion; role ownership unavailable'}
+    return result
+
+
 def role_preferences(pool):
     fw=pd.to_numeric(pool[FLEX],errors='coerce').to_numpy(float)
     special_col=CPT if pool.attrs.get('fantasylabs_ownership',{}).get('site','DraftKings')=='DraftKings' else 'Projected MVP Ownership'
