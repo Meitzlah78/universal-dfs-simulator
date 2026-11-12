@@ -88,6 +88,22 @@ class RoleOwnershipTests(unittest.TestCase):
         self.assertLess(result.attrs['role_ownership_calibration']['final_max_error_pp'],.5)
         self.assertGreater(result.attrs['role_ownership_calibration']['repair_proposal_rosters'],0)
 
+    def test_integer_allocation_retries_without_changing_fitted_targets(self):
+        pool=pd.DataFrame({'Name':[str(i) for i in range(12)],'Team':['A']*6+['B']*6,
+                           'Salary':[5000]*12,'CaptainSalary':[7500]*12})
+        field=build_unique_field(pool,np.ones(12),np.ones(12),10000,min_salary=0)
+        pool['Projected CPT Own %']=[100*field.Captain.eq(n).mean() for n in pool.Name]
+        pool['Projected Flex Ownership']=[100*field[SLOTS[1:]].eq(n).any(axis=1).mean() for n in pool.Name]
+        result,report=calibrate_role_ownership(field,pool,SLOTS,target=10000,seed=0,tolerance_pp=.2)
+        meta=result.attrs['role_ownership_calibration']
+        self.assertGreater(meta['allocation_attempts'],1)
+        self.assertLessEqual(meta['final_max_error_pp'],.2)
+        self.assertEqual(len(result),10000)
+        np.testing.assert_allclose(report['Eligible special target %'],pool['Projected CPT Own %'])
+        np.testing.assert_allclose(report['Eligible FLEX target %'],pool['Projected Flex Ownership'])
+        again,_=calibrate_role_ownership(field,pool,SLOTS,target=10000,seed=0,tolerance_pp=.2)
+        pd.testing.assert_frame_equal(result,again)
+
     def test_repair_survives_zero_role_pruning(self):
         pool,field,slots=self.fixture()
         legal=field[~field[slots[1:]].eq('H').any(axis=1)]

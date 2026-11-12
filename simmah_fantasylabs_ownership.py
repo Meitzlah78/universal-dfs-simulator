@@ -72,14 +72,17 @@ def apply_snapshot(pool,raw,site='DraftKings',mode='single_game',confirmed_undat
     index={key:i for i,key in enumerate(identities)}
     # Explicit provider aliases only; no fuzzy matching.
     frame['_key']=frame['Player'].map(name_key).replace(aliases)
-    matched=[]
+    matched=[];unmatched=[]
     for row in frame.to_dict('records'):
         team=row['_team'];key=row['_key'];target=index.get((team,key))
         if target is None and ('defense' in key or row['Role']=='DST'):
             candidates=[i for i,(t,_) in enumerate(identities) if t==team and str(pool.iloc[i].get('Position','')).upper() in {'DST','D','DEF'}]
             if len(candidates)==1:target=candidates[0]
-        if target is None:raise ValueError('Ownership player not uniquely matched to salary slate: '+row['Player'])
+        if target is None:
+            unmatched.append(row['Player']+' ('+team+', '+row['Role']+')')
         matched.append(target)
+    if unmatched:
+        raise ValueError('Ownership players not uniquely matched to salary slate: '+'; '.join(unmatched))
     frame['_index']=matched
     if frame.duplicated(['_index','Role']).any():raise ValueError('Duplicate player/role ownership rows')
     if dashboard:frame['Optimal %']=np.nan

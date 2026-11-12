@@ -89,6 +89,16 @@ class FantasyLabsTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'Ambiguous'):
             self.apply(pd.concat([p,duplicate],ignore_index=True),f)
 
+    def test_all_unmatched_players_and_roles_are_reported_together(self):
+        p,f=self.fixture()
+        f.loc[f.Player=='Player 0','Player']='Missing One'
+        f.loc[f.Player=='Player 1','Player']='Missing Two'
+        with self.assertRaises(ValueError) as caught:self.apply(p,f)
+        message=str(caught.exception)
+        for name in ['Missing One','Missing Two']:
+            self.assertIn(name,message)
+        self.assertIn('CPT',message);self.assertIn('FLEX',message)
+
     def test_missing_unprojected_salary_rows_remain_unknown_and_no_eligible_fallback(self):
         p,f=self.fixture();extra=p.iloc[:1].copy();extra['Name']='Unknown reserve';extra['Projection']=0
         p=pd.concat([p,extra],ignore_index=True)

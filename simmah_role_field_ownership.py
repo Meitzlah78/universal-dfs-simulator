@@ -117,8 +117,22 @@ def calibrate_role_ownership(field, pool, slots, target=None, seed=20261105, tol
     error=float(np.max(np.abs(actual-wanted))*100)
     # Small fields have coarser ownership steps. Never hide large residuals.
     rounding_limit=max(tolerance_pp,600/count)
+    allocation_attempts = 1
+    # A valid fitted distribution can miss tolerance in one randomized integer
+    # draw. Retry only that draw, retaining the closest legal allocation.
+    while error > rounding_limit and allocation_attempts < 32:
+        allocation_attempts += 1
+        trial_order=rng.permutation(len(rows))
+        trial_cumulative=np.cumsum(probability[trial_order]);trial_cumulative[-1]=1.
+        trial_selected=trial_order[np.searchsorted(trial_cumulative,
+            (rng.random()+np.arange(count))/count,side='right')]
+        trial_actual=np.bincount(role_picks[trial_selected].ravel(),minlength=2*n)/count
+        trial_error=float(np.max(np.abs(trial_actual-wanted))*100)
+        if trial_error < error:
+            selected=trial_selected;actual=trial_actual;error=trial_error
     if error > rounding_limit:
         raise ValueError(f'Final role ownership differs by {error:.2f} pp after integer allocation; increase opponent count')
+    result=rows.iloc[selected].reset_index(drop=True)
     report=pd.DataFrame({'Name':names,'Raw special own %':raw[0],'Raw FLEX own %':raw[1],
         'Independent special target %':independent[0]*100,'Independent FLEX target %':independent[1]*100,
         'Eligible special target %':desired[0]*100,'Eligible FLEX target %':desired[1]*100,
@@ -129,7 +143,7 @@ def calibrate_role_ownership(field, pool, slots, target=None, seed=20261105, tol
         'normalized_role_totals':[100.,500.],
         'eligibility_adjustment_max_pp':float(np.max(np.abs(desired-independent))*100),'fitted_max_error_pp':fit_error,'final_max_error_pp':error,
         'final_mean_error_pp':float(np.abs(actual-wanted).mean()*100),'support_rosters':len(rows),
-        'field_entries':count,'repair_proposal_rosters':repaired_support,'unique_rosters':int(np.unique(selected).size),
+        'field_entries':count,'repair_proposal_rosters':repaired_support,'allocation_attempts':allocation_attempts,'unique_rosters':int(np.unique(selected).size),
         'construction_policy':'learned roster frequencies used as prior; ownership fitted last',
         'duplication_policy':'fitted roster resampling; real duplicate frequencies not independently validated'}
     return result, report
