@@ -5094,6 +5094,14 @@ if platform == "FanDuel":
         fd_players = exclude_zero_projection_players(fd_players, "FanDuel " + lineup_mode)
         fd_players = apply_injury_statuses(fd_players, "injury_status_fd_" + lineup_mode.replace(" ", "_").lower())
         fd_players = resolve_quarterback_roles_for_build(fd_players, "FanDuel " + lineup_mode)
+        if lineup_mode == "Single Game":
+            from simmah_fantasylabs_ownership import render_role_exclusions, apply_authorized_slate_exclusions
+            fd_players = apply_authorized_slate_exclusions(fd_players, site='FanDuel', mode='single_game')
+            with _tab_roster:
+                if fd_players.attrs.get('authorized_slate_exclusions'):
+                    st.info('Excluded from candidate and opponent pools for this slate: '+
+                        ', '.join(fd_players.attrs['authorized_slate_exclusions']['players']))
+                fd_players = render_role_exclusions(st, fd_players)
 
         # Restore FanDuel's saved simulation summaries on every Streamlit rerun.
         fd_sim_key = "fd_player_sim_" + lineup_mode.replace(" ", "_").lower()
@@ -5559,6 +5567,10 @@ if platform == "FanDuel":
 
         from simmah_fantasylabs_ownership import invalidate_field
         _fl_fd_fingerprint = fd_players.attrs.get("fantasylabs_ownership", {}).get("sha256")
+        if fd_players.attrs.get("ownership_excluded_players"):
+            _fl_fd_fingerprint = (_fl_fd_fingerprint, tuple(fd_players.attrs["ownership_excluded_players"]))
+        if fd_players.attrs.get('authorized_slate_exclusions'):
+            _fl_fd_fingerprint = (_fl_fd_fingerprint, tuple(fd_players.attrs['authorized_slate_exclusions']['players']))
         if invalidate_field(st.session_state, fd_signature, _fl_fd_fingerprint, site="FanDuel", mode=("single_game" if lineup_mode == "Single Game" else "full_roster")):
             st.info("Ownership input changed. Run a fresh FanDuel build and contest comparison. Previous outputs were retained for recovery.")
 

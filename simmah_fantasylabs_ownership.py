@@ -1,5 +1,5 @@
 """Private NFL FantasyLabs / DraftDashboard snapshots; no account access."""
-import hashlib,io,re,unicodedata
+import hashlib,io,json,re,unicodedata
 import numpy as np
 import pandas as pd
 
@@ -119,7 +119,7 @@ def apply_snapshot(pool,raw,site='DraftKings',mode='single_game',confirmed_undat
 
 def apply_authorized_slate_exclusions(pool,site='DraftKings',mode='single_game'):
     """Apply Mark's explicit one-slate exclusion; never treat missing shares as zero."""
-    if site!='DraftKings' or mode!='single_game':return pool
+    if site not in {'DraftKings','FanDuel'} or mode!='single_game':return pool
     try:day=slate_date(pool)
     except ValueError:return pool
     teams=set(pool['Team'].astype(str).str.strip().str.upper().replace({'WSH':'WAS'}))
@@ -130,6 +130,35 @@ def apply_authorized_slate_exclusions(pool,site='DraftKings',mode='single_game')
     result.attrs['authorized_slate_exclusions']={
         'slate_date':day,'site':site,'format':mode,'players':pool.loc[excluded,'Name'].astype(str).tolist(),
         'scope':'candidate and opponent pools','reason':'user-authorized exclusion; role ownership unavailable'}
+    return result
+
+
+def missing_role_players(pool):
+    """Return incomplete eligible players; explicit numeric zero is covered."""
+    special=CPT if pool.attrs.get('fantasylabs_ownership',{}).get('site','DraftKings')=='DraftKings' else 'Projected MVP Ownership'
+    missing=np.zeros(len(pool),dtype=bool)
+    for column in [FLEX,special]:
+        values=pd.to_numeric(pool[column],errors='coerce').to_numpy(float) if column in pool else np.full(len(pool),np.nan)
+        missing|=~(np.isfinite(values)&(values>=0)&(values<=100))
+    return pool.loc[missing,'Name'].astype(str).tolist()
+
+
+def render_role_exclusions(st,pool):
+    """User-selected exclusions apply to both pools; never manufacture shares."""
+    meta=pool.attrs.get('fantasylabs_ownership',{})
+    if not meta or meta.get('format')!='single_game':return pool
+    missing=missing_role_players(pool)
+    if not missing:return pool
+    st.warning('Imported role ownership is unavailable for: '+', '.join(missing)+'. Upload their MVP/FLEX shares or explicitly exclude them below.')
+    identity=json.dumps([meta.get('site'),meta.get('slate_date'),meta.get('sha256'),missing])
+    key='ownership_pool_exclusions_'+hashlib.sha256(identity.encode()).hexdigest()[:20]
+    excluded=st.multiselect('Exclude from BOTH my lineups and simulated opponents',
+        options=missing,default=[],key=key,
+        help='Only selected players are excluded. Missing ownership is not treated as zero. Rebuild after changing this selection.')
+    if not excluded:return pool
+    result=pool.loc[~pool.Name.astype(str).isin(excluded)].copy()
+    result.attrs['ownership_excluded_players']=sorted(excluded)
+    st.info('Excluded from both pools: '+', '.join(sorted(excluded))+'. Run a fresh build.')
     return result
 
 
