@@ -134,11 +134,20 @@ def apply_authorized_slate_exclusions(pool,site='DraftKings',mode='single_game')
 
 
 def role_preferences(pool):
-    fw=pd.to_numeric(pool[FLEX],errors='coerce').to_numpy(float)
     special_col=CPT if pool.attrs.get('fantasylabs_ownership',{}).get('site','DraftKings')=='DraftKings' else 'Projected MVP Ownership'
-    cw=pd.to_numeric(pool[special_col],errors='coerce').to_numpy(float)
-    if not (np.isfinite(fw)&np.isfinite(cw)&(fw>=0)&(cw>=0)).all():
-        raise ValueError('Imported ownership is missing for an eligible opponent player; no fallback or zero fill was used')
+    special='CPT' if special_col==CPT else 'MVP'
+    arrays=[];gaps=[]
+    for role,column in [('FLEX',FLEX),(special,special_col)]:
+        values=pd.to_numeric(pool[column],errors='coerce').to_numpy(float) if column in pool else np.full(len(pool),np.nan)
+        valid=np.isfinite(values)&(values>=0)&(values<=100)
+        for index in np.flatnonzero(~valid):
+            row=pool.iloc[index]
+            gaps.append(str(row.get('Name','Unknown player'))+' ('+str(row.get('Team',''))+', '+role+')')
+        arrays.append(values)
+    if gaps:
+        raise ValueError('Imported ownership is missing or invalid for eligible opponent players: '+
+            '; '.join(gaps)+'. Upload ownership covering these player/role rows or explicitly remove those players from the eligible pool. No fallback or zero fill was used.')
+    fw,cw=arrays
     if fw.sum()<=0 or cw.sum()<=0:raise ValueError('Positive ownership mass required for both roles')
     return fw,cw
 

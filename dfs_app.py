@@ -48,6 +48,7 @@ render_brand(st, show_logo=False)
 _app_header = st.container(key="simmah_app_header")
 _refresh_header = _app_header.container(key="sticky_projection_bar")
 _pinned_slates = _app_header.container(key="simmah_pinned_slates")
+_active_site_header = _app_header.empty()
 
 def render_cloud_storage_header(st, host):
     from simmah_workspace_cloud import configuration, probe
@@ -3132,6 +3133,7 @@ if auto_slate_file is None:
         st.caption("Next: choose your contest, review the player pool, then build.")
     workspace_stop(st, _loaded_slate_tabs, _pinned_slates)
 selected_format = detected_format
+_active_site_header.info(f"**Active slate: {selected_format}**")
 
 if selected_format in {"FanDuel NBA", "DraftKings NBA"}:
     from simmah_nba_import import render_setup as render_nba_setup
@@ -5464,6 +5466,15 @@ if platform == "FanDuel":
         fd_sim_clicked = fd_sim_button
         fd_build_clicked = fd_sim_button
         fd_contest_clicked = fd_sim_button
+        # Check imported role coverage before the combined SIM/BUILD/CONTEST
+        # workflow spends time fitting or creates a new candidate portfolio.
+        if fd_sim_button and lineup_mode == "Single Game" and fd_players.attrs.get("fantasylabs_ownership"):
+            from simmah_fantasylabs_ownership import role_preferences
+            try:
+                role_preferences(fd_players)
+            except ValueError as exc:
+                st.error("FanDuel ownership inputs need attention: " + str(exc))
+                workspace_stop(st, _loaded_slate_tabs, _pinned_slates)
         fd_workflow_status = None
         if fd_run_all_clicked:
             fd_workflow_status = st.empty()
@@ -5657,7 +5668,11 @@ if platform == "FanDuel":
 
             if lineup_mode == "Single Game" and fd_pool.attrs.get("fantasylabs_ownership"):
                 from simmah_fantasylabs_ownership import role_preferences
-                fd_flex_weights, fd_mvp_weights = role_preferences(fd_pool)
+                try:
+                    fd_flex_weights, fd_mvp_weights = role_preferences(fd_pool)
+                except ValueError as exc:
+                    st.error("FanDuel ownership inputs need attention: " + str(exc))
+                    workspace_stop(st, _loaded_slate_tabs, _pinned_slates)
 
             rng = np.random.default_rng(123)
             opponent_rows = []

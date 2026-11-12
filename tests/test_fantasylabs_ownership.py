@@ -126,6 +126,24 @@ class FantasyLabsTests(unittest.TestCase):
         result,_=self.apply(p,f);self.assertTrue(pd.isna(result[CPT].iloc[-1]))
         with self.assertRaisesRegex(ValueError,'missing'):role_preferences(result)
         self.assertEqual(role_preferences(result.iloc[:-1])[0].sum(),500)
+
+    def test_fd_missing_coverage_reports_exact_players_and_roles(self):
+        pool=pd.DataFrame({'Name':['Missing receiver','Missing kicker','Covered'],
+            'Team':['WAS','NYG','WAS'],FLEX:[np.nan,20.,30.],
+            'Projected MVP Ownership':[5.,np.nan,0.]})
+        pool.attrs['fantasylabs_ownership']={'site':'FanDuel'}
+        before=pool.copy(deep=True)
+        with self.assertRaises(ValueError) as caught:role_preferences(pool)
+        message=str(caught.exception)
+        self.assertIn('Missing receiver (WAS, FLEX)',message)
+        self.assertIn('Missing kicker (NYG, MVP)',message)
+        self.assertNotIn('Covered',message)
+        pd.testing.assert_frame_equal(pool,before)
+
+    def test_fd_absent_role_column_reports_players_instead_of_keyerror(self):
+        pool=pd.DataFrame({'Name':['Player'], 'Team':['WAS'], FLEX:[20.]})
+        pool.attrs['fantasylabs_ownership']={'site':'FanDuel'}
+        with self.assertRaisesRegex(ValueError,r'Player \(WAS, MVP\)'):role_preferences(pool)
     def test_removing_or_changing_source_invalidates_only_downstream_outputs(self):
         state={'simulation_df':'sim','candidates_df':'candidates','contest_field_df':'old','portfolio_df':'old portfolio'}
         self.assertTrue(invalidate_field(state,('slate',),'first'))
