@@ -106,6 +106,50 @@ class FantasyLabsTests(unittest.TestCase):
             self.assertNotIn('fd_contest_comparison_'+mode,state);self.assertNotIn('fd_lineups_'+mode,state)
             self.assertEqual(state['fd_simulation_df_'+mode],'sim');self.assertNotIn(('slate',),state['fd_saved_builds'])
 
+    def test_draftdashboard_all_four_nfl_formats(self):
+        for site in ['DraftKings','FanDuel']:
+            for mode in ['single_game','full_roster']:
+                with self.subTest(site=site,mode=mode):
+                    p,f=self.fixture()
+                    f['Source']='DraftDashboard';f['Site']=site;f['Sport']='NFL'
+                    f=f.drop(columns=['Optimal %','Source URL','Matchup'])
+                    if site=='FanDuel':f['Role']=f.Role.replace({'CPT':'MVP','FLEX':'AnyFLEX'})
+                    if mode=='full_roster':
+                        f=f[f.Role.isin(['FLEX','AnyFLEX'])].copy()
+                        f['Role']='WR';f['Projected Ownership %']=90.
+                    f=f.rename(columns={'Slate date':'Slate Date','Role':'Position','Source update label':'Source Update ET'})
+                    f['Projected Ownership %']=f['Projected Ownership %'].astype(str)+'%'
+                    result,meta=apply_snapshot(p,f.to_csv(index=False).encode(),site,mode)
+                    self.assertEqual(meta['source'],'DraftDashboard')
+                    self.assertTrue(result['Ownership Source'].str.startswith('DraftDashboard').all())
+                    self.assertFalse(any('Optimal %' in c for c in result))
+                    np.testing.assert_array_equal(result.Projection,p.Projection)
+                    if mode=='full_roster':np.testing.assert_array_equal(full_preferences(result),[90]*10)
+                    else:
+                        fw,cw=role_preferences(result)
+                        np.testing.assert_array_equal(fw,[50]*10)
+                        np.testing.assert_array_equal(cw,[10]*10)
+
+    def test_dashboard_rejects_wrong_sport_mixed_sources_and_missing_roles(self):
+        p,f=self.fixture();f['Source']='DraftDashboard';f=f.drop(columns=['Optimal %'])
+        bad=f.copy();bad['Sport']='NBA'
+        with self.assertRaisesRegex(ValueError,'NFL'):self.apply(p,bad)
+        bad=f.copy();bad.loc[0,'Source']='FantasyLabs SimLabs'
+        with self.assertRaises(ValueError):self.apply(p,bad)
+        with self.assertRaisesRegex(ValueError,'Both special-role'):self.apply(p,f[f.Role=='FLEX'])
+
+    def test_dashboard_clears_old_optimal_data_and_changes_identity(self):
+        p,f=self.fixture();old,old_meta=self.apply(p,f)
+        f['Source']='DraftDashboard';f=f.drop(columns=['Optimal %'])
+        result,meta=self.apply(old,f)
+        self.assertFalse(any('Optimal %' in c for c in result))
+        self.assertNotEqual(meta['sha256'],old_meta['sha256'])
+        state={}
+        invalidate_field(state,('slate',),old_meta['sha256'])
+        state['portfolio_df']='old'
+        self.assertTrue(invalidate_field(state,('slate',),meta['sha256']))
+        self.assertNotIn('portfolio_df',state)
+
     def test_live_opponent_weights_prefer_import_over_old_selection_columns(self):
         import ast,types
         from pathlib import Path

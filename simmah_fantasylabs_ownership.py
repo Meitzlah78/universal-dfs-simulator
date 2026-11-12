@@ -1,4 +1,4 @@
-"""Explicit NFL ownership snapshot trial; no account or network access."""
+"""Private NFL FantasyLabs / DraftDashboard snapshots; no account access."""
 import hashlib,io,re,unicodedata
 import numpy as np
 import pandas as pd
@@ -32,9 +32,17 @@ def apply_snapshot(pool,raw,site='DraftKings',mode='single_game',confirmed_undat
     special_col=CPT if special=='CPT' else 'Projected MVP Ownership'
     opt_special=OPT_CPT if special=='CPT' else 'FantasyLabs MVP Optimal %'
     frame=pd.read_csv(io.BytesIO(raw),dtype=str,keep_default_na=False)
+    dashboard=set(frame.get('Source',[]))=={'DraftDashboard'}
+    source='DraftDashboard' if dashboard else 'FantasyLabs SimLabs'
     required={'Source','Source URL','Captured UTC','Source update label','Site','Slate date','Matchup','Team','Role','Player','Projected Ownership %','Optimal %'}
-    if not required<=set(frame):raise ValueError('Upload the FantasyLabs ownership snapshot CSV')
-    if frame.empty or set(frame['Source'])!={'FantasyLabs SimLabs'} or set(frame['Site'])!={site}:
+    if dashboard:
+        required.discard('Optimal %')
+        frame=frame.rename(columns={'Slate Date':'Slate date','Position':'Role','Source Update ET':'Source update label'})
+        required.discard('Matchup')
+        required.discard('Source URL')
+        if 'Sport' in frame and set(frame['Sport'])!={'NFL'}:raise ValueError('Ownership snapshot must be for NFL')
+    if not required<=set(frame):raise ValueError('Upload the NFL DraftDashboard or FantasyLabs ownership snapshot CSV')
+    if frame.empty or set(frame['Source'])!={source} or set(frame['Site'])!={site}:
         raise ValueError('Ownership snapshot belongs to a different site/source')
     day=slate_date(pool)
     if set(frame['Slate date'])!={day}:
@@ -55,8 +63,8 @@ def apply_snapshot(pool,raw,site='DraftKings',mode='single_game',confirmed_undat
     frame['Role']=frame['Role'].replace({'AnyFLEX':'FLEX','D':'DST','DEF':'DST'})
     if mode=='single_game' and set(frame['Role'])!={special,'FLEX'}:raise ValueError('Both special-role and FLEX ownership tables are required for this site')
     if mode=='full_roster' and not set(frame['Role'])<={'QB','RB','WR','TE','DST'}:raise ValueError('Full-roster imports require position ownership, not Captain/MVP/FLEX shares')
-    for col in ('Projected Ownership %','Optimal %'):
-        frame[col]=pd.to_numeric(frame[col],errors='coerce')
+    for col in (['Projected Ownership %'] if dashboard else ['Projected Ownership %','Optimal %']):
+        frame[col]=pd.to_numeric(frame[col].str.rstrip('%'),errors='coerce')
         if not (np.isfinite(frame[col])&frame[col].between(0,100)).all():raise ValueError('Invalid or missing ownership/optimal percentage')
     aliases={'matthewhibner':'matthibner'}
     identities=list(zip(poolteams,pool['Name'].map(name_key).replace(aliases)))
@@ -74,7 +82,9 @@ def apply_snapshot(pool,raw,site='DraftKings',mode='single_game',confirmed_undat
         matched.append(target)
     frame['_index']=matched
     if frame.duplicated(['_index','Role']).any():raise ValueError('Duplicate player/role ownership rows')
+    if dashboard:frame['Optimal %']=np.nan
     result=pool.copy(deep=True)
+    result.drop(columns=[c for c in result if c.startswith(('FantasyLabs ', 'DraftDashboard ')) and 'Optimal %' in c],inplace=True)
     if mode=='single_game':
         sets={role:set(frame.loc[frame.Role==role,'_index']) for role in (special,'FLEX')}
         if sets[special]!=sets['FLEX']:raise ValueError('Special-role and FLEX player coverage differs')
@@ -84,7 +94,7 @@ def apply_snapshot(pool,raw,site='DraftKings',mode='single_game',confirmed_undat
         for role,col,optcol in [(special,special_col,opt_special),('FLEX',FLEX,OPT_FLEX)]:
             part=frame.loc[frame.Role==role].set_index('_index')
             result[col]=[part['Projected Ownership %'].get(i,np.nan) for i in range(len(pool))]
-            result[optcol]=[part['Optimal %'].get(i,np.nan) for i in range(len(pool))]
+            if not dashboard:result[optcol]=[part['Optimal %'].get(i,np.nan) for i in range(len(pool))]
         if (result[special_col]+result[FLEX]>100.2).any():raise ValueError('A player cannot exceed 100% combined ownership')
         result['Projected Ownership']=result[special_col]+result[FLEX]
     else:
@@ -93,9 +103,9 @@ def apply_snapshot(pool,raw,site='DraftKings',mode='single_game',confirmed_undat
         if abs(sums['overall']-900)>9.:raise ValueError('NFL full-roster ownership must total approximately 900%')
         part=frame.set_index('_index')
         result['Projected Ownership']=[part['Projected Ownership %'].get(i,np.nan) for i in range(len(pool))]
-        result['FantasyLabs Optimal %']=[part['Optimal %'].get(i,np.nan) for i in range(len(pool))]
-    result['Ownership Source']='FantasyLabs SimLabs role snapshot (trial)'
-    metadata={'sha256':hashlib.sha256(raw).hexdigest(),'slate_date':day,'matched_players':frame['_index'].nunique(),'site':site,'format':mode,'special_role':special,
+        if not dashboard:result['FantasyLabs Optimal %']=[part['Optimal %'].get(i,np.nan) for i in range(len(pool))]
+    result['Ownership Source']=source+' ownership snapshot (trial)'
+    metadata={'source':source,'sha256':hashlib.sha256(raw).hexdigest(),'slate_date':day,'matched_players':frame['_index'].nunique(),'site':site,'format':mode,'special_role':special,
         'raw_totals':sums,'captured_utc':sorted(set(frame['Captured UTC'])),
         'source_update_label':sorted(set(frame['Source update label'])),
         'ownership_updated_utc':None,'mode':'proposal preferences; not exact marginal calibration',
@@ -109,7 +119,7 @@ def role_preferences(pool):
     special_col=CPT if pool.attrs.get('fantasylabs_ownership',{}).get('site','DraftKings')=='DraftKings' else 'Projected MVP Ownership'
     cw=pd.to_numeric(pool[special_col],errors='coerce').to_numpy(float)
     if not (np.isfinite(fw)&np.isfinite(cw)&(fw>=0)&(cw>=0)).all():
-        raise ValueError('FantasyLabs ownership is missing for an eligible opponent player; no fallback or zero fill was used')
+        raise ValueError('Imported ownership is missing for an eligible opponent player; no fallback or zero fill was used')
     if fw.sum()<=0 or cw.sum()<=0:raise ValueError('Positive ownership mass required for both roles')
     return fw,cw
 
@@ -117,7 +127,7 @@ def role_preferences(pool):
 def full_preferences(pool):
     own=pd.to_numeric(pool['Projected Ownership'],errors='coerce').to_numpy(float)
     if not (np.isfinite(own)&(own>=0)&(own<=100)).all():
-        raise ValueError('FantasyLabs ownership is missing for an eligible opponent player; no fallback or zero fill was used')
+        raise ValueError('Imported ownership is missing for an eligible opponent player; no fallback or zero fill was used')
     return own
 
 
@@ -163,12 +173,13 @@ def invalidate_field(state,signature,fingerprint,site='DraftKings',mode='single_
 def render_snapshot(st,pool,site='DraftKings',mode='single_game'):
     from simmah_slate_workspaces import workspace_file_uploader
     label=('DK Showdown' if site=='DraftKings' else 'FD Single Game') if mode=='single_game' else ('DK Classic' if site=='DraftKings' else 'FD Full Roster')
-    with st.expander('FantasyLabs ownership — '+label+' trial',expanded=False):
+    with st.expander('DraftDashboard / FantasyLabs ownership — '+label+' trial',expanded=False):
         st.caption('Upload the ownership snapshot CSV. Special-role/FLEX shares stay separate where applicable; Optimal% is comparison-only. Point projections and exposure caps stay unchanged.')
-        upload=workspace_file_uploader(st,'FantasyLabs ownership CSV',type=['csv'],key='fantasylabs_ownership_upload_'+site+'_'+mode)
+        upload=workspace_file_uploader(st,'NFL ownership CSV (DraftDashboard or FantasyLabs)',type=['csv'],key='fantasylabs_ownership_upload_'+site+'_'+mode)
         if upload is None:return pool
         try:
             header=pd.read_csv(io.BytesIO(upload.getvalue()),dtype=str,keep_default_na=False)
+            if set(header.get('Source',[]))=={'DraftDashboard'}:header=header.rename(columns={'Slate Date':'Slate date'})
             confirmed=False;current=pool
             try:day=slate_date(pool)
             except ValueError:
@@ -190,9 +201,9 @@ def render_snapshot(st,pool,site='DraftKings',mode='single_game'):
         except (ValueError,KeyError,pd.errors.ParserError) as exc:
             st.error(str(exc));st.stop()
         totals=' · '.join(k+' '+f'{v:.2f}%' for k,v in meta['raw_totals'].items())
-        st.success(f"Matched {meta['matched_players']} players · "+totals)
+        st.success(meta['source']+f" · Matched {meta['matched_players']} players · "+totals)
         st.caption('Captured: '+', '.join(meta['captured_utc'])+' · '+', '.join(meta['source_update_label']))
-        st.warning('The displayed Sims update is not a verified ownership-update timestamp. Refresh for injury news before building. Single-game fields fit eligible role targets after construction; inspect the final comparison. This does not validate real duplication or projection accuracy.')
+        st.caption('Refresh ownership for injury news before building. Single-game imports require separate CPT/MVP and FLEX tables; overall ownership cannot supply role shares.')
         columns=[c for c in result if c=='Name' or c.startswith(('Projected ','FantasyLabs '))]
         st.dataframe(result[columns],hide_index=True,width='stretch')
         return result

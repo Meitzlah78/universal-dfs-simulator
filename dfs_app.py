@@ -789,7 +789,7 @@ def build_showdown_opponent_field(available_players, simulation_df, players_df,
         from simmah_role_field_ownership import restore_role_support
         result = restore_role_support(result, field, pool, ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"])
         result.attrs["fantasylabs_ownership"] = pool.attrs["fantasylabs_ownership"]
-        st.caption("FantasyLabs opponent proposals use the full legal salary range; your own build salary limits are unchanged. CPT/FLEX ownership is fitted after contest-size expansion.")
+        st.caption("Imported ownership opponent proposals use the full legal salary range; your own build salary limits are unchanged. CPT/FLEX ownership is fitted after contest-size expansion.")
     return result
 
 
@@ -5696,7 +5696,7 @@ if platform == "FanDuel":
                     opponent_df, _fl_fd_report = calibrate_role_ownership(opponent_df, fd_pool, fd_slots, target=fd_opponent_target)
                     st.session_state["ownership_comparison_data_FanDuel_Single_Game"] = _fl_fd_report
                     _fl_fd_fit = opponent_df.attrs["role_ownership_calibration"]
-                    with st.expander("FantasyLabs targets versus final opponent ownership", expanded=False):
+                    with st.expander("Imported targets versus final opponent ownership", expanded=False):
                         st.dataframe(_fl_fd_report, hide_index=True, width="stretch")
                     st.caption(f"Final MVP/FLEX ownership fit: largest error {_fl_fd_fit['final_max_error_pp']:.2f} pp. Opponents use the full legal salary range; your build limits are unchanged. Eligible shares normalize to 100% MVP and 500% FLEX; raw inputs remain visible.")
                 opponent_df = with_roster_projections(opponent_df, fd_pool, fd_slots, [1.5,1,1,1,1,1] if lineup_mode == "Single Game" else None)
@@ -8082,7 +8082,7 @@ with _tab_build:
                 st.session_state["ownership_comparison_data_DraftKings_Showdown"] = _fl_report
                 _fl_fit = contest_field_df.attrs["role_ownership_calibration"]
                 st.caption(f"Final CPT/FLEX ownership fit: largest error {_fl_fit['final_max_error_pp']:.2f} pp. Eligible-player shares are normalized separately to 100% CPT and 500% FLEX; raw inputs remain in the comparison.")
-                with st.expander("FantasyLabs targets versus final opponent ownership", expanded=False):
+                with st.expander("Imported targets versus final opponent ownership", expanded=False):
                     st.dataframe(_fl_report, hide_index=True, width="stretch")
         except ValueError as exc:
             for _stale in ("contest_field_df", "contest_field_ready", "contest_results_df", "portfolio_df", "final_lineups"):
