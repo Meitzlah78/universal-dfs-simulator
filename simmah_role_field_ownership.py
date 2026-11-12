@@ -12,6 +12,36 @@ from scipy.special import logsumexp
 ENGINE = 'role-marginals-v3'
 
 
+def impossible_salary_roles(pool, slots, salary_cap):
+    """Check every positive imported role against the cheapest legal roster.
+
+    This runs before simulation and diagnoses structural pool loss without
+    changing ownership, projections, or the salary cap.
+    """
+    special = 'Projected CPT Own %' if slots[0] == 'Captain' else 'Projected MVP Ownership'
+    records = pool.reset_index(drop=True).to_dict('records')
+    flex = [i for i,r in enumerate(records) if float(r['Projected Flex Ownership']) > 0]
+    captains = [i for i,r in enumerate(records) if float(r[special]) > 0]
+    def cheapest(captain, forced=None):
+        selected=[] if forced is None else [forced]
+        options=sorted((i for i in flex if i!=captain and i!=forced),key=lambda i:float(records[i]['Salary']))
+        selected += options[:5-len(selected)]
+        if len(selected)<5:return float('inf')
+        if all(records[i]['Team']==records[captain]['Team'] for i in selected):
+            other=[i for i in options if records[i]['Team']!=records[captain]['Team']]
+            replaceable=[i for i in selected if i!=forced]
+            if not other or not replaceable:return float('inf')
+            selected.remove(max(replaceable,key=lambda i:float(records[i]['Salary'])))
+            selected.append(other[0])
+        return float(records[captain]['CaptainSalary'])+sum(float(records[i]['Salary']) for i in selected)
+    failures=[]
+    for i,r in enumerate(records):
+        for role,minimum in ([('CPT' if slots[0]=='Captain' else 'MVP',cheapest(i))] if i in captains else []) + ([('FLEX',min((cheapest(c,i) for c in captains if c!=i),default=float('inf')))] if i in flex else []):
+            if minimum>salary_cap:
+                failures.append({'Name':r['Name'],'Role':role,'Cheapest legal salary':minimum,'Salary cap':salary_cap})
+    return pd.DataFrame(failures,columns=['Name','Role','Cheapest legal salary','Salary cap'])
+
+
 def calibrate_role_ownership(field, pool, slots, target=None, seed=20261105, tolerance_pp=.5, support_salary_cap=None):
     if field is None or field.empty:
         raise ValueError('Role ownership calibration requires legal opponent proposals')

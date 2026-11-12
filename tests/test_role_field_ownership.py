@@ -2,7 +2,7 @@ import unittest
 import numpy as np
 import pandas as pd
 from simmah_showdown_field import build_unique_field, expand_field, SLOTS
-from simmah_role_field_ownership import calibrate_role_ownership, restore_role_support
+from simmah_role_field_ownership import calibrate_role_ownership, restore_role_support, impossible_salary_roles
 
 class RoleOwnershipTests(unittest.TestCase):
     def fixture(self, fd=False):
@@ -87,6 +87,20 @@ class RoleOwnershipTests(unittest.TestCase):
         self.assertEqual(len(result),12000)
         self.assertLess(result.attrs['role_ownership_calibration']['final_max_error_pp'],.5)
         self.assertGreater(result.attrs['role_ownership_calibration']['repair_proposal_rosters'],0)
+
+    def test_nine_player_pool_detects_nabers_captain_salary_failure(self):
+        names=['Malik Nabers','Jayden Daniels','Stefon Diggs','J.J. McCarthy','Isaiah Likely',
+               'Rachaad White','Antonio Williams','Chig Okonkwo','Dominic Zvada']
+        salary=[11000,10000,9200,8800,8200,7600,7200,5800,5400]
+        pool=pd.DataFrame({'Name':names,'Salary':salary,'CaptainSalary':np.array(salary)*1.5,
+                           'Team':['NYG','WAS','WAS','NYG','NYG','WAS','WAS','WAS','NYG'],
+                           'Projected CPT Own %':[1.]*9,'Projected Flex Ownership':[1.]*9})
+        failures=impossible_salary_roles(pool,SLOTS,50000)
+        self.assertEqual(failures.Name.tolist(),['Malik Nabers'])
+        self.assertEqual(failures.Role.tolist(),['CPT'])
+        self.assertEqual(failures['Cheapest legal salary'].iloc[0],50700)
+        cheap=pool.iloc[-1:].copy();cheap['Name']='Eligible value';cheap['Salary']=2000;cheap['CaptainSalary']=3000
+        self.assertTrue(impossible_salary_roles(pd.concat([pool,cheap],ignore_index=True),SLOTS,50000).empty)
 
     def test_integer_allocation_retries_without_changing_fitted_targets(self):
         pool=pd.DataFrame({'Name':[str(i) for i in range(12)],'Team':['A']*6+['B']*6,

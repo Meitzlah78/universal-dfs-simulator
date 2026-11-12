@@ -7963,6 +7963,21 @@ with _tab_build:
         # Keep a persistent status message and surface failures instead of letting
         # the player progress bar vanish without telling the user what failed.
         workflow_status = st.empty()
+        if players_df.attrs.get('fantasylabs_ownership'):
+            from simmah_role_field_ownership import impossible_salary_roles
+            _ownership_check_pool = players_df.loc[players_df['Name'].isin(available_players)].copy()
+            _ownership_check_pool['CaptainSalary'] = _ownership_check_pool['Name'].map(captain_salary_map)
+            _ownership_failures = impossible_salary_roles(
+                _ownership_check_pool, ['Captain','Flex1','Flex2','Flex3','Flex4','Flex5'], SALARY_CAP)
+            if not _ownership_failures.empty:
+                _ownership_missing = all_dk_players_df.loc[
+                    pd.to_numeric(all_dk_players_df.get('Projected Ownership'),errors='coerce').gt(0)
+                    & ~all_dk_players_df['Name'].isin(available_players),'Name'].astype(str).tolist()
+                workflow_status.error(f"Ownership preflight: the current {len(_ownership_check_pool)}-player pool cannot form legal rosters for the imported roles below. Restore missing projections or review exclusions before building. No ownership targets or projections were replaced.")
+                st.dataframe(_ownership_failures,hide_index=True,width='stretch')
+                if _ownership_missing:
+                    st.warning('Imported-ownership players outside this build pool: '+', '.join(_ownership_missing))
+                workspace_stop(st, _loaded_slate_tabs, _pinned_slates)
         workflow_status.info(f"Step 1 of 4: Running {SIMULATION_COUNT:,} player simulations...")
         try:
             simulation_df = run_game_simulations(
