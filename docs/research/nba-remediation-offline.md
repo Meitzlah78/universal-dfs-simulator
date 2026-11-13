@@ -64,3 +64,43 @@ python scripts/sweep_nba_diversity_offline.py EVIDENCE SWEEP.json
 ```
 
 Baseline instrumentation is isolated in `simmah_nba_baseline_audit_offline.py`; tests verify identical scores, stats, team points and elapsed time to the unchanged live baseline at a fixed seed. Added cutoff and integrated ledger tests pass; broad NBA discovery runs 389 tests with one skip.
+
+## Clock-only ablation: excess timer turnovers confirmed
+
+The 226-game clock audit holds sampled rotation schedules, target minutes, role/shot/foul priors, coaching/blowout rules and blending fixed. It adds opt-in `clock_model`; default timing remains legacy. Each arm uses 128 draws per game. The original unsupported roster game is excluded/unresolved; all fixed 226 games complete in each arm.
+
+The audited source subset contains 114,051 PBP events. Shot-clock violations average 1.43 per source game, while the previous integrated arm generates 21.40. It redraws a generic full action after a 14-second OREB reset and converts any draw beyond the remaining timer into a turnover. Of those simulated expirations, 7.61/game follow OREB and 2.75 follow fouls. No seconds disappear: all arms' regulation ledgers conserve 2,880 seconds to <2e-12 roundoff.
+
+| Per game | Source | Legacy | Legal-clock proposal | Prior-date empirical transition timing |
+|---|---:|---:|---:|---:|
+| Shot-clock violations | 1.43 | 21.40 | 1.28 | 1.28 |
+| Player FGA | 175.48 | 155.16 | 181.61 | 181.61 |
+| FTA | 52.00 | 51.82 | 62.48 | 62.41 |
+| Points | 227.35 | 213.84 | 251.90 | 251.81 |
+
+Legal-clock sampling conditions an intended legal event's timing on available support; actual clock violations are generated separately at the earlier-game PBP frequency. The empirical arm also uses only earlier-date transition intervals. No shooting rates or FGA/points targets are fitted. The clock correction recovers 26.45 FGA but leaves 6.13 excess FGA and 24.46 excess points. Most recovery comes from correcting expiration semantics; empirical timing changes phase allocation but almost not the aggregate FGA mean.
+
+| Regulation seconds/game | PBP | Legacy | Empirical clock |
+|---|---:|---:|---:|
+| After player OREB | 130.74 | 234.19 | 134.97 |
+| After foul | 119.67 | 100.04 | 78.04 |
+| After FT | 308.93 | 251.26 | 326.09 |
+| After made basket | 1139.55 | 880.37 | 1181.98 |
+| After player DREB | 733.29 | 780.36 | 826.83 |
+| After turnover | 290.23 | 584.37 | 296.91 |
+| Other/boundaries/team-rebound sequences | 157.59 | 49.39 | 35.18 |
+
+“After FT” is later live action, not FT administration: administration itself deducts zero game seconds in both source and model. No separate transition-delay layer is added. The full source interval after a made basket averages 15.26 seconds; that does not identify a 4–6 second setup subphase. Source/model bucket taxonomies differ around team and dead-ball rebounds.
+
+The missing-rebound-flight hypothesis was rejected rather than patched: all 18,833 direct player miss/rebound pairs in the original 227-game feed share a clock timestamp. This limits identifiability; it does not prove physical flight takes no time. No unmeasured time padding is added. Team/dead-ball rebound events are separated from player OREB/DREB before counting and fitting transitions.
+
+Conditional >=30-minute player FD exceedances move from 24.72%/16.08% above P90/P95 to 10.35%/5.03%, but the scoring overshoot means those tail rates alone do not validate the model. Possessions proxy rises from 101.90 to 107.79 per team versus 102.65 observed; it is not exact event reconstruction. No new eight-build coverage claim is made.
+
+Counters reproduce all 226 saved per-game means (points/FGA/FTA) exactly. Broad NBA tests: 394 run, one skipped, no failures. Seven focused tests cover legal support, zero explicit violations producing zero tail-induced violations, temporal cutoff, input immutability and full regulation ledger conservation. This is still development evidence, not promotion-ready validation. Next work must reconcile event/scoring rates under the corrected clock before promotion; minutes variance and archive blending remain unchanged.
+
+Reproduce:
+
+```
+python scripts/audit_nba_clock.py REPO EVIDENCE OUTPUT
+python scripts/replay_nba_clock_audit.py REPO EVIDENCE OUTPUT
+```
