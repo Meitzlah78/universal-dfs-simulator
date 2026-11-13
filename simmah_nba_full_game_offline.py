@@ -40,7 +40,7 @@ def _duplicate_court_players(selected):
                for i in range(5) for j in range(i+1,5))
 
 
-def simulate_game(rotations, profiles, rates, seed, overtime_rotations=None, platform='FanDuel', *, shooting=None, target_minutes=None, foul_rates=None, blowout=False, clock_model=None, shot_hazards=None):
+def simulate_game(rotations, profiles, rates, seed, overtime_rotations=None, platform='FanDuel', *, shooting=None, target_minutes=None, foul_rates=None, blowout=False, clock_model=None, shot_hazards=None, possession_audit=False):
     """Simulate the supplied rotations without score-driven substitutions.
 
     rotations: integer (scenarios, 2 teams, 48 minutes, 5 players), global player
@@ -189,6 +189,27 @@ def simulate_game(rotations, profiles, rates, seed, overtime_rotations=None, pla
     for context in ['fg','ft']:
         for outcome in ['miss_rebound_opportunities','player_oreb','player_dreb','team_oreb','team_dreb']:
             extra[context+'_'+outcome]=np.zeros(n,np.int32)
+    possession_origins=['dead_ball_inbound','after_andone_oreb','after_foul','after_ft','after_make','after_dreb','after_turnover','period_start']
+    pos_start=np.zeros(n);pos_origin=np.full(n,7,int);pos_side=side.copy()
+    pos_count=np.zeros((n,2),np.int32);pos_completed=np.zeros((n,8),np.int32);pos_seconds=np.zeros((n,8))
+    pos_terminals=np.zeros((n,8),np.int32);pos_terminal_seconds=np.zeros((n,8))
+    oreb_start_sum=np.zeros(n);oreb_pending=np.zeros(n,int);oreb_tail_count=np.zeros(n,np.int32);oreb_tail_seconds=np.zeros(n)
+    made_action=np.zeros(n,bool);sample_trace=[]
+    def finish_possession(ids,reason,completed=True):
+        if not possession_audit or not len(ids):return
+        keep=(pos_side[ids]>=0)&(elapsed[ids]-pos_start[ids]>1e-10)
+        ids=ids[keep]
+        if not len(ids):return
+        duration=elapsed[ids]-pos_start[ids];codes=pos_origin[ids]
+        pos_count[ids,pos_side[ids]]+=1
+        if completed:pos_completed[ids,codes]+=1;pos_seconds[ids,codes]+=duration
+        else:pos_terminals[ids,codes]+=1;pos_terminal_seconds[ids,codes]+=duration
+        oreb_tail_count[ids]+=oreb_pending[ids];oreb_tail_seconds[ids]+=oreb_pending[ids]*elapsed[ids]-oreb_start_sum[ids]
+        if 0 in ids:
+            sample_trace.append({'scenario':0,'offense':int(pos_side[0]),'start_elapsed':float(pos_start[0]),'end_elapsed':float(elapsed[0]),'seconds':float(elapsed[0]-pos_start[0]),'origin':possession_origins[pos_origin[0]],'end_reason':reason,'completed':completed})
+        pos_start[ids]=elapsed[ids];pos_origin[ids]=origin[ids];pos_side[ids]=side[ids]
+        oreb_pending[ids]=0;oreb_start_sum[ids]=0
+        if not completed:pos_side[ids]=-1
     extra['team_offensive_rebounds']=np.zeros(n,np.int32)
     extra['team_defensive_rebounds']=np.zeros(n,np.int32)
     def resolve_rebound(ids,off,defense,rate,context,team):
@@ -207,6 +228,9 @@ def simulate_game(rotations, profiles, rates, seed, overtime_rotations=None, pla
         extra[context+'_player_dreb'][ids]+=(~oreb)&credited
         extra[context+'_team_oreb'][ids]+=oreb&team_rebound
         extra[context+'_team_dreb'][ids]+=(~oreb)&team_rebound
+        if possession_audit:
+            continuing=oreb&credited&~made_action[ids]
+            oi=ids[continuing];oreb_pending[oi]+=1;oreb_start_sum[oi]+=elapsed[oi]
         extra['offensive_rebounds'][ids]+=oreb&credited
         if credited.any():
             ri=ids[credited];lineup=np.where(oreb[credited,None],off[credited],defense[credited])
@@ -223,6 +247,7 @@ def simulate_game(rotations, profiles, rates, seed, overtime_rotations=None, pla
             ids=live[action_side[live]==team]
             if not len(ids):continue
             r=rates[team]
+            made_action[ids]=False
             minute=np.minimum((elapsed[ids]/60).astype(int),47)
             full_offense=court(ids,team,minute);full_defense=court(ids,1-team,minute)
             previous_origin=origin[ids].copy()
@@ -255,6 +280,7 @@ def simulate_game(rotations, profiles, rates, seed, overtime_rotations=None, pla
             clock[ids]=np.maximum(0,clock[ids]-consumed)
             period_clock[ids]=np.maximum(0,period_clock[ids]-consumed)
             elapsed[ids]+=consumed
+            finish_possession(ids[violation],'shot_clock_turnover')
             ids=ids[valid]
             if not len(ids):continue
             offense=full_offense[valid];defense=full_defense[valid]
@@ -317,7 +343,7 @@ def simulate_game(rotations, profiles, rates, seed, overtime_rotations=None, pla
                 made=rng.random(len(si))<np.clip(probability,.01,.99)
                 attempts[si,sp,0]+=1;attempts[si[three],sp[three],1]+=1
                 if made.any():
-                    mi=si[made];mp=sp[made]
+                    mi=si[made];mp=sp[made];made_action[mi]=True
                     add(mi,mp,'FGM');add(mi[three[made]],mp[three[made]],'3PM')
                     team_points[mi,team]+=2+three[made]
                     counters['field_goal_makes'][mi]+=1
@@ -344,14 +370,18 @@ def simulate_game(rotations, profiles, rates, seed, overtime_rotations=None, pla
                     rows=shot_rows[~made]
                     resolve_rebound(ri,offense[rows],defense[rows],r.offensive_rebound,'fg',team)
             extra['possession_changes'][ids]+=(side[ids]!=team)
+            finish_possession(ids[(side[ids]!=team)|made_action[ids]],'scoring_or_control_end')
         # A shot may not span a period boundary. Expired periods advance without
         # crediting an event; overtime requires an explicit on-court rotation.
+        finish_possession(np.flatnonzero((period_clock<=0)|(clock<=0)),'period_end',False)
         next_quarter=(period_clock<=0)&(clock>0)&(overtime_count==0)
         quarter[next_quarter]+=1
         period_clock[next_quarter]=720
         team_fouls[next_quarter]=0;shot_clock[next_quarter]=24.;origin[next_quarter]=0
         next_period=quarter[next_quarter]
         side[next_quarter]=np.where((next_period==2)|(next_period==3),1-opening[next_quarter],opening[next_quarter])
+        if possession_audit:
+            pos_start[next_quarter]=elapsed[next_quarter];pos_origin[next_quarter]=7;pos_side[next_quarter]=side[next_quarter]
         tied=(clock<=0)&(team_points[:,0]==team_points[:,1])
         can_extend=tied & (overtime_count < (overtime.shape[2] if overtime is not None else 0))
         if can_extend.any():
@@ -360,6 +390,8 @@ def simulate_game(rotations, profiles, rates, seed, overtime_rotations=None, pla
             period_clock[can_extend]=300
             team_fouls[can_extend]=0;shot_clock[can_extend]=24.;origin[can_extend]=0
             side[can_extend]=rng.integers(0,2,int(can_extend.sum()))
+            if possession_audit:
+                pos_start[can_extend]=elapsed[can_extend];pos_origin[can_extend]=7;pos_side[can_extend]=side[can_extend]
     if not np.allclose(clock_ledger.sum(axis=1),elapsed,atol=1e-7):raise RuntimeError('Clock ledger does not reconcile')
     if not np.allclose(regulation_ledger.sum(axis=1),2880.,atol=1e-7):raise RuntimeError('Regulation clock ledger does not conserve 2880 seconds')
     fgm,threes,ftm,reb,ast,stl,blk,to=np.moveaxis(stats,2,0)
@@ -368,6 +400,7 @@ def simulate_game(rotations, profiles, rates, seed, overtime_rotations=None, pla
         'requires_overtime':team_points[:,0]==team_points[:,1], 'overtime_periods':overtime_count, 'elapsed_seconds':elapsed, 'counters':counters,
         'player_minutes':player_seconds/60,'personal_fouls':personal,'disqualified_at_seconds':dq_seconds,'attempts':attempts,'mechanics_counters':extra,
         'clock_audit':{'buckets':BUCKETS,'seconds':clock_ledger,'regulation_seconds':regulation_ledger,'actions':action_counts,'expirations':expiration_counts,'free_throw_administration_seconds':0.,'separate_transition_delay_seconds':0.},
+        'possession_trace':{'enabled':possession_audit,'origins':possession_origins,'counts_by_team':pos_count,'completed_by_origin':pos_completed,'completed_seconds_by_origin':pos_seconds,'terminal_by_origin':pos_terminals,'terminal_seconds_by_origin':pos_terminal_seconds,'oreb_continuation_tails':oreb_tail_count,'oreb_continuation_tail_seconds':oreb_tail_seconds,'scenario_zero':sample_trace},
         'engine':'offline-integrated-basketball-v1','live_enabled':False}
 
 
