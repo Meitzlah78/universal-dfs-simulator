@@ -9,7 +9,7 @@ import sys
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from simmah_nba_history import completed_games,download_game
 from simmah_nba_possessions import reconstruct
-from simmah_nba_rotations import reconstruct_rotations
+from simmah_nba_espn_rotations import reconstruct_rotations
 from simmah_nba_fit import fit_baseline
 from simmah_nba_roles import fit_roles,evaluate_roles
 

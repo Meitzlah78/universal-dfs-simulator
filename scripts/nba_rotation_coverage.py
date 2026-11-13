@@ -10,7 +10,7 @@ import sys
 from urllib.request import urlopen
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from simmah_nba_history import completed_games,parse_game
-from simmah_nba_rotations import reconstruct_rotations
+from simmah_nba_espn_rotations import reconstruct_rotations
 
 DATES=[f'{year}-{month}-{day}' for year in (2023,2024,2025,2026)
        for month,day in [('01','15'),('03','15'),('04','25'),('06','01')]]
