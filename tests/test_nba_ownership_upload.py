@@ -82,7 +82,7 @@ st.session_state['result']=render_upload(st,st.session_state['pool'],'DraftKings
         app.session_state['pool']=pool
         app.run()
         self.assertFalse(app.exception)
-        self.assertEqual(app.get('file_uploader')[0].proto.label,'FantasyLabs NBA ownership CSV')
+        self.assertEqual(app.get('file_uploader')[0].proto.label,'NBA ownership CSV (DraftDashboard or FantasyLabs)')
         app.session_state['_slate_restored_uploads']={
             'nba_ownership_upload_DraftKings':StoredUpload(frame.to_csv(index=False).encode(),'ownership.csv')}
         app.run()
