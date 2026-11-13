@@ -12,6 +12,8 @@ on:
       - 'scripts/archive_nba_pbp.py'
       - 'scripts/learn_nba_roles.py'
       - 'simmah_nba_learning.py'
+      - 'simmah_nba_individual_learning.py'
+      - 'scripts/import_nba_rate_snapshots.py'
 permissions:
   contents: write
 concurrency:
@@ -58,7 +60,7 @@ jobs:
         run: python -m pip install numpy pandas scipy
       - name: Test learning gates
         if: steps.clock.outputs.run == 'true'
-        run: python -m unittest discover -s tests -p test_nba_learning.py -v
+        run: python -m unittest tests.test_nba_learning tests.test_nba_individual_learning -v
       - name: Learn and validate historical player roles
         if: steps.clock.outputs.run == 'true'
         id: learning

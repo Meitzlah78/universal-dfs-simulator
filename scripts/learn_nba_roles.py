@@ -41,6 +41,18 @@ def run(archive_root,model_root,today):
             'sha256':hashlib.sha256(payload).hexdigest()}
         index['versions']=[r for r in index['versions'] if r['version']!=model['version']]+[record]
         temporary=index_path.with_suffix('.tmp');temporary.write_text(json.dumps(index,indent=2)+'\n');temporary.replace(index_path)
+    from simmah_nba_individual_learning import validate_individual
+    snapshots=[json.loads(p.read_text()) for p in (model_root/'individual_rate_snapshots').glob('*.json')]
+    individual=validate_individual(games,snapshots,today)
+    challenger=individual.pop('model',None)
+    (reports/(today+'-individual.json')).write_text(json.dumps(individual,indent=2)+'\n')
+    if challenger:
+        digest=hashlib.sha256(json.dumps(challenger,sort_keys=True).encode()).hexdigest()
+        destination=model_root/'individual_role_challenger.json'
+        temporary=destination.with_suffix('.tmp')
+        temporary.write_text(json.dumps({'sha256':digest,'model':challenger},indent=2)+'\n')
+        temporary.replace(destination)
+    report['individual_challenger']={k:individual.get(k) for k in ('status','reason','training_before')}
     print(json.dumps(report,indent=2))
     return report
 
