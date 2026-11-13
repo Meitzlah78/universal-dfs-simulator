@@ -149,13 +149,16 @@ class PregameEngine:
             for team,(ids,minutes,roles) in enumerate(groups):
                 padded=np.zeros(size);padded[:len(ids)]=minutes
                 profiles[team,:len(ids)]=roles
-                overtime.append(np.stack([build_rotation(np.tile(padded*5/48,(n,1)),seed+game_index*97+team+10000+ot*11,team*size,period_minutes=5) for ot in range(self.max_overtimes)],axis=1))
+                overtime.append(padded*5/48)
                 rotation_seed=seed+game_index*97+team
                 minute_sampler=draw_wider_minutes if self.pool.attrs.get('nba_wider_minutes') else draw_regulation_minutes
                 minute_draws=(minute_sampler(padded,n,np.random.SeedSequence([seed,game_index,team,731]))
                               if self.pool.attrs.get('nba_variable_minutes') else np.tile(padded,(n,1)))
                 rotations.append(build_rotation(minute_draws,rotation_seed,team*size))
-            rotation=np.stack(rotations,axis=1);ot=np.stack(overtime,axis=1)
+            from simmah_nba_overtime_rotations import OvertimeRotations
+            rotation=np.stack(rotations,axis=1)
+            ot=OvertimeRotations(np.stack(overtime),n,
+                [seed+game_index*97+team+10000 for team in (0,1)],self.max_overtimes)
             targets=np.zeros((2,size))
             for team,(ids,_,_) in enumerate(groups):
                 projected=self.pool.loc[ids,'Projection'].to_numpy(float)
