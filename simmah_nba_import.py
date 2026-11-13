@@ -218,8 +218,10 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
             with tabs[1]:st.caption('NBA game times / market feed unavailable; existing salary-file and projection metadata retained.')
     from simmah_nba_ownership_upload import render_upload as render_ownership_upload
     with tabs[1]:
-        with st.expander('FantasyLabs ownership — NBA', expanded=True):
+        with st.expander('DraftDashboard / FantasyLabs inputs — NBA', expanded=True):
             pool = render_ownership_upload(st, pool, platform, day)
+            from simmah_nba_draftdashboard_text import render_text_upload
+            pool = render_text_upload(st, pool, platform, day)
     markets = extract_markets(pool)
     slate['markets'] = markets
     slate['players'] = pool

@@ -29,8 +29,9 @@ def refresh_pool(pool, fetch_rw=None):
         if status is None:raise ValueError('Unrecognized injury status; automatic swap paused')
         result.at[idx,'Injury Status']=status
         for col in ('Projected Minutes','Minutes Source','Game Start'):
+            if col in {'Projected Minutes','Minutes Source'} and str(row.get('Minutes Source','')).startswith('DraftDashboard'):continue
             if col in news:result.at[idx,col]=news[col]
-        if row.get('Projection Source')!='Uploaded CSV':
+        if row.get('Projection Source') not in {'Uploaded CSV','DraftDashboard uploaded projection'}:
             value=positive(rw.get(key))
             result.at[idx,'Projection']=value if value is not None else float('nan')
             result.at[idx,'Projection Source']='RotoWire' if value is not None else 'Missing'

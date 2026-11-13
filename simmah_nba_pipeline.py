@@ -173,6 +173,9 @@ def run_pipeline(pool,outcome_factory,ownership,ownership_source,payouts,entry_f
             'excluded_player_ids':pool.iloc[excluded]['Player ID'].astype(str).tolist(),
             'simulation_seeds':{'construction':seed,'field':seed+1009,'evaluation':seed+2017},
             'simulations_per_set':simulations,'status':'experimental offline pipeline; marginal contest estimates'}
+    if {'Salary','Projection','Injury Status'}<=set(pool):
+        from simmah_nba_player_score import player_scores
+        result['player_scores']=player_scores(pool,evaluation)
     if selection_mode=='tournament' and 'nba_hard_exposure_limits' in portfolio.attrs:
         result['selection_key']=selection_key(pool,candidates['indices'],report,portfolio_count,diversity,'Top 1%')
     if capture_diagnostics:

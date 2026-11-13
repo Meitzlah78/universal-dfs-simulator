@@ -22,6 +22,7 @@ TEAMS = dict(zip(
 def apply_snapshot(pool, data, platform, day):
     frame = pd.read_csv(io.BytesIO(data), dtype=str, keep_default_na=False)
     dashboard = set(frame.get('Source', [])) == {'DraftDashboard'}
+    if dashboard and 'OWN' in frame and 'Projected Ownership %' not in frame:frame=frame.rename(columns={'OWN':'Projected Ownership %'})
     source = 'DraftDashboard' if dashboard else 'FantasyLabs SimLabs'
     column = 'DraftDashboard Projected Own %' if dashboard else IMPORTED_COLUMN
     required = {'Player','Team','Position','Projected Ownership %','Optimal %','Site','Sport',
@@ -56,6 +57,10 @@ def apply_snapshot(pool, data, platform, day):
     result = pool.copy(deep=True)
     result.drop(columns=[IMPORTED_COLUMN, OPTIMAL_COLUMN, 'DraftDashboard Projected Own %'], errors='ignore', inplace=True)
     result[column] = [values.get(k,np.nan) for k in pool_keys]
+    applied_fields={}
+    if dashboard:
+        from simmah_nba_draftdashboard_fields import apply_fields
+        result,applied_fields=apply_fields(result,frame,keys,pool_keys)
     if not dashboard:
         optimal = dict(zip(keys,frame['Optimal %']))
         result[OPTIMAL_COLUMN] = [optimal.get(k,np.nan) for k in pool_keys]
@@ -64,7 +69,7 @@ def apply_snapshot(pool, data, platform, day):
     if dashboard and missing.any():
         raise ValueError('DraftDashboard file is missing eligible players: '+', '.join(result.loc[missing,'Name'].astype(str)))
     meta = {'sha256':hashlib.sha256(data).hexdigest(),'site':platform,'date':str(day),
-            'source':source,'source_update':sorted(set(frame['Source Update ET'])),
+            'source':source,'draftdashboard_fields':applied_fields,'ownership_scope':'main slate' if dashboard else 'uploaded slate','source_update':sorted(set(frame['Source Update ET'])),
             'captured_utc':sorted(set(frame['Captured UTC'])),'raw_total':total,
             'matched_players':sum(k in values for k in pool_keys),
             'missing_eligible_players':result.loc[missing,'Name'].astype(str).tolist(),
@@ -77,7 +82,7 @@ def apply_snapshot(pool, data, platform, day):
 def render_upload(st, pool, platform, day):
     from simmah_slate_workspaces import workspace_file_uploader
     st.subheader('NBA ownership')
-    st.caption('Optional imported ownership overrides RotoWire ownership. Point projections and minutes stay unchanged. Optimal% is comparison-only.')
+    st.caption('Imported ownership overrides RotoWire ownership. DD PRO and projected MIN also apply when explicitly supplied. DashRank, defensive ranks and usage stay separate context; FPPG is historical. Ownership-only files leave points/minutes unchanged. Optimal% is comparison-only.')
     upload = workspace_file_uploader(st, 'NBA ownership CSV (DraftDashboard or FantasyLabs)', type=['csv'],
         key='nba_ownership_upload_'+platform,
         help='Use the matching DraftKings or FanDuel NBA snapshot for this slate date.')
@@ -90,6 +95,8 @@ def render_upload(st, pool, platform, day):
         st.stop()
         return pool
     st.success(f"{meta['source']} ownership loaded: {meta['matched_players']} matched players · {platform} · {day}")
+    if meta.get('draftdashboard_fields'):
+        st.caption('DraftDashboard fields loaded: '+', '.join(meta['draftdashboard_fields'])+'. OWN must match this site/date/main slate. Ratings are not added as extra projection boosts.')
     st.caption('Source update: '+', '.join(meta['source_update'])+
                '. This is not a separately verified ownership-update time. Rebuild to apply a changed snapshot.')
     if meta['missing_eligible_players']:

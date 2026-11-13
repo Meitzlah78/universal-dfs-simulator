@@ -84,6 +84,9 @@ def make_package(pool, built, template, contest, markets, settings, *, started_a
     csv('candidate_lineups.csv',candidates)
     csv('candidate_scores.csv',built['report'])
     csv('portfolio_at_build.csv',built['portfolio'])
+    if 'player_scores' in built:
+        csv('solver/player_simmah_scores.csv',built['player_scores'])
+        add('solver/player_simmah_score_definition.json',_json(built['player_scores'].attrs))
     support=diagnostic.get('support',{})
     if 'indices' in support:csv('solver/opponent_support.csv',_rosters(pool,support['indices'],slots))
     fit=field.get('fit_state',{})
