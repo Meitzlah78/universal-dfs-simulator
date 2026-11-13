@@ -78,7 +78,7 @@ class WorkflowIntegrationTest(unittest.TestCase):
         self.assertNotIn('st.dataframe(_saved_classic_entries',source)
         self.assertIn('data=classic_export_portfolio.to_csv(index=False).encode("utf-8")',source)
         self.assertIn('for _, lineup in classic_export_portfolio.iterrows():',source)
-        self.assertIn("select_portfolio(classic_portfolio_source",source)
+        self.assertIn("select_nfl_portfolio(st, classic_portfolio_source",source)
 
     def test_fanduel_joint_roi_reuses_selected_field_without_hidden_expansion(self):
         source=Path('dfs_app.py').read_text()
@@ -118,20 +118,21 @@ class WorkflowIntegrationTest(unittest.TestCase):
         return pool,frame,[slot for slot,_ in roster]
 
     def test_fanduel_assigned_count_matches_owned_and_report_export_source(self):
-        from simmah_portfolio_selection import select_portfolio
+        from simmah_nfl_portfolio import select_for_app
+        from test_nfl_portfolio_ui import UI
         tree=ast.parse(Path('dfs_app.py').read_text())
         nodes=[]
         for n in sorted((n for n in ast.walk(tree) if isinstance(n,ast.Assign) and isinstance(n.targets[0],ast.Name)),key=lambda n:n.lineno):
             name=n.targets[0].id
             if name=='_fd_owned_count':nodes.append(n)
             if (name=='_fd_diverse_portfolio' and isinstance(n.value,ast.Call)
-                    and isinstance(n.value.func,ast.Name) and n.value.func.id=='select_portfolio'):nodes.append(n)
+                    and isinstance(n.value.func,ast.Name) and n.value.func.id=='select_nfl_portfolio'):nodes.append(n)
             if name=='fd_export_portfolio' and isinstance(n.value,ast.Call) and ast.unparse(n.value)=='_fd_diverse_portfolio.copy()':nodes.append(n)
         pool,frame,slots=self.portfolio_fixture()
         for shown in [3,100]:
-            ns={'np':np,'pd':pd,'select_portfolio':select_portfolio,'fd_all_ranked':frame,
+            ns={'np':np,'pd':pd,'select_nfl_portfolio':select_for_app,'fd_all_ranked':frame,
                 'fd_slots':slots,'fd_rank_column':'Top1','fd_rank_count':shown,'fd_all_contests':False,'portfolio_diversity':0,
-                'fd_player_display':pool,'st':SimpleNamespace(session_state={'selected_fd_contest':{'your_entries':20}}),
+                'fd_player_display':pool,'lineup_mode':'Single Game','st':UI({'selected_fd_contest':{'your_entries':20}}),
                 'full_roster_contest_parameters':lambda *args:{'owned':20}}
             exec(compile(ast.Module(body=nodes,type_ignores=[]),'app','exec'),ns)
             assigned=ns['fd_export_portfolio']
@@ -139,7 +140,8 @@ class WorkflowIntegrationTest(unittest.TestCase):
             self.assertEqual(assigned[slots].apply(lambda row:tuple(sorted(row)),axis=1).nunique(),20)
 
     def test_classic_assignment_matches_owned_entries_not_display_count(self):
-        from simmah_portfolio_selection import select_portfolio
+        from simmah_nfl_portfolio import select_for_app
+        from test_nfl_portfolio_ui import UI
         tree=ast.parse(Path('dfs_app.py').read_text())
         wanted={'_classic_assignment_count','_classic_slots','classic_export_portfolio','_classic_unique_entries'}
         nodes=sorted((n for n in ast.walk(tree) if isinstance(n,ast.Assign) and isinstance(n.targets[0],ast.Name) and n.targets[0].id in wanted),key=lambda n:n.lineno)
@@ -150,8 +152,8 @@ class WorkflowIntegrationTest(unittest.TestCase):
             if name not in seen:first.append(node);seen.add(name)
         pool,frame,slots=self.portfolio_fixture()
         for displayed,owned in [(3,20),(100,20)]:
-            ns={'np':np,'select_portfolio':select_portfolio,
-                'st':SimpleNamespace(session_state={'selected_dk_contest':{'your_entries':owned}}),
+            ns={'np':np,'select_nfl_portfolio':select_for_app,
+                'st':UI({'selected_dk_contest':{'your_entries':owned}}),
                 'classic_entry_count':owned,'classic_top_portfolio':frame.head(displayed),'dk_all_contests':False,'portfolio_diversity':0,
                 'classic_portfolio_source':frame,'classic_rank_metric':'Top1','control_map':{}}
             exec(compile(ast.Module(body=first,type_ignores=[]),'dfs_app.py','exec'),ns)

@@ -1,0 +1,23 @@
+name: NFL portfolio quality budget
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  selector:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install numpy pandas requests "scipy>=1.11"
+      - run: python -m py_compile dfs_app.py simmah_selector_budget.py simmah_nfl_portfolio.py simmah_ui.py
+      - run: python -m unittest discover -s tests -p test_selector_budget.py -v
+      - run: python -m unittest discover -s tests -p test_nfl_portfolio_ui.py -v
+      - run: python -m unittest discover -s tests -p test_workflow_integration.py -v
+      - run: python -m unittest discover -s tests -p test_role_exposure_limits.py -v
+      - run: python -m unittest discover -s tests -p test_fd_contest_workspaces.py -v

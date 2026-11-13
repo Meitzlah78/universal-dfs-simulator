@@ -88,6 +88,8 @@ def render_cloud_storage_header(st, host):
 render_cloud_storage_header(st, st.sidebar)
 
 _loaded_slate_tabs = begin_workspaces(st)
+from simmah_nfl_portfolio import preserve_existing as preserve_nfl_portfolios
+preserve_nfl_portfolios(st.session_state)
 from simmah_injury_display import injury_frame, injury_player_pool
 from simmah_single_stacks import render_controls as render_single_stack_controls, selected_validator as single_stack_validator
 from simmah_build_state import uploaded_slate_signature, signature_matches_upload
@@ -6017,18 +6019,18 @@ if platform == "FanDuel":
                 fd_all_ranked = fd_rank_source.copy()
                 _fd_diverse_portfolio = None
                 if lineup_mode in ("Full Roster", "Single Game"):
-                    from simmah_portfolio_selection import select_portfolio, put_portfolio_first
+                    from simmah_portfolio_selection import put_portfolio_first
+                    from simmah_nfl_portfolio import select_for_app as select_nfl_portfolio
                     _fd_owned_count = len(fd_assignment_entries) if fd_all_contests else full_roster_contest_parameters(st.session_state.get("selected_fd_contest") or {}, 1)["owned"]
-                    try:
-                        _fd_diverse_portfolio = select_portfolio(fd_all_ranked, fd_slots, _fd_owned_count, fd_rank_column,
-                            controls=fd_player_display.set_index("Name").to_dict("index"), diversity=portfolio_diversity)
-                    except ValueError as exc:
-                        st.error(str(exc))
+                    with st.spinner("Selecting a cap-compliant NFL portfolio (up to 30 seconds)..."):
+                        _fd_diverse_portfolio = select_nfl_portfolio(st, fd_all_ranked, fd_slots, _fd_owned_count,
+                            controls=fd_player_display.set_index("Name").to_dict("index"), diversity=portfolio_diversity,
+                            site="FanDuel", mode=lineup_mode,
+                            previous=st.session_state.get("fd_assigned_display_" + lineup_mode.replace(" ", "_").lower()))
+                    if _fd_diverse_portfolio is None:
                         workspace_stop(st, _loaded_slate_tabs, _pinned_slates)
-                    if _fd_diverse_portfolio.attrs.get("effective_auto_cap_pct", 100) > (100 - .4 * portfolio_diversity):
-                        st.warning(f"The candidate pool cannot fill all assigned entries at the preferred exposure cap. Automatic cap increased to {_fd_diverse_portfolio.attrs['effective_auto_cap_pct']}%; your manual exposure limits remain enforced.")
                     fd_all_ranked = put_portfolio_first(fd_all_ranked, _fd_diverse_portfolio, fd_slots)
-                    st.caption(f"Lineup exposure diversity: {portfolio_diversity}%. Preferred player cap: {100 - .4 * portfolio_diversity:.0f}%. Locks and manual limits remain enforced. Candidate alternatives remain available below.")
+                    st.caption("Portfolio selection uses Top 1% with a 5% total-quality budget. The ranking choice sorts the table only; candidate alternatives remain available below.")
                 with _tab_lineups:
                     _fd_diverse_portfolio = render_editor(st, _fd_diverse_portfolio, fd_user_pool, fd_slots,
                         "FanDuel", lineup_mode, st.session_state.get("selected_fd_contest", {}),
@@ -7799,20 +7801,19 @@ else:
                         key="dk_classic_portfolio_metric_top1_default_v2"
                     )
                     classic_rank_metric = PORTFOLIO_METRICS[classic_rank_label]
-                    from simmah_portfolio_selection import select_portfolio, put_portfolio_first
+                    from simmah_portfolio_selection import put_portfolio_first
+                    from simmah_nfl_portfolio import select_for_app as select_nfl_portfolio
                     _classic_assignment_count = len(entry_df) if dk_all_contests else max(1, int((st.session_state.get("selected_dk_contest") or {}).get("your_entries") or classic_entry_count))
                     _classic_multi_contest = dk_all_contests and entry_df["Contest ID"].nunique() > 1
                     _classic_slots = [col for col in ["QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "FLEX", "DST"] if col in classic_portfolio_source]
                     classic_portfolio_source = classic_portfolio_source.loc[
                         classic_portfolio_source[_classic_slots].isin(set(classic_pool["Name"].astype(str))).all(axis=1)].copy()
-                    try:
-                        classic_export_portfolio = select_portfolio(classic_portfolio_source, _classic_slots,
-                            _classic_assignment_count, classic_rank_metric, controls=control_map, diversity=portfolio_diversity)
-                    except ValueError as exc:
-                        st.error(str(exc))
+                    with st.spinner("Selecting a cap-compliant NFL portfolio (up to 30 seconds)..."):
+                        classic_export_portfolio = select_nfl_portfolio(st, classic_portfolio_source, _classic_slots,
+                            _classic_assignment_count, controls=control_map, diversity=portfolio_diversity,
+                            site="DraftKings", mode="Classic", previous=st.session_state.get("classic_contest_entries_df"))
+                    if classic_export_portfolio is None:
                         workspace_stop(st, _loaded_slate_tabs, _pinned_slates)
-                    if classic_export_portfolio.attrs.get("effective_auto_cap_pct", 100) > (100 - .4 * portfolio_diversity):
-                        st.warning(f"The candidate pool cannot fill all assigned entries at the preferred exposure cap. Automatic cap increased to {classic_export_portfolio.attrs['effective_auto_cap_pct']}%; your manual exposure limits remain enforced.")
                     with _tab_lineups:
                         classic_export_portfolio = render_editor(st, classic_export_portfolio, classic_pool, _classic_slots,
                             "DraftKings", "Classic", st.session_state.get("selected_dk_contest", {}),
@@ -7825,7 +7826,7 @@ else:
                     _classic_unique_entries = classic_export_portfolio.copy()
                     classic_top_portfolio = put_portfolio_first(classic_portfolio_source, classic_export_portfolio,
                         _classic_slots).head(int(classic_portfolio_count)).copy()
-                    st.caption(f"Lineup exposure diversity: {portfolio_diversity}%. Preferred player cap: {100 - .4 * portfolio_diversity:.0f}%. Manual limits remain enforced; display count does not change assigned entries.")
+                    st.caption("Portfolio selection uses Top 1% with a 5% total-quality budget. Ranking and display count do not change assigned entries.")
                     st.session_state["classic_contest_entries_df"] = classic_export_portfolio.copy()
                     classic_top_portfolio["Assigned to contest"] = np.arange(len(classic_top_portfolio)) < len(_classic_unique_entries)
                     _classic_portfolio_field = st.session_state.get("classic_contest_field_df")
@@ -9462,22 +9463,18 @@ with _tab_build:
                 "portfolio_df" not in st.session_state
                 or st.session_state.get("portfolio_count_used") != portfolio_count
                 or st.session_state.get("portfolio_control_signature") != current_control_signature
-                or st.session_state.get("portfolio_metric_used") != portfolio_metric
                 or st.session_state.get("portfolio_exposure_diversity_used") != portfolio_diversity
-                or getattr(st.session_state.get("portfolio_df"), "attrs", {}).get("portfolio_selection") != "quality-role-exposure-v3"
+                or getattr(st.session_state.get("portfolio_df"), "attrs", {}).get("portfolio_selection") != "portfolio-quality-budget-v1"
             ):
 
-                from simmah_portfolio_selection import select_portfolio
-                try:
-                    portfolio_df = select_portfolio(results_df, portfolio_lineup_columns,
-                        int(portfolio_count), portfolio_metric, controls=control_map,
-                        diversity=portfolio_diversity)
-                except ValueError as exc:
-                    st.error(str(exc))
+                from simmah_nfl_portfolio import select_for_app as select_nfl_portfolio
+                with st.spinner("Selecting a cap-compliant NFL portfolio (up to 30 seconds)..."):
+                    portfolio_df = select_nfl_portfolio(st, results_df, portfolio_lineup_columns,
+                        int(portfolio_count), controls=control_map, diversity=portfolio_diversity,
+                        site="DraftKings", mode="Showdown", previous=st.session_state.get("portfolio_df"))
+                if portfolio_df is None:
                     workspace_stop(st, _loaded_slate_tabs, _pinned_slates)
                 portfolio_df["Locked"] = False
-                if portfolio_df.attrs.get("effective_auto_cap_pct",100) > (100-.4*portfolio_diversity):
-                    st.warning(f"Automatic exposure cap increased to {portfolio_df.attrs['effective_auto_cap_pct']}% to fill entries. Manual limits remain enforced.")
 
                 st.session_state["portfolio_df"] = portfolio_df
                 st.session_state["portfolio_count_used"] = portfolio_count
@@ -9488,6 +9485,9 @@ with _tab_build:
             # Changing the sort option must reorder the existing pool, not select a new one.
             # This keeps the exact same lineups while letting the user inspect a different ranking.
             portfolio_df = st.session_state["portfolio_df"].copy()
+            from simmah_nfl_portfolio import render_status as render_nfl_selector_status
+            render_nfl_selector_status(st, portfolio_df)
+            st.caption("Portfolio selection uses Top 1%; ranking sorts the existing portfolio only.")
             # Keep saved/restored portfolio rows mathematically consistent too.
             if "WinRate" in portfolio_df.columns and "Top1" in portfolio_df.columns:
                 portfolio_df["WinRate"] = np.minimum(
