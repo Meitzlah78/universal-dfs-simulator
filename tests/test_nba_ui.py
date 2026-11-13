@@ -55,7 +55,7 @@ class NBAWorkspaceTests(unittest.TestCase):
         self.assertIn('diagnostic_package',at.session_state['nba_build_result']['result'])
         self.assertTrue(any(button.proto.label=='DOWNLOAD CALIBRATION & SOLVER PACKAGE' for button in at.get('download_button')))
         self.assertFalse(any('capture failed' in item.value for item in at.warning))
-        at.slider(key='nba_exposure_diversity').set_value(100).run(timeout=20)
+        at.checkbox(key='nba_quality_budget_diversify').set_value(True).run(timeout=20)
         self.assertFalse(at.exception)
         self.assertEqual(at.session_state['test_build_calls'],1)
         at.slider(key='nba_build_correlation').set_value(100).run(timeout=20)
@@ -122,9 +122,25 @@ class NBAWorkspaceTests(unittest.TestCase):
         built=at.session_state['nba_build_result']['result']
         self.assertEqual(built['candidates']['indices'].shape[1],8)
         self.assertEqual(len(built['portfolio']),3)
-        at.slider(key='nba_exposure_diversity').set_value(100).run(timeout=20)
+        at.checkbox(key='nba_quality_budget_diversify').set_value(True).run(timeout=20)
         self.assertFalse(at.exception)
         self.assertEqual(at.session_state['test_build_calls'],1)
         self.assertTrue(any('EXPORT TO DRAFTKINGS' in button.proto.label for button in at.get('download_button')))
 
 
+
+    def test_quality_timeout_keeps_saved_lineups_and_export(self):
+        from streamlit.testing.v1 import AppTest
+        from unittest.mock import patch
+        import pandas as pd
+        from simmah_selector_budget import QualityNotCertified
+        at=AppTest.from_file(str(Path(__file__).with_name('nba_ui_fixture.py'))).run(timeout=20)
+        at.button(key='nba_build').click().run(timeout=20)
+        before=at.session_state['nba_build_result']['result']['portfolio'].copy(deep=True)
+        with patch('simmah_nba_contest.select_entries',side_effect=QualityNotCertified('Fixture certification timeout')):
+            at.checkbox(key='nba_quality_budget_diversify').set_value(False).run(timeout=20)
+        self.assertFalse(at.exception)
+        pd.testing.assert_frame_equal(at.session_state['nba_build_result']['result']['portfolio'],before)
+        self.assertTrue(any('Previous saved lineups were retained' in x.value for x in at.error))
+        export=next(x for x in at.get('download_button') if x.proto.id.endswith('-nba_entries_download'))
+        self.assertFalse(export.proto.disabled)

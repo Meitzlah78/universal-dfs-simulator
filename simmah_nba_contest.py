@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from simmah_nba_arrays import score_batches
 from simmah_nba_rules import rules_for
-from simmah_portfolio_selection import select_portfolio
+from simmah_selector_budget import select_quality_budget,VERSION
 
 
 def evaluate_candidates(outcomes,candidates,field,payouts,entry_fee,*,construction_seed,
@@ -75,6 +75,7 @@ def evaluate_candidates(outcomes,candidates,field,payouts,entry_fee,*,constructi
 
 def select_entries(pool,candidates,report,count,diversity=50,controls=None,metric='Top 1%'):
     """Reselect saved scored candidates; no simulation or field rebuilding."""
+    if metric not in report:raise ValueError('Requested ranking metric is unavailable')
     indices=np.asarray(candidates)
     if len(indices)!=len(report):raise ValueError('Candidate report alignment mismatch')
     rows=report.reset_index(drop=True).copy()
@@ -82,10 +83,52 @@ def select_entries(pool,candidates,report,count,diversity=50,controls=None,metri
         rows[column]=pool.iloc[indices[:,slot]]['Player ID'].astype(str).to_numpy()
     from simmah_nba_portfolio_limits import portfolio_limits, validate_portfolio_limits
     limits=portfolio_limits(pool,controls,count=int(count))
-    selected=select_portfolio(rows,list(rules_for(pool)['slots']),count,metric,
-                            controls=limits,diversity=diversity,automatic_caps=not pool.attrs.get('nba_uncapped',False))
+    quality_metric=metric
+    if metric=='Expected ROI (%)':
+        # Same ranking/optimum for a common entry fee; a percentage budget on
+        # negative ROI has no useful meaning. Budget expected payout instead.
+        quality_metric='Expected Prize ($)'
+        if quality_metric not in rows:
+            if 'Entry Fee ($)' not in rows:raise ValueError('ROI selection requires expected prize or entry fee')
+            fee=pd.to_numeric(rows['Entry Fee ($)'],errors='coerce')
+            if not np.isfinite(fee).all() or (fee<=0).any() or fee.nunique()!=1:raise ValueError('One positive common entry fee required')
+            rows[quality_metric]=fee*(1+pd.to_numeric(rows[metric],errors='coerce')/100)
+    budget=.05 if diversity is None or float(diversity)>0 else 0.
+    selected=select_quality_budget(rows,list(rules_for(pool)['slots']),count,
+        controls=limits,automatic_max=100.,quality_metric=quality_metric,quality_loss=budget)
+    selected.attrs.update(portfolio_selection='nba-'+VERSION,ranking_metric=metric,
+        budget_metric=quality_metric,selection_method='certified quality then budgeted concentration')
     validate_portfolio_limits(selected,rules_for(pool)['slots'],limits)
     selected.attrs['nba_hard_exposure_limits']=limits
+    if not selected.attrs.get('diversity_optimal',True):
+        import logging
+        logging.getLogger(__name__).warning('NBA selector: %s',selected.attrs['diversity_status'])
     return selected
 
 
+
+
+def selection_key(pool,candidates,report,count,diversity,metric):
+    """Identity for reselecting immutable saved candidates without rerunning MILP."""
+    import hashlib,json
+    from simmah_nba_portfolio_limits import portfolio_limits
+    cols=list(dict.fromkeys(c for c in [metric,'Expected Prize ($)','Entry Fee ($)'] if c in report))
+    digest=hashlib.sha256(np.asarray(candidates).tobytes()+pd.util.hash_pandas_object(report[cols],index=True).values.tobytes())
+    digest.update(json.dumps({'version':VERSION,'ids':pool['Player ID'].astype(str).tolist(),
+        'limits':portfolio_limits(pool,count=int(count)),'count':int(count),'metric':metric,
+        'budget':.05 if diversity is None or float(diversity)>0 else 0.},sort_keys=True,default=str).encode())
+    return digest.hexdigest()
+
+
+def reselect_saved_entries(pool,built,diversity,metric):
+    count=len(built['portfolio']);key=selection_key(pool,built['candidates']['indices'],built['report'],count,diversity,metric)
+    if built.get('selection_key')==key:return built['portfolio']
+    # Commit only after selection + cap validation succeeds. Failure leaves both
+    # the saved portfolio and its successful request key untouched.
+    try:selected=select_entries(pool,built['candidates']['indices'],built['report'],count,diversity=diversity,metric=metric)
+    except (ValueError,RuntimeError):
+        import logging
+        logging.getLogger(__name__).warning('NBA reselection failed; previous saved portfolio retained',exc_info=True)
+        raise
+    built['portfolio']=selected;built['selection_key']=key
+    return selected

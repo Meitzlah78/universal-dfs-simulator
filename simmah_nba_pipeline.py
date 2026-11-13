@@ -5,7 +5,7 @@ from copy import deepcopy
 from time import perf_counter
 from simmah_nba_candidates import build_candidates,build_opponent_support
 from simmah_nba_field import build_field,sample_popularity_field,ownership_support_diagnostic
-from simmah_nba_contest import evaluate_candidates,select_entries
+from simmah_nba_contest import evaluate_candidates,select_entries,selection_key
 from simmah_nba_rosters import export_entries,SLOT_COLUMNS
 from simmah_nba_rules import rules_for
 from simmah_nba_pregame import validate_game_reports
@@ -130,7 +130,8 @@ def run_pipeline(pool,outcome_factory,ownership,ownership_source,payouts,entry_f
         try:portfolio=select_current()
         except ValueError as exc:
             repair_failure=str(exc).startswith(('Portfolio repair reached its search limit',
-                'No full unique portfolio satisfies the manual exposure limits'))
+                'No full unique portfolio satisfies the manual exposure limits',
+                'No full portfolio satisfies the manual and automatic caps'))
             if selection_mode!='tournament' or not repair_failure:raise
             notify('Expanding candidate coverage for exposure limits')
             recovery_started=perf_counter()
@@ -161,7 +162,7 @@ def run_pipeline(pool,outcome_factory,ownership,ownership_source,payouts,entry_f
                 'search_noise':.6,'salary_aware':True,'requested_extra':1500,'extra_attempted':extras['attempted'],'reason':str(exc)}
             timings['candidate_recovery']=perf_counter()-recovery_started
             portfolio=select_current()
-    except ValueError as exc:
+    except (ValueError,RuntimeError) as exc:
         raise NBASelectionFailure(str(exc),candidates['indices'],report,
             {'portfolio_count':portfolio_count,'diversity':diversity,'metric':'Top 1%',
              'selection_mode':selection_mode,'seed':seed,'salary_min':salary_min,
@@ -172,6 +173,7 @@ def run_pipeline(pool,outcome_factory,ownership,ownership_source,payouts,entry_f
             'excluded_player_ids':pool.iloc[excluded]['Player ID'].astype(str).tolist(),
             'simulation_seeds':{'construction':seed,'field':seed+1009,'evaluation':seed+2017},
             'simulations_per_set':simulations,'status':'experimental offline pipeline; marginal contest estimates'}
+    if selection_mode=='tournament':result['selection_key']=selection_key(pool,candidates['indices'],report,portfolio_count,diversity,'Top 1%')
     if capture_diagnostics:
         result['diagnostics']={'outcomes':captured_draws,'engine_reports':captured_reports,
             'support':support,'ownership_input':np.asarray(ownership).copy(),

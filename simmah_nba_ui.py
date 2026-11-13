@@ -13,7 +13,7 @@ from simmah_nba_pregame import PregameEngine
 from simmah_nba_simulation_cache import CachedNBAOutcomes
 from simmah_nba_engine import EventRates
 from simmah_nba_pipeline import run_pipeline,export_portfolio,NBASelectionFailure
-from simmah_nba_contest import select_entries
+from simmah_nba_contest import select_entries,reselect_saved_entries
 from simmah_nba_rosters import SLOT_COLUMNS
 from simmah_nba_rules import rules_for
 from simmah_portfolio import portfolio_roi_totals
@@ -197,7 +197,10 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
             help='Give the builder credit for salary left for later slots. Game scores, opponent lineups and exposure limits stay the same.')
         correlation=st.slider('Build correlation',0,100,0,key='nba_build_correlation',
             help='Extra preference for positively correlated player combinations measured from the shared game simulations. 0 = no extra bonus; 100 = strongest bonus. Game simulations remain correlated at every setting.')
-        diversity=st.slider('Exposure diversity',0,100,50,key='nba_exposure_diversity')
+        diversify=st.checkbox('Diversify within 5% quality budget',value=True,key='nba_quality_budget_diversify',
+            help='First certify the strongest portfolio within all caps. Then reduce concentration while retaining at least 95% of its measured quality. Off selects maximum quality.')
+        diversity=100 if diversify else 0
+        st.caption('Quality first: hard caps never relax. ROI ranks use expected prize for the percentage budget. A solver timeout preserves saved lineups or the certified quality optimum.')
         if not use_caps:st.caption('No automatic player exposure limits. Diversity still favors less overlap; every selected lineup must be unique.')
         else:st.caption('Hard portfolio caps: 60% overall; verified projected ownership + 5 percentage points where lower; below 16 projected minutes: 15%. Small portfolios round positive caps up to at least one entry. Caps never relax; selection/export stops if they cannot be met.')
         metric=st.selectbox('Rank lineups',['Top 1%','Expected ROI (%)','Expected Prize ($)'],key='nba_rank_metric')
@@ -301,11 +304,14 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         with tabs[3]:st.warning('ROI uses estimated opponent ownership; the external ownership fit failed.')
 
     try:
-        portfolio=select_entries(saved_pool,built['candidates']['indices'],built['report'],len(built['portfolio']),diversity=diversity,metric=metric)
-        built['portfolio']=portfolio
-    except ValueError as exc:
-        with tabs[3]:st.error(str(exc))
-        return
+        portfolio=reselect_saved_entries(saved_pool,built,diversity,metric)
+    except (ValueError,RuntimeError) as exc:
+        with tabs[3]:st.error('Selection did not complete. Previous saved lineups were retained. '+str(exc))
+        portfolio=built['portfolio']
+    with tabs[3]:
+        attrs=portfolio.attrs
+        if 'actual_quality_loss' in attrs:
+            st.caption(f"Selected quality: {attrs['selected_quality']:.4g} · feasible optimum: {attrs['quality_optimum']:.4g} · quality loss: {100*attrs['actual_quality_loss']:.2f}% · {attrs['diversity_status']}")
     export_pool=pool.copy(deep=True)
     if 'Eligible' not in export_pool:export_pool['Eligible']=True
     if len(excluded):

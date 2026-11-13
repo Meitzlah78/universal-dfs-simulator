@@ -105,13 +105,14 @@ def make_package(pool, built, template, contest, markets, settings, *, started_a
         'engine_reports':diagnostic.get('engine_reports',{}),
         'simulation_seeds':built.get('simulation_seeds',{}),'search_seeds':diagnostic.get('seeds',{}),
         'simulations_per_set':built.get('simulations_per_set'),
-        'timings_seconds':built.get('timings_seconds',{}),
+        'timings_seconds':built.get('timings_seconds',{}),'portfolio_selection':dict(built['portfolio'].attrs),
         'excluded_player_ids':built.get('excluded_player_ids',[])}))
     # Preserve the actual installed implementation and model/profile files.
     # Never capture secrets, environment variables, other users' files or archives.
     root=Path(source_root) if source_root is not None else Path(__file__).parent
     source_paths=set(root.glob('simmah_nba_*.py'))
     source_paths.update(root.glob('simmah_portfolio.py'))
+    source_paths.update(root.glob('simmah_selector_budget.py'))
     source_paths.update(root.glob('simmah_diagnostic*.py'))
     source_paths.update(root.glob('simmah_slate_workspaces.py'))
     source_paths.update(root.glob('simmah_export_history.py'))
@@ -172,7 +173,7 @@ def make_package(pool, built, template, contest, markets, settings, *, started_a
 def make_selection_failure_package(pool,candidates,report,contest,settings,error):
     """Selection-only evidence; preserve the failed pool without rerunning sims."""
     from simmah_nba_portfolio_limits import portfolio_limits
-    from simmah_portfolio_selection import SELECTION_VERSION
+    from simmah_selector_budget import VERSION as SELECTION_VERSION
     if len(candidates)!=len(report):raise ValueError('Failed candidate scores are misaligned')
     rules=rules_for(pool);stamp=datetime.now(timezone.utc)
     files={
@@ -185,7 +186,7 @@ def make_selection_failure_package(pool,candidates,report,contest,settings,error
         'candidate_lineups.csv':_rosters(pool,candidates,rules['slots']).to_csv(index=False).encode('utf-8-sig'),
         'candidate_scores.csv':report.to_csv(index=False).encode('utf-8-sig')}
     root=Path(__file__).parent
-    for name in ('simmah_portfolio_selection.py','simmah_nba_portfolio_limits.py','simmah_nba_contest.py','simmah_exposure_limits.py'):
+    for name in ('simmah_selector_budget.py','simmah_nba_portfolio_limits.py','simmah_nba_contest.py','simmah_exposure_limits.py'):
         files['implementation/'+name]=(root/name).read_bytes()
     manifest={'schema':1,'kind':'nba_portfolio_selection_failure','sport':'NBA',
         'contest_id':str(contest['id']),'platform':rules['platform'],
