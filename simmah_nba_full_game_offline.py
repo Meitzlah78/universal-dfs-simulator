@@ -40,7 +40,7 @@ def _duplicate_court_players(selected):
                for i in range(5) for j in range(i+1,5))
 
 
-def simulate_game(rotations, profiles, rates, seed, overtime_rotations=None, platform='FanDuel', *, shooting=None, target_minutes=None, foul_rates=None, blowout=False, clock_model=None):
+def simulate_game(rotations, profiles, rates, seed, overtime_rotations=None, platform='FanDuel', *, shooting=None, target_minutes=None, foul_rates=None, blowout=False, clock_model=None, shot_hazards=None):
     """Simulate the supplied rotations without score-driven substitutions.
 
     rotations: integer (scenarios, 2 teams, 48 minutes, 5 players), global player
@@ -82,6 +82,12 @@ def simulate_game(rotations, profiles, rates, seed, overtime_rotations=None, pla
     if clock_model is not None:
         p=float(clock_model.get('violation_probability',float('nan')))
         if not np.isfinite(p) or not 0<=p<=1:raise ValueError('Valid explicit shot-clock violation probability required')
+    if shot_hazards is not None:
+        one=float(shot_hazards['and_one_probability_per_make'])
+        if not np.isfinite(one) or not 0<=one<=1:raise ValueError('Invalid and-one probability')
+        for key in ['fg_rebound_outcomes','ft_rebound_outcomes']:
+            value=np.asarray(shot_hazards[key],float)
+            if value.shape!=(4,) or not np.isfinite(value).all() or (value<0).any() or not np.isclose(value.sum(),1.):raise ValueError('Invalid player/team rebound probabilities')
     rng=np.random.default_rng(seed)
     stats=np.zeros((n,2*size,len(STAT_NAMES)),np.int32)
     team_points=np.zeros((n,2),np.int32)
@@ -178,6 +184,35 @@ def simulate_game(rotations, profiles, rates, seed, overtime_rotations=None, pla
         six=personal[ids,who]==6
         dq_seconds[ids[six],who[six]]=elapsed[ids[six]]
         team_fouls[ids,(who//size)]+=1
+    extra['non_andone_shooting_fouls']=np.zeros(n,np.int32)
+    extra['and_one_fouls']=np.zeros(n,np.int32)
+    for context in ['fg','ft']:
+        for outcome in ['miss_rebound_opportunities','player_oreb','player_dreb','team_oreb','team_dreb']:
+            extra[context+'_'+outcome]=np.zeros(n,np.int32)
+    extra['team_offensive_rebounds']=np.zeros(n,np.int32)
+    extra['team_defensive_rebounds']=np.zeros(n,np.int32)
+    def resolve_rebound(ids,off,defense,rate,context,team):
+        u=rng.random(len(ids))
+        if shot_hazards is None:
+            oreb=u<rate;credited=np.ones(len(ids),bool);team_rebound=np.zeros(len(ids),bool)
+        else:
+            probability=np.asarray(shot_hazards[context+'_rebound_outcomes'],float)
+            cdf=np.cumsum(probability);cdf[-1]=1.
+            outcome=np.searchsorted(cdf,u,side='right')
+            oreb=(outcome==0)|(outcome==2);credited=outcome<2;team_rebound=~credited
+            extra['team_offensive_rebounds'][ids]+=outcome==2
+            extra['team_defensive_rebounds'][ids]+=outcome==3
+        extra[context+'_miss_rebound_opportunities'][ids]+=1
+        extra[context+'_player_oreb'][ids]+=oreb&credited
+        extra[context+'_player_dreb'][ids]+=(~oreb)&credited
+        extra[context+'_team_oreb'][ids]+=oreb&team_rebound
+        extra[context+'_team_dreb'][ids]+=(~oreb)&team_rebound
+        extra['offensive_rebounds'][ids]+=oreb&credited
+        if credited.any():
+            ri=ids[credited];lineup=np.where(oreb[credited,None],off[credited],defense[credited])
+            add(ri,pick(ri,lineup,2),'REB');counters['credited_rebounds'][ri]+=1
+        side[ids]=np.where(oreb,team,1-team);shot_clock[ids]=np.where(oreb,14.,24.)
+        origin[ids]=np.where(team_rebound,0,np.where(oreb,1,5))
     actions=0
     while np.any(clock>0):
         actions+=1
@@ -254,7 +289,7 @@ def simulate_game(rotations, profiles, rates, seed, overtime_rotations=None, pla
                 ti=ids[trips];tp=shooter[trips]
                 shooting_trip=~nonshoot[trips]
                 if shooting_trip.any():
-                    extra['shooting_fouls'][ti[shooting_trip]]+=1
+                    extra['shooting_fouls'][ti[shooting_trip]]+=1;extra['non_andone_shooting_fouls'][ti[shooting_trip]]+=1
                     fi=ti[shooting_trip];foul_player(fi,defense[np.flatnonzero(trips)[shooting_trip]])
                     defense[np.flatnonzero(trips)[shooting_trip]]=court(fi,1-team,np.minimum((elapsed[fi]/60).astype(int),47))
                 count=np.where(shooting_trip&(rng.random(len(ti))<.04557),3,2)
@@ -270,11 +305,8 @@ def simulate_game(rotations, profiles, rates, seed, overtime_rotations=None, pla
                 last_miss=~made[np.arange(len(ti)),count-1]
                 side[ti]=1-team;shot_clock[ti]=24.;origin[ti]=3
                 if last_miss.any():
-                    ri=ti[last_miss];oreb=rng.random(len(ri))<r.offensive_rebound;extra['offensive_rebounds'][ri]+=oreb
-                    rows=np.flatnonzero(trips)[last_miss]
-                    lineup=np.where(oreb[:,None],offense[rows],defense[rows])
-                    add(ri,pick(ri,lineup,2),'REB');counters['credited_rebounds'][ri]+=1
-                    side[ri]=np.where(oreb,team,1-team);shot_clock[ri]=np.where(oreb,14.,24.);origin[ri]=np.where(oreb,1,5)
+                    ri=ti[last_miss];rows=np.flatnonzero(trips)[last_miss]
+                    resolve_rebound(ri,offense[rows],defense[rows],r.offensive_rebound,'ft',team)
             if shots.any():
                 shot_rows=np.flatnonzero(shots)
                 si=ids[shots];sp=shooter[shots]
@@ -294,29 +326,23 @@ def simulate_game(rotations, profiles, rates, seed, overtime_rotations=None, pla
                         ai=mi[assisted];ap=pick(ai,offense[shot_rows[made][assisted]],1,mp[assisted])
                         add(ai,ap,'AST');counters['credited_assists'][ai]+=1
                     side[mi]=1-team;shot_clock[mi]=24.;origin[mi]=4
-                    andone=rng.random(len(mi))<.03
+                    andone=rng.random(len(mi))<(.03 if shot_hazards is None else shot_hazards['and_one_probability_per_make'])
                     if andone.any():
                         ai=mi[andone];ap=mp[andone];rows=shot_rows[made][andone]
                         foul_player(ai,defense[rows]);defense[rows]=court(ai,1-team,np.minimum((elapsed[ai]/60).astype(int),47));good=rng.random(len(ai))<shooting[ap,3]
                         stats[ai,ap,2]+=good;attempts[ai,ap,2]+=1;team_points[ai,team]+=good
-                        extra['one_shot_trips'][ai]+=1;extra['shooting_fouls'][ai]+=1;origin[ai]=3
+                        extra['one_shot_trips'][ai]+=1;extra['shooting_fouls'][ai]+=1;extra['and_one_fouls'][ai]+=1;origin[ai]=3
                         miss=~good
                         if miss.any():
-                            ri=ai[miss];counters['free_throw_misses'][ri]+=1;oreb=rng.random(len(ri))<r.offensive_rebound;extra['offensive_rebounds'][ri]+=oreb
-                            lineup=np.where(oreb[:,None],offense[rows[miss]],defense[rows[miss]])
-                            add(ri,pick(ri,lineup,2),'REB');counters['credited_rebounds'][ri]+=1
-                            side[ri]=np.where(oreb,team,1-team);shot_clock[ri]=np.where(oreb,14.,24.);origin[ri]=np.where(oreb,1,5)
+                            ri=ai[miss];counters['free_throw_misses'][ri]+=1
+                            resolve_rebound(ri,offense[rows[miss]],defense[rows[miss]],r.offensive_rebound,'ft',team)
                 if (~made).any():
                     ri=si[~made];counters['field_goal_misses'][ri]+=1
                     blocked=rng.random(len(ri))<r.block_on_miss
                     if blocked.any():
                         bi=ri[blocked];add(bi,pick(bi,defense[shot_rows[~made][blocked]],4),'BLK');counters['blocks'][bi]+=1
-                    oreb=rng.random(len(ri))<r.offensive_rebound
                     rows=shot_rows[~made]
-                    extra['offensive_rebounds'][ri]+=oreb
-                    lineup=np.where(oreb[:,None],offense[rows],defense[rows])
-                    add(ri,pick(ri,lineup,2),'REB');counters['credited_rebounds'][ri]+=1
-                    side[ri]=np.where(oreb,team,1-team);shot_clock[ri]=np.where(oreb,14.,24.);origin[ri]=np.where(oreb,1,5)
+                    resolve_rebound(ri,offense[rows],defense[rows],r.offensive_rebound,'fg',team)
             extra['possession_changes'][ids]+=(side[ids]!=team)
         # A shot may not span a period boundary. Expired periods advance without
         # crediting an event; overtime requires an explicit on-court rotation.
