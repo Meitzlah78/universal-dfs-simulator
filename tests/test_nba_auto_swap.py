@@ -31,6 +31,22 @@ class AutoSwapTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'coverage'):
             refresh_pool(self.pool(),lambda *a,**kw:({}, {}, '1'))
 
+    def test_dd_points_and_minutes_preserved_but_injury_news_updates(self):
+        p=self.pool()
+        p['Projection Source']='DraftDashboard uploaded projection'
+        p['Projected Minutes']=[34.,0.]
+        p['Minutes Source']='DraftDashboard projected MIN (user confirmed)'
+        def fresh(*args,**kwargs):
+            return {('a','NY'):99.,('b','NY'):99.},{
+                ('a','NY'):{'RotoWire Injury':'OUT','Projected Minutes':20.,'Minutes Source':'RotoWire'},
+                ('b','NY'):{'RotoWire Injury':'Active','Projected Minutes':30.,'Minutes Source':'RotoWire'}},'123'
+        out=refresh_pool(p,fresh)
+        self.assertEqual(out.Projection.tolist(),[10.,0.])
+        self.assertEqual(out['Projected Minutes'].tolist(),[34.,0.])
+        self.assertEqual(out['Minutes Source'].tolist(),p['Minutes Source'].tolist())
+        self.assertEqual(out['Injury Status'].tolist(),['Out','Active'])
+        self.assertFalse(out.Eligible.any())
+
     def test_feed_failure_propagates_not_zero(self):
         def fail(*a,**kw):raise OSError('offline')
         with self.assertRaises(OSError):refresh_pool(self.pool(),fail)

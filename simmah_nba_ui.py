@@ -28,6 +28,8 @@ def input_identity(pool,markets,contest,salary_min,correlation=0,excluded_player
              'contest':contest,'salary_min':salary_min,'portfolio_limits_version':3,'field_model_version':6,'overtime_period_limit':10}
     if pool.attrs.get('fantasylabs_nba_ownership'):
         content['ownership_snapshot']=pool.attrs['fantasylabs_nba_ownership']['sha256']
+    if pool.attrs.get('draftdashboard_text'):
+        content['draftdashboard_text']=pool.attrs['draftdashboard_text']['sha256']
     if pool.attrs.get('nba_variable_minutes'):content['variable_regulation_minutes']=1
     if pool.attrs.get('nba_estimated_rotation_teams'):
         content['estimated_rotation_teams']=sorted(pool.attrs['nba_estimated_rotation_teams'])
@@ -297,6 +299,12 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         return
     stale=saved['identity']!=identity
     built=saved['result'];saved_pool=saved['pool']
+    with tabs[1]:
+        with st.expander('Simmah player score — experimental',expanded=False):
+            st.caption('0–100 relative to active players on this saved slate. 40% expected points, 35% P90 upside, 25% P90 salary value. Display only; not a probability or lineup-selection input. Provider ranks are separate context, not extra boosts.')
+            if stale:st.info('These scores use the previous saved build. Rebuild for current inputs.')
+            if 'player_scores' in built:st.dataframe(built['player_scores'].sort_values('Simmah Score',ascending=False),hide_index=True,width='stretch')
+            else:st.caption('Rebuild to calculate scores from independent simulation outcomes.')
     from simmah_nba_player_display import display_pool
     labeled_pool=display_pool(saved_pool,status_pool=pool)
     if built['field'].get('ownership_fit_warning'):

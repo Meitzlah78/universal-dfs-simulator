@@ -17,6 +17,9 @@ class NBAPipelineTests(unittest.TestCase):
         self.assertEqual(len(set(called)),3)
         self.assertEqual(result['field']['copies'].sum(),100)
         self.assertEqual(len(result['portfolio']),5)
+        np.testing.assert_allclose(result['player_scores']['Simulated Mean FP'],
+            np.random.default_rng(called[-1]).gamma(4,8,(20,len(pool))).mean(axis=0))
+        self.assertFalse(result['player_scores'].attrs['used_by_selector'])
         self.assertGreaterEqual(result['timings_seconds']['portfolio_selection'],0.)
         rows=[['entry_id','contest_id','contest_name','entry_fee',*SLOTS]]
         rows += [[str(900+i),'42-99','Test','.05',*(['']*9)] for i in range(5)]
