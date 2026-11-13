@@ -95,9 +95,9 @@ def select_entries(pool,candidates,report,count,diversity=50,controls=None,metri
             rows[quality_metric]=fee*(1+pd.to_numeric(rows[metric],errors='coerce')/100)
     budget=.05 if diversity is None or float(diversity)>0 else 0.
     selected=select_quality_budget(rows,list(rules_for(pool)['slots']),count,
-        controls=limits,automatic_max=100.,quality_metric=quality_metric,quality_loss=budget)
+        controls=limits,automatic_max=100.,quality_metric=quality_metric,quality_loss=budget,diversify=budget>0)
     selected.attrs.update(portfolio_selection='nba-'+VERSION,ranking_metric=metric,
-        budget_metric=quality_metric,selection_method='certified quality then budgeted concentration')
+        budget_metric=quality_metric,selection_method='certified quality then budgeted concentration' if budget>0 else 'certified maximum quality; diversity disabled')
     validate_portfolio_limits(selected,rules_for(pool)['slots'],limits)
     selected.attrs['nba_hard_exposure_limits']=limits
     if not selected.attrs.get('diversity_optimal',True):
@@ -116,7 +116,8 @@ def selection_key(pool,candidates,report,count,diversity,metric):
     digest=hashlib.sha256(np.asarray(candidates).tobytes()+pd.util.hash_pandas_object(report[cols],index=True).values.tobytes())
     digest.update(json.dumps({'version':VERSION,'ids':pool['Player ID'].astype(str).tolist(),
         'limits':portfolio_limits(pool,count=int(count)),'count':int(count),'metric':metric,
-        'budget':.05 if diversity is None or float(diversity)>0 else 0.},sort_keys=True,default=str).encode())
+        'budget':.05 if diversity is None or float(diversity)>0 else 0.,
+        'diversify':diversity is None or float(diversity)>0},sort_keys=True,default=str).encode())
     return digest.hexdigest()
 
 

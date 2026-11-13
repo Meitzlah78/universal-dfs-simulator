@@ -18,7 +18,7 @@ class QualityNotCertified(RuntimeError):pass
 
 
 def select_quality_budget(candidates,slots,count,*,controls=None,automatic_max=80.,
-                          quality_metric='Top1',quality_loss=QUALITY_LOSS,time_limit=15.):
+                          quality_metric='Top1',quality_loss=QUALITY_LOSS,time_limit=15.,diversify=True):
     controls=controls or {};count=int(count)
     if count<1 or not 0<=quality_loss<1 or not 0<=automatic_max<=100 or time_limit<=0:
         raise ValueError('Invalid budget, cap, count, or solver limit')
@@ -75,6 +75,22 @@ def select_quality_budget(candidates,slots,count,*,controls=None,automatic_max=8
             raise RuntimeError('Solver incumbent failed independent count/exposure validation')
     check(chosen)
     optimum=float(quality[chosen].sum());scaled_opt=float(scaled[chosen].sum());floor=(1-quality_loss)*scaled_opt
+    original=chosen.copy();best_concentration=float(np.square(np.asarray(overall[:,original].sum(axis=1)).ravel()).sum())
+    def finish(chosen,status,optimal):
+        actual_quality=float(quality[chosen].sum())
+        if actual_quality<optimum*(1-quality_loss)-1e-9:raise RuntimeError('Quality-loss budget exceeded')
+        result=c.iloc[chosen].drop(columns='_q').copy().reset_index(drop=True)
+        validate_exposure_limits(result,slots,controls)
+        exposure=np.asarray(overall[:,chosen].sum(axis=1)).ravel()
+        result.attrs.update(version=VERSION,quality_optimum=optimum,
+            selected_quality=actual_quality,quality_loss_budget=quality_loss,
+            actual_quality_loss=(optimum-actual_quality)/optimum,automatic_cap_pct=automatic_max,
+            effective_automatic_cap_pct=automatic_max,max_exposure_pct=float(exposure.max()*100/count),
+            concentration_before=best_concentration,concentration_after=float(np.square(exposure).sum()),
+            quality_optimality='certified by MILP',diversity_status=status,
+            diversity_optimal=optimal,diversity_requested=bool(diversify),unique_candidates=m)
+        return result
+    if not diversify:return finish(chosen,'diversity disabled; retained certified quality optimum',True)
     # For integer exposure k, max_j[(2j+1)k-j(j+1)] = k^2.
     # This epigraph gives an exact squared-concentration objective without
     # enumerating portfolio pairs or changing the primary quality budget.
@@ -89,23 +105,10 @@ def select_quality_budget(candidates,slots,count,*,controls=None,automatic_max=8
         bounds=Bounds(np.zeros(m+p),np.r_[np.ones(m),np.full(p,count**2)]),
         constraints=LinearConstraint(a2,l2,u2),options=opts)
     second_status='optimal concentration' if second.status==0 else 'time-limited feasible concentration'
-    original=chosen.copy();best_concentration=float(np.square(np.asarray(overall[:,original].sum(axis=1)).ravel()).sum())
     if second.x is not None:
         trial=np.flatnonzero(second.x[:m]>.5);check(trial)
         if float(scaled[trial].sum())<floor-1e-7:raise RuntimeError('Solver violated frozen quality-loss budget')
         concentration=float(np.square(np.asarray(overall[:,trial].sum(axis=1)).ravel()).sum())
         if concentration<=best_concentration:chosen=trial
     else:second_status='diversity search unfinished; retained certified quality optimum'
-    actual_quality=float(quality[chosen].sum())
-    if actual_quality<optimum*(1-quality_loss)-1e-9:raise RuntimeError('Quality-loss budget exceeded')
-    result=c.iloc[chosen].drop(columns='_q').copy().reset_index(drop=True)
-    validate_exposure_limits(result,slots,controls)
-    exposure=np.asarray(overall[:,chosen].sum(axis=1)).ravel()
-    result.attrs.update(version=VERSION,quality_optimum=optimum,
-        selected_quality=actual_quality,quality_loss_budget=quality_loss,
-        actual_quality_loss=(optimum-actual_quality)/optimum,automatic_cap_pct=automatic_max,
-        effective_automatic_cap_pct=automatic_max,max_exposure_pct=float(exposure.max()*100/count),
-        concentration_before=best_concentration,concentration_after=float(np.square(exposure).sum()),
-        quality_optimality='certified by MILP',diversity_status=second_status,
-        diversity_optimal=bool(second.status==0),unique_candidates=m)
-    return result
+    return finish(chosen,second_status,bool(second.status==0))

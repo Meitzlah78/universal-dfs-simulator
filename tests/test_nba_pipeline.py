@@ -17,6 +17,7 @@ class NBAPipelineTests(unittest.TestCase):
         self.assertEqual(len(set(called)),3)
         self.assertEqual(result['field']['copies'].sum(),100)
         self.assertEqual(len(result['portfolio']),5)
+        self.assertGreaterEqual(result['timings_seconds']['portfolio_selection'],0.)
         rows=[['entry_id','contest_id','contest_name','entry_fee',*SLOTS]]
         rows += [[str(900+i),'42-99','Test','.05',*(['']*9)] for i in range(5)]
         header=['Id','Nickname','Salary','Position','Team','Opponent','Game','Injury Indicator','Injury Details','FPPG']

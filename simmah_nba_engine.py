@@ -61,11 +61,16 @@ def simulate_game(rotations, profiles, rates, seed, overtime_rotations=None, pla
     if len(rates)!=2:raise ValueError('One event-rate model per team required')
     for r in rates:r.validate()
     n=len(rotation)
-    overtime=None if overtime_rotations is None else np.asarray(overtime_rotations)
+    from simmah_nba_overtime_rotations import OvertimeRotations
+    lazy_overtime=isinstance(overtime_rotations,OvertimeRotations)
+    overtime=overtime_rotations if lazy_overtime else (None if overtime_rotations is None else np.asarray(overtime_rotations))
     if overtime is not None:
-        if overtime.ndim!=5 or overtime.shape[:2]!=(n,2) or overtime.shape[3:]!=(5,5) or overtime.dtype.kind not in 'iu':
+        if lazy_overtime:
+            if overtime.shape[:2]!=(n,2) or overtime.size!=size:
+                raise ValueError('Overtime rotations must match scenarios and team roster size')
+        elif overtime.ndim!=5 or overtime.shape[:2]!=(n,2) or overtime.shape[3:]!=(5,5) or overtime.dtype.kind not in 'iu':
             raise ValueError('Overtime rotations must be scenarios x teams x periods x 5 minutes x 5 players')
-        for team in (0,1):
+        for team in (() if lazy_overtime else (0,1)):
             selected=overtime[:,team]
             if (selected<team*size).any() or (selected>=(team+1)*size).any() or _duplicate_court_players(selected):
                 raise ValueError('Overtime rotation has wrong-team or duplicate players')

@@ -1,0 +1,102 @@
+{
+  "archived_rotation_replay": {
+    "scope": "Frozen archived NBA inputs, current pregame engine, three independent 10,000-draw phases. Sequential game execution on benchmark hardware; not live host latency or archived-score reproduction.",
+    "archive": "Simmah_NBA_FanDuel_136378-281443006_20261108T001550Z_9cf11de27b_Calibration_Solver.zip",
+    "players": 209,
+    "games": 6,
+    "simulations_per_set": 10000,
+    "repeats": 2,
+    "records": [
+      {
+        "repeat": 0,
+        "arm": "eager",
+        "seconds": 51.117902695999874,
+        "draw_sha256": [
+          "b486d4aeb2168e89aa8ea3772ba1af538abf78c09b3f85054f522b011029ff30",
+          "258f1e2e07abdc6b9563bd96f27b00ea5e2ea0beb125b125a590a533d8b8581e",
+          "fe152110608a93280afe2e891086bad2938ce7226fcf65fce85e70fac131a47b"
+        ]
+      },
+      {
+        "repeat": 0,
+        "arm": "lazy",
+        "seconds": 46.951087114000984,
+        "draw_sha256": [
+          "b486d4aeb2168e89aa8ea3772ba1af538abf78c09b3f85054f522b011029ff30",
+          "258f1e2e07abdc6b9563bd96f27b00ea5e2ea0beb125b125a590a533d8b8581e",
+          "fe152110608a93280afe2e891086bad2938ce7226fcf65fce85e70fac131a47b"
+        ]
+      },
+      {
+        "repeat": 1,
+        "arm": "lazy",
+        "seconds": 47.09611859100005,
+        "draw_sha256": [
+          "b486d4aeb2168e89aa8ea3772ba1af538abf78c09b3f85054f522b011029ff30",
+          "258f1e2e07abdc6b9563bd96f27b00ea5e2ea0beb125b125a590a533d8b8581e",
+          "fe152110608a93280afe2e891086bad2938ce7226fcf65fce85e70fac131a47b"
+        ]
+      },
+      {
+        "repeat": 1,
+        "arm": "eager",
+        "seconds": 49.3016707780007,
+        "draw_sha256": [
+          "b486d4aeb2168e89aa8ea3772ba1af538abf78c09b3f85054f522b011029ff30",
+          "258f1e2e07abdc6b9563bd96f27b00ea5e2ea0beb125b125a590a533d8b8581e",
+          "fe152110608a93280afe2e891086bad2938ce7226fcf65fce85e70fac131a47b"
+        ]
+      }
+    ],
+    "mean_seconds": {
+      "eager": 50.209786737000286,
+      "lazy": 47.02360285250052
+    },
+    "simulation_reduction_pct": 6.345742715835567,
+    "exact_scores_and_game_reports": true,
+    "max_overtimes_unchanged": 10,
+    "candidate_target_unchanged": 5000,
+    "field_support_target_unchanged": 10000
+  },
+  "full_build_modes": {
+    "scope": "Synthetic four-team cold build-to-export, full simulation/candidate counts, same hard caps; offline benchmark hardware, not hosted timing. Diversity settings differ explicitly, not a same-policy speed comparison.",
+    "runs": [
+      {
+        "mode": "quality_budget_on",
+        "seconds": 32.885100706998855,
+        "stages": {
+          "game_scenarios": 11.254338724998888,
+          "candidates": 0.03961969100055285,
+          "opponent_field": 0.477083734000189,
+          "contest_scoring": 3.4680763090000255,
+          "portfolio_selection": 17.561745001999952
+        },
+        "candidate_hash": "1273a7538fd54cff25fb0375eb1dda32d1ef8e51a2420044f6ebcb9302621b6a",
+        "report_hash": "b9d238cfb3baf3c4d3b96991c733707cc2e38dde425e594d402bf0e3038c1c43",
+        "selected_quality": 29.22864682539683,
+        "quality_optimum": 30.691854978354982,
+        "max_exposure_pct": 30.0,
+        "concentration": 910.0,
+        "diversity_status": "time-limited feasible concentration"
+      },
+      {
+        "mode": "quality_budget_off",
+        "seconds": 17.143473086000085,
+        "stages": {
+          "game_scenarios": 10.957833391999884,
+          "candidates": 0.04217835499912326,
+          "opponent_field": 0.451072245999967,
+          "contest_scoring": 3.7677518340005918,
+          "portfolio_selection": 1.8328420119996736
+        },
+        "candidate_hash": "1273a7538fd54cff25fb0375eb1dda32d1ef8e51a2420044f6ebcb9302621b6a",
+        "report_hash": "b9d238cfb3baf3c4d3b96991c733707cc2e38dde425e594d402bf0e3038c1c43",
+        "selected_quality": 30.691854978354982,
+        "quality_optimum": 30.691854978354982,
+        "max_exposure_pct": 30.0,
+        "concentration": 978.0,
+        "diversity_status": "diversity disabled; retained certified quality optimum"
+      }
+    ]
+  }
+}

@@ -122,10 +122,13 @@ def run_pipeline(pool,outcome_factory,ownership,ownership_source,payouts,entry_f
     notify('Selecting portfolio')
     recovery=None
     def select_current():
-        if selection_mode=='flat_payout':
-            from simmah_nba_cash import select_flat_primary
-            return select_flat_primary(pool,candidates['indices'],report)
-        return select_entries(pool,candidates['indices'],report,portfolio_count,diversity=diversity)
+        started=perf_counter()
+        try:
+            if selection_mode=='flat_payout':
+                from simmah_nba_cash import select_flat_primary
+                return select_flat_primary(pool,candidates['indices'],report)
+            return select_entries(pool,candidates['indices'],report,portfolio_count,diversity=diversity)
+        finally:timings['portfolio_selection']=timings.get('portfolio_selection',0.)+perf_counter()-started
     try:
         try:portfolio=select_current()
         except ValueError as exc:
