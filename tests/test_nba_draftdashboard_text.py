@@ -52,10 +52,13 @@ class DDTextTests(unittest.TestCase):
         p=self.pool();before=p.copy(deep=True)
         r=apply_text(p,TEXT,'DraftKings','2026-11-13',confirmed=True)
         self.assertEqual(r.loc[0,'Projection'],49.1)
-        self.assertEqual(r.loc[0,'Projected Minutes'],34.)
+        self.assertEqual(r.loc[0,'Projected Minutes'],30.)
+        self.assertEqual(r.loc[0,'DraftDashboard Projected Minutes'],34.)
         self.assertEqual(r.loc[0,'RotoWire Projected Own %'],25.)
         self.assertFalse(r.attrs['draftdashboard_text']['ownership_applied'])
         pd.testing.assert_frame_equal(p,before)
+        explicit=apply_text(p,TEXT,'DraftKings','2026-11-13',confirmed=True,use_minutes=True)
+        self.assertEqual(explicit.loc[0,'Projected Minutes'],34.)
 
     def test_date_site_salary_and_opponent_guards(self):
         with self.assertRaisesRegex(ValueError,'Confirm'):apply_text(self.pool(),TEXT,'DraftKings','2026-11-13')

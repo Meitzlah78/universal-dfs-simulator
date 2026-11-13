@@ -52,7 +52,7 @@ def parse_text(text, platform):
     return frame
 
 
-def apply_text(pool, text, platform, day, *, confirmed=False,file_format='txt'):
+def apply_text(pool, text, platform, day, *, confirmed=False,file_format='txt',use_minutes=False):
     if not confirmed:raise ValueError('Confirm this undated DD text belongs to the selected slate date')
     from simmah_nba_rules import rules_for
     if rules_for(pool)['platform']!=platform:raise ValueError('DD site differs from salary slate')
@@ -82,13 +82,19 @@ def apply_text(pool, text, platform, day, *, confirmed=False,file_format='txt'):
         if float(p['Salary'])!=row['Salary'] or player_key('',p['Opponent'])[1]!=player_key('',row['Opponent'])[1]:
             raise ValueError('DD salary/opponent differs from current slate: '+str(p['Name']))
     result,fields=apply_fields(pool,frame,keys,pool_keys)
+    result['DraftDashboard Projected Minutes']=pd.to_numeric(pd.Series(
+        [source.get(key,{}).get('MIN',float('nan')) for key in pool_keys],index=pool.index),errors='raise')
+    if not use_minutes:
+        for col in ('Projected Minutes','Minutes Source'):
+            if col in pool:result[col]=pool[col]
+            else:result.drop(columns=[col],errors='ignore',inplace=True)
     for col in frame:
         if col.startswith('DraftDashboard '):
             values=dict(zip(keys,frame[col]));result[col]=[values.get(key) for key in pool_keys]
     result.attrs['draftdashboard_text']={'sha256':hashlib.sha256(text.encode()).hexdigest(),
         'site':platform,'date':str(day),'date_confirmation':'user confirmed current selected slate',
         'rows':len(frame),'matched':sum(key in source for key in pool_keys),
-        'ownership_applied':False,'fields':fields}
+        'ownership_applied':False,'dd_minutes_applied':use_minutes,'fields':fields}
     return result
 
 
@@ -99,8 +105,11 @@ def render_text_upload(st,pool,platform,day):
     if upload is None:return pool
     data=upload.getvalue();digest=hashlib.sha256(data).hexdigest()[:12]
     if not st.checkbox(f'This DD player table is for {platform}, {day}',key='nba_dd_confirm_'+platform+'_'+str(day)+'_'+digest):return pool
-    try:result=apply_text(pool,data.decode('utf-8-sig'),platform,day,confirmed=True,file_format='csv' if upload.name.lower().endswith('.csv') else 'txt')
+    use_minutes=st.checkbox('Use DD projected MIN for simulations',value=False,key='nba_dd_minutes_'+platform+'_'+str(day)+'_'+digest,
+        help='Default keeps existing simulation minutes and retains DD MIN as labeled context. Enabling replaces minutes; existing rotation-budget checks still apply.')
+    try:result=apply_text(pool,data.decode('utf-8-sig'),platform,day,confirmed=True,file_format='csv' if upload.name.lower().endswith('.csv') else 'txt',use_minutes=use_minutes)
     except (ValueError,UnicodeError) as exc:
         st.error('DraftDashboard attributes not applied: '+str(exc));st.stop();return pool
     st.success(f"DD attributes loaded: {result.attrs['draftdashboard_text']['matched']} matched players · {platform} · {day}")
+    if not use_minutes:st.caption('DD MIN retained as projected-minutes context. Existing simulation minutes remain in use.')
     return result

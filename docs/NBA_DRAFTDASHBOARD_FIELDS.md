@@ -41,6 +41,11 @@ Every currently eligible player must be covered. Displayed OWN strings including
 `<1%` and `...` remain reference-only and never override validated field ownership.
 Last-three games/minutes/usage are retained separately. A changed text snapshot
 invalidates saved-build inputs. It does not bypass injury or manual exclusions.
+Copied-table/attributes uploads retain DD projected MIN as its own labeled field
+by default and preserve existing simulation minutes. The explicit "Use DD projected
+MIN for simulations" checkbox enables replacement, with existing rotation-budget
+checks still enforced. The supplied snapshots contain team totals from 216 to 291
+minutes, so silently replacing or normalizing all rotations would be inappropriate.
 
 ## Simmah player score v1
 
