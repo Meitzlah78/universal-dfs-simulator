@@ -19,6 +19,17 @@ class NBAQualityBudgetTests(unittest.TestCase):
  def test_negative_roi_uses_expected_payout(self):
   p,c,r=self.fixture();v=select_entries(p,c,r,2,metric='Expected ROI (%)')
   self.assertEqual(v.attrs['budget_metric'],'Expected Prize ($)');self.assertAlmostEqual(v.attrs['quality_optimum'],1.7)
+ def test_disabled_diversity_skips_second_solver_and_preserves_hard_caps(self):
+  from simmah_selector_budget import milp
+  p,c,r=self.fixture()
+  with patch('simmah_selector_budget.milp',wraps=milp) as solve:
+   v=select_entries(p,c,r,2,diversity=0,controls={'0':{'Max Exposure %':0}})
+  self.assertEqual(solve.call_count,1)
+  self.assertAlmostEqual(v['Top 1%'].sum(),17.)
+  self.assertEqual(v.attrs['actual_quality_loss'],0.)
+  self.assertFalse(v.attrs['diversity_requested'])
+  self.assertNotIn('0',v[list(['PG','SG','SF','PF','C','G','F','UTIL'])].values)
+  self.assertIn('disabled',v.attrs['diversity_status'])
  def test_quality_timeout_preserves_saved_lineups_and_key(self):
   p,c,r=self.fixture();old=pd.DataFrame({'saved':[1,2]});built={'portfolio':old,'selection_key':'previous','candidates':{'indices':c},'report':r}
   with patch('simmah_selector_budget.milp',return_value=SimpleNamespace(status=1,x=np.array([1.,1.,0.]))):

@@ -50,7 +50,9 @@ def simulate_market_game(rotations,profiles,rates,targets,seed,pilot_n=1024,iter
     fitted=list(rates);pilot=np.asarray(rotations)[:pilot_n];baseline=None
     def run(rotation,models,run_seed):
         if overtime_rotations is None:return simulate_game(rotation,profiles,models,run_seed,platform=platform)
-        return simulate_game(rotation,profiles,models,run_seed,overtime_rotations=np.asarray(overtime_rotations)[:len(rotation)],platform=platform)
+        from simmah_nba_overtime_rotations import OvertimeRotations
+        ot=overtime_rotations if isinstance(overtime_rotations,OvertimeRotations) else np.asarray(overtime_rotations)
+        return simulate_game(rotation,profiles,models,run_seed,overtime_rotations=ot[:len(rotation)],platform=platform)
     for _ in range(iterations):
         result=run(pilot,fitted,seed+104729)
         means=result['team_points'].mean(axis=0)

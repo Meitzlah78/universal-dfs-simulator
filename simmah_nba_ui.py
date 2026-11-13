@@ -200,10 +200,10 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         correlation=st.slider('Build correlation',0,100,0,key='nba_build_correlation',
             help='Extra preference for positively correlated player combinations measured from the shared game simulations. 0 = no extra bonus; 100 = strongest bonus. Game simulations remain correlated at every setting.')
         diversify=st.checkbox('Diversify within 5% quality budget',value=True,key='nba_quality_budget_diversify',
-            help='First certify the strongest portfolio within all caps. Then reduce concentration while retaining at least 95% of its measured quality. Off selects maximum quality.')
+            help='First certify the strongest portfolio within all caps. Then reduce concentration while retaining at least 95% of its measured quality. Off selects maximum quality and skips the extra diversity search; caps still apply.')
         diversity=100 if diversify else 0
         st.caption('Quality first: hard caps never relax. ROI ranks use expected prize for the percentage budget. A solver timeout preserves saved lineups or the certified quality optimum.')
-        if not use_caps:st.caption('No automatic player exposure limits. Diversity still favors less overlap; every selected lineup must be unique.')
+        if not use_caps:st.caption('No automatic player exposure limits. '+('Diversity favors less overlap. ' if diversify else 'Maximum-quality selection may concentrate exposures. ')+'Every selected lineup must be unique.')
         else:st.caption('Hard portfolio caps: 60% overall; verified projected ownership + 5 percentage points where lower; below 16 projected minutes: 15%. Small portfolios round positive caps up to at least one entry. Caps never relax; selection/export stops if they cannot be met.')
         metric=st.selectbox('Rank lineups',['Top 1%','Expected ROI (%)','Expected Prize ($)'],key='nba_rank_metric')
         clicked=workspace_button(st,'BUILD NBA LINEUPS',disabled=bool(error),key='nba_build')
@@ -329,7 +329,7 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         if built.get('timings_seconds'):
             _timing=built['timings_seconds']
             total_note=(f"Total {built['build_total_seconds']:.1f}s · " if 'build_total_seconds' in built else '')
-            st.caption('Build timing · '+total_note+ ' · '.join(label+f" {_timing[key]:.1f}s" for key,label in [('game_scenarios','Game scenarios'),('candidates','Candidates'),('opponent_field','Opponents'),('contest_scoring','Scoring')])+
+            st.caption('Build timing · '+total_note+ ' · '.join(label+f" {_timing[key]:.1f}s" for key,label in [('game_scenarios','Game scenarios'),('candidates','Candidates'),('opponent_field','Opponents'),('contest_scoring','Scoring'),('portfolio_selection','Selection')] if key in _timing)+
                 f" · {built.get('scenario_cache_hits',0)}/3 scenario sets reused")
         render_exports(st,upload,cid,saved_pool,built,portfolio,platform,stale,'build',status_pool=pool,current_pool=export_pool,salary_min=salary_min,saved_contest_id=saved.get('contest_id',''))
         if built.get('candidate_recovery'):
