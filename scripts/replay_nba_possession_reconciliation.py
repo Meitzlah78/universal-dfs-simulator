@@ -11,7 +11,7 @@ from replay_nba_full_game_offline import actual_rows,Priors,rotations,EventRates
 from simmah_nba_full_game_offline import simulate_game
 
 
-def run(root,evidence,out,limit=None,shard=None):
+def run(root,evidence,out,limit=None,shard=None,restarts=None):
  root=Path(root);out=Path(out);out.mkdir(exist_ok=True);games,allowed=load(root,evidence);clock_records=[observed(g) for g in games];hazard_records=[observe_hazards(g) for g in games]
  base=EventRates(**json.loads((root/'data/nba_models/event-rates-before-2026-04-09.json').read_text())['rates']);results=[];failures=[]
  checkpoint=out/'possession-replays.json'
@@ -21,13 +21,18 @@ def run(root,evidence,out,limit=None,shard=None):
  if len(completed)!=len(results)+len(failures):raise ValueError('Duplicate checkpoint rows')
  carried=len(results)
  if any(r['game_id'] not in allowed or r.get('fitted_hazards',{}).get('before',r.get('date'))!=r.get('date') for r in results):raise ValueError('Checkpoint target/date mismatch')
- arms=['clock_reference','shooting_fouls_and_rebounds']
+ arms=['restart_timing'] if restarts else ['clock_reference','shooting_fouls_and_rebounds']
+ if restarts:
+  from simmah_nba_restart_timing_offline import restart_observations,fit_restarts
+  clean=set(json.loads((Path(out).parent/'nba-possession-results/reconciliation-summary.json').read_text())['clean_game_ids']);allowed=allowed&clean
+  restart_records=[restart_observations(g) for g in games]
  if limit and int(limit)>0:
   traces=json.loads((Path(out).parent/'nba-possession-results/source-traces.json').read_text());clean={r['game_id'] for r in traces if not r['flags'] and not r['issues']}
   allowed={g['event_id'] for g in games if g['event_id'] in allowed and g['event_id'] in clean}
   allowed=set([g['event_id'] for g in games if g['event_id'] in allowed][:int(limit)])
  if shard:
   part,total=map(int,shard.split('/'));allowed={g['event_id'] for i,g in enumerate(games) if i%total==part and g['event_id'] in allowed}
+ if any(r['game_id'] not in allowed or r['arm'] not in arms for r in results+failures):raise ValueError('Checkpoint scope does not match selected games/arms/shard')
  for gi,g in enumerate(games):
   if g['event_id'] not in allowed or all((g['event_id'],arm) in completed for arm in arms):continue
   players=actual_rows(g);teams=list(dict.fromkeys(r['team'] for r in players));by=[[r for r in players if r['team']==t and r['v'][0]>0] for t in teams]
@@ -37,9 +42,10 @@ def run(root,evidence,out,limit=None,shard=None):
    raw=np.array([r['v'][0] for r in group]);means[t,:len(group)]=raw*240/raw.sum()
    sp,roles,fr=prior.for_names([r['name'] for r in group]);profiles[t,:len(group)]=roles;splits[t*size:t*size+len(group)]=sp;fouls[t*size:t*size+len(group)]=fr
   reg,ot=rotations(means,128,71+gi*17);clock=fit_clock(clock_records,g['date'],'empirical');hazards=fit_hazards(hazard_records,g['date'],base)
+  if restarts:clock=fit_restarts(clock,restart_records,g['date'])
   for arm in arms:
    if (g['event_id'],arm) in completed:continue
-   sf=arm in ['shooting_fouls','shooting_fouls_and_rebounds'];rb=arm in ['rebound_outcomes','shooting_fouls_and_rebounds']
+   sf=arm in ['shooting_fouls','shooting_fouls_and_rebounds','restart_timing'];rb=arm in ['rebound_outcomes','shooting_fouls_and_rebounds','restart_timing']
    models=[replace(base,free_throw_trip=hazards['free_throw_trip_probability_per_action']) if sf else base]*2
    settings=None if arm=='clock_reference' else {**hazards,'and_one_probability_per_make':hazards['and_one_probability_per_make'] if sf else .03,
     'fg_rebound_outcomes':hazards['fg_rebound_outcomes'] if rb else [base.offensive_rebound,1-base.offensive_rebound,0.,0.],
@@ -51,7 +57,7 @@ def run(root,evidence,out,limit=None,shard=None):
     duration=trace['completed_seconds_by_origin'].sum(axis=1)+trace['terminal_seconds_by_origin'].sum(axis=1)
     if not np.allclose(duration,r['elapsed_seconds'],atol=1e-7):raise RuntimeError('Possession clock partition failed')
     if not np.array_equal(trace['counts_by_team'].sum(axis=1),trace['completed_by_origin'].sum(axis=1)+trace['terminal_by_origin'].sum(axis=1)):raise RuntimeError('Possession count partition failed')
-    row={'game_id':g['event_id'],'date':g['date'],'arm':arm,'points':float(r['team_points'].sum(axis=1).mean()),
+    row={'game_id':g['event_id'],'date':g['date'],'arm':arm,'restart_training':clock.get('restart_training'),'points':float(r['team_points'].sum(axis=1).mean()),
       'fga':float(attempts[:,:,0].sum(axis=1).mean()),'three_pa':float(attempts[:,:,1].sum(axis=1).mean()),'fta':float(attempts[:,:,2].sum(axis=1).mean()),
       'fgm':float(stats[:,:,0].sum(axis=1).mean()),'three_pm':float(stats[:,:,1].sum(axis=1).mean()),'ftm':float(stats[:,:,2].sum(axis=1).mean()),
       'turnovers':float((r['counters']['turnovers']+e['shot_clock_violations']).mean()),

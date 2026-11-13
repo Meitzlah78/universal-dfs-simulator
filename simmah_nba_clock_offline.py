@@ -18,7 +18,7 @@ def sample_duration(raw,scale,origin,budget,model):
     bound=np.maximum(0,np.nextafter(budget,0.))
     result=scale*gammaincinv(4,u*gammainc(4,bound/scale))
     if model['mode']=='empirical':
-        for code,key in enumerate(BUCKETS):
+        for code,key in enumerate(BUCKETS+(['period_start','dead_ball_inbound'] if model.get('restart_profiles') else [])):
             use=origin==code;history=np.asarray(model['profiles'].get(key,[]),float)
             if not use.any() or not len(history):continue
             history=np.sort(history[(history>0)&np.isfinite(history)])

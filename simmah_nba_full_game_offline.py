@@ -135,7 +135,9 @@ def simulate_game(rotations, profiles, rates, seed, overtime_rotations=None, pla
     attempts=np.zeros((n,2*size,3),np.int32) # FGA, 3PA, FTA
     extra={k:np.zeros(n,np.int32) for k in ['shot_clock_violations','one_shot_trips','two_shot_trips','three_shot_trips','technical_trips','nonshooting_fouls','offensive_rebounds']}
     from simmah_nba_clock_offline import BUCKETS,sample_duration
-    origin=np.zeros(n,np.int8)
+    restart_timing=bool(clock_model and clock_model.get('restart_profiles'))
+    if restart_timing:BUCKETS=BUCKETS+['period_start','dead_ball_inbound']
+    origin=np.full(n,7 if restart_timing else 0,np.int8)
     clock_ledger=np.zeros((n,len(BUCKETS)))
     regulation_ledger=np.zeros_like(clock_ledger)
     action_counts=np.zeros_like(clock_ledger,dtype=np.int32)
@@ -207,7 +209,7 @@ def simulate_game(rotations, profiles, rates, seed, overtime_rotations=None, pla
         oreb_tail_count[ids]+=oreb_pending[ids];oreb_tail_seconds[ids]+=oreb_pending[ids]*elapsed[ids]-oreb_start_sum[ids]
         if 0 in ids:
             sample_trace.append({'scenario':0,'offense':int(pos_side[0]),'start_elapsed':float(pos_start[0]),'end_elapsed':float(elapsed[0]),'seconds':float(elapsed[0]-pos_start[0]),'origin':possession_origins[pos_origin[0]],'end_reason':reason,'completed':completed})
-        pos_start[ids]=elapsed[ids];pos_origin[ids]=origin[ids];pos_side[ids]=side[ids]
+        pos_start[ids]=elapsed[ids];pos_origin[ids]=np.where(origin[ids]==8,0,origin[ids]);pos_side[ids]=side[ids]
         oreb_pending[ids]=0;oreb_start_sum[ids]=0
         if not completed:pos_side[ids]=-1
     extra['team_offensive_rebounds']=np.zeros(n,np.int32)
@@ -236,7 +238,7 @@ def simulate_game(rotations, profiles, rates, seed, overtime_rotations=None, pla
             ri=ids[credited];lineup=np.where(oreb[credited,None],off[credited],defense[credited])
             add(ri,pick(ri,lineup,2),'REB');counters['credited_rebounds'][ri]+=1
         side[ids]=np.where(oreb,team,1-team);shot_clock[ids]=np.where(oreb,14.,24.)
-        origin[ids]=np.where(team_rebound,0,np.where(oreb,1,5))
+        origin[ids]=np.where(team_rebound,8 if restart_timing else 0,np.where(oreb,1,5))
     actions=0
     while np.any(clock>0):
         actions+=1
@@ -377,7 +379,7 @@ def simulate_game(rotations, profiles, rates, seed, overtime_rotations=None, pla
         next_quarter=(period_clock<=0)&(clock>0)&(overtime_count==0)
         quarter[next_quarter]+=1
         period_clock[next_quarter]=720
-        team_fouls[next_quarter]=0;shot_clock[next_quarter]=24.;origin[next_quarter]=0
+        team_fouls[next_quarter]=0;shot_clock[next_quarter]=24.;origin[next_quarter]=7 if restart_timing else 0
         next_period=quarter[next_quarter]
         side[next_quarter]=np.where((next_period==2)|(next_period==3),1-opening[next_quarter],opening[next_quarter])
         if possession_audit:
@@ -388,7 +390,7 @@ def simulate_game(rotations, profiles, rates, seed, overtime_rotations=None, pla
             overtime_count[can_extend]+=1
             clock[can_extend]=300
             period_clock[can_extend]=300
-            team_fouls[can_extend]=0;shot_clock[can_extend]=24.;origin[can_extend]=0
+            team_fouls[can_extend]=0;shot_clock[can_extend]=24.;origin[can_extend]=7 if restart_timing else 0
             side[can_extend]=rng.integers(0,2,int(can_extend.sum()))
             if possession_audit:
                 pos_start[can_extend]=elapsed[can_extend];pos_origin[can_extend]=7;pos_side[can_extend]=side[can_extend]
