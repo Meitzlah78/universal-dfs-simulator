@@ -75,9 +75,12 @@ def render_diversity_controls(st, platform, mode, simulation_count):
     """Portfolio exposure choice is independent of construction-scenario choice."""
     value = st.slider("Lineup exposure diversity",0,100,50,step=5,
         key=f"portfolio_exposure_diversity_{platform}_{mode}_v1",
-        help="Higher settings penalize cumulative exposure to every player across all positions, alongside roster overlap. The preferred cap is a ceiling, not an exposure target. Manual exposure limits and player locks remain authoritative. Changing this reselects existing candidates; it does not reduce simulation counts.")
+        help=("Higher NFL settings lower the hard overall player cap. Selection first maximizes total Top 1% quality under all limits, then reduces concentration within a fixed 5% quality-loss budget. Infeasible limits are reported rather than relaxed. For one entry, choose diversity 0 (100% cap). Changing this reselects existing candidates; it does not reduce simulation counts." if mode in ("Classic", "Showdown", "Full Roster", "Single Game") else "Higher settings penalize cumulative player exposure and roster overlap. Manual limits stay enforced."))
     cap=100-.4*value
-    st.caption(f"Preferred player exposure cap: {cap:.0f}%. Automatic limits may relax if needed to fill entries; manual limits stay enforced.")
+    if mode in ("Classic", "Showdown", "Full Roster", "Single Game"):
+        st.caption(f"Hard player exposure cap: {cap:.0f}%. NFL selection retains at least 95% of the best feasible Top 1% total. Infeasible limits stop selection; caps are never relaxed.")
+    else:
+        st.caption(f"Preferred player exposure cap: {cap:.0f}%. Automatic limits may relax if needed to fill entries; manual limits stay enforced.")
     with st.expander("Advanced: candidate construction",expanded=False):
         scenario=st.slider("Game-scenario construction",0,100,
             100 if mode in ("Showdown","Single Game") else 50,step=5,
