@@ -1,0 +1,20 @@
+{
+  "regular_history_games": 159,
+  "regular_history_rows": 4255,
+  "excluded_history_records": 10,
+  "chronological_role_training_examples": 2841,
+  "player_snapshots": 2134,
+  "supported_historical_role_priors": 1891,
+  "unsupported_role_priors": 243,
+  "no_role_history": 243,
+  "insufficient_role_training": 0,
+  "timestamp_player_cases": 16,
+  "too_late_under_both_hypotheses": 6,
+  "regular_game_denominator": 159,
+  "allocation_evaluable_games": 0,
+  "input_blocked_games": 159,
+  "allocation_conflict_rate": null,
+  "input_blocked_rate": 1.0,
+  "accuracy_residuals": "not evaluable: no certified capture-time eligible pools; independent historical role priors do not certify availability",
+  "protocol": "Fixed trailing5 starter rate >=0.5 after >=3 explicit earlier observations; same-role earlier mean with >=20 training labels. Development evidence only; not tuned to the single injury-heavy team-game."
+}
