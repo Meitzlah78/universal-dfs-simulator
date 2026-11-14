@@ -1,0 +1,3725 @@
+[
+  {
+    "game_id": "401898388",
+    "kickoff": "2026-10-05T23:00Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261005&limit=100",
+    "retrieved_at": "2026-11-14T16:53:31.775855+00:00",
+    "teams": [
+      "ATL",
+      "MEM"
+    ],
+    "archive_teams_verified": true,
+    "rows": 34,
+    "usable": true
+  },
+  {
+    "game_id": "401898389",
+    "kickoff": "2026-10-07T00:00Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261006&limit=100",
+    "retrieved_at": "2026-11-14T16:53:31.719725+00:00",
+    "teams": [
+      "OKC",
+      "NO"
+    ],
+    "archive_teams_verified": true,
+    "rows": 33,
+    "usable": true
+  },
+  {
+    "game_id": "401898390",
+    "kickoff": "2026-10-07T02:00Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261006&limit=100",
+    "retrieved_at": "2026-11-14T16:53:31.719734+00:00",
+    "teams": [
+      "GS",
+      "LAL"
+    ],
+    "archive_teams_verified": true,
+    "rows": 42,
+    "usable": true
+  },
+  {
+    "game_id": "401898391",
+    "kickoff": "2026-10-08T00:00Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261007&limit=100",
+    "retrieved_at": "2026-11-14T16:53:35.988486+00:00",
+    "teams": [
+      "MEM",
+      "ORL"
+    ],
+    "archive_teams_verified": true,
+    "rows": 40,
+    "usable": true
+  },
+  {
+    "game_id": "401898392",
+    "kickoff": "2026-10-08T23:00Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261008&limit=100",
+    "retrieved_at": "2026-11-14T16:53:36.072070+00:00",
+    "teams": [
+      "CLE",
+      "BOS"
+    ],
+    "archive_teams_verified": true,
+    "rows": 42,
+    "usable": true
+  },
+  {
+    "game_id": "401898393",
+    "kickoff": "2026-10-08T23:30Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261008&limit=100",
+    "retrieved_at": "2026-11-14T16:53:36.072087+00:00",
+    "teams": [
+      "MIA",
+      "NO"
+    ],
+    "archive_teams_verified": true,
+    "rows": 42,
+    "usable": true
+  },
+  {
+    "game_id": "401898394",
+    "kickoff": "2026-10-09T00:00Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261008&limit=100",
+    "retrieved_at": "2026-11-14T16:53:36.072095+00:00",
+    "teams": [
+      "SA",
+      "ATL"
+    ],
+    "archive_teams_verified": true,
+    "rows": 38,
+    "usable": true
+  },
+  {
+    "game_id": "401898395",
+    "kickoff": "2026-10-09T12:00Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261009&limit=100",
+    "retrieved_at": "2026-11-14T16:53:35.907655+00:00",
+    "teams": [
+      "DAL",
+      "HOU"
+    ],
+    "archive_teams_verified": true,
+    "rows": 38,
+    "usable": true
+  },
+  {
+    "game_id": "401898396",
+    "kickoff": "2026-10-10T23:00Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261010&limit=100",
+    "retrieved_at": "2026-11-14T16:53:35.979877+00:00",
+    "teams": [
+      "IND",
+      "ATL"
+    ],
+    "archive_teams_verified": true,
+    "rows": 32,
+    "usable": true
+  },
+  {
+    "game_id": "401898397",
+    "kickoff": "2026-10-11T00:00Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261010&limit=100",
+    "retrieved_at": "2026-11-14T16:53:35.979885+00:00",
+    "teams": [
+      "MIA",
+      "MIN"
+    ],
+    "archive_teams_verified": true,
+    "rows": 32,
+    "usable": true
+  },
+  {
+    "game_id": "401898398",
+    "kickoff": "2026-10-11T00:00Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261010&limit=100",
+    "retrieved_at": "2026-11-14T16:53:35.979888+00:00",
+    "teams": [
+      "BOS",
+      "PHI"
+    ],
+    "archive_teams_verified": true,
+    "rows": 42,
+    "usable": true
+  },
+  {
+    "game_id": "401898399",
+    "kickoff": "2026-10-11T00:30Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261010&limit=100",
+    "retrieved_at": "2026-11-14T16:53:35.979891+00:00",
+    "teams": [
+      "GS",
+      "SAC"
+    ],
+    "archive_teams_verified": true,
+    "rows": 34,
+    "usable": true
+  },
+  {
+    "game_id": "401898400",
+    "kickoff": "2026-10-11T10:00Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261011&limit=100",
+    "retrieved_at": "2026-11-14T16:53:40.323146+00:00",
+    "teams": [
+      "HOU",
+      "DAL"
+    ],
+    "archive_teams_verified": true,
+    "rows": 38,
+    "usable": true
+  },
+  {
+    "game_id": "401898401",
+    "kickoff": "2026-10-11T22:30Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261011&limit=100",
+    "retrieved_at": "2026-11-14T16:53:40.323167+00:00",
+    "teams": [
+      "CLE",
+      "ORL"
+    ],
+    "archive_teams_verified": true,
+    "rows": 41,
+    "usable": true
+  },
+  {
+    "game_id": "401898402",
+    "kickoff": "2026-10-12T23:00Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261012&limit=100",
+    "retrieved_at": "2026-11-14T16:53:40.359931+00:00",
+    "teams": [
+      "ATL",
+      "OKC"
+    ],
+    "archive_teams_verified": true,
+    "rows": 21,
+    "usable": true
+  },
+  {
+    "game_id": "401898403",
+    "kickoff": "2026-10-13T23:00Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261013&limit=100",
+    "retrieved_at": "2026-11-14T16:53:40.284031+00:00",
+    "teams": [
+      "ORL",
+      "CLE"
+    ],
+    "archive_teams_verified": true,
+    "rows": 42,
+    "usable": true
+  },
+  {
+    "game_id": "401898404",
+    "kickoff": "2026-10-14T23:30Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261014&limit=100",
+    "retrieved_at": "2026-11-14T16:53:40.325775+00:00",
+    "teams": [
+      "MIA",
+      "BKN"
+    ],
+    "archive_teams_verified": true,
+    "rows": 40,
+    "usable": true
+  },
+  {
+    "game_id": "401898405",
+    "kickoff": "2026-10-14T23:30Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261014&limit=100",
+    "retrieved_at": "2026-11-14T16:53:40.325795+00:00",
+    "teams": [
+      "BOS",
+      "CHA"
+    ],
+    "archive_teams_verified": true,
+    "rows": 37,
+    "usable": true
+  },
+  {
+    "game_id": "401898406",
+    "kickoff": "2026-10-16T23:00Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261016&limit=100",
+    "retrieved_at": "2026-11-14T16:53:52.190176+00:00",
+    "teams": [
+      "ORL",
+      "MIA"
+    ],
+    "archive_teams_verified": true,
+    "rows": 42,
+    "usable": true
+  },
+  {
+    "game_id": "401898408",
+    "kickoff": "2026-10-17T00:00Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261016&limit=100",
+    "retrieved_at": "2026-11-14T16:53:52.190197+00:00",
+    "teams": [
+      "DAL",
+      "ATL"
+    ],
+    "archive_teams_verified": true,
+    "rows": 36,
+    "usable": true
+  },
+  {
+    "game_id": "401898409",
+    "kickoff": "2026-10-17T02:00Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261016&limit=100",
+    "retrieved_at": "2026-11-14T16:53:52.190207+00:00",
+    "teams": [
+      "GS",
+      "POR"
+    ],
+    "archive_teams_verified": true,
+    "rows": 32,
+    "usable": true
+  },
+  {
+    "game_id": "401898717",
+    "kickoff": "2026-10-09T02:45Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261008&limit=100",
+    "retrieved_at": "2026-11-14T16:53:36.072097+00:00",
+    "teams": [
+      "LAL",
+      "SAC"
+    ],
+    "archive_teams_verified": true,
+    "rows": 30,
+    "usable": true
+  },
+  {
+    "game_id": "401898718",
+    "kickoff": "2026-10-14T02:00Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261013&limit=100",
+    "retrieved_at": "2026-11-14T16:53:40.284056+00:00",
+    "teams": [
+      "LAL",
+      "GS"
+    ],
+    "archive_teams_verified": true,
+    "rows": 34,
+    "usable": true
+  },
+  {
+    "game_id": "401898719",
+    "kickoff": "2026-10-17T02:30Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261016&limit=100",
+    "retrieved_at": "2026-11-14T16:53:52.190211+00:00",
+    "teams": [
+      "LAL",
+      "DEN"
+    ],
+    "archive_teams_verified": true,
+    "rows": 44,
+    "usable": true
+  },
+  {
+    "game_id": "401898720",
+    "kickoff": "2026-10-11T02:30Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261010&limit=100",
+    "retrieved_at": "2026-11-14T16:53:35.979893+00:00",
+    "teams": [
+      "PHX",
+      "SA"
+    ],
+    "archive_teams_verified": true,
+    "rows": 35,
+    "usable": true
+  },
+  {
+    "game_id": "401898721",
+    "kickoff": "2026-10-13T01:00Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261012&limit=100",
+    "retrieved_at": "2026-11-14T16:53:40.359939+00:00",
+    "teams": [
+      "UTAH",
+      "SA"
+    ],
+    "archive_teams_verified": true,
+    "rows": 42,
+    "usable": true
+  },
+  {
+    "game_id": "401898722",
+    "kickoff": "2026-10-15T00:00Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261014&limit=100",
+    "retrieved_at": "2026-11-14T16:53:40.325799+00:00",
+    "teams": [
+      "SA",
+      "PHX"
+    ],
+    "archive_teams_verified": true,
+    "rows": 37,
+    "usable": true
+  },
+  {
+    "game_id": "401898843",
+    "kickoff": "2026-10-17T00:00Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261016&limit=100",
+    "retrieved_at": "2026-11-14T16:53:52.190199+00:00",
+    "teams": [
+      "SA",
+      "SAC"
+    ],
+    "archive_teams_verified": true,
+    "rows": 39,
+    "usable": true
+  },
+  {
+    "game_id": "401901820",
+    "kickoff": "2026-10-06T23:00Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261006&limit=100",
+    "retrieved_at": "2026-11-14T16:53:31.719706+00:00",
+    "teams": [
+      "CHA",
+      "BKN"
+    ],
+    "archive_teams_verified": true,
+    "rows": 33,
+    "usable": true
+  },
+  {
+    "game_id": "401901821",
+    "kickoff": "2026-10-11T23:00Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261011&limit=100",
+    "retrieved_at": "2026-11-14T16:53:40.323173+00:00",
+    "teams": [
+      "CHA",
+      "MIL"
+    ],
+    "archive_teams_verified": true,
+    "rows": 33,
+    "usable": true
+  },
+  {
+    "game_id": "401901824",
+    "kickoff": "2026-10-12T23:00Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261012&limit=100",
+    "retrieved_at": "2026-11-14T16:53:40.359934+00:00",
+    "teams": [
+      "WSH",
+      "BKN"
+    ],
+    "archive_teams_verified": true,
+    "rows": 38,
+    "usable": true
+  },
+  {
+    "game_id": "401901825",
+    "kickoff": "2026-10-15T00:00Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261014&limit=100",
+    "retrieved_at": "2026-11-14T16:53:40.325801+00:00",
+    "teams": [
+      "DAL",
+      "NO"
+    ],
+    "archive_teams_verified": true,
+    "rows": 33,
+    "usable": true
+  },
+  {
+    "game_id": "401901826",
+    "kickoff": "2026-10-14T02:00Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261013&limit=100",
+    "retrieved_at": "2026-11-14T16:53:40.284058+00:00",
+    "teams": [
+      "SAC",
+      "POR"
+    ],
+    "archive_teams_verified": true,
+    "rows": 31,
+    "usable": true
+  },
+  {
+    "game_id": "401902644",
+    "kickoff": "2026-10-03T23:00Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261003&limit=100",
+    "retrieved_at": "2026-11-14T16:53:31.759327+00:00",
+    "teams": [
+      "TOR",
+      "MIA"
+    ],
+    "archive_teams_verified": true,
+    "rows": 31,
+    "usable": true
+  },
+  {
+    "game_id": "401902645",
+    "kickoff": "2026-10-10T22:30Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261010&limit=100",
+    "retrieved_at": "2026-11-14T16:53:35.979855+00:00",
+    "teams": [
+      "TOR",
+      "LAC"
+    ],
+    "archive_teams_verified": true,
+    "rows": 32,
+    "usable": true
+  },
+  {
+    "game_id": "401906508",
+    "kickoff": "2026-10-08T23:30Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261008&limit=100",
+    "retrieved_at": "2026-11-14T16:53:36.072093+00:00",
+    "teams": [
+      "NY",
+      "WSH"
+    ],
+    "archive_teams_verified": true,
+    "rows": 42,
+    "usable": true
+  },
+  {
+    "game_id": "401906509",
+    "kickoff": "2026-10-17T00:00Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261016&limit=100",
+    "retrieved_at": "2026-11-14T16:53:52.190203+00:00",
+    "teams": [
+      "NO",
+      "WSH"
+    ],
+    "archive_teams_verified": true,
+    "rows": 43,
+    "usable": true
+  },
+  {
+    "game_id": "401908620",
+    "kickoff": "2026-10-08T00:00Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261007&limit=100",
+    "retrieved_at": "2026-11-14T16:53:35.988489+00:00",
+    "teams": [
+      "OKC",
+      "MIL"
+    ],
+    "archive_teams_verified": true,
+    "rows": 34,
+    "usable": true
+  },
+  {
+    "game_id": "401908622",
+    "kickoff": "2026-10-16T00:30Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261015&limit=100",
+    "retrieved_at": "2026-11-14T16:53:52.187884+00:00",
+    "teams": [
+      "HOU",
+      "OKC"
+    ],
+    "archive_teams_verified": true,
+    "rows": 33,
+    "usable": true
+  },
+  {
+    "game_id": "401908939",
+    "kickoff": "2026-10-08T00:00Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261007&limit=100",
+    "retrieved_at": "2026-11-14T16:53:35.988491+00:00",
+    "teams": [
+      "CHI",
+      "PHX"
+    ],
+    "archive_teams_verified": true,
+    "rows": 43,
+    "usable": true
+  },
+  {
+    "game_id": "401908940",
+    "kickoff": "2026-10-10T00:00Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261009&limit=100",
+    "retrieved_at": "2026-11-14T16:53:35.907726+00:00",
+    "teams": [
+      "CHI",
+      "MEM"
+    ],
+    "archive_teams_verified": true,
+    "rows": 41,
+    "usable": true
+  },
+  {
+    "game_id": "401908941",
+    "kickoff": "2026-10-12T01:00Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261011&limit=100",
+    "retrieved_at": "2026-11-14T16:53:40.323177+00:00",
+    "teams": [
+      "DEN",
+      "CHI"
+    ],
+    "archive_teams_verified": true,
+    "rows": 42,
+    "usable": true
+  },
+  {
+    "game_id": "401908942",
+    "kickoff": "2026-10-15T00:00Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261014&limit=100",
+    "retrieved_at": "2026-11-14T16:53:40.325806+00:00",
+    "teams": [
+      "MIL",
+      "CHI"
+    ],
+    "archive_teams_verified": true,
+    "rows": 42,
+    "usable": true
+  },
+  {
+    "game_id": "401908943",
+    "kickoff": "2026-10-17T00:00Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261016&limit=100",
+    "retrieved_at": "2026-11-14T16:53:52.190205+00:00",
+    "teams": [
+      "CHI",
+      "MIN"
+    ],
+    "archive_teams_verified": true,
+    "rows": 43,
+    "usable": true
+  },
+  {
+    "game_id": "401908944",
+    "kickoff": "2026-10-13T23:00Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261013&limit=100",
+    "retrieved_at": "2026-11-14T16:53:40.284049+00:00",
+    "teams": [
+      "TOR",
+      "NY"
+    ],
+    "archive_teams_verified": true,
+    "rows": 36,
+    "usable": true
+  },
+  {
+    "game_id": "401908945",
+    "kickoff": "2026-10-15T23:30Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261015&limit=100",
+    "retrieved_at": "2026-11-14T16:53:52.187859+00:00",
+    "teams": [
+      "NY",
+      "TOR"
+    ],
+    "archive_teams_verified": true,
+    "rows": 39,
+    "usable": true
+  },
+  {
+    "game_id": "401908946",
+    "kickoff": "2026-10-16T23:00Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261016&limit=100",
+    "retrieved_at": "2026-11-14T16:53:52.190192+00:00",
+    "teams": [
+      "DET",
+      "TOR"
+    ],
+    "archive_teams_verified": true,
+    "rows": 37,
+    "usable": true
+  },
+  {
+    "game_id": "401908947",
+    "kickoff": "2026-10-05T23:00Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261005&limit=100",
+    "retrieved_at": "2026-11-14T16:53:31.775868+00:00",
+    "teams": [
+      "DET",
+      "PHX"
+    ],
+    "archive_teams_verified": true,
+    "rows": 41,
+    "usable": true
+  },
+  {
+    "game_id": "401908948",
+    "kickoff": "2026-10-17T02:00Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261016&limit=100",
+    "retrieved_at": "2026-11-14T16:53:52.190209+00:00",
+    "teams": [
+      "PHX",
+      "UTAH"
+    ],
+    "archive_teams_verified": true,
+    "rows": 36,
+    "usable": true
+  },
+  {
+    "game_id": "401909088",
+    "kickoff": "2026-10-20T19:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261020&limit=100",
+    "retrieved_at": "2026-11-14T16:53:52.145296+00:00",
+    "teams": [
+      "DET",
+      "BOS"
+    ],
+    "archive_teams_verified": true,
+    "rows": 28,
+    "usable": true
+  },
+  {
+    "game_id": "401909089",
+    "kickoff": "2026-10-20T23:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261020&limit=100",
+    "retrieved_at": "2026-11-14T16:53:52.145315+00:00",
+    "teams": [
+      "NY",
+      "PHI"
+    ],
+    "archive_teams_verified": true,
+    "rows": 28,
+    "usable": true
+  },
+  {
+    "game_id": "401909090",
+    "kickoff": "2026-10-21T01:50Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261020&limit=100",
+    "retrieved_at": "2026-11-14T16:53:52.145318+00:00",
+    "teams": [
+      "SA",
+      "OKC"
+    ],
+    "archive_teams_verified": true,
+    "rows": 28,
+    "usable": true
+  },
+  {
+    "game_id": "401909091",
+    "kickoff": "2026-10-21T23:30Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261021&limit=100",
+    "retrieved_at": "2026-11-14T16:53:51.994322+00:00",
+    "teams": [
+      "MIA",
+      "MIN"
+    ],
+    "archive_teams_verified": true,
+    "rows": 27,
+    "usable": true
+  },
+  {
+    "game_id": "401909093",
+    "kickoff": "2026-10-22T23:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261022&limit=100",
+    "retrieved_at": "2026-11-14T16:53:56.499963+00:00",
+    "teams": [
+      "PHI",
+      "CLE"
+    ],
+    "archive_teams_verified": true,
+    "rows": 28,
+    "usable": true
+  },
+  {
+    "game_id": "401909094",
+    "kickoff": "2026-10-23T01:30Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261022&limit=100",
+    "retrieved_at": "2026-11-14T16:53:56.499982+00:00",
+    "teams": [
+      "OKC",
+      "DEN"
+    ],
+    "archive_teams_verified": true,
+    "rows": 27,
+    "usable": true
+  },
+  {
+    "game_id": "401909095",
+    "kickoff": "2026-10-23T23:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261023&limit=100",
+    "retrieved_at": "2026-11-14T16:53:56.582923+00:00",
+    "teams": [
+      "BOS",
+      "NY"
+    ],
+    "archive_teams_verified": true,
+    "rows": 27,
+    "usable": true
+  },
+  {
+    "game_id": "401909096",
+    "kickoff": "2026-10-24T01:30Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261023&limit=100",
+    "retrieved_at": "2026-11-14T16:53:56.582937+00:00",
+    "teams": [
+      "SA",
+      "HOU"
+    ],
+    "archive_teams_verified": true,
+    "rows": 25,
+    "usable": true
+  },
+  {
+    "game_id": "401909277",
+    "kickoff": "2026-10-30T23:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261030&limit=100",
+    "retrieved_at": "2026-11-14T16:54:04.158254+00:00",
+    "teams": [
+      "WSH",
+      "CHA"
+    ],
+    "archive_teams_verified": true,
+    "rows": 26,
+    "usable": true
+  },
+  {
+    "game_id": "401909278",
+    "kickoff": "2026-10-30T23:30Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261030&limit=100",
+    "retrieved_at": "2026-11-14T16:54:04.158267+00:00",
+    "teams": [
+      "BOS",
+      "CHI"
+    ],
+    "archive_teams_verified": true,
+    "rows": 29,
+    "usable": true
+  },
+  {
+    "game_id": "401909279",
+    "kickoff": "2026-10-30T23:30Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261030&limit=100",
+    "retrieved_at": "2026-11-14T16:54:04.158270+00:00",
+    "teams": [
+      "BKN",
+      "DET"
+    ],
+    "archive_teams_verified": true,
+    "rows": 28,
+    "usable": true
+  },
+  {
+    "game_id": "401909280",
+    "kickoff": "2026-10-30T23:30Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261030&limit=100",
+    "retrieved_at": "2026-11-14T16:54:04.158273+00:00",
+    "teams": [
+      "PHI",
+      "NY"
+    ],
+    "archive_teams_verified": true,
+    "rows": 28,
+    "usable": true
+  },
+  {
+    "game_id": "401909281",
+    "kickoff": "2026-10-30T23:30Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261030&limit=100",
+    "retrieved_at": "2026-11-14T16:54:04.158275+00:00",
+    "teams": [
+      "TOR",
+      "ORL"
+    ],
+    "archive_teams_verified": true,
+    "rows": 25,
+    "usable": true
+  },
+  {
+    "game_id": "401909282",
+    "kickoff": "2026-10-31T00:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261030&limit=100",
+    "retrieved_at": "2026-11-14T16:54:04.158278+00:00",
+    "teams": [
+      "MIA",
+      "IND"
+    ],
+    "archive_teams_verified": true,
+    "rows": 27,
+    "usable": true
+  },
+  {
+    "game_id": "401909283",
+    "kickoff": "2026-10-31T00:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261030&limit=100",
+    "retrieved_at": "2026-11-14T16:54:04.158280+00:00",
+    "teams": [
+      "DAL",
+      "HOU"
+    ],
+    "archive_teams_verified": true,
+    "rows": 28,
+    "usable": true
+  },
+  {
+    "game_id": "401909284",
+    "kickoff": "2026-10-31T00:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261030&limit=100",
+    "retrieved_at": "2026-11-14T16:54:04.158282+00:00",
+    "teams": [
+      "MIN",
+      "LAC"
+    ],
+    "archive_teams_verified": true,
+    "rows": 27,
+    "usable": true
+  },
+  {
+    "game_id": "401909285",
+    "kickoff": "2026-10-31T02:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261030&limit=100",
+    "retrieved_at": "2026-11-14T16:54:04.158284+00:00",
+    "teams": [
+      "GS",
+      "LAL"
+    ],
+    "archive_teams_verified": true,
+    "rows": 28,
+    "usable": true
+  },
+  {
+    "game_id": "401909286",
+    "kickoff": "2026-10-31T02:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261030&limit=100",
+    "retrieved_at": "2026-11-14T16:54:04.158286+00:00",
+    "teams": [
+      "PHX",
+      "DEN"
+    ],
+    "archive_teams_verified": true,
+    "rows": 27,
+    "usable": true
+  },
+  {
+    "game_id": "401909287",
+    "kickoff": "2026-11-07T00:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261106&limit=100",
+    "retrieved_at": "2026-11-14T16:54:07.509071+00:00",
+    "teams": [
+      "ATL",
+      "WSH"
+    ],
+    "archive_teams_verified": true,
+    "rows": 24,
+    "usable": true
+  },
+  {
+    "game_id": "401909288",
+    "kickoff": "2026-11-07T00:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261106&limit=100",
+    "retrieved_at": "2026-11-14T16:54:07.509088+00:00",
+    "teams": [
+      "CHA",
+      "BOS"
+    ],
+    "archive_teams_verified": true,
+    "rows": 25,
+    "usable": true
+  },
+  {
+    "game_id": "401909289",
+    "kickoff": "2026-11-07T00:30Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261106&limit=100",
+    "retrieved_at": "2026-11-14T16:54:07.509092+00:00",
+    "teams": [
+      "CLE",
+      "PHI"
+    ],
+    "archive_teams_verified": true,
+    "rows": 24,
+    "usable": true
+  },
+  {
+    "game_id": "401909290",
+    "kickoff": "2026-11-07T01:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261106&limit=100",
+    "retrieved_at": "2026-11-14T16:54:07.509094+00:00",
+    "teams": [
+      "DAL",
+      "UTAH"
+    ],
+    "archive_teams_verified": true,
+    "rows": 29,
+    "usable": true
+  },
+  {
+    "game_id": "401909291",
+    "kickoff": "2026-11-07T01:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261106&limit=100",
+    "retrieved_at": "2026-11-14T16:54:07.509096+00:00",
+    "teams": [
+      "MEM",
+      "OKC"
+    ],
+    "archive_teams_verified": true,
+    "rows": 27,
+    "usable": true
+  },
+  {
+    "game_id": "401909292",
+    "kickoff": "2026-11-07T01:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261106&limit=100",
+    "retrieved_at": "2026-11-14T16:54:07.509099+00:00",
+    "teams": [
+      "MIL",
+      "TOR"
+    ],
+    "archive_teams_verified": true,
+    "rows": 26,
+    "usable": true
+  },
+  {
+    "game_id": "401909294",
+    "kickoff": "2026-11-07T03:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261106&limit=100",
+    "retrieved_at": "2026-11-14T16:54:07.509103+00:00",
+    "teams": [
+      "LAL",
+      "POR"
+    ],
+    "archive_teams_verified": true,
+    "rows": 27,
+    "usable": true
+  },
+  {
+    "game_id": "401909295",
+    "kickoff": "2026-11-07T03:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261106&limit=100",
+    "retrieved_at": "2026-11-14T16:54:07.509105+00:00",
+    "teams": [
+      "SAC",
+      "SA"
+    ],
+    "archive_teams_verified": true,
+    "rows": 25,
+    "usable": true
+  },
+  {
+    "game_id": "401909834",
+    "kickoff": "2026-10-21T23:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261021&limit=100",
+    "retrieved_at": "2026-11-14T16:53:51.994299+00:00",
+    "teams": [
+      "ORL",
+      "ATL"
+    ],
+    "archive_teams_verified": true,
+    "rows": 26,
+    "usable": true
+  },
+  {
+    "game_id": "401909835",
+    "kickoff": "2026-10-21T23:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261021&limit=100",
+    "retrieved_at": "2026-11-14T16:53:51.994318+00:00",
+    "teams": [
+      "WSH",
+      "MIL"
+    ],
+    "archive_teams_verified": true,
+    "rows": 30,
+    "usable": true
+  },
+  {
+    "game_id": "401909836",
+    "kickoff": "2026-10-21T23:30Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261021&limit=100",
+    "retrieved_at": "2026-11-14T16:53:51.994324+00:00",
+    "teams": [
+      "BKN",
+      "CHA"
+    ],
+    "archive_teams_verified": true,
+    "rows": 28,
+    "usable": true
+  },
+  {
+    "game_id": "401909837",
+    "kickoff": "2026-10-21T23:30Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261021&limit=100",
+    "retrieved_at": "2026-11-14T16:53:51.994327+00:00",
+    "teams": [
+      "TOR",
+      "CHI"
+    ],
+    "archive_teams_verified": true,
+    "rows": 28,
+    "usable": true
+  },
+  {
+    "game_id": "401909838",
+    "kickoff": "2026-10-22T00:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261021&limit=100",
+    "retrieved_at": "2026-11-14T16:53:51.994329+00:00",
+    "teams": [
+      "MEM",
+      "UTAH"
+    ],
+    "archive_teams_verified": true,
+    "rows": 29,
+    "usable": true
+  },
+  {
+    "game_id": "401909839",
+    "kickoff": "2026-10-22T00:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261021&limit=100",
+    "retrieved_at": "2026-11-14T16:53:51.994331+00:00",
+    "teams": [
+      "NO",
+      "IND"
+    ],
+    "archive_teams_verified": true,
+    "rows": 28,
+    "usable": true
+  },
+  {
+    "game_id": "401909840",
+    "kickoff": "2026-10-22T00:30Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261021&limit=100",
+    "retrieved_at": "2026-11-14T16:53:51.994333+00:00",
+    "teams": [
+      "HOU",
+      "DAL"
+    ],
+    "archive_teams_verified": true,
+    "rows": 27,
+    "usable": true
+  },
+  {
+    "game_id": "401909842",
+    "kickoff": "2026-10-22T02:30Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261021&limit=100",
+    "retrieved_at": "2026-11-14T16:53:51.994340+00:00",
+    "teams": [
+      "LAC",
+      "SAC"
+    ],
+    "archive_teams_verified": true,
+    "rows": 25,
+    "usable": true
+  },
+  {
+    "game_id": "401909843",
+    "kickoff": "2026-10-23T23:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261023&limit=100",
+    "retrieved_at": "2026-11-14T16:53:56.582926+00:00",
+    "teams": [
+      "CHA",
+      "ATL"
+    ],
+    "archive_teams_verified": true,
+    "rows": 27,
+    "usable": true
+  },
+  {
+    "game_id": "401909844",
+    "kickoff": "2026-10-23T23:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261023&limit=100",
+    "retrieved_at": "2026-11-14T16:53:56.582929+00:00",
+    "teams": [
+      "IND",
+      "DAL"
+    ],
+    "archive_teams_verified": true,
+    "rows": 26,
+    "usable": true
+  },
+  {
+    "game_id": "401909845",
+    "kickoff": "2026-10-23T23:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261023&limit=100",
+    "retrieved_at": "2026-11-14T16:53:56.582931+00:00",
+    "teams": [
+      "ORL",
+      "MIN"
+    ],
+    "archive_teams_verified": true,
+    "rows": 26,
+    "usable": true
+  },
+  {
+    "game_id": "401909846",
+    "kickoff": "2026-10-23T23:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261023&limit=100",
+    "retrieved_at": "2026-11-14T16:53:56.582933+00:00",
+    "teams": [
+      "WSH",
+      "TOR"
+    ],
+    "archive_teams_verified": true,
+    "rows": 29,
+    "usable": true
+  },
+  {
+    "game_id": "401909847",
+    "kickoff": "2026-10-24T00:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261023&limit=100",
+    "retrieved_at": "2026-11-14T16:53:56.582935+00:00",
+    "teams": [
+      "MIA",
+      "DET"
+    ],
+    "archive_teams_verified": true,
+    "rows": 29,
+    "usable": true
+  },
+  {
+    "game_id": "401909848",
+    "kickoff": "2026-10-23T20:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261023&limit=100",
+    "retrieved_at": "2026-11-14T16:53:56.582902+00:00",
+    "teams": [
+      "MIL",
+      "CHI"
+    ],
+    "archive_teams_verified": true,
+    "rows": 31,
+    "usable": true
+  },
+  {
+    "game_id": "401909849",
+    "kickoff": "2026-10-24T01:30Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261023&limit=100",
+    "retrieved_at": "2026-11-14T16:53:56.582940+00:00",
+    "teams": [
+      "UTAH",
+      "NO"
+    ],
+    "archive_teams_verified": true,
+    "rows": 30,
+    "usable": true
+  },
+  {
+    "game_id": "401909850",
+    "kickoff": "2026-10-24T02:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261023&limit=100",
+    "retrieved_at": "2026-11-14T16:53:56.582942+00:00",
+    "teams": [
+      "GS",
+      "MEM"
+    ],
+    "archive_teams_verified": true,
+    "rows": 31,
+    "usable": true
+  },
+  {
+    "game_id": "401909851",
+    "kickoff": "2026-10-24T02:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261023&limit=100",
+    "retrieved_at": "2026-11-14T16:53:56.582945+00:00",
+    "teams": [
+      "LAL",
+      "LAC"
+    ],
+    "archive_teams_verified": true,
+    "rows": 28,
+    "usable": true
+  },
+  {
+    "game_id": "401909852",
+    "kickoff": "2026-10-24T02:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261023&limit=100",
+    "retrieved_at": "2026-11-14T16:53:56.582947+00:00",
+    "teams": [
+      "SAC",
+      "POR"
+    ],
+    "archive_teams_verified": true,
+    "rows": 26,
+    "usable": true
+  },
+  {
+    "game_id": "401909853",
+    "kickoff": "2026-10-24T22:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261024&limit=100",
+    "retrieved_at": "2026-11-14T16:53:56.517045+00:00",
+    "teams": [
+      "CHA",
+      "MIA"
+    ],
+    "archive_teams_verified": true,
+    "rows": 27,
+    "usable": true
+  },
+  {
+    "game_id": "401909854",
+    "kickoff": "2026-10-24T23:30Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261024&limit=100",
+    "retrieved_at": "2026-11-14T16:53:56.517059+00:00",
+    "teams": [
+      "CLE",
+      "BKN"
+    ],
+    "archive_teams_verified": true,
+    "rows": 29,
+    "usable": true
+  },
+  {
+    "game_id": "401909855",
+    "kickoff": "2026-10-24T23:30Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261024&limit=100",
+    "retrieved_at": "2026-11-14T16:53:56.517062+00:00",
+    "teams": [
+      "PHI",
+      "MIL"
+    ],
+    "archive_teams_verified": true,
+    "rows": 28,
+    "usable": true
+  },
+  {
+    "game_id": "401909856",
+    "kickoff": "2026-10-25T00:30Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261024&limit=100",
+    "retrieved_at": "2026-11-14T16:53:56.517068+00:00",
+    "teams": [
+      "ATL",
+      "HOU"
+    ],
+    "archive_teams_verified": true,
+    "rows": 26,
+    "usable": true
+  },
+  {
+    "game_id": "401909857",
+    "kickoff": "2026-10-25T00:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261024&limit=100",
+    "retrieved_at": "2026-11-14T16:53:56.517064+00:00",
+    "teams": [
+      "CHI",
+      "WSH"
+    ],
+    "archive_teams_verified": true,
+    "rows": 29,
+    "usable": true
+  },
+  {
+    "game_id": "401909858",
+    "kickoff": "2026-10-25T00:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261024&limit=100",
+    "retrieved_at": "2026-11-14T16:53:56.517066+00:00",
+    "teams": [
+      "DAL",
+      "SA"
+    ],
+    "archive_teams_verified": true,
+    "rows": 25,
+    "usable": true
+  },
+  {
+    "game_id": "401909860",
+    "kickoff": "2026-10-25T02:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261024&limit=100",
+    "retrieved_at": "2026-11-14T16:53:56.517073+00:00",
+    "teams": [
+      "PHX",
+      "GS"
+    ],
+    "archive_teams_verified": true,
+    "rows": 27,
+    "usable": true
+  },
+  {
+    "game_id": "401909861",
+    "kickoff": "2026-10-25T21:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261025&limit=100",
+    "retrieved_at": "2026-11-14T16:53:56.502383+00:00",
+    "teams": [
+      "UTAH",
+      "LAL"
+    ],
+    "archive_teams_verified": true,
+    "rows": 31,
+    "usable": true
+  },
+  {
+    "game_id": "401909862",
+    "kickoff": "2026-10-25T22:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261025&limit=100",
+    "retrieved_at": "2026-11-14T16:53:56.502403+00:00",
+    "teams": [
+      "BKN",
+      "IND"
+    ],
+    "archive_teams_verified": true,
+    "rows": 27,
+    "usable": true
+  },
+  {
+    "game_id": "401909863",
+    "kickoff": "2026-10-25T23:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261025&limit=100",
+    "retrieved_at": "2026-11-14T16:53:56.502406+00:00",
+    "teams": [
+      "NY",
+      "ORL"
+    ],
+    "archive_teams_verified": true,
+    "rows": 28,
+    "usable": true
+  },
+  {
+    "game_id": "401909864",
+    "kickoff": "2026-10-25T23:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261025&limit=100",
+    "retrieved_at": "2026-11-14T16:53:56.502410+00:00",
+    "teams": [
+      "MIN",
+      "TOR"
+    ],
+    "archive_teams_verified": true,
+    "rows": 28,
+    "usable": true
+  },
+  {
+    "game_id": "401909865",
+    "kickoff": "2026-10-25T23:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261025&limit=100",
+    "retrieved_at": "2026-11-14T16:53:56.502412+00:00",
+    "teams": [
+      "OKC",
+      "LAC"
+    ],
+    "archive_teams_verified": true,
+    "rows": 28,
+    "usable": true
+  },
+  {
+    "game_id": "401909866",
+    "kickoff": "2026-10-25T23:30Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261025&limit=100",
+    "retrieved_at": "2026-11-14T16:53:56.502415+00:00",
+    "teams": [
+      "PHI",
+      "DET"
+    ],
+    "archive_teams_verified": true,
+    "rows": 27,
+    "usable": true
+  },
+  {
+    "game_id": "401909867",
+    "kickoff": "2026-10-26T01:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261025&limit=100",
+    "retrieved_at": "2026-11-14T16:53:56.502417+00:00",
+    "teams": [
+      "SAC",
+      "MEM"
+    ],
+    "archive_teams_verified": true,
+    "rows": 27,
+    "usable": true
+  },
+  {
+    "game_id": "401909868",
+    "kickoff": "2026-10-26T23:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261026&limit=100",
+    "retrieved_at": "2026-11-14T16:54:01.164811+00:00",
+    "teams": [
+      "CHA",
+      "WSH"
+    ],
+    "archive_teams_verified": true,
+    "rows": 27,
+    "usable": true
+  },
+  {
+    "game_id": "401909870",
+    "kickoff": "2026-10-26T23:30Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261026&limit=100",
+    "retrieved_at": "2026-11-14T16:54:01.164835+00:00",
+    "teams": [
+      "BOS",
+      "CHI"
+    ],
+    "archive_teams_verified": true,
+    "rows": 29,
+    "usable": true
+  },
+  {
+    "game_id": "401909872",
+    "kickoff": "2026-10-27T00:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261026&limit=100",
+    "retrieved_at": "2026-11-14T16:54:01.164840+00:00",
+    "teams": [
+      "MIL",
+      "IND"
+    ],
+    "archive_teams_verified": true,
+    "rows": 30,
+    "usable": true
+  },
+  {
+    "game_id": "401909874",
+    "kickoff": "2026-10-27T00:30Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261026&limit=100",
+    "retrieved_at": "2026-11-14T16:54:01.164845+00:00",
+    "teams": [
+      "HOU",
+      "ATL"
+    ],
+    "archive_teams_verified": true,
+    "rows": 26,
+    "usable": true
+  },
+  {
+    "game_id": "401909875",
+    "kickoff": "2026-10-27T01:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261026&limit=100",
+    "retrieved_at": "2026-11-14T16:54:01.164847+00:00",
+    "teams": [
+      "UTAH",
+      "MEM"
+    ],
+    "archive_teams_verified": true,
+    "rows": 29,
+    "usable": true
+  },
+  {
+    "game_id": "401909876",
+    "kickoff": "2026-10-27T02:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261026&limit=100",
+    "retrieved_at": "2026-11-14T16:54:01.164850+00:00",
+    "teams": [
+      "DEN",
+      "GS"
+    ],
+    "archive_teams_verified": true,
+    "rows": 28,
+    "usable": true
+  },
+  {
+    "game_id": "401909878",
+    "kickoff": "2026-10-28T00:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261027&limit=100",
+    "retrieved_at": "2026-11-14T16:54:00.856269+00:00",
+    "teams": [
+      "NY",
+      "DET"
+    ],
+    "archive_teams_verified": true,
+    "rows": 30,
+    "usable": true
+  },
+  {
+    "game_id": "401909879",
+    "kickoff": "2026-10-28T00:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261027&limit=100",
+    "retrieved_at": "2026-11-14T16:54:00.856273+00:00",
+    "teams": [
+      "SA",
+      "SAC"
+    ],
+    "archive_teams_verified": true,
+    "rows": 25,
+    "usable": true
+  },
+  {
+    "game_id": "401909881",
+    "kickoff": "2026-10-28T23:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261028&limit=100",
+    "retrieved_at": "2026-11-14T16:54:00.916982+00:00",
+    "teams": [
+      "ATL",
+      "MIA"
+    ],
+    "archive_teams_verified": true,
+    "rows": 27,
+    "usable": true
+  },
+  {
+    "game_id": "401909882",
+    "kickoff": "2026-10-28T23:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261028&limit=100",
+    "retrieved_at": "2026-11-14T16:54:00.917003+00:00",
+    "teams": [
+      "CLE",
+      "WSH"
+    ],
+    "archive_teams_verified": true,
+    "rows": 27,
+    "usable": true
+  },
+  {
+    "game_id": "401909883",
+    "kickoff": "2026-10-28T23:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261028&limit=100",
+    "retrieved_at": "2026-11-14T16:54:00.917007+00:00",
+    "teams": [
+      "DET",
+      "CHA"
+    ],
+    "archive_teams_verified": true,
+    "rows": 28,
+    "usable": true
+  },
+  {
+    "game_id": "401909884",
+    "kickoff": "2026-10-28T23:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261028&limit=100",
+    "retrieved_at": "2026-11-14T16:54:00.917010+00:00",
+    "teams": [
+      "IND",
+      "PHI"
+    ],
+    "archive_teams_verified": true,
+    "rows": 25,
+    "usable": true
+  },
+  {
+    "game_id": "401909885",
+    "kickoff": "2026-10-28T23:30Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261028&limit=100",
+    "retrieved_at": "2026-11-14T16:54:00.917012+00:00",
+    "teams": [
+      "TOR",
+      "ORL"
+    ],
+    "archive_teams_verified": true,
+    "rows": 25,
+    "usable": true
+  },
+  {
+    "game_id": "401909886",
+    "kickoff": "2026-10-29T00:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261028&limit=100",
+    "retrieved_at": "2026-11-14T16:54:00.917014+00:00",
+    "teams": [
+      "CHI",
+      "NY"
+    ],
+    "archive_teams_verified": true,
+    "rows": 29,
+    "usable": true
+  },
+  {
+    "game_id": "401909887",
+    "kickoff": "2026-10-29T00:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261028&limit=100",
+    "retrieved_at": "2026-11-14T16:54:00.917016+00:00",
+    "teams": [
+      "MIL",
+      "HOU"
+    ],
+    "archive_teams_verified": true,
+    "rows": 29,
+    "usable": true
+  },
+  {
+    "game_id": "401909888",
+    "kickoff": "2026-10-29T00:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261028&limit=100",
+    "retrieved_at": "2026-11-14T16:54:00.917018+00:00",
+    "teams": [
+      "MIN",
+      "GS"
+    ],
+    "archive_teams_verified": true,
+    "rows": 27,
+    "usable": true
+  },
+  {
+    "game_id": "401909889",
+    "kickoff": "2026-10-29T00:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261028&limit=100",
+    "retrieved_at": "2026-11-14T16:54:00.917020+00:00",
+    "teams": [
+      "NO",
+      "DEN"
+    ],
+    "archive_teams_verified": true,
+    "rows": 28,
+    "usable": true
+  },
+  {
+    "game_id": "401909891",
+    "kickoff": "2026-10-29T01:30Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261028&limit=100",
+    "retrieved_at": "2026-11-14T16:54:00.917025+00:00",
+    "teams": [
+      "DAL",
+      "OKC"
+    ],
+    "archive_teams_verified": true,
+    "rows": 24,
+    "usable": true
+  },
+  {
+    "game_id": "401909892",
+    "kickoff": "2026-10-29T02:30Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261028&limit=100",
+    "retrieved_at": "2026-11-14T16:54:00.917027+00:00",
+    "teams": [
+      "LAC",
+      "LAL"
+    ],
+    "archive_teams_verified": true,
+    "rows": 25,
+    "usable": true
+  },
+  {
+    "game_id": "401909893",
+    "kickoff": "2026-10-30T00:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261029&limit=100",
+    "retrieved_at": "2026-11-14T16:54:00.848332+00:00",
+    "teams": [
+      "ATL",
+      "CLE"
+    ],
+    "archive_teams_verified": true,
+    "rows": 26,
+    "usable": true
+  },
+  {
+    "game_id": "401909894",
+    "kickoff": "2026-10-30T00:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261029&limit=100",
+    "retrieved_at": "2026-11-14T16:54:00.848353+00:00",
+    "teams": [
+      "NO",
+      "SAC"
+    ],
+    "archive_teams_verified": true,
+    "rows": 25,
+    "usable": true
+  },
+  {
+    "game_id": "401909895",
+    "kickoff": "2026-10-30T02:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261029&limit=100",
+    "retrieved_at": "2026-11-14T16:54:00.848356+00:00",
+    "teams": [
+      "POR",
+      "MEM"
+    ],
+    "archive_teams_verified": true,
+    "rows": 28,
+    "usable": true
+  },
+  {
+    "game_id": "401909896",
+    "kickoff": "2026-10-31T19:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261031&limit=100",
+    "retrieved_at": "2026-11-14T16:54:04.378129+00:00",
+    "teams": [
+      "UTAH",
+      "POR"
+    ],
+    "archive_teams_verified": true,
+    "rows": 26,
+    "usable": true
+  },
+  {
+    "game_id": "401909897",
+    "kickoff": "2026-10-31T22:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261031&limit=100",
+    "retrieved_at": "2026-11-14T16:54:04.378151+00:00",
+    "teams": [
+      "CHA",
+      "PHI"
+    ],
+    "archive_teams_verified": true,
+    "rows": 26,
+    "usable": true
+  },
+  {
+    "game_id": "401909898",
+    "kickoff": "2026-10-31T23:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261031&limit=100",
+    "retrieved_at": "2026-11-14T16:54:04.378155+00:00",
+    "teams": [
+      "NO",
+      "ATL"
+    ],
+    "archive_teams_verified": true,
+    "rows": 25,
+    "usable": true
+  },
+  {
+    "game_id": "401909899",
+    "kickoff": "2026-11-01T00:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261031&limit=100",
+    "retrieved_at": "2026-11-14T16:54:04.378158+00:00",
+    "teams": [
+      "MEM",
+      "SAC"
+    ],
+    "archive_teams_verified": true,
+    "rows": 28,
+    "usable": true
+  },
+  {
+    "game_id": "401909900",
+    "kickoff": "2026-11-01T00:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261031&limit=100",
+    "retrieved_at": "2026-11-14T16:54:04.378161+00:00",
+    "teams": [
+      "MIL",
+      "CLE"
+    ],
+    "archive_teams_verified": true,
+    "rows": 28,
+    "usable": true
+  },
+  {
+    "game_id": "401909901",
+    "kickoff": "2026-11-01T00:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261031&limit=100",
+    "retrieved_at": "2026-11-14T16:54:04.378163+00:00",
+    "teams": [
+      "SA",
+      "MIN"
+    ],
+    "archive_teams_verified": true,
+    "rows": 25,
+    "usable": true
+  },
+  {
+    "game_id": "401909902",
+    "kickoff": "2026-11-01T00:30Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261031&limit=100",
+    "retrieved_at": "2026-11-14T16:54:04.378166+00:00",
+    "teams": [
+      "HOU",
+      "OKC"
+    ],
+    "archive_teams_verified": true,
+    "rows": 26,
+    "usable": true
+  },
+  {
+    "game_id": "401909903",
+    "kickoff": "2026-11-01T20:30Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261101&limit=100",
+    "retrieved_at": "2026-11-14T16:54:04.140350+00:00",
+    "teams": [
+      "ORL",
+      "BOS"
+    ],
+    "archive_teams_verified": true,
+    "rows": 26,
+    "usable": true
+  },
+  {
+    "game_id": "401909904",
+    "kickoff": "2026-11-01T22:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261101&limit=100",
+    "retrieved_at": "2026-11-14T16:54:04.140370+00:00",
+    "teams": [
+      "IND",
+      "BKN"
+    ],
+    "archive_teams_verified": true,
+    "rows": 25,
+    "usable": true
+  },
+  {
+    "game_id": "401909905",
+    "kickoff": "2026-11-02T01:30Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261101&limit=100",
+    "retrieved_at": "2026-11-14T16:54:04.140373+00:00",
+    "teams": [
+      "GS",
+      "LAC"
+    ],
+    "archive_teams_verified": true,
+    "rows": 27,
+    "usable": true
+  },
+  {
+    "game_id": "401909906",
+    "kickoff": "2026-11-02T02:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261101&limit=100",
+    "retrieved_at": "2026-11-14T16:54:04.140376+00:00",
+    "teams": [
+      "LAL",
+      "TOR"
+    ],
+    "archive_teams_verified": true,
+    "rows": 26,
+    "usable": true
+  },
+  {
+    "game_id": "401909907",
+    "kickoff": "2026-11-03T00:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261102&limit=100",
+    "retrieved_at": "2026-11-14T16:54:04.155351+00:00",
+    "teams": [
+      "CLE",
+      "OKC"
+    ],
+    "archive_teams_verified": true,
+    "rows": 23,
+    "usable": true
+  },
+  {
+    "game_id": "401909908",
+    "kickoff": "2026-11-03T00:30Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261102&limit=100",
+    "retrieved_at": "2026-11-14T16:54:04.155371+00:00",
+    "teams": [
+      "CHA",
+      "DET"
+    ],
+    "archive_teams_verified": true,
+    "rows": 27,
+    "usable": true
+  },
+  {
+    "game_id": "401909909",
+    "kickoff": "2026-11-03T00:30Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261102&limit=100",
+    "retrieved_at": "2026-11-14T16:54:04.155375+00:00",
+    "teams": [
+      "IND",
+      "ATL"
+    ],
+    "archive_teams_verified": true,
+    "rows": 24,
+    "usable": true
+  },
+  {
+    "game_id": "401909910",
+    "kickoff": "2026-11-03T00:30Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261102&limit=100",
+    "retrieved_at": "2026-11-14T16:54:04.155377+00:00",
+    "teams": [
+      "NY",
+      "BKN"
+    ],
+    "archive_teams_verified": true,
+    "rows": 27,
+    "usable": true
+  },
+  {
+    "game_id": "401909911",
+    "kickoff": "2026-11-03T00:30Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261102&limit=100",
+    "retrieved_at": "2026-11-14T16:54:04.155380+00:00",
+    "teams": [
+      "ORL",
+      "WSH"
+    ],
+    "archive_teams_verified": true,
+    "rows": 23,
+    "usable": true
+  },
+  {
+    "game_id": "401909912",
+    "kickoff": "2026-11-03T00:30Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261102&limit=100",
+    "retrieved_at": "2026-11-14T16:54:04.155382+00:00",
+    "teams": [
+      "PHI",
+      "CHI"
+    ],
+    "archive_teams_verified": true,
+    "rows": 28,
+    "usable": true
+  },
+  {
+    "game_id": "401909913",
+    "kickoff": "2026-11-03T01:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261102&limit=100",
+    "retrieved_at": "2026-11-14T16:54:04.155385+00:00",
+    "teams": [
+      "DAL",
+      "SAC"
+    ],
+    "archive_teams_verified": true,
+    "rows": 25,
+    "usable": true
+  },
+  {
+    "game_id": "401909915",
+    "kickoff": "2026-11-03T01:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261102&limit=100",
+    "retrieved_at": "2026-11-14T16:54:04.155389+00:00",
+    "teams": [
+      "MIN",
+      "MIL"
+    ],
+    "archive_teams_verified": true,
+    "rows": 28,
+    "usable": true
+  },
+  {
+    "game_id": "401909916",
+    "kickoff": "2026-11-03T01:30Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261102&limit=100",
+    "retrieved_at": "2026-11-14T16:54:04.155391+00:00",
+    "teams": [
+      "HOU",
+      "BOS"
+    ],
+    "archive_teams_verified": true,
+    "rows": 29,
+    "usable": true
+  },
+  {
+    "game_id": "401909917",
+    "kickoff": "2026-11-03T01:30Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261102&limit=100",
+    "retrieved_at": "2026-11-14T16:54:04.155394+00:00",
+    "teams": [
+      "SA",
+      "UTAH"
+    ],
+    "archive_teams_verified": true,
+    "rows": 26,
+    "usable": true
+  },
+  {
+    "game_id": "401909918",
+    "kickoff": "2026-11-03T02:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261102&limit=100",
+    "retrieved_at": "2026-11-14T16:54:04.155396+00:00",
+    "teams": [
+      "DEN",
+      "POR"
+    ],
+    "archive_teams_verified": true,
+    "rows": 26,
+    "usable": true
+  },
+  {
+    "game_id": "401909919",
+    "kickoff": "2026-11-03T03:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261102&limit=100",
+    "retrieved_at": "2026-11-14T16:54:04.155400+00:00",
+    "teams": [
+      "GS",
+      "PHX"
+    ],
+    "archive_teams_verified": true,
+    "rows": 26,
+    "usable": true
+  },
+  {
+    "game_id": "401909920",
+    "kickoff": "2026-11-03T03:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261102&limit=100",
+    "retrieved_at": "2026-11-14T16:54:04.155404+00:00",
+    "teams": [
+      "LAC",
+      "TOR"
+    ],
+    "archive_teams_verified": true,
+    "rows": 25,
+    "usable": true
+  },
+  {
+    "game_id": "401909921",
+    "kickoff": "2026-11-03T03:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261102&limit=100",
+    "retrieved_at": "2026-11-14T16:54:04.155407+00:00",
+    "teams": [
+      "LAL",
+      "MIA"
+    ],
+    "archive_teams_verified": true,
+    "rows": 29,
+    "usable": true
+  },
+  {
+    "game_id": "401909922",
+    "kickoff": "2026-11-05T00:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261104&limit=100",
+    "retrieved_at": "2026-11-14T16:54:07.695712+00:00",
+    "teams": [
+      "DET",
+      "PHI"
+    ],
+    "archive_teams_verified": true,
+    "rows": 26,
+    "usable": true
+  },
+  {
+    "game_id": "401909923",
+    "kickoff": "2026-11-05T00:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261104&limit=100",
+    "retrieved_at": "2026-11-14T16:54:07.695732+00:00",
+    "teams": [
+      "WSH",
+      "ATL"
+    ],
+    "archive_teams_verified": true,
+    "rows": 26,
+    "usable": true
+  },
+  {
+    "game_id": "401909924",
+    "kickoff": "2026-11-05T00:30Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261104&limit=100",
+    "retrieved_at": "2026-11-14T16:54:07.695736+00:00",
+    "teams": [
+      "BOS",
+      "MIL"
+    ],
+    "archive_teams_verified": true,
+    "rows": 29,
+    "usable": true
+  },
+  {
+    "game_id": "401909925",
+    "kickoff": "2026-11-05T00:30Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261104&limit=100",
+    "retrieved_at": "2026-11-14T16:54:07.695739+00:00",
+    "teams": [
+      "BKN",
+      "CHA"
+    ],
+    "archive_teams_verified": true,
+    "rows": 26,
+    "usable": true
+  },
+  {
+    "game_id": "401909926",
+    "kickoff": "2026-11-05T00:30Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261104&limit=100",
+    "retrieved_at": "2026-11-14T16:54:07.695741+00:00",
+    "teams": [
+      "NY",
+      "CHI"
+    ],
+    "archive_teams_verified": true,
+    "rows": 29,
+    "usable": true
+  },
+  {
+    "game_id": "401909927",
+    "kickoff": "2026-11-05T01:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261104&limit=100",
+    "retrieved_at": "2026-11-14T16:54:07.695743+00:00",
+    "teams": [
+      "MEM",
+      "IND"
+    ],
+    "archive_teams_verified": true,
+    "rows": 28,
+    "usable": true
+  },
+  {
+    "game_id": "401909929",
+    "kickoff": "2026-11-05T01:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261104&limit=100",
+    "retrieved_at": "2026-11-14T16:54:07.695748+00:00",
+    "teams": [
+      "OKC",
+      "CLE"
+    ],
+    "archive_teams_verified": true,
+    "rows": 24,
+    "usable": true
+  },
+  {
+    "game_id": "401909930",
+    "kickoff": "2026-11-05T01:30Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261104&limit=100",
+    "retrieved_at": "2026-11-14T16:54:07.695751+00:00",
+    "teams": [
+      "HOU",
+      "MIN"
+    ],
+    "archive_teams_verified": true,
+    "rows": 28,
+    "usable": true
+  },
+  {
+    "game_id": "401909931",
+    "kickoff": "2026-11-05T02:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261104&limit=100",
+    "retrieved_at": "2026-11-14T16:54:07.695753+00:00",
+    "teams": [
+      "DEN",
+      "TOR"
+    ],
+    "archive_teams_verified": true,
+    "rows": 27,
+    "usable": true
+  },
+  {
+    "game_id": "401909932",
+    "kickoff": "2026-11-05T02:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261104&limit=100",
+    "retrieved_at": "2026-11-14T16:54:07.695755+00:00",
+    "teams": [
+      "PHX",
+      "POR"
+    ],
+    "archive_teams_verified": true,
+    "rows": 26,
+    "usable": true
+  },
+  {
+    "game_id": "401909933",
+    "kickoff": "2026-11-05T02:30Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261104&limit=100",
+    "retrieved_at": "2026-11-14T16:54:07.695758+00:00",
+    "teams": [
+      "SA",
+      "DAL"
+    ],
+    "archive_teams_verified": true,
+    "rows": 25,
+    "usable": true
+  },
+  {
+    "game_id": "401909934",
+    "kickoff": "2026-11-05T03:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261104&limit=100",
+    "retrieved_at": "2026-11-14T16:54:07.695760+00:00",
+    "teams": [
+      "SAC",
+      "LAL"
+    ],
+    "archive_teams_verified": true,
+    "rows": 27,
+    "usable": true
+  },
+  {
+    "game_id": "401909936",
+    "kickoff": "2026-11-06T02:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261105&limit=100",
+    "retrieved_at": "2026-11-14T16:54:07.463547+00:00",
+    "teams": [
+      "PHX",
+      "ORL"
+    ],
+    "archive_teams_verified": true,
+    "rows": 25,
+    "usable": true
+  },
+  {
+    "game_id": "401909937",
+    "kickoff": "2026-11-06T03:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261105&limit=100",
+    "retrieved_at": "2026-11-14T16:54:07.463566+00:00",
+    "teams": [
+      "GS",
+      "MIA"
+    ],
+    "archive_teams_verified": true,
+    "rows": 28,
+    "usable": true
+  },
+  {
+    "game_id": "401909938",
+    "kickoff": "2026-11-07T22:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261107&limit=100",
+    "retrieved_at": "2026-11-14T16:54:07.781145+00:00",
+    "teams": [
+      "IND",
+      "DEN"
+    ],
+    "archive_teams_verified": true,
+    "rows": 28,
+    "usable": true
+  },
+  {
+    "game_id": "401909939",
+    "kickoff": "2026-11-08T00:30Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261107&limit=100",
+    "retrieved_at": "2026-11-14T16:54:07.781165+00:00",
+    "teams": [
+      "ATL",
+      "BKN"
+    ],
+    "archive_teams_verified": true,
+    "rows": 25,
+    "usable": true
+  },
+  {
+    "game_id": "401909940",
+    "kickoff": "2026-11-08T01:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261107&limit=100",
+    "retrieved_at": "2026-11-14T16:54:07.781168+00:00",
+    "teams": [
+      "CLE",
+      "NY"
+    ],
+    "archive_teams_verified": true,
+    "rows": 25,
+    "usable": true
+  },
+  {
+    "game_id": "401909941",
+    "kickoff": "2026-11-08T01:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261107&limit=100",
+    "retrieved_at": "2026-11-14T16:54:07.781171+00:00",
+    "teams": [
+      "OKC",
+      "WSH"
+    ],
+    "archive_teams_verified": true,
+    "rows": 24,
+    "usable": true
+  },
+  {
+    "game_id": "401909943",
+    "kickoff": "2026-11-08T02:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261107&limit=100",
+    "retrieved_at": "2026-11-14T16:54:07.781177+00:00",
+    "teams": [
+      "PHX",
+      "HOU"
+    ],
+    "archive_teams_verified": true,
+    "rows": 29,
+    "usable": true
+  },
+  {
+    "game_id": "401909944",
+    "kickoff": "2026-11-08T03:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261107&limit=100",
+    "retrieved_at": "2026-11-14T16:54:07.781180+00:00",
+    "teams": [
+      "POR",
+      "SA"
+    ],
+    "archive_teams_verified": true,
+    "rows": 24,
+    "usable": true
+  },
+  {
+    "game_id": "401909945",
+    "kickoff": "2026-11-08T20:30Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261108&limit=100",
+    "retrieved_at": "2026-11-14T16:54:11.979257+00:00",
+    "teams": [
+      "CHI",
+      "PHI"
+    ],
+    "archive_teams_verified": true,
+    "rows": 25,
+    "usable": true
+  },
+  {
+    "game_id": "401909946",
+    "kickoff": "2026-11-08T23:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261108&limit=100",
+    "retrieved_at": "2026-11-14T16:54:11.979270+00:00",
+    "teams": [
+      "DET",
+      "LAL"
+    ],
+    "archive_teams_verified": true,
+    "rows": 29,
+    "usable": true
+  },
+  {
+    "game_id": "401909947",
+    "kickoff": "2026-11-09T00:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261108&limit=100",
+    "retrieved_at": "2026-11-14T16:54:11.979273+00:00",
+    "teams": [
+      "MIN",
+      "UTAH"
+    ],
+    "archive_teams_verified": true,
+    "rows": 26,
+    "usable": true
+  },
+  {
+    "game_id": "401909948",
+    "kickoff": "2026-11-09T00:30Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261108&limit=100",
+    "retrieved_at": "2026-11-14T16:54:11.979276+00:00",
+    "teams": [
+      "DAL",
+      "BKN"
+    ],
+    "archive_teams_verified": true,
+    "rows": 27,
+    "usable": true
+  },
+  {
+    "game_id": "401909949",
+    "kickoff": "2026-11-09T01:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261108&limit=100",
+    "retrieved_at": "2026-11-14T16:54:11.979279+00:00",
+    "teams": [
+      "MIL",
+      "BOS"
+    ],
+    "archive_teams_verified": true,
+    "rows": 26,
+    "usable": true
+  },
+  {
+    "game_id": "401909950",
+    "kickoff": "2026-11-09T02:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261108&limit=100",
+    "retrieved_at": "2026-11-14T16:54:11.979281+00:00",
+    "teams": [
+      "LAC",
+      "NO"
+    ],
+    "archive_teams_verified": true,
+    "rows": 28,
+    "usable": true
+  },
+  {
+    "game_id": "401909951",
+    "kickoff": "2026-11-09T02:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261108&limit=100",
+    "retrieved_at": "2026-11-14T16:54:11.979284+00:00",
+    "teams": [
+      "SAC",
+      "MIA"
+    ],
+    "archive_teams_verified": true,
+    "rows": 26,
+    "usable": true
+  },
+  {
+    "game_id": "401909952",
+    "kickoff": "2026-11-10T00:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261109&limit=100",
+    "retrieved_at": "2026-11-14T16:54:12.009062+00:00",
+    "teams": [
+      "ATL",
+      "LAL"
+    ],
+    "archive_teams_verified": true,
+    "rows": 26,
+    "usable": true
+  },
+  {
+    "game_id": "401909953",
+    "kickoff": "2026-11-10T00:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261109&limit=100",
+    "retrieved_at": "2026-11-14T16:54:12.009082+00:00",
+    "teams": [
+      "CHA",
+      "CLE"
+    ],
+    "archive_teams_verified": true,
+    "rows": 24,
+    "usable": true
+  },
+  {
+    "game_id": "401909954",
+    "kickoff": "2026-11-10T00:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261109&limit=100",
+    "retrieved_at": "2026-11-14T16:54:12.009086+00:00",
+    "teams": [
+      "DET",
+      "WSH"
+    ],
+    "archive_teams_verified": true,
+    "rows": 27,
+    "usable": true
+  },
+  {
+    "game_id": "401909955",
+    "kickoff": "2026-11-10T00:30Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261109&limit=100",
+    "retrieved_at": "2026-11-14T16:54:12.009089+00:00",
+    "teams": [
+      "TOR",
+      "MEM"
+    ],
+    "archive_teams_verified": true,
+    "rows": 25,
+    "usable": true
+  },
+  {
+    "game_id": "401909956",
+    "kickoff": "2026-11-10T01:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261109&limit=100",
+    "retrieved_at": "2026-11-14T16:54:12.009091+00:00",
+    "teams": [
+      "DAL",
+      "IND"
+    ],
+    "archive_teams_verified": true,
+    "rows": 27,
+    "usable": true
+  },
+  {
+    "game_id": "401909957",
+    "kickoff": "2026-11-10T01:30Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261109&limit=100",
+    "retrieved_at": "2026-11-14T16:54:12.009094+00:00",
+    "teams": [
+      "HOU",
+      "DEN"
+    ],
+    "archive_teams_verified": true,
+    "rows": 28,
+    "usable": true
+  },
+  {
+    "game_id": "401909958",
+    "kickoff": "2026-11-10T02:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261109&limit=100",
+    "retrieved_at": "2026-11-14T16:54:12.009096+00:00",
+    "teams": [
+      "PHX",
+      "SA"
+    ],
+    "archive_teams_verified": true,
+    "rows": 26,
+    "usable": true
+  },
+  {
+    "game_id": "401909959",
+    "kickoff": "2026-11-10T03:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261109&limit=100",
+    "retrieved_at": "2026-11-14T16:54:12.009098+00:00",
+    "teams": [
+      "GS",
+      "NO"
+    ],
+    "archive_teams_verified": true,
+    "rows": 26,
+    "usable": true
+  },
+  {
+    "game_id": "401909960",
+    "kickoff": "2026-11-11T00:30Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261110&limit=100",
+    "retrieved_at": "2026-11-14T16:54:11.976919+00:00",
+    "teams": [
+      "NY",
+      "MIL"
+    ],
+    "archive_teams_verified": true,
+    "rows": 28,
+    "usable": true
+  },
+  {
+    "game_id": "401909961",
+    "kickoff": "2026-11-11T01:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261110&limit=100",
+    "retrieved_at": "2026-11-14T16:54:11.976941+00:00",
+    "teams": [
+      "PHI",
+      "BOS"
+    ],
+    "archive_teams_verified": true,
+    "rows": 27,
+    "usable": true
+  },
+  {
+    "game_id": "401909962",
+    "kickoff": "2026-11-11T02:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261110&limit=100",
+    "retrieved_at": "2026-11-14T16:54:11.976944+00:00",
+    "teams": [
+      "PHX",
+      "LAC"
+    ],
+    "archive_teams_verified": true,
+    "rows": 25,
+    "usable": true
+  },
+  {
+    "game_id": "401909963",
+    "kickoff": "2026-11-11T02:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261110&limit=100",
+    "retrieved_at": "2026-11-14T16:54:11.976948+00:00",
+    "teams": [
+      "UTAH",
+      "MIA"
+    ],
+    "archive_teams_verified": true,
+    "rows": 28,
+    "usable": true
+  },
+  {
+    "game_id": "401909964",
+    "kickoff": "2026-11-11T03:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261110&limit=100",
+    "retrieved_at": "2026-11-14T16:54:11.976950+00:00",
+    "teams": [
+      "SAC",
+      "ORL"
+    ],
+    "archive_teams_verified": true,
+    "rows": 23,
+    "usable": true
+  },
+  {
+    "game_id": "401909965",
+    "kickoff": "2026-11-11T04:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261110&limit=100",
+    "retrieved_at": "2026-11-14T16:54:11.976953+00:00",
+    "teams": [
+      "POR",
+      "OKC"
+    ],
+    "archive_teams_verified": true,
+    "rows": 23,
+    "usable": true
+  },
+  {
+    "game_id": "401909966",
+    "kickoff": "2026-11-12T00:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261111&limit=100",
+    "retrieved_at": "2026-11-14T16:54:12.039850+00:00",
+    "teams": [
+      "IND",
+      "WSH"
+    ],
+    "archive_teams_verified": true,
+    "rows": 26,
+    "usable": true
+  },
+  {
+    "game_id": "401909967",
+    "kickoff": "2026-11-12T00:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261111&limit=100",
+    "retrieved_at": "2026-11-14T16:54:12.039871+00:00",
+    "teams": [
+      "NY",
+      "CLE"
+    ],
+    "archive_teams_verified": true,
+    "rows": 27,
+    "usable": true
+  },
+  {
+    "game_id": "401909968",
+    "kickoff": "2026-11-12T00:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261111&limit=100",
+    "retrieved_at": "2026-11-14T16:54:12.039874+00:00",
+    "teams": [
+      "TOR",
+      "BOS"
+    ],
+    "archive_teams_verified": true,
+    "rows": 26,
+    "usable": true
+  },
+  {
+    "game_id": "401909969",
+    "kickoff": "2026-11-12T01:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261111&limit=100",
+    "retrieved_at": "2026-11-14T16:54:12.039877+00:00",
+    "teams": [
+      "CHI",
+      "SA"
+    ],
+    "archive_teams_verified": true,
+    "rows": 26,
+    "usable": true
+  },
+  {
+    "game_id": "401909970",
+    "kickoff": "2026-11-12T01:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261111&limit=100",
+    "retrieved_at": "2026-11-14T16:54:12.039879+00:00",
+    "teams": [
+      "MEM",
+      "DEN"
+    ],
+    "archive_teams_verified": true,
+    "rows": 29,
+    "usable": true
+  },
+  {
+    "game_id": "401909971",
+    "kickoff": "2026-11-12T01:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261111&limit=100",
+    "retrieved_at": "2026-11-14T16:54:12.039881+00:00",
+    "teams": [
+      "MIL",
+      "LAL"
+    ],
+    "archive_teams_verified": true,
+    "rows": 30,
+    "usable": true
+  },
+  {
+    "game_id": "401909972",
+    "kickoff": "2026-11-12T01:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261111&limit=100",
+    "retrieved_at": "2026-11-14T16:54:12.039883+00:00",
+    "teams": [
+      "NO",
+      "BKN"
+    ],
+    "archive_teams_verified": true,
+    "rows": 25,
+    "usable": true
+  },
+  {
+    "game_id": "401909973",
+    "kickoff": "2026-11-12T02:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261111&limit=100",
+    "retrieved_at": "2026-11-14T16:54:12.039886+00:00",
+    "teams": [
+      "UTAH",
+      "ORL"
+    ],
+    "archive_teams_verified": true,
+    "rows": 26,
+    "usable": true
+  },
+  {
+    "game_id": "401909974",
+    "kickoff": "2026-11-12T02:30Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261111&limit=100",
+    "retrieved_at": "2026-11-14T16:54:12.039888+00:00",
+    "teams": [
+      "HOU",
+      "GS"
+    ],
+    "archive_teams_verified": true,
+    "rows": 28,
+    "usable": true
+  },
+  {
+    "game_id": "401909975",
+    "kickoff": "2026-11-12T03:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261111&limit=100",
+    "retrieved_at": "2026-11-14T16:54:12.039891+00:00",
+    "teams": [
+      "POR",
+      "OKC"
+    ],
+    "archive_teams_verified": true,
+    "rows": 24,
+    "usable": true
+  },
+  {
+    "game_id": "401909976",
+    "kickoff": "2026-11-13T00:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261112&limit=100",
+    "retrieved_at": "2026-11-14T16:54:16.472566+00:00",
+    "teams": [
+      "PHI",
+      "TOR"
+    ],
+    "archive_teams_verified": true,
+    "rows": 25,
+    "usable": true
+  },
+  {
+    "game_id": "401909978",
+    "kickoff": "2026-11-13T01:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261112&limit=100",
+    "retrieved_at": "2026-11-14T16:54:16.472590+00:00",
+    "teams": [
+      "MIN",
+      "DAL"
+    ],
+    "archive_teams_verified": true,
+    "rows": 27,
+    "usable": true
+  },
+  {
+    "game_id": "401909979",
+    "kickoff": "2026-11-13T02:00Z",
+    "season_id": "2027",
+    "season_type_id": 2,
+    "season_type_slug": "regular-season",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261112&limit=100",
+    "retrieved_at": "2026-11-14T16:54:16.472592+00:00",
+    "teams": [
+      "PHX",
+      "CHA"
+    ],
+    "archive_teams_verified": true,
+    "rows": 26,
+    "usable": true
+  },
+  {
+    "game_id": "401914101",
+    "kickoff": "2026-10-05T23:00Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261005&limit=100",
+    "retrieved_at": "2026-11-14T16:53:31.775871+00:00",
+    "teams": [
+      "PHI",
+      "NY"
+    ],
+    "archive_teams_verified": true,
+    "rows": 42,
+    "usable": true
+  },
+  {
+    "game_id": "401914102",
+    "kickoff": "2026-10-06T00:00Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261005&limit=100",
+    "retrieved_at": "2026-11-14T16:53:31.775873+00:00",
+    "teams": [
+      "MIL",
+      "MIN"
+    ],
+    "archive_teams_verified": true,
+    "rows": 41,
+    "usable": true
+  },
+  {
+    "game_id": "401914123",
+    "kickoff": "2026-10-07T23:00Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261007&limit=100",
+    "retrieved_at": "2026-11-14T16:53:35.988472+00:00",
+    "teams": [
+      "IND",
+      "MIN"
+    ],
+    "archive_teams_verified": true,
+    "rows": 37,
+    "usable": true
+  },
+  {
+    "game_id": "401914124",
+    "kickoff": "2026-10-12T23:30Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261012&limit=100",
+    "retrieved_at": "2026-11-14T16:53:40.359937+00:00",
+    "teams": [
+      "NY",
+      "MIN"
+    ],
+    "archive_teams_verified": true,
+    "rows": 42,
+    "usable": true
+  },
+  {
+    "game_id": "401914125",
+    "kickoff": "2026-10-15T00:00Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261014&limit=100",
+    "retrieved_at": "2026-11-14T16:53:40.325810+00:00",
+    "teams": [
+      "MIN",
+      "DET"
+    ],
+    "archive_teams_verified": true,
+    "rows": 35,
+    "usable": true
+  },
+  {
+    "game_id": "401914127",
+    "kickoff": "2026-10-04T23:00Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261004&limit=100",
+    "retrieved_at": "2026-11-14T16:53:31.660442+00:00",
+    "teams": [
+      "DEN",
+      "UTAH"
+    ],
+    "archive_teams_verified": true,
+    "rows": 41,
+    "usable": true
+  },
+  {
+    "game_id": "401914128",
+    "kickoff": "2026-10-07T01:00Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261006&limit=100",
+    "retrieved_at": "2026-11-14T16:53:31.719729+00:00",
+    "teams": [
+      "UTAH",
+      "DEN"
+    ],
+    "archive_teams_verified": true,
+    "rows": 42,
+    "usable": true
+  },
+  {
+    "game_id": "401914129",
+    "kickoff": "2026-10-08T02:00Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261007&limit=100",
+    "retrieved_at": "2026-11-14T16:53:35.988493+00:00",
+    "teams": [
+      "POR",
+      "GS"
+    ],
+    "archive_teams_verified": true,
+    "rows": 30,
+    "usable": true
+  },
+  {
+    "game_id": "401914130",
+    "kickoff": "2026-10-12T20:00Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261012&limit=100",
+    "retrieved_at": "2026-11-14T16:53:40.359916+00:00",
+    "teams": [
+      "POR",
+      "LON"
+    ],
+    "archive_teams_verified": true,
+    "rows": 33,
+    "usable": true
+  },
+  {
+    "game_id": "401918010",
+    "kickoff": "2026-10-04T23:00Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261004&limit=100",
+    "retrieved_at": "2026-11-14T16:53:31.660464+00:00",
+    "teams": [
+      "LAC",
+      "GS"
+    ],
+    "archive_teams_verified": true,
+    "rows": 42,
+    "usable": true
+  },
+  {
+    "game_id": "401918011",
+    "kickoff": "2026-10-15T02:30Z",
+    "season_id": "2027",
+    "season_type_id": 1,
+    "season_type_slug": "preseason",
+    "season_verified": true,
+    "season_source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20261014&limit=100",
+    "retrieved_at": "2026-11-14T16:53:40.325813+00:00",
+    "teams": [
+      "LAC",
+      "DEN"
+    ],
+    "archive_teams_verified": true,
+    "rows": 40,
+    "usable": true
+  }
+]

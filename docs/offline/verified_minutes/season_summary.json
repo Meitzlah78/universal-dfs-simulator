@@ -1,0 +1,9 @@
+{
+  "games": 219,
+  "usable_games": 219,
+  "season_slugs": {
+    "preseason": 60,
+    "regular-season": 159
+  },
+  "request_failures": []
+}
