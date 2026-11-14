@@ -1,0 +1,21 @@
+{
+  "regular_archive_games": 159,
+  "archive_team_games": 318,
+  "archive_games_with_saved_inputs": 31,
+  "archive_games_without_saved_inputs": 128,
+  "archive_unique_team_games_with_saved_inputs": 62,
+  "archive_team_snapshot_versions": 122,
+  "all_saved_games": 37,
+  "all_unique_saved_team_games": 74,
+  "all_team_snapshot_versions": 144,
+  "all_snapshots_complete_priors": 20,
+  "archive_snapshots_complete_priors": 13,
+  "all_snapshots_complete_verified_statuses": 0,
+  "certified_team_snapshot_versions": 0,
+  "certified_archive_team_games": 0,
+  "allocation_evaluable": 0,
+  "allocation_conflict_rate": null,
+  "residual_comparison": "not evaluable: empty certified subset",
+  "cold_start_policy": "uncertified_pool; no numeric fill or player removal",
+  "shadow_status": "offline hook implemented; not connected to hosted Simmah or collecting live captures"
+}
