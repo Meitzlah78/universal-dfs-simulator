@@ -39,7 +39,9 @@ def download_daily_lineups(day):
     date.fromisoformat(day)
     request=Request('https://stats.nba.com/js/data/leaders/00_daily_lineups_'+day.replace('-','')+'.json',
                     headers={'User-Agent':'Mozilla/5.0','Accept':'application/json','Referer':'https://www.nba.com/'})
-    with urlopen(request,timeout=8) as response:payload=json.load(response)
+    with urlopen(request,timeout=8) as response:
+        from simmah_nba_shadow_capture import read_json_response
+        payload=read_json_response(response,request.full_url)
     return {'payload':payload,'checked_at':time.time()}
 
 

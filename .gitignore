@@ -14,3 +14,6 @@ __pycache__/
 # Private, browser-confirmed workspace recovery files.
 static/workspace_backups/
 data/workspace_recovery/
+
+# Private, opt-in NBA source captures and shadow results
+data/nba_shadow/

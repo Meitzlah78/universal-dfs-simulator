@@ -70,7 +70,8 @@ def download_dff(day, pool, platform='FanDuel'):
     path='fanduel/' if platform=='FanDuel' else ''
     url = f'https://www.dailyfantasyfuel.com/nba/projections/{path}{day}/'
     with urlopen(Request(url, headers={'User-Agent':'Mozilla/5.0'}), timeout=6) as response:
-        return parse_dff(response.read().decode('utf-8'), day, pool)
+        from simmah_nba_shadow_capture import read_text_response
+        return parse_dff(read_text_response(response,url), day, pool)
 
 
 class EntriesInProjectionUpload(ValueError):
@@ -261,7 +262,8 @@ def download_rotowire(day, pool, platform='FanDuel'):
             'Referer': 'https://www.rotowire.com/daily/nba/optimizer.php?site='+platform,
         })
         with urlopen(request,timeout=min(4,remaining)) as response:
-            return json.load(response)
+            from simmah_nba_shadow_capture import read_json_response
+            return read_json_response(response,request.full_url)
     listing=get('slate-list.php?siteID='+('1' if platform=='DraftKings' else '2'))
     try:slate=select_rotowire_slate(listing,day,pool,platform=platform)
     except ValueError:

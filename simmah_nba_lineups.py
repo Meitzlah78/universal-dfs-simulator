@@ -26,7 +26,8 @@ def download_lineup_status(slate_id,day,pairs):
     request=Request('https://www.rotowire.com/daily/nba/api/players.php?slateID='+str(slate_id),
                     headers={'User-Agent':'Mozilla/5.0','Accept':'application/json'})
     with urlopen(request,timeout=8) as response:
-        players=json.load(response)
+        from simmah_nba_shadow_capture import read_json_response
+        players=read_json_response(response,request.full_url)
     import time
     return {'players':parse_lineup_status(players,day,pairs),'checked_at':time.time()}
 
