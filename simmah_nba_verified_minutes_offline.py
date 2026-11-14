@@ -69,18 +69,40 @@ def age_shrink(rows, prior_minutes, capture, *, half_life_days=14., prior_streng
             'history_weight': trust, 'evidence_mass': total, 'history_mean': historical}
 
 
-def learn_role_bounds(rows, role, *, minimum_samples=20):
+def _role_label_verified(row):
+    # A boolean alone is not a provenance record.
+    if row.get('role_verified_pregame') is not True or not row.get('role_source'):
+        return False
+    try:
+        return _utc(row['role_published_at']) <= _utc(row['game_started_at'])
+    except (KeyError, ValueError, TypeError):
+        return False
+
+
+def learn_role_bounds(rows, role, *, minimum_samples=20, context='normal'):
     """Earlier verified role-labelled records only; callers cannot fit test outcomes.
 
     Deliberately reports insufficient support instead of inventing a generic cap.
     Role labels must have been available before the corresponding game.
     """
-    values = [r['minutes'] for r in rows if r.get('role') == role and r.get('role_verified_pregame')]
+    if context not in {'normal', 'injury_promoted'}:
+        raise ValueError('Unsupported pregame role context')
+    selected = [r for r in rows if r.get('role') == role and _role_label_verified(r) and r.get('role_context', 'normal') == context]
+    values = [r['minutes'] for r in selected]
     if len(values) < minimum_samples:
-        raise ValueError('Insufficient earlier verified role observations')
+        raise ValueError('Insufficient earlier verified role observations for '+context+'; normal-rotation bounds not substituted')
     low, high = np.quantile(values, [.05, .95])
     return {'lower': float(low), 'upper': float(high), 'sample_n': len(values),
-            'role': role, 'latest_date': max(r['date'] for r in rows if r.get('role') == role and r.get('role_verified_pregame'))}
+            'role': role, 'context': context, 'latest_date': max(r['date'] for r in selected)}
+
+
+class AllocationConflict(ValueError):
+    """Machine-readable conflict for offline diagnostics; never relaxes bounds."""
+    def __init__(self, lower_sum, upper_sum):
+        self.details = {'target':240., 'lower_sum':float(lower_sum), 'upper_sum':float(upper_sum),
+                        'upper_shortfall':max(0.,240.-float(upper_sum)),
+                        'lower_excess':max(0.,float(lower_sum)-240.)}
+        super().__init__('Learned role bounds cannot allocate 240 minutes; no bounds relaxed')
 
 
 def bounded_redistribution(means, lower, upper, uncertainty):
@@ -91,7 +113,7 @@ def bounded_redistribution(means, lower, upper, uncertainty):
     if not all(np.all(np.isfinite(x)) for x in (m, lo, hi, u)) or np.any(lo < 0) or np.any(hi > 48) or np.any(lo > hi) or np.any(u <= 0):
         raise ValueError('Invalid learned bounds')
     if lo.sum() > 240 + 1e-9 or hi.sum() < 240 - 1e-9:
-        raise ValueError('Learned role bounds cannot allocate 240 minutes; no bounds relaxed')
+        raise AllocationConflict(lo.sum(), hi.sum())
     a = float(np.min((lo-m)/u))-1
     b = float(np.max((hi-m)/u))+1
     for _ in range(100):
@@ -123,7 +145,7 @@ def forecast_verified_team(roster, history, game_date, captured_at):
             raise ValueError('Unverified current role prior: '+p['name'])
         own = [r for r in prior if tuple(r['key']) == tuple(p['key'])]
         estimate = age_shrink(own, role['minutes'], capture)
-        bounds = learn_role_bounds(prior, role['role'])
+        bounds = learn_role_bounds(prior, role['role'], context=role.get('context', 'normal'))
         players.append(dict(p, **estimate, bounds=bounds))
     if len({tuple(p['key']) for p in players}) != len(players):
         raise ValueError('Duplicate player identity')

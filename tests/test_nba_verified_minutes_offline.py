@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from simmah_nba_verified_minutes_offline import eligibility_at, verified_history, age_shrink, bounded_redistribution, learn_role_bounds, forecast_verified_team
+from simmah_nba_verified_minutes_offline import eligibility_at, verified_history, age_shrink, bounded_redistribution, learn_role_bounds, forecast_verified_team, AllocationConflict
 
 class VerifiedMinutesTests(unittest.TestCase):
     def test_event_season_overrides_league_header(self):
@@ -29,7 +29,7 @@ class VerifiedMinutesTests(unittest.TestCase):
         base['participation']='confirmed_dnp'
         self.assertEqual(len(verified_history([base],'2026-11-01T00:00Z','2026-11-01')[0]),1)
     def test_role_bounds_not_universal_cap(self):
-        rows=[dict(role='core',role_verified_pregame=True,minutes=39+i%4,date='2026-10-01') for i in range(24)]
+        rows=[dict(role='core',role_verified_pregame=True,role_source='dated fixture',role_published_at='2026-09-30T00:00Z',game_started_at='2026-10-01T20:00Z',minutes=39+i%4,date='2026-10-01') for i in range(24)]
         self.assertGreater(learn_role_bounds(rows,'core')['upper'],38)
         with self.assertRaises(ValueError):learn_role_bounds(rows,'bench')
     def test_conservation_and_uncertainty(self):
@@ -38,6 +38,42 @@ class VerifiedMinutesTests(unittest.TestCase):
         self.assertAlmostEqual(sum(out),240)
         self.assertTrue(np.all(out[4:]<=25))
         self.assertTrue(np.all(out[:4]>30))
+    def test_role_boolean_without_provenance_is_not_training_support(self):
+        rows=[dict(role='core',role_verified_pregame=True,minutes=40,date='2026-10-01') for _ in range(24)]
+        with self.assertRaises(ValueError):learn_role_bounds(rows,'core')
+
+    def test_promotion_uses_separate_history(self):
+        rows=[dict(role='rotation',role_verified_pregame=True,role_source='dated fixture',role_published_at='2026-09-30T00:00Z',game_started_at='2026-10-01T20:00Z',role_context='normal',minutes=24,date='2026-10-01') for _ in range(24)]
+        with self.assertRaisesRegex(ValueError,'normal-rotation bounds not substituted'):
+            learn_role_bounds(rows,'rotation',context='injury_promoted')
+        rows += [dict(role='rotation',role_verified_pregame=True,role_source='dated fixture',role_published_at='2026-09-30T00:00Z',game_started_at='2026-10-01T20:00Z',role_context='injury_promoted',minutes=34+i%4,date='2026-10-02') for i in range(24)]
+        normal=learn_role_bounds(rows,'rotation')
+        promoted=learn_role_bounds(rows,'rotation',context='injury_promoted')
+        self.assertGreater(promoted['upper'],normal['upper'])
+        self.assertEqual(promoted['sample_n'],24)
+
+    def test_two_absences_do_not_force_normal_rotation_caps(self):
+        # Six supported promoted players can cover 240; normal bounds cannot.
+        normal=[dict(role='rotation',role_verified_pregame=True,role_source='dated fixture',role_published_at='2026-09-30T00:00Z',game_started_at='2026-10-01T20:00Z',role_context='normal',minutes=28+i%3,date='2026-10-01') for i in range(24)]
+        promoted=[dict(role='rotation',role_verified_pregame=True,role_source='dated fixture',role_published_at='2026-09-30T00:00Z',game_started_at='2026-10-01T20:00Z',role_context='injury_promoted',minutes=39+i%4,date='2026-10-02') for i in range(24)]
+        old=learn_role_bounds(normal+promoted,'rotation')
+        with self.assertRaises(AllocationConflict):
+            bounded_redistribution([40]*6,[old['lower']]*6,[old['upper']]*6,[1]*6)
+        new=learn_role_bounds(normal+promoted,'rotation',context='injury_promoted')
+        out=bounded_redistribution([40]*6,[new['lower']]*6,[new['upper']]*6,[1]*6)
+        self.assertAlmostEqual(sum(out),240)
+        self.assertTrue(np.all(out>old['upper']))
+
+    def test_conflict_has_quantified_deficit(self):
+        with self.assertRaises(AllocationConflict) as caught:
+            bounded_redistribution([30]*8,[0]*8,[29]*8,[1]*8)
+        self.assertEqual(caught.exception.details['upper_shortfall'],8)
+
+    def test_unknown_logs_do_not_change_evidence(self):
+        empty=age_shrink([],12,'2026-11-01T00:00Z')
+        self.assertEqual(empty['raw_minutes'],12)
+        self.assertEqual(empty['history_weight'],0)
+
     def test_infeasible_bounds_reported(self):
         with self.assertRaisesRegex(ValueError,'no bounds relaxed'):
             bounded_redistribution([30]*8,[0]*8,[29]*8,[1]*8)
@@ -49,7 +85,7 @@ class VerifiedMinutesTests(unittest.TestCase):
                 eligibility_evidence=dict(source='dated roster',published_at='2026-10-31T00:00Z',valid_from='2026-10-31T00:00Z',valid_until='2026-11-02T00:00Z',team='MIL',eligibility='eligible'),
                 role_prior=dict(source='earlier training',published_at='2026-10-31T00:00Z',valid_from='2026-10-31T00:00Z',valid_until='2026-11-02T00:00Z',role='rotation',minutes=30,uncertainty=2)))
             for j in range(4):
-                history.append(dict(key=key,date='2026-10-01',completed_at='2026-10-02T00:00Z',minutes=26+j*3,season_verified=True,season_source='event',season_id='2027',season_type='regular',participation='played',role='rotation',role_verified_pregame=True))
+                history.append(dict(key=key,date='2026-10-01',completed_at='2026-10-02T00:00Z',minutes=26+j*3,season_verified=True,season_source='event',season_id='2027',season_type='regular',participation='played',role='rotation',role_verified_pregame=True,role_source='dated fixture',role_published_at='2026-09-30T00:00Z',game_started_at='2026-10-01T20:00Z'))
         result=forecast_verified_team(roster,history,'2026-11-01','2026-11-01T00:00Z')
         self.assertAlmostEqual(sum(p['predicted_minutes'] for p in result['players']),240)
         roster[0]['eligibility_evidence']=None

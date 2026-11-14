@@ -1,0 +1,58 @@
+[
+  {
+    "package": "197518170",
+    "game_id": "401909288",
+    "team": "CHA",
+    "day": "2026-11-06",
+    "capture": "2026-11-06T23:51:17.906427+00:00",
+    "historical_core_out": [
+      "moussa diabate",
+      "dennis schroder"
+    ],
+    "vacancy_minutes": 57.599999999999994,
+    "normalized_blend_supported": true,
+    "out_with_unknown_positive_history": [
+      "Grant Williams"
+    ],
+    "unsupported_vacancy_donors": [],
+    "rest_days": 2,
+    "back_to_back": false,
+    "spread": 10.5,
+    "spread_missing": false,
+    "available_core_out_proxy": true,
+    "core_out_recency": {
+      "moussa diabate": "played_last_game",
+      "dennis schroder": "played_last_game"
+    },
+    "vacancy_state": "new_or_mixed",
+    "unresolved_QD": false
+  },
+  {
+    "package": "136333-281428360",
+    "game_id": "401909288",
+    "team": "CHA",
+    "day": "2026-11-06",
+    "capture": "2026-11-06T23:54:49.383035+00:00",
+    "historical_core_out": [
+      "moussa diabate",
+      "dennis schroder"
+    ],
+    "vacancy_minutes": 57.599999999999994,
+    "normalized_blend_supported": true,
+    "out_with_unknown_positive_history": [
+      "Grant Williams"
+    ],
+    "unsupported_vacancy_donors": [],
+    "rest_days": 2,
+    "back_to_back": false,
+    "spread": 10.5,
+    "spread_missing": false,
+    "available_core_out_proxy": true,
+    "core_out_recency": {
+      "moussa diabate": "played_last_game",
+      "dennis schroder": "played_last_game"
+    },
+    "vacancy_state": "new_or_mixed",
+    "unresolved_QD": false
+  }
+]

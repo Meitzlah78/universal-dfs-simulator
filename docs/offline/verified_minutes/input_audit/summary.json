@@ -1,0 +1,25 @@
+{
+  "available_player_snapshots": 2134,
+  "unknown_actual_snapshots": 259,
+  "official_rows_matched": 2118,
+  "official_roster_status_counts": {
+    "Active": 1875,
+    "Inactive": 243,
+    "missing": 16
+  },
+  "certified_eligibility": 0,
+  "certified_current_role_priors": 0,
+  "reason_not_certified": "Official timestamps have no UTC offset; rosterStatus Active and row validity are not yet certified as game-eligibility evidence at saved capture.",
+  "historical_participation": {
+    "played": 5392,
+    "confirmed_dnp": 1108,
+    "unknown_zero": 11,
+    "missing_raw": 0
+  },
+  "team_snapshots": 144,
+  "two_or_more_historical_core_out_snapshots": 2,
+  "unique_two_or_more_core_out_team_games": 1,
+  "source_errors": [],
+  "accuracy_backtest": "blocked: no certified current-role priors/eligibility; do not silently drop unsupported snapshots",
+  "sensitivity_warning": "Role priors 4/12/24/32 are illustrative sensitivity inputs, not fitted forecasts or actual labels."
+}
