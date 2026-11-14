@@ -33,4 +33,12 @@ def redistribute(minutes,means,*,state='neutral',transfer_budget=0.,foul_cuts=No
     if state=='blowout':move(core,[j for j in bench if j not in (foul_cuts or {})],transfer_budget,state)
     if state=='tight':move(bench,[j for j in core if j not in (foul_cuts or {})],transfer_budget,state)
     if not np.isclose(v.sum(),240) or np.any(v< -1e-9) or np.any(v>48+1e-9):raise AssertionError('Conservation failed')
+    # Floating-point boundary repair only; never alter a substantive transfer.
+    v=np.clip(v,0.,48.)
+    residual=240.-v.sum()
+    if abs(residual)>1e-8:raise AssertionError('Non-numerical budget residual')
+    if residual:
+        choices=np.flatnonzero((means>0)&((48-v>abs(residual)) if residual>0 else (v>abs(residual))))
+        if not len(choices):raise AssertionError('No numerical repair support')
+        v[choices[0]]+=residual
     return v,ledger
