@@ -54,6 +54,29 @@ class ShadowIntegrationTests(unittest.TestCase):
             self.assertEqual(result['status'],'uncertified_pool')
             pd.testing.assert_frame_equal(before,self.pool)
             self.assertEqual(shadow.health()['captures_persisted'],1)
+    def test_freeze_to_sidecar_uses_canonical_adapter_without_touching_baseline(self):
+        from tests.nba_shadow_adapter_fixture import fixture
+        roster,history=fixture()
+        raws=[json.dumps(p,sort_keys=True).encode() for p in (roster,history)]
+        import hashlib
+        request={'game_id':roster['game_id'],'team_id':roster['team_id'],
+                 'roster_sha256':hashlib.sha256(raws[0]).hexdigest(),
+                 'history_sha256':hashlib.sha256(raws[1]).hexdigest()}
+        self.pool.attrs['nba_shadow_adapter_requests']=[request]
+        before=self.pool.copy(deep=True)
+        with tempfile.TemporaryDirectory() as root,patch.dict(os.environ,{'SIMMAH_NBA_SHADOW_DIRECTORY':root}),patch.object(shadow,'_now',side_effect=['2026-11-14T17:58:00Z','2026-11-14T17:59:00Z','2026-11-14T18:00:00Z']):
+            shadow.remember_response('fixture://nba-roster/v1',raws[0])
+            shadow.remember_response('fixture://nba-history/v1',raws[1])
+            cid=shadow.begin_build_capture(self.pool,self.pool,settings={},model={})
+            shadow._EXECUTOR.shutdown(wait=True);shadow._EXECUTOR=None
+            result=json.loads((Path(root)/(cid+'.result.json')).read_text())
+            self.assertEqual(result['status'],'forecasts')
+            self.assertEqual(result['provenance'],'synthetic')
+            self.assertFalse(result['qualified_for_evaluation'])
+            self.assertEqual(shadow.health()['synthetic_forecasts'],1)
+            self.assertEqual(shadow.health()['certified_pools'],0)
+            pd.testing.assert_frame_equal(before,self.pool)
+
     def test_queue_full_returns_immediately(self):
         with patch.object(shadow,'_PENDING') as pending:
             pending.acquire.return_value=False

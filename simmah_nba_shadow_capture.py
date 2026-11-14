@@ -67,7 +67,7 @@ def health():
         result=dict(_HEALTH,enabled=enabled(),receipt_sources=len(_RECEIPTS))
     attempts=result.get('capture_attempts',0)
     result['persisted_per_attempt']=result.get('captures_persisted',0)/attempts if attempts else None
-    result['certified_pools']=0  # No certified eligibility/role adapter is connected.
+    result['certified_pools']=0  # Only synthetic source profiles are approved; no real certified pools.
     return result
 
 
@@ -80,7 +80,7 @@ def _freeze(source_pool,prepared_pool,settings,model):
     with _LOCK:
         at=_now();receipts=[dict(r) for r in _RECEIPTS.values()]
     version={}
-    for name in ('simmah_nba_pipeline.py','simmah_nba_pregame.py','simmah_nba_engine.py','simmah_nba_shadow_worker.py'):
+    for name in ('simmah_nba_pipeline.py','simmah_nba_pregame.py','simmah_nba_engine.py','simmah_nba_shadow_worker.py','simmah_nba_shadow_adapters.py'):
         version[name]=hashlib.sha256((Path(__file__).parent/name).read_bytes()).hexdigest()
     capture={'schema_version':1,'mode':'shadow','capture_id':uuid.uuid4().hex,'frozen_at':at,
         'source_pool':json.loads(source_pool.to_json(orient='split',date_format='iso',double_precision=15)),
@@ -88,6 +88,7 @@ def _freeze(source_pool,prepared_pool,settings,model):
         'settings':settings,'model':model,'model_source_hashes':version,
         'baseline_forecasts':json.loads(prepared_pool[[c for c in ('Player ID','Name','Team','Opponent','Projection','Projected Minutes','Game Start','Injury Status','Eligible') if c in prepared_pool]].to_json(orient='records',date_format='iso',double_precision=15)),
         'role_priors':None,'bounds':None,
+        'adapter_requests':source_pool.attrs.get('nba_shadow_adapter_requests',[]),
         'input_status':'uncertified_pool',
         'warnings':['DFS pool is not certified full team/game membership','Independent point-in-time role priors and bounds are not connected','Observed source cache is not yet a certified per-player transformation lineage'],
         'receipts':[{**{k:v for k,v in r.items() if k!='raw'},'raw_file':r['sha256']+'.response.gz'} for r in receipts]}
@@ -116,7 +117,13 @@ def _persist_and_run(frozen,receipts,capture_id):
     result=subprocess.run([sys.executable,str(Path(__file__).with_name('simmah_nba_shadow_worker.py')),str(path)],
         timeout=20,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,check=False)
     if result.returncode:raise ValueError('shadow_worker_failed')
-    _event('uncertified_pool')
+    outcome=json.loads((root/(capture_id+'.result.json')).read_text())
+    results=outcome.get('team_game_results') or [outcome]
+    for item in results:
+        state=item.get('status','uncertified_pool')
+        if state not in {'forecasts','allocation_conflict'}:_event('uncertified_pool')
+        elif item.get('provenance')=='synthetic':_event('synthetic_'+state)
+        else:_event('certified_input_'+state)
 
 
 def _failure(capture_id,reason):
