@@ -5,13 +5,14 @@ from simmah_nba_minutes import allocate_minutes
 from scripts.expand_minutes_evidence_offline import player_key
 
 
-def forecast_team(roster,history,game_date,captured_at,*,history_ceiling=None):
+def forecast_team(roster,history,game_date,captured_at,*,history_ceiling=None,window=5,half_life=3.):
     """Accept only names, teams, saved availability. No provider projection feature.
 
     Fixed baseline: last5 explicit observations; exponential half-life3 observed
     games. No absence-to-zero. Unknown histories receive earlier league roster-
     observation mean, explicitly marked cold start. Water-fill to240, cap48.
     """
+    if not isinstance(window,int) or window<1 or not np.isfinite(half_life) or half_life<=0:raise ValueError('Invalid history weighting')
     capture=pd.Timestamp(captured_at)
     if capture.tzinfo is None:raise ValueError('Timezone-aware pregame capture required')
     available=[]
@@ -33,9 +34,9 @@ def forecast_team(roster,history,game_date,captured_at,*,history_ceiling=None):
     league=float(np.mean([h['minutes'] for h in prior]));weights=[];items=[]
     for key,p in available:
         own=[h for h in prior if tuple(h['key'])==key]
-        own=sorted(own,key=lambda h:(h['date'],h['completed_at'],h['game_id']))[-5:]
+        own=sorted(own,key=lambda h:(h['date'],h['completed_at'],h['game_id']))[-window:]
         if own:
-            recency=2.**(-np.arange(len(own)-1,-1,-1)/3.);raw=float(np.average([h['minutes'] for h in own],weights=recency))
+            recency=2.**(-np.arange(len(own)-1,-1,-1)/half_life);raw=float(np.average([h['minutes'] for h in own],weights=recency))
         else:raw=league
         weights.append(raw);items.append({'key':key,'name':p['name'],'team':p['team'],'raw_minutes':raw,'history_n':len(own),'cold_start':not bool(own),'last_history_date':max((h['date'] for h in own),default=None),'status':p.get('status','unknown')})
     if np.count_nonzero(np.array(weights)>0)<5:raise ValueError('Historical positive-minute support cannot fill five court positions')
