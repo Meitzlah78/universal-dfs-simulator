@@ -19,14 +19,26 @@ def summarize_interval(frame):
         'above_p99':float((frame.actual>frame.p99).mean())}
 
 
-def run(evidence,audit,output):
+def verify_pregame_forecasts(frame):
+    if frame[['package','player_id']].duplicated().any():raise ValueError('Duplicate frozen player forecast')
+    for capture,opening in zip(frame.captured_at,frame.observed_opening_utc):
+        a,b=pd.Timestamp(capture),pd.Timestamp(opening)
+        if pd.isna(a) or pd.isna(b) or a.tzinfo is None or b.tzinfo is None:
+            raise ValueError('Timezone-aware capture and opening timestamps required')
+        if a>=b:raise ValueError('Forecast capture must precede observed opening')
+
+
+def run(evidence,audit,output,extra_forecast=None):
     output=Path(output);output.mkdir(parents=True,exist_ok=True)
     policy=ROOT/'data/nba_rotation_trials/shared-bench-v1-policy.json'
     config=json.loads(policy.read_text());trials=config['trials'];seed=config['evaluation_seed']
     with zipfile.ZipFile(audit) as z:
-        forecast=pd.read_csv(io.BytesIO(z.read('player-forecast-audit.csv')),dtype={'package':str,'game_id':str})
+        forecast=pd.read_csv(io.BytesIO(z.read('player-forecast-audit.csv')),dtype={'package':str,'game_id':str,'player_id':str})
+    if extra_forecast:
+        extra=pd.read_csv(extra_forecast,dtype={'package':str,'game_id':str,'player_id':str})
+        forecast=pd.concat([forecast,extra],ignore_index=True)
     # The audited source is already limited to observed pre-tip predictions.
-    assert (pd.to_datetime(forecast.captured_at,utc=True)<pd.to_datetime(forecast.observed_opening_utc,utc=True)).all()
+    verify_pregame_forecasts(forecast)
     forecast['_key']=[player_key(n,t) for n,t in zip(forecast.name,forecast.team)]
     packages=[];minutes=[];pairs=[];team_snapshots=[];errors=[]
     for path in sorted(Path(evidence).rglob('*.zip')):
@@ -111,7 +123,8 @@ def run(evidence,audit,output):
             'bench_minutes_within2':f[(f.projected_minutes<18)&(f.minute_error<=2)]}
         slices[platform]={name:summarize_interval(frame) for name,frame in groups.items()}
     result={'policy':config,'policy_sha256':hashlib.sha256(policy.read_bytes()).hexdigest(),
-        'source_audit_sha256':hashlib.sha256(Path(audit).read_bytes()).hexdigest(),'live_enabled':False,
+        'source_audit_sha256':hashlib.sha256(Path(audit).read_bytes()).hexdigest(),
+        'extra_forecast_sha256':hashlib.sha256(Path(extra_forecast).read_bytes()).hexdigest() if extra_forecast else None,'live_enabled':False,
         'packages':packages,'omissions':errors,'physical_games_with_pairs':len(grouped),'primary_pairs':len(primary),'observed_joint_tail_rate':float(primary.event.mean()),
         'mean_predicted_joint_tail_probability':{arm:float(primary[arm+'_probability'].mean()) for arm in ['independent','shared']},
         'paired_game_level_scores':bootstrap,'minute_marginals_primary':marginal,
@@ -127,4 +140,4 @@ def run(evidence,audit,output):
 
 
 if __name__=='__main__':
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('evidence');p.add_argument('audit');p.add_argument('output');a=p.parse_args();run(a.evidence,a.audit,a.output)
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('evidence');p.add_argument('audit');p.add_argument('output');p.add_argument('--extra-forecast');a=p.parse_args();run(a.evidence,a.audit,a.output,a.extra_forecast)
