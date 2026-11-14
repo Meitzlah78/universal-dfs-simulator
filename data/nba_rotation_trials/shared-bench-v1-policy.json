@@ -1,0 +1,21 @@
+{
+  "version": "shared-bench-dependence-v1-offline",
+  "live_enabled": false,
+  "parent": "production draw_wider_minutes",
+  "treatment": "share reserve/donor transfer sign across one team's disjoint pairs",
+  "positive_probability": 0.2,
+  "maximum_positive_minutes": 12,
+  "negative_multiple": -0.25,
+  "preserve_marginals_in_distribution": true,
+  "trials": 10000,
+  "evaluation_seed": 2100,
+  "joint_tail_threshold_minutes": 5,
+  "exclude_actual_overtime_games_from_minute_scoring": true,
+  "primary_unit": "physical game; duplicate DK/FD snapshots not independent",
+  "selection_of_primary_snapshot": "latest capture per physical team before observed opening",
+  "interval": [0.1, 0.9],
+  "training": "no fitted parameters; signs and amplitudes inherited from production",
+  "status": "existing eight builds and November 13 are development diagnostics, not promotion holdouts",
+  "production_parameters": "unchanged",
+  "PR77": "isolated and untouched"
+}
