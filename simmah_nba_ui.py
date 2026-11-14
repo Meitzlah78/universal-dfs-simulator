@@ -96,6 +96,7 @@ def render_exports(st,upload,cid,pool,built,portfolio,platform,stale,location,st
 
 
 def render_workspace(st,slate,upload,tabs,controls,markets):
+    source_pool=slate['players']  # Freeze source view separately from prepared player inputs.
     pool=slate['players'];rules=rules_for(pool);platform=rules['platform'];slots=rules['slots'];contests={c['id']:c for c in slate['contests']}
     with controls:
         use_caps=st.checkbox('Apply automatic NBA exposure caps',value=False,key='nba_apply_caps_'+platform,
@@ -232,6 +233,18 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
     with tabs[2]:
         from simmah_nba_cash import render_cash_check
         render_cash_check(st,pool,engine,ownership,salary_min,excluded,day)
+    with tabs[2]:
+        with st.expander('Shadow capture health',expanded=False):
+            try:
+                from simmah_nba_shadow_capture import health
+                status=health()
+                st.caption('Research capture '+('enabled' if status['enabled'] else 'disabled')+'. Live forecasts and lineups are unchanged.')
+                if status['enabled']:
+                    st.write(status)
+                    if st.session_state.get('nba_shadow_last_capture'):st.caption('Latest capture: '+st.session_state['nba_shadow_last_capture'])
+                    st.caption('Raw receipts do not certify complete rosters. Unsupported inputs are recorded separately from allocation conflicts. Counters describe this app process only.')
+            except Exception:
+                st.caption('Shadow capture health unavailable. Live builds remain available.')
     identity=input_identity(pool,markets,contest,salary_min,correlation,pool.iloc[excluded]['Player ID'],salary_aware)
     saved=st.session_state.get('nba_build_result')
     if clicked:
@@ -246,11 +259,31 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
                 message.write(text)
                 if text in stages:bar.progress(stages[text])
             try:
+                # Receipt capture is opt-in and never owns the live engine/state.
+                shadow_id=None
+                try:
+                    from simmah_nba_shadow_capture import begin_build_capture
+                    shadow_id=begin_build_capture(source_pool,pool,
+                        settings={'contest_id':str(cid),'date':day,'platform':platform,'input_identity':identity,
+                            'salary_min':salary_min,'correlation':correlation,'entries':count,
+                            'diversity':diversity,'salary_aware':salary_aware,'markets':markets,
+                            'ownership_weights':ownership['weights'].tolist(),'ownership_source':ownership['source'],
+                            'ownership_mode':ownership['mode'],'payouts':payout_vector(contest).tolist(),
+                            'entry_fee':selected['entry_fee'],'variable_minutes':variable_minutes,
+                            'wider_minutes':wider_minutes,'automatic_caps':use_caps,
+                            'estimated_rotation_teams':estimated_teams,
+                            'excluded_player_ids':list(map(str,pool.iloc[excluded]['Player ID']))},
+                        model={'simulation_identity':engine.identity,'rates':vars(engine.rates),
+                            'max_overtimes':engine.max_overtimes,'rotation_reconciliation':engine.rotation_reconciliation})
+                except Exception:
+                    st.caption('Shadow capture unavailable; live build continues.')
+                if shadow_id:st.session_state['nba_shadow_last_capture']=shadow_id
                 built=run_pipeline(pool,engine,ownership['weights'],
                     ownership['source'],
                     payout_vector(contest),selected['entry_fee'],count,diversity=diversity,
                     salary_min=salary_min,correlation=correlation,ownership_mode=ownership['mode'],progress=progress,
                     excluded_indices=excluded,capture_diagnostics=True,salary_aware=salary_aware)
+                if shadow_id:built['shadow_capture_id']=shadow_id
                 reports=engine.last_report
                 # A completed portfolio must serialize and pass site legality
                 # before replacing the last successful build or showing success.
