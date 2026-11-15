@@ -117,7 +117,7 @@ def q2_offensive_management(remaining, margin, field, normal, changed, kind,
     return hurry,timeout
 
 
-def simulate(n,seed,clock,decision,parameters,*,fourth_policy=None,run_model=None,management_policy=None,timeout_trace=None):
+def simulate(n,seed,clock,decision,parameters,*,fourth_policy=None,run_model=None,management_policy=None,timeout_trace=None,mechanics_trace=None):
     if n<1 or clock.get('train_years')!=[2022,2023]:raise ValueError('Training-only clock and positive draws required')
     if management_policy not in (None, LEGACY_POLICY_VERSION, V2_POLICY_VERSION, V3_POLICY_VERSION, V4_POLICY_VERSION, POLICY_VERSION):raise ValueError('Unknown management policy')
     slices={f'q{q}_{k}':np.zeros(n) for q in [2,4] for k in ['snaps','defensive_timeouts','offensive_timeouts','all_timeouts','hurry_snaps','kneels']}
@@ -146,6 +146,12 @@ def simulate(n,seed,clock,decision,parameters,*,fourth_policy=None,run_model=Non
         kick=isfourth&~go
         penalty=(u[i,1]<parameters['penalty_rate'])&~kick&~kneel
         normal=~kick&~penalty&~kneel
+        if mechanics_trace is not None and isfourth.any():
+            a=isfourth;j=i[a]
+            mechanics_trace('fourth',{'field':field[j].copy(),'togo':togo[j].copy(),
+                'remaining':r[j].copy(),'margin':margin[a],'qtr':q[a],
+                'go':go[a].copy(),'executed':~penalty[a],
+                'punt':kick[a]&(field[j]>40),'fg':kick[a]&(field[j]<=40)})
         audit['penalty_opportunities'][i[~kick]]+=1;audit['no_play_penalties'][i[penalty]]+=1
         # New possession counts only when an offensive snap or kick actually occurs.
         begin=pending[i]&~penalty;counts['drives'][i[begin]]+=1;pending[i[begin]]=False
@@ -171,6 +177,12 @@ def simulate(n,seed,clock,decision,parameters,*,fourth_policy=None,run_model=Non
             turn[a]=intercept|fumble;td[a]=(g>=field[j])&~turn[a];safe[a]=(g<=-(100-field[j]))&~turn[a]
             counts['rush_attempts'][j[running]]+=1;counts['rush_yards'][j[running]]+=g[running];counts['rush20'][j[running&(g>=20)]]+=1
             incomplete=passing&~caught&~sack&~intercept
+            if mechanics_trace is not None:
+                mechanics_trace('play',{'field':field[j].copy(),'togo':togo[j].copy(),
+                    'remaining':r[j].copy(),'margin':margin[a],'qtr':q[a],'down':down[j].copy(),
+                    'passing':passing,'caught':caught,'running':running,'sack':sack,
+                    'gain':g.copy(),'turnover':turn[a],'td':td[a],
+                    'conversion':(g>=togo[j])&~turn[a]&~safe[a]})
             oob_chance=np.where(running,parameters.get('oob_run',parameters['oob_rate']),parameters.get('oob_pass',parameters['oob_rate']))
             oob=(caught|running)&(u[j,8]<oob_chance)
             for key,mask in [('dropbacks',passing),('completions',caught),('incompletions',incomplete),('sacks',sack),('interceptions',intercept),('oob_run',oob&running),('oob_completion',oob&caught)]:audit[key][j[mask]]+=1
