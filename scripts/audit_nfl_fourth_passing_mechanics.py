@@ -1,5 +1,5 @@
 """Passive V5 Fourth-Down-Only/Combined audit; no model refit or 2025 read."""
-import hashlib,json
+import hashlib,json,sys
 from concurrent.futures import ProcessPoolExecutor,as_completed
 from pathlib import Path
 import numpy as np
@@ -56,7 +56,7 @@ def summarize(o,denom):
         for short in [0,1]:
             for script,sname in enumerate(SCRIPTS):
                 v=arr[(zone*2+short)*4+script];n=v[1]
-                rows.append({'zone':zname,'distance':'short' if short==0 else 'other','script':sname,'opportunities':float(n),'opps_per_game':float(n/denom),'go_rate':float(v[2]/n) if n else None,'punts_per_game':float(v[3]/denom),'fg_per_game':float(v[4]/denom),'conversions_per_go':float(v[5]/v[2]) if v[2] else None,'candidate_expected_go_rate':float(v[6]/n) if n else None})
+                rows.append({'zone':zname,'distance':'short' if short==0 else 'other','script':sname,'opportunities':float(n),'opps_per_game':float(n/denom),'go_rate':float(v[2]/n) if n else None,'punts_per_game':float(v[3]/denom),'fg_per_game':float(v[4]/denom),'conversions_per_go':float(v[5]/v[2]) if v[2] else None,'candidate_expected_go_rate':float(v[6]/n) if n and v[6]>0 else None})
     totals={}
     for k,name in enumerate(['designed_run','completion']):
         total=plays[k].sum(axis=0);n=total[0]
@@ -77,13 +77,19 @@ def main():
     if len(paths)!=285 or POLICY_VERSION!='late-half-management-v5':raise ValueError('Frozen 285-game V5 only')
     totals={a:{'fourth':np.zeros((40,len(FOURTH_COLS))),'play':np.zeros((2,12,len(PLAY_COLS))),'dropbacks':0} for a in ARMS}
     count=0
-    with ProcessPoolExecutor(max_workers=4,initializer=init,initargs=(config,)) as pool:
-        for future in as_completed([pool.submit(replay,str(p)) for p in paths]):
-            for a,values in future.result().items():
-                for key in ['fourth','play']:totals[a][key]+=np.asarray(values[key])
-                totals[a]['dropbacks']+=values['dropbacks']
-            count+=1
-            if count%25==0:print(f'Matched mechanics audit {count}/285',flush=True)
+    if '--summarize-only' in sys.argv:
+        for p in paths:
+            for arm,values in json.loads((OUT/'games'/p.name).read_text())['arms'].items():
+                for key in ['fourth','play']:totals[arm][key]+=np.asarray(values[key])
+                totals[arm]['dropbacks']+=values['dropbacks']
+    else:
+        with ProcessPoolExecutor(max_workers=4,initializer=init,initargs=(config,)) as pool:
+            for future in as_completed([pool.submit(replay,str(p)) for p in paths]):
+                for a,values in future.result().items():
+                    for key in ['fourth','play']:totals[a][key]+=np.asarray(values[key])
+                    totals[a]['dropbacks']+=values['dropbacks']
+                count+=1
+                if count%25==0:print(f'Matched mechanics audit {count}/285',flush=True)
     root=ROOT/'inputs/Simmah_NFL_PBP_2022-2025_Recovered';f,source=load_year(root,2024);obs=observed(f,config['fourth']);sources=[source]
     result={'scope':'Passive matched 285-game replay of Fourth-Down-Only and Combined; every output dictionary matches all 1140 saved arm batches exactly; observed 2024 is reused development data',
         'simulated_trials_per_arm':285*1024,'observed_games':int(f.game_id.nunique()),'arms':{a:summarize(v,285*1024) for a,v in totals.items()},'observed':summarize({'fourth':obs.fourth,'play':obs.play,'dropbacks':obs.dropbacks},285),
