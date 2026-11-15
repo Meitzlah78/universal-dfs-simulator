@@ -33,7 +33,7 @@ def main():
     parser.add_argument('--data',type=Path,default=ROOT/'inputs/Simmah_NFL_PBP_2022-2025_Recovered/play_by_play_2024.csv.gz')
     parser.add_argument('--frozen',type=Path,default=OUT/'frozen_inputs.json')
     parser.add_argument('--actual-audit',type=Path,default=ROOT/'inputs/Simmah_2024_Full_Game_Hybrid_Replay.zip')
-    parser.add_argument('--out',type=Path,default=Path('late-half-v2-results'))
+    parser.add_argument('--out',type=Path,default=Path('late-half-v3-results'))
     args=parser.parse_args();data=args.data;out=args.out;out.mkdir(parents=True,exist_ok=True)
     if data.name!='play_by_play_2024.csv.gz':raise ValueError('Only 2024 evaluation is allowed')
     cols=['season','game_id','play_id','qtr','quarter_seconds_remaining','play_type','qb_kneel','qb_spike','extra_point_attempt','two_point_attempt','timeout','timeout_team','posteam','defteam','fixed_drive']
@@ -75,7 +75,14 @@ def main():
     for metric,ref in [('snaps','observed_snaps_per_game'),('drives','observed_drives_per_game'),('points','observed_total_regulation_points')]:
         target=float((snap&f.qtr.between(1,4)).sum()/len(games)) if metric=='snaps' else actual[ref]
         fullgame[metric]={'observed':target,'simulated':means[metric],'relative_error':(means[metric]-target)/target,'pass':abs(means[metric]-target)/target<=.05}
-    report={'full_game_checks':fullgame,'full_game_tolerance':.05,'policy':POLICY_VERSION,'games':len(games),'draws_per_game':1024,'checks':checks,'observed':observed,'simulated':simulated,'means':{k:float(np.mean([b['means'][k] for b in batches])) for k in batches[0]['means']},'ledger_max_error':max(b['ledger_max_error'] for b in batches),'slice_gate':all(c['pass'] for c in checks.values()),'baseline_locked':False,'ablations':'BLOCKED pending full baseline validation','2025':'not opened or extracted','production':'unchanged','evaluation':'Reused 2024 diagnostics; no independent holdout claim','sources':{str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in [data,args.frozen,args.actual_audit,Path('simmah_nfl_clock_rebuild_offline.py'),Path(__file__)]}}
+    report={'full_game_checks':fullgame,'full_game_tolerance':.05,'policy':POLICY_VERSION,'games':len(games),'draws_per_game':1024,'checks':checks,'observed':observed,'simulated':simulated,'means':{k:float(np.mean([b['means'][k] for b in batches])) for k in batches[0]['means']},'ledger_max_error':max(b['ledger_max_error'] for b in batches),'slice_gate':all(c['pass'] for c in checks.values()),'baseline_locked':False,'research_baseline_locked':False,'research_gate_scope':'User-authorized Q2/Q4 snap and defensive-timeout screens plus exact regulation accounting; not production/full-game validation','ablations':'BLOCKED pending clock-slice research gate','2025':'not opened or extracted','production':'unchanged','evaluation':'Reused 2024 diagnostics; no independent holdout claim','sources':{str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in [data,args.frozen,args.actual_audit,Path('simmah_nfl_clock_rebuild_offline.py'),Path(__file__)]}}
+    for q in [2,4]:
+        for metric in ['offensive_timeouts','all_timeouts','kneels']:
+            key=f'q{q}_{metric}'
+            report.setdefault('additional_management_checks',{})[key]={'observed':observed[key]['mean'],'simulated':simulated[key],'delta':simulated[key]-observed[key]['mean']}
+    report['research_baseline_locked']=report['slice_gate'] and report['ledger_max_error']==0
+    if report['research_baseline_locked']:
+        report['ablations']='AUTHORIZED: exploratory four-arm matrix under user-specified clock-slice gate; full-game validation remains separate'
     meta.write_text(json.dumps({'cache_key':cache_key}))
     (out/'validation.json').write_text(json.dumps(report,indent=2));(out/'game_batches.json').write_text(json.dumps(results));print(json.dumps(checks),flush=True)
 if __name__=='__main__':main()

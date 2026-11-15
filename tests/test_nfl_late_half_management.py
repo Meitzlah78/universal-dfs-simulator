@@ -76,3 +76,23 @@ class RevisedManagementTests(unittest.TestCase):
                     self.assertTrue(victory_kneel(np.array([r]),np.array([1]),np.array([down]),np.array([75]),np.array([tos]))[0])
                     elapsed=2 if tos>0 else 42
                     r=max(0,r-elapsed);tos=max(0,tos-1);down+=1
+
+class Q2UrgencyTests(unittest.TestCase):
+    def masks(self,r=1900,margin=0,field=50,normal=True,changed=False,kind='running',tos=3,defensive=False):
+        from simmah_nfl_clock_rebuild_offline import q2_offensive_management
+        return tuple(bool(x[0]) for x in q2_offensive_management(*[np.array([x]) for x in (r,margin,field,normal,changed,kind,tos,defensive)]))
+    def test_urgency_for_any_trailing_tied_or_sub21_leading_score(self):
+        for margin in [-35,-1,0,1,20]:self.assertEqual(self.masks(margin=margin),(True,False))
+        self.assertEqual(self.masks(margin=21),(False,False))
+        self.assertEqual(self.masks(field=80),(False,False))
+        self.assertEqual(self.masks(field=79),(True,False))
+    def test_q2_only_and_timeout_clock_budget(self):
+        for r in [1921,1800,120,45,1]:self.assertEqual(self.masks(r=r),(False,False))
+        self.assertEqual(self.masks(r=1920),(True,False))
+        self.assertEqual(self.masks(r=1845),(True,True))
+        self.assertEqual(self.masks(r=1846),(True,False))
+        self.assertEqual(self.masks(r=1805),(True,False))
+        self.assertEqual(self.masks(r=1840,tos=0),(True,False))
+    def test_never_double_spend_or_override_stopped_terminal_clock(self):
+        for kw in [dict(defensive=True),dict(normal=False),dict(changed=True),dict(kind='incomplete'),dict(kind='late_out_of_bounds'),dict(kind='kick')]:
+            self.assertEqual(self.masks(r=1840,**kw),(False,False))
