@@ -1,9 +1,12 @@
 # NFL preparation performance and recovery
 
-A cold full-slate build performs a nine-pass projection fit, optional market
-calibration and another nine-pass final-context fit, followed by separate
-evaluation and construction samples. A fitting counter is not overall build
-progress. Reducing candidate count does not shorten these fitting passes.
+A market-enabled cold full-slate build now performs a three-pass preliminary
+fit, market calibration and a full nine-pass final-context fit, followed by
+separate evaluation and construction samples. Before the follow-up cold-fit
+fix, both fits used nine passes. Without markets the only fit retains all nine
+passes. See [the regression analysis](nfl-cold-fit-regression.md). A fitting
+counter is not overall build progress. Reducing candidate count does not
+shorten these fitting passes.
 
 This change computes fixed player rates once per game, uses indexed stat
 writes instead of repeated per-player masks, and skips empty draws. Draw order,

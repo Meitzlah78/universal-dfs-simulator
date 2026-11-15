@@ -332,10 +332,19 @@ def replay_losses(cases,parameters,players,*,draws=1024,seed=791):
             from simmah_market_calibration import calibrate_market_inputs
             from simmah_nfl_scoring import score_nfl_stat_line
             settings=case['fit_settings']
+            final_context=settings.get('policy')=='final-context-coarse-prefit-v1'
+            context=({'correlation_strength':float(case.get('correlation_strength',1.)),
+                      'weather_by_team':case['weather']} if final_context else {})
             fitted_inputs,_=fit_projection_inputs(pool,roles,case['platform'],score_nfl_stat_line,
-                pilot_n=int(settings['pilot_n']),iterations=int(settings['iterations']),learned_parameters=effective)
+                pilot_n=int(settings['pilot_n']),iterations=int(settings.get('pre_market_iterations',settings['iterations'])),
+                learned_parameters=effective,**context)
             gains,_=calibrate_market_inputs(pool,roles,fitted_inputs,case['weather'],case['platform'],
-                case['market_targets'],pilot_n=max(512,int(settings['pilot_n'])),learned_parameters=effective)
+                case['market_targets'],pilot_n=max(512,int(settings['pilot_n'])),learned_parameters=effective,
+                **({'correlation_strength':float(case.get('correlation_strength',1.))} if final_context else {}))
+            if final_context and gains:
+                fitted_inputs,_=fit_projection_inputs(pool,roles,case['platform'],score_nfl_stat_line,
+                    pilot_n=int(settings['pilot_n']),iterations=int(settings['iterations']),learned_parameters=effective,
+                    initial_parameters=fitted_inputs,market_gain=gains,**context)
         stats=simulate_stat_lines(pool,roles,np.random.default_rng(seed_for_game),draws,
             correlation_strength=float(case.get('correlation_strength',1.)),
             weather_by_team=case['weather'],projection_inputs=fitted_inputs,

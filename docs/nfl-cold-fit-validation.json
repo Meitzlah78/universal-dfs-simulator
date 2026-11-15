@@ -1,0 +1,212 @@
+{
+  "schema": 1,
+  "base_commit": "914e0b0cfd531c8225f7623b898cb265703ba2f6",
+  "regression_commit": "8c7db8e120fdb8be0c87cc51c4e6691a08741d91",
+  "old_engine_sha256": "30955819befdb0de6862d3b18d61ba553e7752cdb751eab9e84d0222749e07c1",
+  "new_engine_sha256": "ffc8ca4f50786f06640693ae67e84b00034a81e572e36bc671e9bacf6b682652",
+  "source_model": "22a17d60a969d482",
+  "source_model_sha256": "9281cadda3e5a0ea71919cf22b34aaf9ff992c8bf30bad853e3ea84f66a5f199",
+  "parameters_unchanged": {
+    "rushing_df": 3.0,
+    "rushing_sd": 6.0
+  },
+  "holdout_retested": false,
+  "validation_kind": "numerical projection alignment, not observed forecast or ROI validation",
+  "thresholds": {
+    "mae_increase_points": 0.05,
+    "weighted_mse_increase": 0.01,
+    "position_mae_increase_points": 0.1,
+    "market_mae_increase_points": 0.5
+  },
+  "cases": [
+    {
+      "case": "FD_actual_uploaded_positive_pool",
+      "players": 240,
+      "games": 10,
+      "role_source": "fallback defaults",
+      "input_sha256": "676d822bd43877dafee0f2d32ee946d7539d9fd660c09ee825a2aa70aabe4c6c",
+      "evaluation_seeds": [
+        791,
+        1171
+      ],
+      "independent_draws_per_seed": 4096,
+      "baseline": {
+        "seconds": 57.84991033000006,
+        "mae": 0.31106191914095577,
+        "weighted_mse": 0.026272041945811873,
+        "mae_by_pos": {
+          "QB": 0.501602423021104,
+          "RB": 0.2643368110801654,
+          "WR": 0.35417005794339135,
+          "TE": 0.2325607379073107
+        },
+        "market_mae": 1.39996337890625
+      },
+      "candidate": {
+        "seconds": 44.32732688500005,
+        "mae": 0.33408618533511886,
+        "weighted_mse": 0.029153380050996387,
+        "mae_by_pos": {
+          "QB": 0.5621348690008737,
+          "RB": 0.2853834566173911,
+          "WR": 0.38057963175134596,
+          "TE": 0.24092176441522636
+        },
+        "market_mae": 1.4072998046875
+      },
+      "qualification": "passed"
+    },
+    {
+      "case": "DK_actual_uploaded_positive_pool",
+      "players": 240,
+      "games": 10,
+      "role_source": "fallback defaults",
+      "input_sha256": "c858a6043ef7d2c6d3c243eca091b3ed077411bb592adb6a5da58c2df88a2970",
+      "evaluation_seeds": [
+        791,
+        1171
+      ],
+      "independent_draws_per_seed": 4096,
+      "baseline": {
+        "seconds": 56.45434303000002,
+        "mae": 0.36171177051733294,
+        "weighted_mse": 0.028686317549946622,
+        "mae_by_pos": {
+          "QB": 0.6086955565467068,
+          "RB": 0.28449007929590414,
+          "WR": 0.4216641263249367,
+          "TE": 0.26889582342874185
+        },
+        "market_mae": 1.67335205078125
+      },
+      "candidate": {
+        "seconds": 44.23286043100006,
+        "mae": 0.38834079474478966,
+        "weighted_mse": 0.033790144683735895,
+        "mae_by_pos": {
+          "QB": 0.5566733365282415,
+          "RB": 0.285885587394795,
+          "WR": 0.472277690922991,
+          "TE": 0.3091593166987818
+        },
+        "market_mae": 1.436309814453125
+      },
+      "qualification": "passed"
+    },
+    {
+      "case": "2026-11-12_WAS_NYG_frozen_roles_weather",
+      "input_sha256": "80365d76977431eb097e6da784dc257d78467647a8d0f64c653a86b2d00beb76",
+      "independent_draws": 10000,
+      "evaluation_seed": 791,
+      "historical_single_fit": {
+        "seconds": 2.8795404290000306,
+        "mae": 1.1698486353661126,
+        "weighted_mse": 0.3594363756695351,
+        "market_mae": 0.3745499999999993
+      },
+      "baseline": {
+        "seconds": 4.557133660999966,
+        "mae": 0.2150785805848808,
+        "weighted_mse": 0.009294760068279053,
+        "market_mae": 3.767150000000001
+      },
+      "candidate": {
+        "seconds": 3.508925814999998,
+        "mae": 0.20361590841547134,
+        "weighted_mse": 0.010317198555708097,
+        "market_mae": 3.7429499999999996
+      },
+      "qualification": "passed"
+    },
+    {
+      "case": "FanDuel_two_team_history_weather_fixture",
+      "baseline": {
+        "mae": 3.1083881535865343,
+        "weighted_mse": 0.6783239597822505,
+        "market_mae": 1.7595500000000008
+      },
+      "candidate": {
+        "mae": 3.1083881535865343,
+        "weighted_mse": 0.6783239597822505,
+        "market_mae": 1.7595500000000008
+      },
+      "qualification": "identical independent residual metrics"
+    },
+    {
+      "case": "DraftKings_two_team_history_weather_fixture",
+      "baseline": {
+        "mae": 5.757581958656176,
+        "weighted_mse": 2.41616764724894,
+        "market_mae": 4.0915
+      },
+      "candidate": {
+        "mae": 5.757581958656176,
+        "weighted_mse": 2.41616764724894,
+        "market_mae": 4.0915
+      },
+      "qualification": "identical independent residual metrics"
+    }
+  ],
+  "exploration_rejected": [
+    {
+      "initial_updates": 0,
+      "reason": "DK shared-input workload MAE increased by 0.091 points, above 0.05 tolerance"
+    },
+    {
+      "initial_updates": 4,
+      "reason": "Slower than two updates without a material numerical-alignment advantage in exploratory checks"
+    }
+  ],
+  "full_preparation_performance_fixture": {
+    "description": "Matched fixed 240-player/10-game DK-target pool scored as FanDuel; fixed fallback roles, weather and existing learned rushing parameters. This workload measures execution, not the actual final FD forecast.",
+    "input_sha256": "f5b76372cd8871162c4e3b2bc0523fbdb7bf5eb02213ba2f5098e33179e50557",
+    "results": {
+      "current_22_pilots": {
+        "total_seconds": 69.84126601499997,
+        "timings": {
+          "fit_seconds": 56.68789425499995,
+          "evaluation_seconds": 6.3549354140000105,
+          "construction_seconds": 6.360318873000097,
+          "persist_seconds": 0.2311751780000577,
+          "total_seconds": 69.83920148700008
+        },
+        "players": 240,
+        "games": 10,
+        "evaluation_draws": 10000,
+        "construction_draws": 10000,
+        "warm_seconds": 0.05690382500006308
+      },
+      "candidate_16_pilots": {
+        "total_seconds": 48.70035401600012,
+        "timings": {
+          "fit_seconds": 35.00362517999997,
+          "evaluation_seconds": 6.6194237700001395,
+          "construction_seconds": 6.772022050000032,
+          "persist_seconds": 0.0614997279999443,
+          "total_seconds": 48.69740311700002
+        },
+        "players": 240,
+        "games": 10,
+        "evaluation_draws": 10000,
+        "construction_draws": 10000,
+        "warm_seconds": 0.05655705499998476
+      }
+    }
+  },
+  "pilot_runs": {
+    "earlier_schedule": 13,
+    "pre_fix": 22,
+    "candidate": 16
+  },
+  "final_projection_passes": 9,
+  "final_evaluation_draws": 10000,
+  "final_construction_draws": 10000,
+  "conditional_engine_and_scoring_unchanged": true,
+  "limitations": [
+    "Uploaded main-slate pools omit defense forecasts and use fallback historical roles.",
+    "Thresholds assess numerical projection alignment only, not future player accuracy.",
+    "Fitted inputs and sampled outcomes can change; this is not exact full-pipeline parity.",
+    "Local timing is not a production-host guarantee.",
+    "No 2025 data or new holdout observations were used."
+  ]
+}
