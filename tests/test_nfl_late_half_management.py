@@ -99,8 +99,8 @@ class Q2UrgencyTests(unittest.TestCase):
 
 class Q2V4GateTests(unittest.TestCase):
     def masks(self,r=1860,field=64,margin=0,tos=3,defensive=False):
-        from simmah_nfl_clock_rebuild_offline import q2_offensive_management,POLICY_VERSION
-        return tuple(bool(x[0]) for x in q2_offensive_management(*[np.array([x]) for x in (r,margin,field,True,False,'running',tos,defensive)],policy=POLICY_VERSION))
+        from simmah_nfl_clock_rebuild_offline import q2_offensive_management,V4_POLICY_VERSION
+        return tuple(bool(x[0]) for x in q2_offensive_management(*[np.array([x]) for x in (r,margin,field,True,False,'running',tos,defensive)],policy=V4_POLICY_VERSION))
     def test_strict_beyond_own35_applies_to_both_urgency_and_timeout(self):
         self.assertEqual(self.masks(field=65),(False,False))
         self.assertEqual(self.masks(field=64),(True,True))
@@ -114,3 +114,33 @@ class Q2V4GateTests(unittest.TestCase):
         self.assertEqual(self.masks(margin=21),(False,False))
         self.assertEqual(self.masks(tos=0),(True,False))
         self.assertEqual(self.masks(defensive=True),(False,False))
+
+class Q2V5BudgetTests(unittest.TestCase):
+    def masks(self,r=1855,field=50,down=1,tos=2):
+        from simmah_nfl_clock_rebuild_offline import q2_offensive_management,POLICY_VERSION
+        return tuple(bool(x[0]) for x in q2_offensive_management(*[np.array([x]) for x in (r,0,field,True,False,'running',tos,False)],policy=POLICY_VERSION,next_down=np.array([down])))
+    def test_cutoff_uses_actual_call_timestamp(self):
+        self.assertEqual(self.masks(r=1855),(True,True))
+        self.assertEqual(self.masks(r=1856),(True,False))
+        self.assertEqual(self.masks(r=1805),(True,False))
+    def test_last_timeout_reserved_on_early_downs(self):
+        for down in [1,2]:self.assertEqual(self.masks(tos=1,down=down),(True,False))
+        for down in [3,4]:self.assertEqual(self.masks(tos=1,down=down),(True,True))
+        self.assertEqual(self.masks(tos=0,down=4),(True,False))
+    def test_reserved_timeout_fg_transition(self):
+        self.assertEqual(self.masks(r=1820,field=40,tos=1),(True,True))
+        self.assertEqual(self.masks(r=1821,field=40,tos=1),(True,False))
+        self.assertEqual(self.masks(r=1820,field=41,tos=1),(True,False))
+    def test_missing_down_context_is_rejected(self):
+        from simmah_nfl_clock_rebuild_offline import q2_offensive_management,POLICY_VERSION
+        with self.assertRaisesRegex(ValueError,'down context'):
+            q2_offensive_management(*[np.array([x]) for x in (1850,0,50,True,False,'running',2,False)],policy=POLICY_VERSION)
+    def test_passive_trace_and_no_zero_runoff_timeout_spending(self):
+        clock={'train_years':[2022,2023],'classes':{k:{'ordinary':[5]} for k in ['running','early_out_of_bounds','late_out_of_bounds','incomplete']}}
+        decision={'decision':{'coef':[[0]*34],'intercept':[0]}}
+        params=dict(penalty_rate=.07,sack_rate=.065,interception_rate=.02,completion_rate=.64,receiving_yards=11,rushing_yards=4.49,fumble_loss_rate=.006,extra_point_rate=.9468,oob_rate=.12)
+        trace=[]
+        a=simulate(32,12,clock,decision,params,management_policy=POLICY_VERSION,timeout_trace=trace.append)
+        b=simulate(32,12,clock,decision,params,management_policy=POLICY_VERSION)
+        self.assertEqual(a,b);self.assertEqual(trace,[])
+        self.assertEqual(a['late_half']['q2_offensive_timeouts'],0)

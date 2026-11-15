@@ -61,7 +61,8 @@ def sample_clock(clock,kind,remaining,margin,u):
 LEGACY_POLICY_VERSION = 'late-half-management-v1'
 V2_POLICY_VERSION = 'late-half-management-v2'
 V3_POLICY_VERSION = 'late-half-management-v3'
-POLICY_VERSION = 'late-half-management-v4'
+V4_POLICY_VERSION = 'late-half-management-v4'
+POLICY_VERSION = 'late-half-management-v5'
 
 
 def management_masks(remaining, margin, field, normal, changed, kind, defensive_timeouts, *, policy=LEGACY_POLICY_VERSION):
@@ -74,7 +75,7 @@ def management_masks(remaining, margin, field, normal, changed, kind, defensive_
     """
     late = ((remaining > 1800) & (remaining <= 1920)) | ((remaining > 0) & (remaining <= 120))
     eligible = late & normal & ~changed & (kind == 'running')
-    max_margin = 8 if policy in (V2_POLICY_VERSION, V3_POLICY_VERSION, POLICY_VERSION) else 16
+    max_margin = 8 if policy in (V2_POLICY_VERSION, V3_POLICY_VERSION, V4_POLICY_VERSION, POLICY_VERSION) else 16
     timeout = eligible & (margin > 0) & (margin <= max_margin) & (defensive_timeouts > 0)
     hurry = eligible & (((margin < 0) & (margin >= -max_margin)) | ((margin == 0) & (field <= 60)))
     return timeout, hurry & ~timeout
@@ -95,24 +96,30 @@ def victory_kneel(remaining, margin, down, field, defensive_timeouts):
 
 
 def q2_offensive_management(remaining, margin, field, normal, changed, kind,
-                            offensive_timeouts, defensive_timeout, *, policy=V3_POLICY_VERSION):
+                            offensive_timeouts, defensive_timeout, *, policy=V3_POLICY_VERSION, next_down=None):
     """User-specified Q2 urgency territory/score gate; frozen v3 clock rules.
 
     Hurry cap is 20 total seconds (live included). Save offensive timeouts
     until the final 45 seconds; never spend one on an already stopped clock
     or after the half has expired. Defensive timeout has precedence.
     """
-    field_limit,clock_limit=(65,1870) if policy==POLICY_VERSION else (80,1845)
+    field_limit,clock_limit=(65,1855) if policy==POLICY_VERSION else ((65,1870) if policy==V4_POLICY_VERSION else (80,1845))
     eligible=((remaining>1800)&(remaining<=1920)&(field<field_limit)&(margin<21)&
               normal&~changed&(kind=='running'))
     hurry=eligible&~defensive_timeout
     timeout=(hurry&(remaining<=clock_limit)&(remaining>1805)&(offensive_timeouts>0))
+    if policy==POLICY_VERSION:
+        if next_down is None:raise ValueError('V5 requires post-play down context')
+        # Preserve the final timeout for a late down or the final 15 seconds
+        # in the existing FG range. All thresholds use actual call time.
+        release_reserved=(np.asarray(next_down)>=3)|((field<=40)&(remaining-1805<=15))
+        timeout &= (offensive_timeouts>1)|release_reserved
     return hurry,timeout
 
 
 def simulate(n,seed,clock,decision,parameters,*,fourth_policy=None,run_model=None,management_policy=None,timeout_trace=None):
     if n<1 or clock.get('train_years')!=[2022,2023]:raise ValueError('Training-only clock and positive draws required')
-    if management_policy not in (None, LEGACY_POLICY_VERSION, V2_POLICY_VERSION, V3_POLICY_VERSION, POLICY_VERSION):raise ValueError('Unknown management policy')
+    if management_policy not in (None, LEGACY_POLICY_VERSION, V2_POLICY_VERSION, V3_POLICY_VERSION, V4_POLICY_VERSION, POLICY_VERSION):raise ValueError('Unknown management policy')
     slices={f'q{q}_{k}':np.zeros(n) for q in [2,4] for k in ['snaps','defensive_timeouts','offensive_timeouts','all_timeouts','hurry_snaps','kneels']}
     rng=np.random.default_rng(seed);r=np.full(n,3600.);side=rng.integers(0,2,n);opening=side.copy()
     field=np.full(n,75.);down=np.ones(n,int);togo=np.full(n,10.);score=np.zeros((2,n));timeouts=np.full((2,n),3)
@@ -127,7 +134,7 @@ def simulate(n,seed,clock,decision,parameters,*,fourth_policy=None,run_model=Non
         u=rng.random((n,14));i=np.flatnonzero(r>0);s=side[i].copy();margin=score[s,i]-score[1-s,i]
         q=4-np.ceil(r[i]/900).astype(int)+1
         if timeout_trace is not None:snap_down=down[i].copy();snap_field=field[i].copy()
-        kneel=victory_kneel(r[i],margin,down[i],field[i],timeouts[1-s,i]) if management_policy in (V2_POLICY_VERSION,V3_POLICY_VERSION,POLICY_VERSION) else np.zeros(len(i),bool)
+        kneel=victory_kneel(r[i],margin,down[i],field[i],timeouts[1-s,i]) if management_policy in (V2_POLICY_VERSION,V3_POLICY_VERSION,V4_POLICY_VERSION,POLICY_VERSION) else np.zeros(len(i),bool)
         isfourth=down[i]==4;go=(field[i]<5)|((r[i]<180)&(margin<0))
         if fourth_policy is not None and isfourth.any():
             import pandas as pd
@@ -209,13 +216,14 @@ def simulate(n,seed,clock,decision,parameters,*,fourth_policy=None,run_model=Non
         # Legacy timeout rule remains exactly preserved when policy is disabled.
         if not management_policy:
             timeout=(r[i]<=120)&(margin>0)&normal&~changed&(kind=='running')&(timeouts[1-s,i]>0)
-        if management_policy in (V2_POLICY_VERSION,V3_POLICY_VERSION,POLICY_VERSION):timeout &= r[i]>5
+        if management_policy in (V2_POLICY_VERSION,V3_POLICY_VERSION,V4_POLICY_VERSION,POLICY_VERSION):timeout &= r[i]>5
         kneel_timeout=kneel&(margin<=8)&(timeouts[1-s,i]>0)&(r[i]>2)
         timeout |= kneel_timeout
         offensive_timeout=np.zeros(len(i),bool)
-        if management_policy in (V3_POLICY_VERSION,POLICY_VERSION):
-            q2_hurry,offensive_timeout=q2_offensive_management(r[i],margin,field[i],normal,changed,kind,timeouts[s,i],timeout,policy=management_policy)
+        if management_policy in (V3_POLICY_VERSION,V4_POLICY_VERSION,POLICY_VERSION):
+            q2_hurry,offensive_timeout=q2_offensive_management(r[i],margin,field[i],normal,changed,kind,timeouts[s,i],timeout,policy=management_policy,next_down=down[i])
             duration[q2_hurry]=np.minimum(duration[q2_hurry],20.)
+            if management_policy==POLICY_VERSION:offensive_timeout &= duration>5
             hurry |= q2_hurry
         if timeout_trace is not None and offensive_timeout.any():
             a=offensive_timeout;j=i[a]

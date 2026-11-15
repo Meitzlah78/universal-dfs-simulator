@@ -56,12 +56,12 @@ def replay_game(game):
 
 
 def main():
-    parser=argparse.ArgumentParser();parser.add_argument('--baseline',type=Path,default=Path('late-half-v4-results'))
+    parser=argparse.ArgumentParser();parser.add_argument('--baseline',type=Path,default=Path('late-half-v5-results'))
     parser.add_argument('--frozen',type=Path,default=Path('late-half-results/frozen_inputs.json'))
     parser.add_argument('--fourth',type=Path,default=Path('../inputs/Simmah_NFL_Event_Levers_Offline_2026-11-14/results/fourth_policy.json'))
     parser.add_argument('--run',type=Path,default=Path('../inputs/Simmah_NFL_Clock_Rebuild_2026-11-14/clock-rebuild/rushing_body_model.json'))
     parser.add_argument('--candidate-freeze',type=Path,default=Path('late-half-results/candidate_freeze.json'))
-    parser.add_argument('--out',type=Path,default=Path('four-arm-v4-results'));parser.add_argument('--workers',type=int,default=4)
+    parser.add_argument('--out',type=Path,default=Path('four-arm-v5-results'));parser.add_argument('--workers',type=int,default=4)
     args=parser.parse_args();report,baseline=checked_baseline(args.baseline)
     expected=json.loads(args.candidate_freeze.read_text())
     if expected.get(str(args.fourth))!=sha(args.fourth) or expected.get(str(args.run))!=sha(args.run):
