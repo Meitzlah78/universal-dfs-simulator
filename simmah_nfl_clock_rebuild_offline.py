@@ -64,6 +64,8 @@ def simulate(n,seed,clock,decision,parameters,*,fourth_policy=None,run_model=Non
     field=np.full(n,75.);down=np.ones(n,int);togo=np.full(n,10.);score=np.zeros((2,n));timeouts=np.full((2,n),3)
     env=np.clip(1+rng.normal(0,.1,n),.75,1.30);warning=np.zeros((2,n),bool);pending=np.ones(n,bool)
     counts={k:np.zeros(n) for k in ['snaps','drives','punts','non_redzone_tds','tds','fg_attempts','fg_made','turnovers','rush_attempts','rush_yards','rush20']}
+    audit={k:np.zeros(n) for k in ['dropbacks','completions','incompletions','sacks','interceptions','oob_run','oob_completion','fourth_opportunities','fourth_go','penalty_opportunities','no_play_penalties','raw_sampled_seconds']}
+    ledger_events={k:np.zeros(n) for k in ['running','incomplete','early_out_of_bounds','late_out_of_bounds','changed','kick','penalty','timeout']}
     ledger={k:np.zeros(n) for k in ['running','incomplete','early_out_of_bounds','late_out_of_bounds','changed','kick','penalty','timeout']}
     for event in range(2500):
         if not (r>0).any():break
@@ -77,9 +79,11 @@ def simulate(n,seed,clock,decision,parameters,*,fourth_policy=None,run_model=Non
             j=i[isfourth]
             st=pd.DataFrame(dict(down=down[j],yardline_100=field[j],ydstogo=togo[j],game_seconds_remaining=r[j],score_differential=margin[isfourth],qtr=q[isfourth]))
             go[isfourth]=u[j,0]<predict_fourth(fourth_policy,st)
+        audit['fourth_opportunities'][i[isfourth]]+=1;audit['fourth_go'][i[isfourth&go]]+=1
         kick=isfourth&~go
         penalty=(u[i,1]<parameters['penalty_rate'])&~kick
         normal=~kick&~penalty
+        audit['penalty_opportunities'][i[~kick]]+=1;audit['no_play_penalties'][i[penalty]]+=1
         # New possession counts only when an offensive snap or kick actually occurs.
         begin=pending[i]&~penalty;counts['drives'][i[begin]]+=1;pending[i[begin]]=False
         gain=np.zeros(len(i));td=np.zeros(len(i),bool);turn=np.zeros(len(i),bool);safe=np.zeros(len(i),bool)
@@ -104,7 +108,9 @@ def simulate(n,seed,clock,decision,parameters,*,fourth_policy=None,run_model=Non
             turn[a]=intercept|fumble;td[a]=(g>=field[j])&~turn[a];safe[a]=(g<=-(100-field[j]))&~turn[a]
             counts['rush_attempts'][j[running]]+=1;counts['rush_yards'][j[running]]+=g[running];counts['rush20'][j[running&(g>=20)]]+=1
             incomplete=passing&~caught&~sack&~intercept
-            oob=(caught|running)&(u[j,8]<parameters['oob_rate'])
+            oob_chance=np.where(running,parameters.get('oob_run',parameters['oob_rate']),parameters.get('oob_pass',parameters['oob_rate']))
+            oob=(caught|running)&(u[j,8]<oob_chance)
+            for key,mask in [('dropbacks',passing),('completions',caught),('incompletions',incomplete),('sacks',sack),('interceptions',intercept),('oob_run',oob&running),('oob_completion',oob&caught)]:audit[key][j[mask]]+=1
             late=((q[a]==2)&(r[j]<=1920))|((q[a]==4)&(r[j]<=300))
             kind[a[incomplete]]='incomplete';kind[a[oob&~late]]='early_out_of_bounds';kind[a[oob&late]]='late_out_of_bounds'
             duration[a]=sample_clock(clock,kind[a],r[j],margin[a],u[j,9])
@@ -137,9 +143,12 @@ def simulate(n,seed,clock,decision,parameters,*,fourth_policy=None,run_model=Non
         timeout=(r[i]<=120)&(margin>0)&normal&~changed&(kind=='running')&(timeouts[1-s,i]>0)
         duration[timeout]=5.;kind[timeout]='timeout';timeouts[1-s[timeout],i[timeout]]-=1
         half=(r[i]>1800).astype(int);oldr=r[i].copy()
+        audit['raw_sampled_seconds'][i]+=duration
         after,elapsed,seen=transition(oldr,duration,stopped=np.isin(kind,['incomplete','late_out_of_bounds','changed','kick','penalty','timeout']),warning_seen=warning[half,i])
         warning[half,i]|=seen
-        for k in ledger:ledger[k][i[kind==k]]+=elapsed[kind==k]
+        for k in ledger:
+            ledger[k][i[kind==k]]+=elapsed[kind==k]
+            ledger_events[k][i[kind==k]]+=1
         r[i]=after
         halftime=(oldr>1800)&(after==1800)
         j=i[halftime]
@@ -147,4 +156,4 @@ def simulate(n,seed,clock,decision,parameters,*,fourth_policy=None,run_model=Non
     if (r>0).any():raise RuntimeError('Regulation failed to terminate')
     total=sum(ledger.values())
     if not np.allclose(total,3600,rtol=0,atol=1e-8):raise RuntimeError('Clock ledger not conserved')
-    return {'version':VERSION,'means':{**{k:float(v.mean()) for k,v in counts.items()},'points':float(score.sum(axis=0).mean())},'clock_seconds':{k:float(v.mean()) for k,v in ledger.items()},'ledger_max_error':float(np.max(np.abs(total-3600))),'draws':n}
+    return {'version':VERSION,'audit':{k:float(v.mean()) for k,v in audit.items()},'clock_events':{k:float(v.mean()) for k,v in ledger_events.items()},'means':{**{k:float(v.mean()) for k,v in counts.items()},'points':float(score.sum(axis=0).mean())},'clock_seconds':{k:float(v.mean()) for k,v in ledger.items()},'ledger_max_error':float(np.max(np.abs(total-3600))),'draws':n}

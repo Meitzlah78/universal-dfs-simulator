@@ -22,5 +22,11 @@ class ClockRebuildTests(unittest.TestCase):
         a=simulate(16,1,clock,decision,p);b=simulate(16,1,clock,decision,p)
         self.assertEqual(a,b);self.assertEqual(a['ledger_max_error'],0);self.assertAlmostEqual(sum(a['clock_seconds'].values()),3600)
         self.assertGreater(a['means']['snaps'],0)
+        m=a['means'];d=a['audit'];e=a['clock_events']
+        self.assertEqual(d['dropbacks']+m['rush_attempts'],m['snaps'])
+        self.assertEqual(d['completions']+d['incompletions']+d['sacks']+d['interceptions'],d['dropbacks'])
+        self.assertEqual(e['penalty'],d['no_play_penalties'])
+        self.assertEqual(e['kick'],m['punts']+m['fg_attempts'])
+        self.assertEqual(sum(e.values()),m['snaps']+e['kick']+e['penalty'])
 
 if __name__=='__main__':unittest.main()
