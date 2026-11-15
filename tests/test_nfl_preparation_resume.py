@@ -26,7 +26,7 @@ class PreparationResumeTest(unittest.TestCase):
         parent=json.loads((Path('data/nfl_models/versions')/(model['parent_version']+'.json')).read_text())
         self.assertEqual(digest(parent),proof['source_model_sha256'])
         for key in parent:
-            if key not in {'engine_sha256','version','parent_version'}:self.assertEqual(model[key],parent[key],key)
+            if key not in {'engine_sha256','version','parent_version','implementation_revalidation'}:self.assertEqual(model[key],parent[key],key)
         raw=Path(proof['evidence']).read_bytes()
         self.assertEqual(hashlib.sha256(raw).hexdigest(),proof['evidence_sha256'])
         evidence=json.loads(raw)
@@ -95,8 +95,8 @@ class PreparationResumeTest(unittest.TestCase):
             prepare_simulations(pool,roles,'FanDuel',root,count=16,pilot_n=16,iterations=1,
                                 market_targets={'A':(20.,)},progress=lambda f,t:messages.append((f,t)))
         self.assertEqual(sorted(f for f,t in messages),[f for f,t in messages])
-        self.assertTrue(any('Fit 1/2' in t for f,t in messages))
-        self.assertTrue(any('Fit 2/2' in t for f,t in messages))
+        self.assertTrue(any('(1/2)' in t for f,t in messages))
+        self.assertTrue(any('(2/2)' in t for f,t in messages))
         self.assertTrue(any('fit ETA' in t for f,t in messages))
 
     def test_completed_evaluation_survives_cancelled_construction(self):

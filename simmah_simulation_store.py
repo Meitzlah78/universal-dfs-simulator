@@ -21,6 +21,13 @@ from simmah_projection_inputs import fit_projection_inputs
 from simmah_qb_roles import quarterback_conflicts
 
 SCHEMA=1
+FIT_POLICY='final-context-coarse-prefit-v1'
+
+
+def pre_market_iterations(iterations,market_targets):
+    # The preliminary fit only initializes market calibration. The complete
+    # final-context fit remains unchanged; without markets this is the only fit.
+    return min(int(iterations),2) if market_targets else int(iterations)
 
 
 class CacheIntegrityError(ValueError):
@@ -98,13 +105,13 @@ def _fit(pool,roles,platform,root,key,pilot_n,iterations,progress,learned_parame
         def fit_progress(stage,offset,weight):
             return (lambda f,t:progress(offset+weight*f,stage+' — '+t)) if progress else None
         parameters,report=fit_projection_inputs(pool,roles,platform,score_nfl_stat_line,
-            pilot_n=pilot_n,iterations=iterations,progress=fit_progress('Fit 1/2 before market' if has_market else 'Projection fit',0,.45 if has_market else 1.),learned_parameters=learned_parameters,
+            pilot_n=pilot_n,iterations=pre_market_iterations(iterations,market_targets),progress=fit_progress('Preliminary market fit (1/2)' if has_market else 'Projection fit',0,.25 if has_market else 1.),learned_parameters=learned_parameters,
             correlation_strength=correlation_strength,weather_by_team=weather,
             resume_state=read_stage('initial'),save_state=lambda state:save_stage('initial',state))
         from simmah_market_calibration import calibrate_market_inputs
         market_state=read_stage('market')
         if market_state is None:
-            if progress and has_market:progress(.45,'Market calibration — final evaluation and construction sampling follow')
+            if progress and has_market:progress(.25,'Market calibration — full final-context projection fit follows')
             market_gain,market_report=calibrate_market_inputs(pool,roles,parameters,weather,platform,
                 market_targets or {},pilot_n=max(512,int(pilot_n)),learned_parameters=learned_parameters,
                 correlation_strength=correlation_strength)
@@ -112,7 +119,7 @@ def _fit(pool,roles,platform,root,key,pilot_n,iterations,progress,learned_parame
         else:market_gain,market_report=market_state['gain'],market_state['report']
         if market_gain:
             parameters,report=fit_projection_inputs(pool,roles,platform,score_nfl_stat_line,
-                pilot_n=pilot_n,iterations=iterations,progress=fit_progress('Fit 2/2 after market',.55,.45),learned_parameters=learned_parameters,
+                pilot_n=pilot_n,iterations=iterations,progress=fit_progress('Full final-context fit (2/2)',.45,.55),learned_parameters=learned_parameters,
                 correlation_strength=correlation_strength,weather_by_team=weather,market_gain=market_gain,
                 initial_parameters=parameters,resume_state=read_stage('final'),save_state=lambda state:save_stage('final',state))
         payload={'key':key,'parameters':parameters,'market_gain':market_gain,'market_report':market_report,
@@ -220,7 +227,8 @@ def prepare_simulations(pool,roles,platform,cache_root,count=10000,correlation_s
     market_targets=canonical_targets(market_targets)
     fit_spec={'schema':SCHEMA,'model_digest':_model_digest(),'players':inputs.to_dict('records'),
               'roles':roles,'learning':learning,'learned_parameters':learned_parameters,'platform':platform,'pilot_n':pilot_n,'iterations':iterations,
-              'correlation_strength':correlation_strength,'weather':weather_by_team,'market_targets':market_targets}
+              'correlation_strength':correlation_strength,'weather':weather_by_team,'market_targets':market_targets,
+              'fit_policy':FIT_POLICY,'pre_market_iterations':pre_market_iterations(iterations,market_targets)}
     fit_key=_hash(_json(fit_spec))
     spec={'schema':SCHEMA,'fit_key':fit_key,'count':count,'correlation_strength':correlation_strength,
           'weather':weather_by_team,'market_targets':market_targets,'evaluation_seed':int(evaluation_seed),'construction_seed':int(construction_seed)}
@@ -243,7 +251,8 @@ def prepare_simulations(pool,roles,platform,cache_root,count=10000,correlation_s
         from simmah_nfl_learning import capture_pregame_inputs
         replay_paths=capture_pregame_inputs(inputs,roles,platform,parameters,weather_by_team,market_gain,
                                game_starts or {},root,incumbent=model,
-                               fit_settings={"pilot_n":pilot_n,"iterations":iterations},market_targets=market_targets,
+                               fit_settings={"pilot_n":pilot_n,"iterations":iterations,'policy':FIT_POLICY,
+                                             'pre_market_iterations':pre_market_iterations(iterations,market_targets)},market_targets=market_targets,
                                correlation_strength=correlation_strength)
         result={}
         for index,(kind,seed) in enumerate([('evaluation',evaluation_seed),('construction',construction_seed)]):
