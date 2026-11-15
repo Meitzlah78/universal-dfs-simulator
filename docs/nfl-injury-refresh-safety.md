@@ -1,0 +1,9 @@
+# NFL injury refresh and assigned-entry export
+
+A failed, empty or malformed injury response retains known player designations. A first-time unverified player is labeled Unknown. Only a verified team response can clear a previous designation; partial team coverage cannot reactivate a player on an unreported team. Unrecognized status values retain known designations and produce a warning. Injury comments are not parsed as official status labels.
+
+The status map used for roster display also feeds build exclusion and the final download check. The existing 15-minute background projection check now checks injuries too. A verified change to a known player's status reruns the full app to apply eligibility changes; failures retain the existing pool exclusions and show a notice. ESPN responses remain cached for up to ten minutes, and the shared Refresh button clears that cache immediately. An absent injury designation is not independent confirmation of a player's game-day active roster or starting role.
+
+All six NFL report/entry download call sites bind the actual assigned name-based roster and slot list. Missing roster evidence or a known-OUT assigned player blocks the download instead of dropping rows and changing entry assignments. Download checkpoints and valid export data retain their existing behavior. This applies to DK Classic/Showdown and FD Full Roster/Single Game.
+
+Validation: 24 injury/feed/display/UI tests, 66 export/assignment/portfolio/ownership tests, and 15 projection/download/restore tests passed (105 total). The UI test uses real Streamlit fragments and exercises Out → failed feed → verified recovery to Active and to Questionable, asserting the named-player export error and restored export eligibility. No simulator parameters or research-model promotions are part of this change.
