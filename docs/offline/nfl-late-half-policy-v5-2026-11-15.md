@@ -37,3 +37,7 @@ Run `scripts/validate_nfl_late_half.py --out late-half-v5-results`, then only af
 All five predeclared screens pass on 285 labels / 291,840 regulation trials: Q2 snaps 10.268 versus 9.453, Q4 snaps 6.562 versus 6.786, Q2 defensive timeouts 1.220 versus 1.372, Q4 defensive timeouts 0.794 versus 0.965, Q2 offensive timeouts 1.464 versus 1.502. Maximum ledger error zero; 43 focused tests pass. Freeze this exact configuration for the user-authorized four-arm research matrix. Q2 snap bias remains +0.816/game despite the coarse screen passing.
 
 Full-game snaps 130.341 versus 123.660 (+5.4%), drives 24.082 versus 21.267 (+13.2%), and points 40.092 versus 45.754 (-12.4%) still fail the separate 5% screens. Therefore the full-model baseline is NOT validated and no main merge, production change or 2025 evaluation is permitted. The lock applies only to the comparative research configuration.
+
+## Completed comparative matrix
+
+All four arms completed 285 labels / two seeds / 512 draws per seed (1,167,360 total arm outcomes), reusing the 570 baseline batches exactly. All arm ledger errors are zero. Baseline points/punts: 40.092 / 10.773; Fourth-Down-Only 41.398 / 9.478; Explosive-Run-Only 39.546 / 11.419; Combined 40.882 / 9.936. Fourth-down-only has the strongest scoring/punt effect in this driver. The full rushing candidate restores 20+ gains but worsens aggregate scoring and punts; the switch is not tail-only. All arms still fail full-game volume/scoring screens. No promotion, merge, production changes or 2025 evaluation.
