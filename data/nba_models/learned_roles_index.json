@@ -24,6 +24,12 @@
       "activation_date": "2026-11-11",
       "file": "learned_roles/2026-11-11-fec2c1c6ba2e.json",
       "sha256": "64a4b4b04dd7a45ae2a6c0cfa8ccf6516327bd1ff84b4fae0f2a5351d9950b82"
+    },
+    {
+      "version": "2026-11-15-0db0721310fa",
+      "activation_date": "2026-11-15",
+      "file": "learned_roles/2026-11-15-0db0721310fa.json",
+      "sha256": "4060c68369e1849f2fba060d5c9de20fca54943d164cf05464106ebaa1ef5263"
     }
   ]
 }
