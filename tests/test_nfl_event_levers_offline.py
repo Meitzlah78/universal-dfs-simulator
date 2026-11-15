@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import patch
 import numpy as np
 import pandas as pd
-from simmah_nfl_event_levers_offline import read_season,fit_gain,sample_gain,fit_fourth,predict_fourth,baseline_fourth,gains,fourth_rows,evaluate_gains,evaluate_fourth
+from simmah_nfl_event_levers_offline import read_season,fit_gain,sample_gain,fit_fourth,predict_fourth,baseline_fourth,gains,fourth_rows,evaluate_gains,evaluate_fourth,fit_rushing_body
 
 
 def rows(kind='run',n=240):
@@ -15,6 +15,15 @@ def rows(kind='run',n=240):
 
 
 class EventLeverTests(unittest.TestCase):
+    def test_short_body_preserves_every_outside_probability(self):
+        f=rows();m=fit_gain(f,'run');new=fit_rushing_body(m,f)
+        outside=~np.isin(np.asarray(m['support']),[1,2,3,4,5,6])
+        np.testing.assert_array_equal(np.asarray(m['probabilities'])[outside],np.asarray(new['probabilities'])[outside])
+        c=new['body_calibration'];self.assertAlmostEqual(c['expected_after'],c['target_observed_training_ypc'],places=8)
+        self.assertAlmostEqual(sum(new['probabilities']),1)
+    def test_short_body_rejects_tuning_data(self):
+        f=rows();m=fit_gain(f,'run');f['season']=2024
+        with self.assertRaises(ValueError):fit_rushing_body(m,f)
     def test_locked_seasons_cannot_be_opened(self):
         with patch('simmah_nfl_event_levers_offline.pd.read_csv') as read:
             with self.assertRaisesRegex(ValueError,'Locked'):read_season('/tmp',2025)

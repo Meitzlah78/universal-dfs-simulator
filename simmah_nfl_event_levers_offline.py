@@ -194,3 +194,39 @@ def evaluate_gains(models,test,draws=64,seeds=(17311,29107)):
         results[kind]={'observed':observed,'candidates':{name:{k:(float(np.mean([r[k] for r in rs])) if rs[0][k] is not None else None) for k in rs[0]} for name,rs in totals.items()},'seed_results':totals}
     return {'scope':'Conditional on observed 2024 play type and field location; fixed opportunity counts, not a full-game replay',
             'draws_per_observed_play':draws,'seeds':list(seeds),'results':results}
+
+
+def fit_rushing_body(model,train):
+    """Training-only mean constraint; preserve mass outside gains 1..6 exactly.
+
+    Uses the actual training field-position distribution and the fixed clipped
+    environment law. No 2024 YPC target or outcome enters this calibration.
+    """
+    if set(train.season.unique())!={2022,2023} or model.get('fit_seasons')!=[2022,2023] or model.get('kind')!='run':
+        raise ValueError('Rushing body fit requires 2022-2023 only')
+    from scipy.optimize import brentq
+    from copy import deepcopy
+    f=gains(train,'run');support=np.asarray(model['support']);p=np.asarray(model['probabilities'])
+    if len(f)<100:raise ValueError('Insufficient training runs')
+    d=np.sort(f.yardline_100.to_numpy(float));own=np.sort(100-d)
+    def expected_min(values,limits):
+        prefix=np.r_[0.,np.cumsum(limits)];k=np.searchsorted(limits,values,side='left')
+        return (prefix[k]+values*(len(limits)-k))/len(limits)
+    # Deterministic Gaussian quadrature; clips exactly as the event sampler.
+    nodes,w=np.polynomial.hermite.hermgauss(64);env=np.clip(1+.1*np.sqrt(2)*nodes,.75,1.30)
+    expected=np.zeros(len(support))
+    for e,weight in zip(env,w/np.sqrt(np.pi)):
+        raw=np.clip(support*np.sqrt(e),-5,65)
+        expected+=weight*np.where(raw>=0,expected_min(np.maximum(raw,0),d),-expected_min(np.maximum(-raw,0),own))
+    body=(support>=1)&(support<=6);mass=p[body].sum();target=float(f.yards_gained.mean())
+    def adjusted(tau):
+        out=p.copy();z=tau*support[body];z-=z.max();b=p[body]*np.exp(z);out[body]=mass*b/b.sum();return out
+    low=float(adjusted(-100)@expected);high=float(adjusted(100)@expected)
+    if not low<=target<=high:raise ValueError('Training mean infeasible with short-body-only lever')
+    tau=float(brentq(lambda t:adjusted(t)@expected-target,-100,100,xtol=1e-12))
+    out=deepcopy(model);out['probabilities']=adjusted(tau).tolist();out['latent_mean']=float(adjusted(tau)@support)
+    out['body_calibration']={'fit_seasons':[2022,2023],'records':len(f),'target_observed_training_ypc':target,
+        'expected_before':float(p@expected),'expected_after':float(adjusted(tau)@expected),'tilt':tau,
+        'adjusted_support':[1,6],'outside_body_mass_max_change':float(np.max(np.abs(adjusted(tau)[~body]-p[~body]))),
+        'environment_quadrature_nodes':64,'scope':'Training-field-position mean constraint, not full-game calibration'}
+    return out
