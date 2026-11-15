@@ -76,21 +76,45 @@ def _fit(pool,roles,platform,root,key,pilot_n,iterations,progress,learned_parame
                 if payload['key']!=key or _hash(_json(payload))!=envelope['sha256']:
                     raise CacheIntegrityError('Projection-fit cache checksum mismatch')
                 report=pd.DataFrame(**payload['report'])
+                if progress:progress(1.,'Reusing completed projection fit')
                 return payload['parameters'],report,True,payload.get('market_gain',{}),payload.get('market_report',[])
             except (KeyError,TypeError,json.JSONDecodeError) as exc:
                 raise CacheIntegrityError('Unreadable projection-fit cache') from exc
+        checkpoint_dir=root/'fit_progress'/key
+        def read_stage(stage):
+            stage_path=checkpoint_dir/(stage+'.json')
+            if not stage_path.exists():return None
+            try:
+                envelope=json.loads(stage_path.read_bytes());payload=envelope['payload']
+                if payload['key']!=key or payload.get('stage')!=stage or _hash(_json(payload))!=envelope['sha256']:
+                    raise CacheIntegrityError('Projection-fit checkpoint checksum mismatch')
+                return payload['state']
+            except (OSError,ValueError,KeyError,TypeError) as exc:
+                raise CacheIntegrityError('Invalid projection-fit checkpoint') from exc
+        def save_stage(stage,state):
+            payload={'key':key,'stage':stage,'state':state}
+            _atomic_write(checkpoint_dir/(stage+'.json'),_json({'payload':payload,'sha256':_hash(_json(payload))}))
+        has_market=bool(market_targets)
+        def fit_progress(stage,offset,weight):
+            return (lambda f,t:progress(offset+weight*f,stage+' — '+t)) if progress else None
         parameters,report=fit_projection_inputs(pool,roles,platform,score_nfl_stat_line,
-            pilot_n=pilot_n,iterations=iterations,progress=progress,learned_parameters=learned_parameters,
-            correlation_strength=correlation_strength,weather_by_team=weather)
+            pilot_n=pilot_n,iterations=iterations,progress=fit_progress('Fit 1/2 before market' if has_market else 'Projection fit',0,.45 if has_market else 1.),learned_parameters=learned_parameters,
+            correlation_strength=correlation_strength,weather_by_team=weather,
+            resume_state=read_stage('initial'),save_state=lambda state:save_stage('initial',state))
         from simmah_market_calibration import calibrate_market_inputs
-        market_gain,market_report=calibrate_market_inputs(pool,roles,parameters,weather,platform,
-            market_targets or {},pilot_n=max(512,int(pilot_n)),learned_parameters=learned_parameters,
-            correlation_strength=correlation_strength)
+        market_state=read_stage('market')
+        if market_state is None:
+            if progress and has_market:progress(.45,'Market calibration — final evaluation and construction sampling follow')
+            market_gain,market_report=calibrate_market_inputs(pool,roles,parameters,weather,platform,
+                market_targets or {},pilot_n=max(512,int(pilot_n)),learned_parameters=learned_parameters,
+                correlation_strength=correlation_strength)
+            save_stage('market',dict(gain=market_gain,report=market_report))
+        else:market_gain,market_report=market_state['gain'],market_state['report']
         if market_gain:
             parameters,report=fit_projection_inputs(pool,roles,platform,score_nfl_stat_line,
-                pilot_n=pilot_n,iterations=iterations,progress=progress,learned_parameters=learned_parameters,
+                pilot_n=pilot_n,iterations=iterations,progress=fit_progress('Fit 2/2 after market',.55,.45),learned_parameters=learned_parameters,
                 correlation_strength=correlation_strength,weather_by_team=weather,market_gain=market_gain,
-                initial_parameters=parameters)
+                initial_parameters=parameters,resume_state=read_stage('final'),save_state=lambda state:save_stage('final',state))
         payload={'key':key,'parameters':parameters,'market_gain':market_gain,'market_report':market_report,
                  'report':report.astype(object).where(pd.notna(report),None).to_dict(orient='split')}
         _atomic_write(path,_json({'payload':payload,'sha256':_hash(_json(payload))}))
@@ -125,6 +149,22 @@ def _read_prepared(directory,key,names,count):
         raise
     except (OSError,ValueError,KeyError,TypeError) as exc:
         raise CacheIntegrityError('Incomplete or unreadable prepared simulation bundle') from exc
+
+
+def _read_outcome_stage(directory,key,kind,names,count):
+    marker=directory/(kind+'.json')
+    if not marker.exists():return None
+    try:
+        saved=json.loads(marker.read_bytes());raw=(directory/(kind+'.npz')).read_bytes()
+        if saved['key']!=key or saved['kind']!=kind or saved['sha256']!=_hash(raw):
+            raise CacheIntegrityError('Outcome checkpoint checksum mismatch')
+        with np.load(io.BytesIO(raw),allow_pickle=False) as archive:
+            matrix=archive['values']
+            if archive['names'].tolist()!=names or matrix.shape!=(count,len(names)) or not np.isfinite(matrix).all():
+                raise CacheIntegrityError('Invalid outcome checkpoint')
+            return pd.DataFrame(matrix,columns=names),saved['market_report']
+    except (OSError,ValueError,KeyError,TypeError) as exc:
+        raise CacheIntegrityError('Invalid outcome checkpoint') from exc
 
 
 def prepare_simulations(pool,roles,platform,cache_root,count=10000,correlation_strength=1.,
@@ -188,6 +228,7 @@ def prepare_simulations(pool,roles,platform,cache_root,count=10000,correlation_s
     with _cache_lock(root/'locks'/('outcomes-'+key+'.lock')):
         cached=_read_prepared(directory,key,names,count)
         if cached is not None:
+            if progress:progress(1.,'Reusing completed evaluation and construction outcomes')
             cached['metadata']={'key':key,'fit_key':fit_key,'cache_hit':True,'count':count,
                 'platform':platform,'learning':learning,'input_players':fit_spec['players'],'weather':weather_by_team,
                 'correlation_strength':correlation_strength,
@@ -207,6 +248,13 @@ def prepare_simulations(pool,roles,platform,cache_root,count=10000,correlation_s
         result={}
         for index,(kind,seed) in enumerate([('evaluation',evaluation_seed),('construction',construction_seed)]):
             mark=time.perf_counter()
+            stage=_read_outcome_stage(directory,key,kind,names,count)
+            if stage is not None:
+                result[kind],saved_market_report=stage
+                if kind=='evaluation':market_report=saved_market_report
+                timings[kind+'_load_seconds']=time.perf_counter()-mark
+                if progress:progress(.3+.35*(index+1),'Reusing completed '+kind+' outcomes')
+                continue
             if progress:progress(.3+.35*index,'Preparing '+kind+' outcomes')
             stats,game_diagnostics=simulate_stat_lines(inputs,roles,np.random.default_rng(seed),count,correlation_strength,
                 return_diagnostics=True,
@@ -226,6 +274,11 @@ def prepare_simulations(pool,roles,platform,cache_root,count=10000,correlation_s
                 values[row.Name]=scores
             result[kind]=pd.DataFrame(values)
             timings[kind+'_seconds']=time.perf_counter()-mark
+            buffer=io.BytesIO()
+            np.savez(buffer,names=np.array(names,dtype=str),values=result[kind].to_numpy())
+            stage_raw=buffer.getvalue()
+            _atomic_write(directory/(kind+'.npz'),stage_raw)
+            _atomic_write(directory/(kind+'.json'),_json({'key':key,'kind':kind,'sha256':_hash(stage_raw),'market_report':market_report}))
         mark=time.perf_counter();directory.mkdir(parents=True,exist_ok=True)
         buffer=io.BytesIO()
         np.savez(buffer,names=np.array(names,dtype=str),evaluation=result['evaluation'].to_numpy(),
@@ -237,6 +290,10 @@ def prepare_simulations(pool,roles,platform,cache_root,count=10000,correlation_s
                   'outcomes_sha256':_hash(raw),'fit_report_sha256':_hash(report_raw), 'market_report':market_report,
                   'pregame_replay_inputs':[json.loads(Path(path).read_text()) for path in replay_paths]}
         _atomic_write(directory/'manifest.json',_json(manifest))
+        # The final manifest supersedes temporary resumable sample files.
+        for kind in ['evaluation','construction']:
+            (directory/(kind+'.json')).unlink(missing_ok=True)
+            (directory/(kind+'.npz')).unlink(missing_ok=True)
         timings['persist_seconds']=time.perf_counter()-mark;timings['total_seconds']=time.perf_counter()-started
         result['fit_report']=report
         result['metadata']={'key':key,'fit_key':fit_key,'cache_hit':False,'fit_cache_hit':fit_hit,

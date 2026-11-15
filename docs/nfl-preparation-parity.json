@@ -1,0 +1,98 @@
+{
+  "schema": 1,
+  "base_commit": "992f3f60a340072de899bee5ac78d104002f9fed",
+  "source_model": "d6464a5c58186cc1",
+  "source_model_sha256": "97c0925fbc7f669018b90df177e09834459aafa5d4678f89b3aab84c44777a27",
+  "old_engine_sha256": "30b0dc3cf890f4c056569b424b150f879a7441f973a3325dec286a1baaa14d38",
+  "new_engine_sha256": "30955819befdb0de6862d3b18d61ba553e7752cdb751eab9e84d0222749e07c1",
+  "parameters_unchanged": {
+    "rushing_df": 3.0,
+    "rushing_sd": 6.0
+  },
+  "validation_dates_unchanged": true,
+  "holdout_retested": false,
+  "numpy_version": "2.3.5",
+  "cases": [
+    {
+      "platform": "DraftKings",
+      "case": "fixture",
+      "players": 12,
+      "draws": 128,
+      "seed": 924,
+      "array_sha256": "2adf4d5be14bbb96632877e2e6aea4fe5bfd485ea7916a27df7999585c5220ed",
+      "before_seconds": 0.1643675699999676,
+      "after_seconds": 0.13345610199996827
+    },
+    {
+      "platform": "DraftKings",
+      "case": "10game_pilot",
+      "players": 240,
+      "draws": 1024,
+      "seed": 924,
+      "array_sha256": "c8752b302363f73b798ab5eb29cf80722a6025f6c0f97b7a2dec49421c12ed5d",
+      "before_seconds": 2.984262134000005,
+      "after_seconds": 2.2444578380000166
+    },
+    {
+      "platform": "DraftKings",
+      "case": "10game_final",
+      "players": 240,
+      "draws": 10000,
+      "seed": 924,
+      "array_sha256": "48729edf91b93042f395df03be2c04e90164fbf49562e0450f96a07b8289f845",
+      "before_seconds": 6.608137062999958,
+      "after_seconds": 5.495974728000078
+    },
+    {
+      "platform": "FanDuel",
+      "case": "fixture",
+      "players": 12,
+      "draws": 128,
+      "seed": 924,
+      "array_sha256": "6f7e0de1f5b08a9a4830f585424abe1d1b96b0ddcda48012dcb6ae708aa9345e",
+      "before_seconds": 0.1526922769999146,
+      "after_seconds": 0.12317506499994124
+    },
+    {
+      "platform": "FanDuel",
+      "case": "10game_pilot",
+      "players": 240,
+      "draws": 1024,
+      "seed": 924,
+      "array_sha256": "c8752b302363f73b798ab5eb29cf80722a6025f6c0f97b7a2dec49421c12ed5d",
+      "before_seconds": 2.9227765089999593,
+      "after_seconds": 2.258516524000015
+    },
+    {
+      "platform": "FanDuel",
+      "case": "10game_final",
+      "players": 240,
+      "draws": 10000,
+      "seed": 924,
+      "array_sha256": "48729edf91b93042f395df03be2c04e90164fbf49562e0450f96a07b8289f845",
+      "before_seconds": 6.384147933999998,
+      "after_seconds": 5.675726527000052
+    },
+    {
+      "platform": "DraftKings",
+      "case": "full_nine_pass_fit",
+      "players": 240,
+      "pilot_draws": 1024,
+      "passes": 9,
+      "exact_parameters_and_report": true,
+      "before_seconds": 26.763049698999907,
+      "after_seconds": 20.140199574000007
+    },
+    {
+      "platform": "FanDuel",
+      "case": "full_nine_pass_fit",
+      "players": 240,
+      "pilot_draws": 1024,
+      "passes": 9,
+      "exact_parameters_and_report": true,
+      "before_seconds": 27.257473275999928,
+      "after_seconds": 20.587665860000016
+    }
+  ],
+  "scope": "Implementation parity only; no new statistical promotion, parameter fitting against outcomes, or 2025 data access."
+}
