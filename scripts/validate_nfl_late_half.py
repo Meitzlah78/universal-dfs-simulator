@@ -33,7 +33,7 @@ def main():
     parser.add_argument('--data',type=Path,default=ROOT/'inputs/Simmah_NFL_PBP_2022-2025_Recovered/play_by_play_2024.csv.gz')
     parser.add_argument('--frozen',type=Path,default=OUT/'frozen_inputs.json')
     parser.add_argument('--actual-audit',type=Path,default=ROOT/'inputs/Simmah_2024_Full_Game_Hybrid_Replay.zip')
-    parser.add_argument('--out',type=Path,default=Path('late-half-v3-results'))
+    parser.add_argument('--out',type=Path,default=Path('late-half-v4-results'))
     args=parser.parse_args();data=args.data;out=args.out;out.mkdir(parents=True,exist_ok=True)
     if data.name!='play_by_play_2024.csv.gz':raise ValueError('Only 2024 evaluation is allowed')
     cols=['season','game_id','play_id','qtr','quarter_seconds_remaining','play_type','qb_kneel','qb_spike','extra_point_attempt','two_point_attempt','timeout','timeout_team','posteam','defteam','fixed_drive']
@@ -68,6 +68,9 @@ def main():
         for metric,tol in TOLERANCES.items():
             key=f'q{q}_{metric}';delta=simulated[key]-observed[key]['mean']
             checks[key]={'observed':observed[key]['mean'],'simulated':simulated[key],'delta':delta,'tolerance':tol,'pass':abs(delta)<=tol}
+    # v4's explicit offensive-timeout target: same +/-0.5 event screen.
+    key='q2_offensive_timeouts';delta=simulated[key]-observed[key]['mean']
+    checks[key]={'observed':observed[key]['mean'],'simulated':simulated[key],'delta':delta,'tolerance':0.5,'pass':abs(delta)<=0.5}
     with ZipFile(args.actual_audit) as z:
         actual=json.loads(z.read('fullgame-actual-audit.json'))
     means={k:float(np.mean([b['means'][k] for b in batches])) for k in batches[0]['means']}

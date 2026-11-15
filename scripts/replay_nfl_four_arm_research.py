@@ -22,6 +22,7 @@ def checked_baseline(folder):
         raise ValueError('Policy or 285-game/1024-draw scope mismatch')
     if not all(report['checks'][f'q{q}_{metric}']['pass'] for q in [2,4] for metric in ['snaps','defensive_timeouts']):
         raise ValueError('Required clock slice failed')
+    if not report['checks'].get('q2_offensive_timeouts',{}).get('pass',False):raise ValueError('Q2 offensive timeout target failed or is missing')
     for p,digest in report['sources'].items():
         if sha(p)!=digest:raise ValueError('Baseline provenance changed: '+p)
     rows=json.loads((folder/'game_batches.json').read_text())
@@ -55,12 +56,12 @@ def replay_game(game):
 
 
 def main():
-    parser=argparse.ArgumentParser();parser.add_argument('--baseline',type=Path,default=Path('late-half-v3-results'))
+    parser=argparse.ArgumentParser();parser.add_argument('--baseline',type=Path,default=Path('late-half-v4-results'))
     parser.add_argument('--frozen',type=Path,default=Path('late-half-results/frozen_inputs.json'))
     parser.add_argument('--fourth',type=Path,default=Path('../inputs/Simmah_NFL_Event_Levers_Offline_2026-11-14/results/fourth_policy.json'))
     parser.add_argument('--run',type=Path,default=Path('../inputs/Simmah_NFL_Clock_Rebuild_2026-11-14/clock-rebuild/rushing_body_model.json'))
     parser.add_argument('--candidate-freeze',type=Path,default=Path('late-half-results/candidate_freeze.json'))
-    parser.add_argument('--out',type=Path,default=Path('four-arm-v3-results'));parser.add_argument('--workers',type=int,default=4)
+    parser.add_argument('--out',type=Path,default=Path('four-arm-v4-results'));parser.add_argument('--workers',type=int,default=4)
     args=parser.parse_args();report,baseline=checked_baseline(args.baseline)
     expected=json.loads(args.candidate_freeze.read_text())
     if expected.get(str(args.fourth))!=sha(args.fourth) or expected.get(str(args.run))!=sha(args.run):

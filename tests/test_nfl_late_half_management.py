@@ -96,3 +96,21 @@ class Q2UrgencyTests(unittest.TestCase):
     def test_never_double_spend_or_override_stopped_terminal_clock(self):
         for kw in [dict(defensive=True),dict(normal=False),dict(changed=True),dict(kind='incomplete'),dict(kind='late_out_of_bounds'),dict(kind='kick')]:
             self.assertEqual(self.masks(r=1840,**kw),(False,False))
+
+class Q2V4GateTests(unittest.TestCase):
+    def masks(self,r=1860,field=64,margin=0,tos=3,defensive=False):
+        from simmah_nfl_clock_rebuild_offline import q2_offensive_management,POLICY_VERSION
+        return tuple(bool(x[0]) for x in q2_offensive_management(*[np.array([x]) for x in (r,margin,field,True,False,'running',tos,defensive)],policy=POLICY_VERSION))
+    def test_strict_beyond_own35_applies_to_both_urgency_and_timeout(self):
+        self.assertEqual(self.masks(field=65),(False,False))
+        self.assertEqual(self.masks(field=64),(True,True))
+        self.assertEqual(self.masks(field=79),(False,False))
+    def test_70_seconds_and_half_end_boundaries(self):
+        self.assertEqual(self.masks(r=1870),(True,True))
+        self.assertEqual(self.masks(r=1871),(True,False))
+        self.assertEqual(self.masks(r=1805),(True,False))
+        for r in [1800,120,70]:self.assertEqual(self.masks(r=r),(False,False))
+    def test_timeout_score_and_defensive_stop_guards_remain(self):
+        self.assertEqual(self.masks(margin=21),(False,False))
+        self.assertEqual(self.masks(tos=0),(True,False))
+        self.assertEqual(self.masks(defensive=True),(False,False))
