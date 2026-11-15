@@ -94,6 +94,7 @@ class InjuryAppBoundaryTests(unittest.TestCase):
                 p=pd.DataFrame([{s:'Healthy Player' for s in slots},{s:'Out Player' if i==0 else 'Healthy Player' for i,s in enumerate(slots)}]);p['Entry ID']=['111','222'];old=p.copy(deep=True)
                 self.assertIsNone(ns['lineup_export_download']('EXPORT',b'ids','entries.csv',portfolio=p,slots=slots))
                 ns['workspace_download_button'].assert_not_called();ns['load_latest_automatic_pregame_snapshot'].assert_not_called();pd.testing.assert_frame_equal(p,old)
+                self.assertTrue(any('Out Player' in str(message) and 'Refresh injury news and rebuild' in str(message) for _,message in st.messages))
     def test_valid_export_keeps_download_and_checkpoint_arguments(self):
         st=UI({'player_injury_statuses':{'Out Player':'Out'}});ns=functions(st);p=pd.DataFrame({'QB':['Healthy Player']})
         self.assertEqual(ns['lineup_export_download']('EXPORT',b'ids','entries.csv',portfolio=p,slots=['QB']),'download')
