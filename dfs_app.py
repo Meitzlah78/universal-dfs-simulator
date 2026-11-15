@@ -1046,6 +1046,7 @@ def normalize_injury_team(value):
         "tampa": "tb", "tampabay": "tb", "tampabaybuccaneers": "tb",
         "tennessee": "ten", "tennesseetitans": "ten",
         "washington": "was", "washingtoncommanders": "was", "wsh": "was",
+        "jac": "jax", "la": "lar",
     }
     return aliases.get(raw, raw).upper()
 
@@ -1067,60 +1068,39 @@ def fetch_nfl_injury_statuses():
     except Exception as exc:
         return {}, "ESPN injury feed unavailable: " + str(exc)[:140]
 
-    statuses = {}
-    for team_block in payload.get("injuries", []):
-        team_data = team_block.get("team", {}) or {}
-        team = normalize_injury_team(team_data.get("abbreviation") or team_data.get("displayName") or team_data.get("name") or team_block.get("displayName") or team_block.get("name"))
-        for injury in team_block.get("injuries", []) or []:
-            athlete = injury.get("athlete", {}) or {}
-            name = normalize_injury_player_name(athlete.get("fullName") or athlete.get("displayName") or athlete.get("shortName"))
-            raw_status = str(injury.get("status") or injury.get("shortComment") or injury.get("detail") or "").strip().casefold()
-            if not name or not team or not raw_status:
-                continue
-            if any(word in raw_status for word in ("injured reserve", "reserve/injured", "physically unable to perform", "out", "suspended")):
-                status = "Out"
-            elif "doubtful" in raw_status:
-                status = "Doubtful"
-            elif any(word in raw_status for word in ("questionable", "day-to-day", "probable")):
-                status = "Questionable"
-            else:
-                continue
-            statuses[(name, team)] = status
+    from simmah_nfl_injuries import parse_injuries
+    try:
+        statuses = parse_injuries(payload, normalize_injury_player_name, normalize_injury_team)
+    except (ValueError, TypeError, AttributeError) as exc:
+        return {}, "ESPN injury feed unavailable: " + str(exc)
     return statuses, "ESPN NFL injury feed"
+
 
 
 def apply_injury_statuses(frame, key_prefix):
     """Automatically sync NFL injury statuses and remove Out players from all slate types."""
     from datetime import datetime
-    if "player_injury_statuses" not in st.session_state:
-        st.session_state["player_injury_statuses"] = {}
-    saved_statuses = st.session_state["player_injury_statuses"]
+    from simmah_nfl_injuries import reconcile_injuries
     live_injuries, injury_source = fetch_nfl_injury_statuses()
-
-    injury_snapshot = tuple(sorted((name, team, status) for (name, team), status in live_injuries.items()))
+    result, injury_check = reconcile_injuries(frame, live_injuries, st.session_state,
+        normalize_injury_player_name, normalize_injury_team)
+    injury_snapshot = tuple(sorted((name, team, status) for (name, team), status
+                                  in st.session_state["nfl_verified_injuries"].items()))
     previous_injury_snapshot = st.session_state.get("injury_feed_snapshot_previous")
-    if previous_injury_snapshot is not None and injury_snapshot != previous_injury_snapshot:
+    if injury_check['verified'] and previous_injury_snapshot is not None and injury_check['changed']:
         st.session_state["injury_updates_found"] = True
-        st.session_state["injury_updates_found_at"] = datetime.now().astimezone().strftime("%Y-%m-%d %I:%M:%S %p %Z")
+        st.session_state["injury_updates_found_at"] = datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %I:%M:%S %p %Z")
     st.session_state["injury_feed_snapshot_previous"] = injury_snapshot
-
-    result = frame.copy()
-    if "Team" not in result.columns:
-        result["Team"] = ""
-    result["_injury_name_key"] = result["Name"].map(normalize_injury_player_name)
-    result["_injury_team_key"] = result["Team"].map(normalize_injury_team)
-    feed_statuses = []
-    for _, player_row in result.iterrows():
-        feed_statuses.append(live_injuries.get((player_row["_injury_name_key"], player_row["_injury_team_key"])))
-    # The live feed is authoritative: a player no longer listed as injured returns to Active.
-    result["Injury Status"] = [status or "Active" for status in feed_statuses]
-    result.drop(columns=["_injury_name_key", "_injury_team_key"], inplace=True)
 
     st.caption(f"Injury status updates: {injury_source}. Automatically checks ESPN; data is cached for up to 10 minutes.")
     if st.session_state.get("injury_updates_found"):
         st.warning("NEW INJURY NEWS FOUND — current statuses were refreshed automatically.")
     if not live_injuries and "unavailable" in injury_source.casefold() or not live_injuries and "unexpected" in injury_source.casefold():
-        st.warning("Live injury statuses could not be loaded. Do not assume every player is healthy; try syncing again.")
+        st.warning("Live injury statuses could not be loaded. Last known designations are kept; unverified players are marked Unknown. Refresh injury news before building.")
+    if injury_check["verified"] and injury_check["unverified_slate_teams"]:
+        st.warning("Injury feed did not verify every slate team. Previous designations were kept for: " + ", ".join(sorted(injury_check["unverified_slate_teams"])))
+    if injury_check["uncertain_slate_players"]:
+        st.warning("Unrecognized injury designation; keeping the last known status for: " + ", ".join(injury_check["uncertain_slate_players"]))
     # Injury news is refreshed together with projections by the shared refresh button.
 
     out_names = set(result.loc[result["Injury Status"].str.casefold() == "out", "Name"].astype(str).str.strip().str.casefold())
@@ -1154,7 +1134,6 @@ def apply_injury_statuses(frame, key_prefix):
                 st.session_state.pop(key, None)
         st.warning("Saved lineups containing Out players were cleared. Run SIM again to rebuild safely.")
 
-    st.session_state["display_injury_statuses"] = dict(zip(result["Name"].astype(str), result["Injury Status"]))
     questionable = result.loc[result["Injury Status"].str.casefold() == "questionable", "Name"].astype(str).tolist()
     doubtful = result.loc[result["Injury Status"].str.casefold() == "doubtful", "Name"].astype(str).tolist()
     excluded = result.loc[result["Injury Status"].str.casefold() == "out", "Name"].astype(str).tolist()
@@ -2330,8 +2309,30 @@ def automatic_projection_refresh(platform_name):
     scope_key = throttle_key + '_scope'
     if st.session_state.get(scope_key) != target_scope:
         should_refresh = True
+    injury_rerun = False
     if should_refresh:
         status = refresh_public_projection_sources((platform_name,))
+        # The background projection fragment must check injuries too. Apply a
+        # verified change to the full app so its player pools are rebuilt.
+        from simmah_nfl_injuries import reconcile_injuries
+        known = st.session_state.get('nfl_injury_name_teams', {})
+        if known:
+            injury_pool = pd.DataFrame([{'Name':name,'Team':team} for name,team in known.items()])
+            injuries, _injury_source = fetch_nfl_injury_statuses()
+            _, checked = reconcile_injuries(injury_pool, injuries, st.session_state,
+                normalize_injury_player_name, normalize_injury_team)
+            notice = ''
+            if not checked['verified']:
+                notice = 'Automatic injury check could not refresh. Last known designations are kept; use Refresh to retry.'
+            elif checked['unverified_slate_teams']:
+                notice = 'Automatic injury check has partial team coverage. Previous designations are kept for: ' + ', '.join(sorted(checked['unverified_slate_teams']))
+            elif checked['uncertain_slate_players']:
+                notice = 'Unrecognized injury designation; previous statuses are kept for: ' + ', '.join(checked['uncertain_slate_players'])
+            st.session_state['automatic_injury_check_notice_' + platform_name] = notice
+            injury_rerun = checked['verified'] and checked['changed']
+            if injury_rerun:
+                st.session_state['injury_updates_found'] = True
+                st.session_state['injury_updates_found_at'] = now_dt.strftime('%Y-%m-%d %I:%M:%S %p %Z')
         st.session_state[scope_key] = target_scope
         st.session_state[throttle_key] = now_dt
         st.session_state["automatic_projection_last_status_" + str(platform_name)] = status
@@ -2340,6 +2341,11 @@ def automatic_projection_refresh(platform_name):
             "automatic_projection_last_status_" + str(platform_name), {}
         )
 
+    injury_notice = st.session_state.get('automatic_injury_check_notice_' + platform_name)
+    if injury_notice:
+        st.warning(injury_notice)
+    if injury_rerun:
+        st.rerun()
     effective_check = st.session_state.get(throttle_key, now_dt)
     now = effective_check.strftime("%Y-%m-%d %I:%M:%S %p %Z")
     current_snapshot = st.session_state.get('automatic_projection_snapshots_by_format', {}).get(platform_name, {})
@@ -2352,7 +2358,7 @@ def automatic_projection_refresh(platform_name):
     st.session_state["automatic_projection_refresh_time"] = now
     st.session_state["automatic_projection_refresh_status"] = status
 
-    # This function runs as a Streamlit fragment every 30 minutes, so update the
+    # This function runs as a Streamlit fragment every 15 minutes, so update the
     # button styling here too when new projection or injury data is detected.
     if st.session_state.get("projection_updates_found") or st.session_state.get("injury_updates_found"):
         st.markdown(
@@ -2986,9 +2992,17 @@ def save_export_checkpoint(snapshot, metadata, export_data, export_name):
 
 
 @st.fragment
-def lineup_export_download(*args, **kwargs):
+def lineup_export_download(*args, portfolio=None, slots=None, **kwargs):
     """Keep export checkpoint callbacks inside a small fragment, not a full app rerun."""
     import copy
+    from simmah_nfl_injuries import out_players
+    if not isinstance(portfolio, pd.DataFrame) or portfolio.empty or not slots or not set(slots).issubset(portfolio.columns):
+        st.error('Export unavailable: the assigned roster could not be verified. Rebuild the portfolio before downloading entries.')
+        return None
+    blocked = out_players(portfolio, slots or [], st.session_state.get('player_injury_statuses', {}), normalize_injury_player_name)
+    if blocked:
+        st.error("Export blocked — these assigned lineups contain OUT players: " + ", ".join(blocked) + ". Refresh injury news and rebuild the portfolio. Saved entries were not changed.")
+        return None
     data = kwargs.get("data", args[1] if len(args) > 1 else None)
     name = kwargs.get("file_name", args[2] if len(args) > 2 else "lineups.csv")
     snapshot, metadata = load_latest_automatic_pregame_snapshot(selected_format)
@@ -6156,7 +6170,7 @@ if platform == "FanDuel":
                         "DOWNLOAD PORTFOLIO REPORT (FOR REVIEW)",
                         fd_export_portfolio.to_csv(index=False).encode("utf-8"),
                         "FanDuel_Assigned_Portfolio_Report.csv", "text/csv",
-                        key="fd_portfolio_report_top_" + lineup_mode.replace(" ", "_").lower(),
+                        key="fd_portfolio_report_top_" + lineup_mode.replace(" ", "_").lower(), portfolio=fd_export_portfolio, slots=fd_slots,
                         on_click="ignore", use_container_width=True,
                     )
                 render_entry_export_header("FanDuel")
@@ -6191,7 +6205,7 @@ if platform == "FanDuel":
                                 fd_entry_bytes,
                                 file_name=_fd_export_name,
                                 mime="text/csv", use_container_width=True, type="primary",
-                                key="fd_entry_upload_v2_" + lineup_mode.replace(" ", "_").lower() + "_" + str(st.session_state["selected_fd_contest"]["id"]), on_click="ignore")
+                                key="fd_entry_upload_v2_" + lineup_mode.replace(" ", "_").lower() + "_" + str(st.session_state["selected_fd_contest"]["id"]), portfolio=fd_export_portfolio, slots=fd_slots, on_click="ignore")
                             st.caption("Export saves a timestamped player snapshot and the exact entry CSV for later comparison.")
                         except Exception as exc:
                             st.error(f"Could not create FanDuel replacement CSV: {exc}")
@@ -7879,7 +7893,7 @@ else:
                             data=classic_export_portfolio.to_csv(index=False).encode("utf-8"),
                             file_name="DraftKings_Classic_Assigned_Portfolio.csv",
                             mime="text/csv",
-                            key="dk_classic_assigned_report",
+                            key="dk_classic_assigned_report", portfolio=classic_export_portfolio, slots=_classic_slots,
                             on_click="ignore"
                         )
 
@@ -7933,7 +7947,7 @@ else:
                                         file_name=(f"DraftKings_Classic_ALL_{len(export_df)}_ENTRIES.csv" if dk_all_contests else f"DraftKings_Classic_{selected_contest_id}_{len(export_df)}_ENTRIES.csv"),
                                         mime="text/csv",
                                         use_container_width=True,
-                                        key="dk_classic_replace_export",
+                                        key="dk_classic_replace_export", portfolio=classic_export_portfolio, slots=export_slots,
                                         on_click="ignore"
                                     )
                                     st.caption("On DraftKings, open My Lineups and choose Edit Entries to upload the downloaded replacement CSV.")
@@ -9786,11 +9800,6 @@ with _tab_build:
                 "Top10", "CashRate", "Entry Fee ($)", "Expected Prize ($)", "Expected Net ($)",
                 "Expected ROI (%)"
             ]
-            portfolio_df = remove_out_players_from_lineups(
-                portfolio_df,
-                portfolio_lineup_columns,
-                "portfolio export"
-            )
             st.session_state["portfolio_df"] = portfolio_df
             portfolio_export_df = portfolio_df[
                 [col for col in export_columns if col in portfolio_df.columns]
@@ -9816,7 +9825,7 @@ with _tab_build:
                 lineup_export_download(
                     label="DOWNLOAD ASSIGNED PORTFOLIO REPORT",
                     data=portfolio_export_df.to_csv(index=False).encode("utf-8"),
-                    file_name="DraftKings_Showdown_Assigned_Portfolio.csv",
+                    file_name="DraftKings_Showdown_Assigned_Portfolio.csv", portfolio=portfolio_df, slots=portfolio_lineup_columns,
                     mime="text/csv",
                     use_container_width=True,
                     on_click="ignore"
@@ -9837,9 +9846,6 @@ with _tab_build:
             if platform == "DraftKings" and lineup_mode == "Showdown":
                 render_entry_export_header("DraftKings")
                 export_portfolio = st.session_state.get("portfolio_df")
-                export_portfolio = remove_out_players_from_lineups(
-                    export_portfolio, ["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"], "DraftKings Showdown export"
-                )
                 if isinstance(export_portfolio, pd.DataFrame):
                     st.session_state["portfolio_df"] = export_portfolio
                 dk_player_ids = st.session_state.get("dk_player_ids", {})
@@ -9891,7 +9897,7 @@ with _tab_build:
                                         file_name=f"DraftKings_Showdown_{selected_contest_id}_{len(export_df)}_ENTRIES.csv",
                                         mime="text/csv",
                                         use_container_width=True,
-                                        key="dk_showdown_unified_export",
+                                        key="dk_showdown_unified_export", portfolio=export_portfolio, slots=["Captain", "Flex1", "Flex2", "Flex3", "Flex4", "Flex5"],
                                         on_click="ignore"
                                     )
                                     st.caption("On DraftKings, open My Lineups and choose Edit Entries to upload the downloaded replacement CSV.")
