@@ -4621,9 +4621,17 @@ def simulate_fd_play_by_play(players_df, rng, n=SIMULATION_COUNT, correlation_st
         return pd.DataFrame()
     n = max(1, int(n))
     pool = players_df.drop_duplicates("Name", keep="first").copy().reset_index(drop=True)
+    st.caption(f"Simulation preparation includes projection fitting, an optional market refit, then {n:,} evaluation and {n:,} separate construction outcomes. Fitting pass counts are not overall build progress. Completed fitting passes are saved for matching-input retries.")
     for col in ("Name", "Team", "Opponent", "Position"):
         if col not in pool.columns:
             pool[col] = ""
+    from simmah_nfl_learning import slate_clock_inputs
+    _, _preflight_clocks = slate_clock_inputs(pool)
+    _preflight_now = pd.Timestamp.now(tz='UTC')
+    _future_clocks = [pd.Timestamp(value) for value in _preflight_clocks.values()
+                      if pd.Timestamp(value) > _preflight_now]
+    if _future_clocks and (min(_future_clocks)-_preflight_now).total_seconds() <= 1200:
+        st.warning('A game locks within 20 minutes. A cold full-slate build may not finish before lock; there is no reliable total completion estimate yet. Keep valid entries in place while this runs.')
     pool["Projection"] = pd.to_numeric(pool.get("Projection", 0.0), errors="coerce").fillna(0.01).clip(lower=0.01)
     _fd_hist = load_nfl_historical_player_stats()
     # The historical index retains spaces; use the same canonical keys as
