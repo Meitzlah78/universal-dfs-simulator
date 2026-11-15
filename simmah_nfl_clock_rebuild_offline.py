@@ -110,7 +110,7 @@ def q2_offensive_management(remaining, margin, field, normal, changed, kind,
     return hurry,timeout
 
 
-def simulate(n,seed,clock,decision,parameters,*,fourth_policy=None,run_model=None,management_policy=None):
+def simulate(n,seed,clock,decision,parameters,*,fourth_policy=None,run_model=None,management_policy=None,timeout_trace=None):
     if n<1 or clock.get('train_years')!=[2022,2023]:raise ValueError('Training-only clock and positive draws required')
     if management_policy not in (None, LEGACY_POLICY_VERSION, V2_POLICY_VERSION, V3_POLICY_VERSION, POLICY_VERSION):raise ValueError('Unknown management policy')
     slices={f'q{q}_{k}':np.zeros(n) for q in [2,4] for k in ['snaps','defensive_timeouts','offensive_timeouts','all_timeouts','hurry_snaps','kneels']}
@@ -126,6 +126,7 @@ def simulate(n,seed,clock,decision,parameters,*,fourth_policy=None,run_model=Non
         # Fixed-width event streams keep arms paired without state-dependent RNG consumption.
         u=rng.random((n,14));i=np.flatnonzero(r>0);s=side[i].copy();margin=score[s,i]-score[1-s,i]
         q=4-np.ceil(r[i]/900).astype(int)+1
+        if timeout_trace is not None:snap_down=down[i].copy();snap_field=field[i].copy()
         kneel=victory_kneel(r[i],margin,down[i],field[i],timeouts[1-s,i]) if management_policy in (V2_POLICY_VERSION,V3_POLICY_VERSION,POLICY_VERSION) else np.zeros(len(i),bool)
         isfourth=down[i]==4;go=(field[i]<5)|((r[i]<180)&(margin<0))
         if fourth_policy is not None and isfourth.any():
@@ -197,6 +198,7 @@ def simulate(n,seed,clock,decision,parameters,*,fourth_policy=None,run_model=Non
             kind[kneel]='kneel';duration[kneel]=42.
         if changed.any():
             j=i[changed];side[j]=1-side[j];down[j]=1;togo[j]=np.minimum(10,field[j]);pending[j]=True
+        if timeout_trace is not None:sampled_duration=duration.copy()
         if management_policy:
             timeout,hurry=management_masks(r[i],margin,field[i],normal,changed,kind,timeouts[1-s,i],policy=management_policy)
             # v2 retains the frozen empirical late-half intervals without v1's
@@ -215,6 +217,15 @@ def simulate(n,seed,clock,decision,parameters,*,fourth_policy=None,run_model=Non
             q2_hurry,offensive_timeout=q2_offensive_management(r[i],margin,field[i],normal,changed,kind,timeouts[s,i],timeout,policy=management_policy)
             duration[q2_hurry]=np.minimum(duration[q2_hurry],20.)
             hurry |= q2_hurry
+        if timeout_trace is not None and offensive_timeout.any():
+            a=offensive_timeout;j=i[a]
+            timeout_trace({'event_index':np.full(len(j),event,int),'trial':j.copy(),
+                'seconds_before_snap':r[j]-1800,'seconds_at_timeout':np.maximum(r[j]-1805,0),
+                'distance_before':snap_field[a],'distance_after':field[j].copy(),
+                'snap_down':snap_down[a],'next_down':down[j].copy(),'margin':margin[a],
+                'offensive_timeouts_before':timeouts[s[a],j].copy(),
+                'defensive_timeouts_before':timeouts[1-s[a],j].copy(),
+                'sampled_interval':sampled_duration[a],'hurry_interval':duration[a].copy()})
         duration[timeout]=np.where(kneel_timeout[timeout],2.,5.)
         kind[timeout]='timeout';timeouts[1-s[timeout],i[timeout]]-=1
         duration[offensive_timeout]=5.;kind[offensive_timeout]='timeout'
