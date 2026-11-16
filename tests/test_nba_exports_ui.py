@@ -53,3 +53,27 @@ class NBAExportPlacementTests(unittest.TestCase):
                 self.assertEqual(app.session_state['test_build_calls'],calls)
                 import pandas as pd
                 pd.testing.assert_frame_equal(saved,app.session_state['nba_build_result']['result']['portfolio'])
+
+    def test_minutes_toggle_does_not_build_or_prepare_candidate_download(self):
+        from streamlit.testing.v1 import AppTest
+        sys.path.insert(0,str(Path(__file__).parent))
+        for platform in ['FanDuel','DraftKings']:
+            with self.subTest(platform=platform):
+                app=AppTest.from_file(str(Path(__file__).with_name('nba_ui_fixture.py')))
+                app.session_state['fixture_platform']=platform
+                app.run(timeout=20).button(key='nba_build').click().run(timeout=20)
+                self.assertFalse(app.exception)
+                calls=app.session_state['test_build_calls']
+                saved=app.session_state['nba_build_result']['result']['portfolio'].copy(deep=True)
+                key='nba_variable_minutes_'+platform
+                app.checkbox(key=key).uncheck().run(timeout=20)
+                app.checkbox(key=key).check().run(timeout=20)
+                self.assertFalse(app.exception)
+                self.assertEqual(app.session_state['test_build_calls'],calls)
+                self.assertFalse(any(b.proto.id.endswith('-nba_all_candidates_download') for b in app.get('download_button')))
+                app.checkbox(key='nba_load_candidate_details').check().run(timeout=20)
+                self.assertFalse(app.exception)
+                self.assertTrue(any(b.proto.id.endswith('-nba_all_candidates_download') for b in app.get('download_button')))
+                self.assertEqual(app.session_state['test_build_calls'],calls)
+                import pandas as pd
+                pd.testing.assert_frame_equal(saved,app.session_state['nba_build_result']['result']['portfolio'])
