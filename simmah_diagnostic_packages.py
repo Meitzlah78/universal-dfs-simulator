@@ -197,7 +197,8 @@ def render_nfl_package(st):
     site='FanDuel' if current.startswith('FanDuel') else 'DraftKings'
     contest=st.session_state.get('selected_fd_contest' if site=='FanDuel' else 'selected_dk_contest') or {}
     if str(contest.get('id') or 'unselected')!=saved['contest_id']:return
-    data=package_bytes(st,saved)
+    from simmah_package_download import package_download_data
+    data=package_download_data(st,saved)
     if data is None:
         st.caption('Diagnostic package is awaiting archive recovery. Check Saved files below.')
         return

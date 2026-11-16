@@ -1,0 +1,30 @@
+{
+  "classification": "SYNTHETIC_CHECKPOINT_COPY_AND_RESTORE",
+  "matrix_bytes": 44000000,
+  "runs_seconds": {
+    "before": [
+      0.06322158600005423,
+      0.01417564799999127,
+      0.021599987999934456,
+      0.012203483999996934,
+      0.016144919999987906,
+      0.014018264000014824,
+      0.014563716999987264
+    ],
+    "after": [
+      0.01044894500000737,
+      0.011709372999916923,
+      0.011462511999980052,
+      0.009710974000086026,
+      0.012505533000080504,
+      0.010305356000003485,
+      0.011023025999975289
+    ]
+  },
+  "median_seconds": {
+    "before": 0.014563716999987264,
+    "after": 0.011023025999975289
+  },
+  "exact_restoration": true,
+  "scope": "Detached capture already produced by autosave; excludes fingerprinting, UI rendering, data refresh, cloud I/O and the complete site switch."
+}

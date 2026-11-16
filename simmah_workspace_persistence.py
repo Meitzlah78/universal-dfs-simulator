@@ -355,6 +355,10 @@ def schedule(st):
         clean = {k:v for k,v in row.items() if not k.startswith('_') and k != 'snapshot'}
         state.setdefault('_slate_backup_queue', {})[sid] = (dict(record=clean, checkpoint=cp),revision)
     advance(state)
+    # Reuse this run's detached capture if the tab event selects another slate.
+    # The caller must not substitute a checkpoint from an earlier run.
+    if current and current.get('_session_checkpoint') is not None:
+        return current['id'],current['_session_checkpoint']
 
 
 def render(st, host):
