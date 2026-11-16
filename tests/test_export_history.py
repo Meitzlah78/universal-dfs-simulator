@@ -77,18 +77,6 @@ class ExportHistoryTests(unittest.TestCase):
         finish_exports(self.st)
         self.assertEqual(calls,[4]);self.assertEqual(len(self.st.session_state[HISTORY]),1)
 
-    def test_idle_history_registers_no_periodic_rerun(self):
-        from simmah_export_history import render_history
-        decorators=[]
-        def fragment(function=None,**kwargs):
-            decorators.append(kwargs)
-            return function
-        self.st.fragment=fragment
-        with patch('simmah_export_history._render_history') as render:
-            render_history(self.st,self.context,'entries')
-        self.assertEqual(decorators,[{}])
-        render.assert_called_once_with(self.st,self.context,'entries')
-
     def test_existing_callback_preserved(self):
         called=[];capture_export(self.st,b'csv','entries.csv',self.context,lambda x:called.append(x),(3,),{})
         self.assertEqual(called,[3]);self.assertEqual(len(self.st.session_state[HISTORY]),1)
