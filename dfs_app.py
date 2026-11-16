@@ -32,7 +32,6 @@ if (getattr(runtime_release, '_active_release', None) != 'nba-uncapped-wider-min
     runtime_release = importlib.reload(runtime_release)
 runtime_release.activate_nba_release('nba-uncapped-wider-minutes-20261107-r1')
 runtime_release.activate_role_ownership_release('role-marginals-v5')
-st.caption('Ownership build: role-marginals-v5')
 
 if st.query_params.get('simmah_qa') == 'storage':
     import importlib
@@ -120,6 +119,8 @@ with _tab_contests:
     _contest_setup = st.container()
     with st.expander('Advanced — optional tools', expanded=False):
         _optional_tools = st.container()
+        with st.expander("Diagnostics", expanded=False):
+            st.caption("Ownership build: role-marginals-v5")
     _contest_history = _optional_tools
 with _tab_roster:
     st.markdown('<div class="simmah-step"><b>2</b>Review your player pool, projections and exposure limits.</div>', unsafe_allow_html=True)
