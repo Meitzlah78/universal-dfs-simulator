@@ -108,8 +108,8 @@ render_pinned_navigation(st)
 with _workspace_rail.container(key="simmah_build_rail"):
     _build_controls = st.container(key="simmah_build_panel", border=True)
     with _build_controls:
-        st.markdown("### Build settings")
-        st.markdown('<div class="simmah-build-spec"><span>10,000 simulations</span><span>5,000 candidates</span></div>', unsafe_allow_html=True)
+        st.markdown("### Build lineups")
+        st.caption((str(st.session_state.get("dfs_format", "")) + " · 10,000 simulations · 5,000 candidates").strip(" ·"))
         if not st.session_state.get('_slate_active'):
             st.caption("Upload your entries in Contests to get started.")
 
@@ -3294,11 +3294,9 @@ with _tab_roster:
             except Exception as exc:
                 st.error(f"Could not read the projection accuracy file: {exc}")
 platform, lineup_mode = format_options[selected_format]
-_build_controls.caption(selected_format)
 # Render single-game rules before projection/contest loaders can stop the script.
 if lineup_mode in {"Showdown", "Single Game"}:
     with _build_controls:
-        st.write("### Stack Options")
         render_single_stack_controls(st, platform, lineup_mode)
 if st.session_state.pop("refresh_projections_requested", False):
     download_public_projection_table.clear()
@@ -5424,13 +5422,10 @@ if platform == "FanDuel":
 
     with _tab_build:
         render_saved_market_calibration(platform, lineup_mode, fd_players)
-        with _build_controls:
-            st.write("### Build Settings")
-        _build_controls.caption("The 5,000-lineup build automatically spreads player exposure while still favoring stronger simulated scores.")
         build_cols = [_build_controls.container() for _ in range(2)]
         with build_cols[0]:
             fd_salary_range = st.slider(
-                "Allowed lineup salary range",
+                "Salary range",
                 min_value=0,
                 max_value=60000,
                 value=(58000, 60000) if lineup_mode == "Full Roster" else (54000, 60000),
@@ -5442,13 +5437,7 @@ if platform == "FanDuel":
         with build_cols[1]:
             portfolio_diversity, aggressiveness = render_diversity_controls(st, platform, lineup_mode, SIMULATION_COUNT)
             if lineup_mode in ("Showdown", "Single Game"):
-                correlation_pct = st.slider(
-                    "Game Correlation", 0, 100,
-                    0 if ((platform == "DraftKings" and lineup_mode == "Showdown") or (platform == "FanDuel" and lineup_mode == "Single Game")) else 70,
-                    step=5,
-                    help="Controls how strongly shared game conditions connect player outcomes.",
-                    key=f"single_game_correlation_strength_{platform}_{lineup_mode}",
-                )
+                correlation_pct = int(st.session_state.get(f"single_game_correlation_strength_{platform}_{lineup_mode}", 0))
                 correlation_strength = correlation_pct / 100.0
             else:
                 correlation_strength = 1.0
@@ -5475,7 +5464,6 @@ if platform == "FanDuel":
         with _build_controls:
             _fd_excluded_names = render_game_exclusions(st, fd_players, "FanDuel", lineup_mode)
         fd_user_pool = fd_players.loc[~fd_players["Name"].astype(str).isin(_fd_excluded_names)].copy()
-        _build_controls.write("### Run")
         _fd_run_center = _build_controls.container()
         with _fd_run_center:
             fd_sim_button = workspace_button(st,
@@ -7452,9 +7440,8 @@ else:
 
             build_cols = [_build_controls.container() for _ in range(3)]
             with build_cols[0]:
-                st.write("### Build Settings")
                 dk_salary_range = st.slider(
-                    "Allowed lineup salary range",
+                    "Salary range",
                     min_value=0,
                     max_value=50000,
                     value=(48000, 50000),
@@ -7525,7 +7512,6 @@ else:
                 )
 
             with build_cols[2]:
-                st.write("### Run")
                 _classic_sim_button = workspace_button(st,
                     "Run Build", type="primary", use_container_width=True, key="dk_classic_sim"
                 )
@@ -7985,12 +7971,11 @@ with _tab_build:
         render_saved_market_calibration(platform, lineup_mode, players_df)
     build_cols = [_build_controls.container() for _ in range(3)]
     with build_cols[0]:
-        st.write("### Build Settings")
         _fd_full = platform == "FanDuel" and lineup_mode == "Full Roster"
         _salary_cap = 60000 if _fd_full else 50000
         _salary_default = (58000, 60000) if _fd_full else ((40000, 50000) if lineup_mode in ("Showdown", "Single Game") else (48000, 50000))
         dk_salary_range = st.slider(
-            "Allowed lineup salary range",
+            "Salary range",
             min_value=0,
             max_value=_salary_cap,
             value=_salary_default,
@@ -8003,19 +7988,12 @@ with _tab_build:
     with build_cols[1]:
         portfolio_diversity, aggressiveness = render_diversity_controls(st, platform, lineup_mode, SIMULATION_COUNT)
         if lineup_mode in ("Showdown", "Single Game"):
-            correlation_pct = st.slider(
-                "Game Correlation", 0, 100,
-                0 if ((platform == "DraftKings" and lineup_mode == "Showdown") or (platform == "FanDuel" and lineup_mode == "Single Game")) else 70,
-                step=5,
-                help="Controls how strongly shared game conditions connect player outcomes.",
-                key=f"single_game_correlation_strength_{platform}_{lineup_mode}",
-            )
+            correlation_pct = int(st.session_state.get(f"single_game_correlation_strength_{platform}_{lineup_mode}", 0))
             correlation_strength = correlation_pct / 100.0
         else:
             correlation_strength = 1.0
         st.session_state["active_game_correlation_strength"] = correlation_strength
     with build_cols[2]:
-        st.write("### Run")
         build_clicked = workspace_button(st,
             "Run Build",
             type="primary",
