@@ -53,19 +53,19 @@ def display_lineups(pool,frame,status_pool=None):
 
 def render_exports(st,upload,cid,pool,built,portfolio,platform,stale,location,status_pool=None,*,current_pool=None,salary_min=0,saved_contest_id=None):
     st.subheader('Export lineups')
-    package=built.get('diagnostic_package')
-    if package:
-        from simmah_package_download import package_download_data
-        data=package_download_data(st,package)
-        if data is not None:
-            workspace_download_button(st,'DOWNLOAD CALIBRATION & SOLVER PACKAGE',data,
-                package['filename'],'application/zip',key='nba_diagnostic_download_'+location,on_click='ignore')
-            st.caption('One file for this saved build: opponent field, player inputs, simulations, solver details and contest identity.')
-        else:st.caption('Diagnostic package is awaiting archive recovery. Check Saved files below.')
-    else:
-        st.caption('Rebuild once to capture a complete calibration and solver package.')
     st.caption('Export the selected portfolio ('+str(len(portfolio))+' lineups), not the full candidate pool.')
-    with st.expander('Advanced — reports and frozen inputs'):
+    with st.expander('Advanced — diagnostics and reports', expanded=False):
+        package=built.get('diagnostic_package')
+        if package:
+            from simmah_package_download import package_download_data
+            data=package_download_data(st,package)
+            if data is not None:
+                workspace_download_button(st,'DOWNLOAD CALIBRATION & SOLVER PACKAGE',data,
+                    package['filename'],'application/zip',key='nba_diagnostic_download_'+location,on_click='ignore')
+                st.caption('One file for this saved build: opponent field, player inputs, simulations, solver details and contest identity.')
+            else:st.caption('Diagnostic package is awaiting archive recovery. Check Saved files below.')
+        else:
+            st.caption('Rebuild once to capture a complete calibration and solver package.')
         workspace_download_button(st,'DOWNLOAD PORTFOLIO REPORT',display_lineups(pool,portfolio,status_pool).to_csv(index=False).encode(),
             'Simmah_NBA_'+platform+'_Portfolio_Report.csv','text/csv',
             key='nba_portfolio_report_'+location,on_click='ignore')

@@ -197,12 +197,13 @@ def render_nfl_package(st):
     site='FanDuel' if current.startswith('FanDuel') else 'DraftKings'
     contest=st.session_state.get('selected_fd_contest' if site=='FanDuel' else 'selected_dk_contest') or {}
     if str(contest.get('id') or 'unselected')!=saved['contest_id']:return
-    from simmah_package_download import package_download_data
-    data=package_download_data(st,saved)
-    if data is None:
-        st.caption('Diagnostic package is awaiting archive recovery. Check Saved files below.')
-        return
-    workspace_download_button(st,'DOWNLOAD CALIBRATION & SOLVER PACKAGE',data,
-        saved['filename'],'application/zip',key='nfl_diagnostic_download',on_click='ignore')
-    st.caption('Saved '+saved['format']+' · contest '+saved['contest_id']+' · '+saved['captured_at']+
-        '. Send this one ZIP for opponent calibration and solver review. Older builds remain in Saved files.')
+    with st.expander('Advanced — diagnostics', expanded=False):
+        from simmah_package_download import package_download_data
+        data=package_download_data(st,saved)
+        if data is None:
+            st.caption('Diagnostic package is awaiting archive recovery. Check Saved files below.')
+            return
+        workspace_download_button(st,'DOWNLOAD CALIBRATION & SOLVER PACKAGE',data,
+            saved['filename'],'application/zip',key='nfl_diagnostic_download',on_click='ignore')
+        st.caption('Saved '+saved['format']+' · contest '+saved['contest_id']+' · '+saved['captured_at']+
+            '. Send this one ZIP for opponent calibration and solver review. Older builds remain in Saved files.')
