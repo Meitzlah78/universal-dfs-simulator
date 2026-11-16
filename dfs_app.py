@@ -6818,6 +6818,10 @@ else:
         # Build/simulate only players with a positive external projection.
         players_df = exclude_zero_projection_players(all_dk_players_df, "DraftKings " + lineup_mode)
         players_df = resolve_quarterback_roles_for_build(players_df, "DraftKings " + lineup_mode)
+        if lineup_mode == "Showdown":
+            from simmah_fantasylabs_ownership import render_role_exclusions
+            with _tab_roster:
+                players_df = render_role_exclusions(st, players_df)
         players_df["Opponent"] = players_df["Team"].map(opponent_map).fillna("—")
         players_df["CaptainSalary"] = (players_df["Salary"] * 1.5).astype(int)
 
@@ -6872,8 +6876,9 @@ else:
 
         from simmah_fantasylabs_ownership import invalidate_field
         _fl_fingerprint = all_dk_players_df.attrs.get("fantasylabs_ownership", {}).get("sha256")
-        if invalidate_field(st.session_state, slate_signature, _fl_fingerprint, mode=("single_game" if lineup_mode == "Showdown" else "full_roster")):
-            st.info("Ownership input changed. Rebuild the opponent field and contest results; game outcomes and candidates were retained.")
+        _ownership_identity = (slate_signature, tuple(players_df.attrs.get('ownership_excluded_players', []))) if lineup_mode == "Showdown" else slate_signature
+        if invalidate_field(st.session_state, _ownership_identity, _fl_fingerprint, mode=("single_game" if lineup_mode == "Showdown" else "full_roster")):
+            st.info("Ownership input or pool exclusions changed. Run a fresh build to update the opponent field and contest results.")
 
         # ================================
         # SIMULATION
