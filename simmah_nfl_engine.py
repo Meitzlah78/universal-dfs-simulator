@@ -45,6 +45,7 @@ def simulate_stat_lines(pool, roles, rng, n, correlation_strength=1.0, progress=
     player_ids = {name: i for i, name in enumerate(stats)}
     player_names = list(stats)
     selection_codes = {}
+    selection_cdf = {}
     game_weights = {}
     by_team = {}
     for row in rows:
@@ -148,7 +149,13 @@ def simulate_stat_lines(pool, roles, rng, n, correlation_strength=1.0, progress=
             cumulative=np.cumsum(game_weights[key][game_indices],axis=1)
             chosen=(rng.random(count)[:,None]>cumulative).sum(axis=1)
             return selection_codes[key][np.minimum(chosen,len(names)-1)]
-        return selection_codes[key][rng.choice(len(names), count, p=weights)]
+        # Cache by both names and shares: an RB-only pool can have identical
+        # receiver/runner names with different opportunity weights.
+        cdf_key = (key, tuple(weights))
+        if cdf_key not in selection_cdf:
+            cumulative = np.cumsum(weights, dtype=np.float64)
+            selection_cdf[cdf_key] = cumulative / cumulative[-1]
+        return selection_codes[key][np.searchsorted(selection_cdf[cdf_key], rng.random(count), side='right')]
 
     diagnostics = {}
     seen = set()
@@ -203,6 +210,8 @@ def simulate_stat_lines(pool, roles, rng, n, correlation_strength=1.0, progress=
         environment = np.clip(1 + strength * rng.normal(0, learned['environment_sd'], n), .75, 1.30)
 
         def switch(idx, new_field):
+            if not len(idx):
+                return
             possession[idx] = 1 - possession[idx]
             field[idx] = np.clip(new_field, 1, 99)
             down[idx] = 1
@@ -222,6 +231,8 @@ def simulate_stat_lines(pool, roles, rng, n, correlation_strength=1.0, progress=
             points[side, xp_made] += 1
             chargeable[side, xp_made] += 1
             add(p['kicker'], 'extra_points_made', xp_made)
+            if not len(two_idx):
+                return  # Empty random draws do not advance the generator.
             pass_two = rng.random(len(two_idx)) < learned['two_point_pass_share']
             for passing, attempts, chance in [(True, two_idx[pass_two], learned['two_point_pass_success']), (False, two_idx[~pass_two], learned['two_point_run_success'])]:
                 success = attempts[rng.random(len(attempts)) < chance]
@@ -247,12 +258,13 @@ def simulate_stat_lines(pool, roles, rng, n, correlation_strength=1.0, progress=
                     continue
                 p, defense = profiles[side], profiles[1-side]['defense']
                 counters['plays'][side, idx] += 1
-                clock[idx] -= np.clip(rng.normal(28, 6, len(idx)) / pace[idx], 12, 45)
+                clock[idx] -= (rng.normal(28, 6, len(idx)) / pace[idx]).clip(12, 45)
                 # Fourth down: field goal within range, otherwise punt. Near the
                 # goal/late while trailing, allow an offensive fourth-down play.
                 trailing = points[side, idx] < points[1-side, idx]
                 go = (down[idx] == 4) & ((field[idx] > 95) | ((clock[idx] < 180) & trailing))
-                fourth = idx[(down[idx] >= 4) & ~go]
+                fourth_mask = (down[idx] >= 4) & ~go
+                fourth = idx[fourth_mask]
                 if len(fourth):
                     fg = fourth[field[fourth] >= 60]
                     punt = fourth[field[fourth] < 60]
@@ -273,11 +285,13 @@ def simulate_stat_lines(pool, roles, rng, n, correlation_strength=1.0, progress=
                     punt_field = np.clip(100-(field[punt]+rng.normal(43, 9, len(punt))), 1, 99)
                     punt_field = np.where(punt_field < 10, 20, punt_field)
                     switch(punt, punt_field)
-                idx = idx[~np.isin(idx, fourth)]
+                # Reuse the aligned fourth-down mask; membership search repeats
+                # the same work on every play in every fitting pilot.
+                idx = idx[~fourth_mask]
                 if not len(idx):
                     continue
                 margin = points[side, idx] - points[1-side, idx]
-                pass_rate = np.clip(p['pass_rate'] - factors['rush_share'] - .004 * margin, .35, .80)
+                pass_rate = (p['pass_rate'] - factors['rush_share'] - .004 * margin).clip(.35, .80)
                 passing = rng.random(len(idx)) < pass_rate
                 gain = np.zeros(len(idx))
                 carrier = np.full(len(idx), -1, dtype=np.int32)
@@ -304,8 +318,9 @@ def simulate_stat_lines(pool, roles, rng, n, correlation_strength=1.0, progress=
                         gain[virtual] = np.clip(rng.gamma(learned['receiving_shape'], learned['receiving_yards']/learned['receiving_shape'], len(virtual))*environment[idx[virtual]]*factors['pass_yards']*p['pass_gain']**.80, 0, 85)
                     if len(selected):
                         carrier[throw] = selected
+                        throw_locations = np.flatnonzero(throw)
                         for name in p['receivers']:
-                            loc = np.flatnonzero(throw & (carrier == player_ids[name]))
+                            loc = throw_locations[np.flatnonzero(selected == player_ids[name])]
                             if not len(loc):
                                 continue  # Empty random draws never advance the generator.
                             add(name, 'targets', idx[loc])
@@ -320,8 +335,9 @@ def simulate_stat_lines(pool, roles, rng, n, correlation_strength=1.0, progress=
                     gain[running] = np.clip(rush_draw(learned['rushing_yards'], int(running.sum())), -5, 65)
                 if len(selected):
                     carrier[running] = selected
+                    run_locations = np.flatnonzero(running)
                     for name in p['runners']:
-                        loc = np.flatnonzero(running & (carrier == player_ids[name]))
+                        loc = run_locations[np.flatnonzero(selected == player_ids[name])]
                         if not len(loc):
                             continue
                         gain[loc] = np.clip(rush_draw(p['rushing_means'][name], len(loc))*np.sqrt(environment[idx[loc]]), -5, 65)

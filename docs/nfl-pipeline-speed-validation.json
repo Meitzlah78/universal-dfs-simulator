@@ -1,0 +1,45 @@
+{
+  "results": [
+    {
+      "label": "before",
+      "total_seconds": 48.816166735000024,
+      "warm_seconds": 0.062114732999816624,
+      "timings": {
+        "fit_seconds": 36.42703695099999,
+        "evaluation_seconds": 5.9701460619999125,
+        "construction_seconds": 6.142983516000186,
+        "persist_seconds": 0.07969722300003923,
+        "total_seconds": 48.81396834000043
+      }
+    },
+    {
+      "label": "after",
+      "total_seconds": 42.35084948299982,
+      "warm_seconds": 0.05798814299987498,
+      "timings": {
+        "fit_seconds": 31.11773774700032,
+        "evaluation_seconds": 5.642989917999785,
+        "construction_seconds": 5.317599974000132,
+        "persist_seconds": 0.06315502300003573,
+        "total_seconds": 42.34764375399982
+      }
+    }
+  ],
+  "exact_parameters_reports_and_outcomes": true,
+  "schema": 1,
+  "base_commit": "030b4086f54210123df546bc8824a4026c445b8f",
+  "source_model": "2f1e4c2db8fd580b",
+  "source_model_sha256": "add3e674575a53370e90046148ae2926e5dbe94485eac5b93a4eaf89a4bb53d1",
+  "old_engine_sha256": "ffc8ca4f50786f06640693ae67e84b00034a81e572e36bc671e9bacf6b682652",
+  "new_engine_sha256": "53a21ff7aaedaa4e926b20a17bf975c7843432573d8490c9848beeddfbca4b90",
+  "holdout_retested": false,
+  "parameters_unchanged": {
+    "rushing_df": 3.0,
+    "rushing_sd": 6.0
+  },
+  "classification": "exact seeded implementation parity",
+  "scope": "One paired local 261-player FanDuel cold preparation; no network, candidate search, opponent construction, selector or live-host latency. No observed forecast/ROI claim.",
+  "golden_cases": "tests/fixtures/nfl-pipeline-original-hashes.json",
+  "golden_cases_sha256": "08f8f80fa3b343b6011c40c30f90a0a197ff807ec0060687693f0f7343d61241",
+  "ui_progress_test": "625 intermediate scoring callbacks coalesced to at most 15 notifications; endpoints and stage resets retained"
+}

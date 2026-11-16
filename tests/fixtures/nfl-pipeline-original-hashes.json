@@ -1,0 +1,15 @@
+{
+  "baseline_commit": "030b4086f54210123df546bc8824a4026c445b8f",
+  "cases": {
+    "FanDuel-baseline": "601c5db2899115d8de6b85840ad954e93814757d5a9fa8c03fa17fe923f0819e",
+    "FanDuel-learned": "53c9bc59190c2ae2502b3e8de3a6bbb192c5e921c8808c75c0a54f9f33c38f4f",
+    "FanDuel-thin": "b7a7ccbb64d5d27909a6ac44c5b7c8ed0dadcba55d23bab568e4373d6bd3d9db",
+    "FanDuel-concentrated": "5ae39f8e4faf1e063ae90fb13b561cd80c3e93ee6f43670492e13c76529508a6",
+    "FanDuel-rb-only": "3d4ee83cf347c3cf7a3b05bcec5b6d5659c7817e54e9c25c9eaaf8456c24bd1e",
+    "DraftKings-baseline": "22be7f12f8b3666a1e23f83cd90a90b9907814ec3e268c160e35aa96df47d1c9",
+    "DraftKings-learned": "63791a84f930a49d144b377d0b695cad079d8374e53bb43eb3ab282385700a22",
+    "DraftKings-thin": "b7a7ccbb64d5d27909a6ac44c5b7c8ed0dadcba55d23bab568e4373d6bd3d9db",
+    "DraftKings-concentrated": "2ae1e0500bcbf5e943bbbe751dd0691ab7b72a5379577e5c90641242aed2fd97",
+    "DraftKings-rb-only": "cce9a2afe835db25958eb23e60d29161b62d01719f73275dc8cdc0a654927de5"
+  }
+}

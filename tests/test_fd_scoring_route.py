@@ -30,7 +30,8 @@ class FanDuelScoringRouteTests(unittest.TestCase):
         outcomes=pd.DataFrame(np.tile(np.arange(1.,13.),(8,1)),columns=names)
         state={'fd_simulation_df_single_game':outcomes,'fd_simulation_df_full_roster':outcomes}
         spec={'field_size':2,'tiers':[(1,1,5.)],'fee':1.,'payouts_known':payouts_known}
-        ns={'np':np,'pd':pd,'st':SimpleNamespace(session_state=state,caption=lambda *a:None,info=lambda *a:None),
+        from simmah_build_progress import ui_progress
+        ns={'ui_progress':ui_progress,'np':np,'pd':pd,'st':SimpleNamespace(session_state=state,caption=lambda *a:None,info=lambda *a:None),
             'user_lineups':user,'opponent_df':field,'lineup_mode':mode,'fd_slots':slots,'SIMULATION_COUNT':8,
             'add_lineup_field_ownership':lambda frame:frame,
             'full_roster_contest_parameters':lambda *a:spec,
