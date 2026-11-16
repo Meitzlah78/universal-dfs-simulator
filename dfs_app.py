@@ -3877,31 +3877,9 @@ def _simulate_scored_player_outcomes(players_df, platform, rng):
 
 @st.cache_data(show_spinner=False, ttl=86400)
 def _download_nfl_historical_player_stats():
-    """Download historical NFL stats once per cache period, with a network timeout."""
-    import io
-    import requests
-
-    frames = []
-    loaded_seasons = []
-    errors = []
-    # Load the current season plus recent seasons for player history.
-    # The 2026 file may not be published yet; failures are recorded and older
-    # seasons still load. Streamlit caches the result for 24 hours.
-    # Short per-request timeouts ensure unavailable data falls back promptly.
-    for season in [2026, 2025, 2024, 2023]:
-        url = f"https://github.com/nflverse/nflverse-data/releases/download/stats_player/stats_player_week_{season}.csv"
-        try:
-            response = requests.get(url, timeout=(4, 10))
-            response.raise_for_status()
-            frame = pd.read_csv(io.BytesIO(response.content), low_memory=False)
-            if not frame.empty:
-                frame["season"] = season
-                frames.append(frame)
-                loaded_seasons.append(season)
-        except Exception as exc:
-            errors.append(f"{season}: {str(exc)[:120]}")
-    historical = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
-    return historical, loaded_seasons, errors
+    """Read the same four seasons concurrently once per 24-hour cache period."""
+    from simmah_nfl_history import download_player_history
+    return download_player_history()
 
 
 def load_nfl_historical_player_stats():
@@ -4619,6 +4597,9 @@ def simulate_fd_play_by_play(players_df, rng, n=SIMULATION_COUNT, correlation_st
     from simmah_nfl_engine import ENGINE_VERSION
     if not isinstance(players_df, pd.DataFrame) or players_df.empty:
         return pd.DataFrame()
+    import time
+    _startup_started=time.perf_counter()
+    progress=st.progress(0,text="Loading NFL player history (cached when available)...")
     n = max(1, int(n))
     pool = players_df.drop_duplicates("Name", keep="first").copy().reset_index(drop=True)
     st.caption(f"Simulation preparation includes projection fitting, an optional market refit, then {n:,} evaluation and {n:,} separate construction outcomes. Fitting pass counts are not overall build progress. Completed fitting passes are saved for matching-input retries.")
@@ -4634,6 +4615,8 @@ def simulate_fd_play_by_play(players_df, rng, n=SIMULATION_COUNT, correlation_st
         st.warning('A game locks within 20 minutes. A cold full-slate build may not finish before lock; there is no reliable total completion estimate yet. Keep valid entries in place while this runs.')
     pool["Projection"] = pd.to_numeric(pool.get("Projection", 0.0), errors="coerce").fillna(0.01).clip(lower=0.01)
     _fd_hist = load_nfl_historical_player_stats()
+    _history_seconds=time.perf_counter()-_startup_started
+    progress.progress(0,text="Preparing historical player roles...")
     # The historical index retains spaces; use the same canonical keys as
     # salary/projection names before looking up opportunity profiles.
     _fd_hist_index = {
@@ -4681,6 +4664,7 @@ def simulate_fd_play_by_play(players_df, rng, n=SIMULATION_COUNT, correlation_st
                 continue
 
     from simmah_matchups import matchup_inputs
+    progress.progress(0,text="Loading defensive matchup schedule and context...")
     _matchup_roles, _matchup_report = matchup_inputs(pool, _fd_hist, load_matchup_schedule())
     for _name, _context in _matchup_roles.items():
         _fd_hist_roles.setdefault(_name, {}).update(_context)
@@ -4688,7 +4672,10 @@ def simulate_fd_play_by_play(players_df, rng, n=SIMULATION_COUNT, correlation_st
         st.caption("nflverse weekly statistics; only dated games before kickoff. Minimum four games; rates shrink toward league averages. External projections remain the scoring targets. Neutral when data is unavailable.")
         st.dataframe(injury_frame(st, _matchup_report), hide_index=True, use_container_width=True)
 
-    progress = st.progress(0, text=f"Preparing {n:,} independent NFL game outcomes...")
+    _startup_seconds=time.perf_counter()-_startup_started
+    st.session_state["nfl_startup_"+platform]={"history_seconds":_history_seconds,"total_seconds":_startup_seconds}
+    st.caption(f"Initial data preparation: {_startup_seconds:.2f}s (player history: {_history_seconds:.2f}s).")
+    progress.progress(0, text=f"Preparing {n:,} independent NFL game outcomes...")
     from simmah_weather import team_key
     weather_by_team = {}
     for row in pool.to_dict("records"):
