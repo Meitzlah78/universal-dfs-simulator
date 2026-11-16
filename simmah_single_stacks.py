@@ -9,8 +9,9 @@ def control_keys(platform, mode):
 
 def render_controls(st, platform, mode):
     splits, qb = control_keys(platform, mode)
-    st.multiselect('Team stacks in MY lineups', OPTIONS, default=[OPTIONS[0]], key=splits,
-        help='Any / All allows every legal team split. Otherwise accept any selected split, in either direction. Both teams remain required. Applies to new builds.')
+    with st.expander('Advanced stack options', expanded=False):
+        st.multiselect('Team stacks in MY lineups', OPTIONS, default=[OPTIONS[0]], key=splits,
+            help='Any / All allows every legal team split. Otherwise accept any selected split, in either direction. Both teams remain required. Applies to new builds.')
     st.checkbox('Pair each QB with a same-team WR/TE', value=False, key=qb,
         help='Every selected quarterback needs at least one same-team wide receiver or tight end. Applies to new builds.')
 

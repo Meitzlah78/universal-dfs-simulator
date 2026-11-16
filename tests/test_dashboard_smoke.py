@@ -10,6 +10,7 @@ class DashboardSmokeTests(unittest.TestCase):
         for format_name in ['DraftKings Classic','DraftKings Showdown','FanDuel Full Roster','FanDuel Single Game']:
             with self.subTest(format=format_name):
                 app=AppTest.from_file(str(Path(__file__).resolve().parents[1]/'dfs_app.py'),default_timeout=30)
+                app.session_state['_slate_backup_booted']=True
                 app.session_state['dfs_format']=format_name
                 with patch('requests.sessions.Session.request',side_effect=requests.ConnectionError('offline layout check')),patch('urllib.request.urlopen',side_effect=OSError('offline layout check')):
                     app.run()
@@ -45,5 +46,26 @@ st.session_state['observed']=(exposure,construction)
         self.assertFalse(app.exception)
         self.assertEqual(app.session_state['observed'],(100,1.))
         self.assertEqual(app.slider(key='lineup_build_aggressiveness_FanDuel_Single Game').value,100)
+
+class AdvancedSidebarTests(unittest.TestCase):
+    def test_saved_correlation_and_construction_survive_layout_changes(self):
+        for platform,mode in [('DraftKings','Showdown'),('FanDuel','Single Game')]:
+            app=AppTest.from_string("""
+import streamlit as st
+from simmah_ui import render_diversity_controls
+site,mode=st.session_state['fixture']
+render_diversity_controls(st,site,mode,10000)
+""")
+            app.session_state['fixture']=(platform,mode)
+            correlation=f'single_game_correlation_strength_{platform}_{mode}'
+            construction=f'lineup_build_aggressiveness_{platform}_{mode}'
+            app.session_state[correlation]=65;app.session_state[construction]=80
+            app.run()
+            self.assertFalse(app.exception)
+            self.assertEqual(app.slider(key=correlation).value,65)
+            self.assertEqual(app.slider(key=construction).value,80)
+            self.assertEqual(app.expander[0].label,'Advanced settings')
+            self.assertFalse(app.expander[0].proto.expanded)
+            self.assertEqual(len(app.expander[0].slider),2)
 
 if __name__=='__main__':unittest.main()
