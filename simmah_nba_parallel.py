@@ -54,15 +54,26 @@ def simulate_one_game(payload):
     return scores,engine.prepared[index],engine.last_report[0]
 
 
+def game_pool(pool,ids):
+    """Send only simulation flags, not raw provider payloads, to workers."""
+    from copy import copy
+    source=copy(pool)
+    source.attrs={key:pool.attrs[key] for key in (
+        'nba_variable_minutes','nba_wider_minutes','nba_estimated_rotation_teams') if key in pool.attrs}
+    return source.iloc[ids].reset_index(drop=True)
+
+
 def simulate_parallel(engine,n,seed):
     from simmah_nba_projections import team_key
     output=np.zeros((n,len(engine.pool)),np.float32);reports=[None]*len(engine.games)
     jobs={}
+    if engine.progress:
+        engine.progress(f'Preparing and simulating {len(engine.games)} NBA games with {worker_count()} workers')
     for local_index,(market,_) in enumerate(engine.games):
         index=local_index+engine.game_index_offset
         teams=set(map(team_key,market['teams']))
         ids=np.flatnonzero(engine.pool['Team'].map(team_key).isin(teams).to_numpy())
-        pool=engine.pool.iloc[ids].reset_index(drop=True)
+        pool=game_pool(engine.pool,ids)
         payload=(pool,market,engine.rates,engine.max_overtimes,engine.platform,index,n,seed,engine.prepared.get(index))
         jobs[_pool().submit(simulate_one_game,payload)]=(local_index,index,ids)
     completed=0
