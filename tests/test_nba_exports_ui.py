@@ -33,3 +33,23 @@ class NBAExportPlacementTests(unittest.TestCase):
                     self.assertFalse(any('EDIT ENTRIES CSV' in label for label in labels))
                 if platform=='FanDuel':
                     self.assertEqual(len([b for b in app.get('link_button') if 'OPEN FANDUEL' in b.proto.label]),1)
+
+    def test_opponent_report_is_deferred_without_rebuilding_selected_lineups(self):
+        from streamlit.testing.v1 import AppTest
+        sys.path.insert(0,str(Path(__file__).parent))
+        for platform in ['FanDuel','DraftKings']:
+            with self.subTest(platform=platform):
+                app=AppTest.from_file(str(Path(__file__).with_name('nba_ui_fixture.py')))
+                app.session_state['fixture_platform']=platform
+                app.run(timeout=20).button(key='nba_build').click().run(timeout=20)
+                self.assertFalse(app.exception)
+                saved=app.session_state['nba_build_result']['result']['portfolio'].copy(deep=True)
+                calls=app.session_state['test_build_calls']
+                self.assertTrue(any(h.value=='My lineups' for h in app.subheader))
+                self.assertFalse(any(b.proto.id.endswith('-nba_field_download') for b in app.get('download_button')))
+                app.checkbox(key='nba_load_engine_details').check().run(timeout=20)
+                self.assertFalse(app.exception)
+                self.assertTrue(any(b.proto.id.endswith('-nba_field_download') for b in app.get('download_button')))
+                self.assertEqual(app.session_state['test_build_calls'],calls)
+                import pandas as pd
+                pd.testing.assert_frame_equal(saved,app.session_state['nba_build_result']['result']['portfolio'])
