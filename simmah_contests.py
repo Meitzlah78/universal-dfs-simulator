@@ -32,7 +32,7 @@ def payout_vector(field_size,tiers):
 
 
 def evaluate_contest(outcomes,candidates,field,slots,field_size,tiers,entry_fee,
-                     multipliers=None,joint=False,progress=None,batch_size=16):
+                     multipliers=None,joint=False,progress=None,batch_size=16,*,workers=None):
     if candidates.empty or field.empty:raise ValueError('Candidates and opponent field must be nonempty')
     values=outcomes.to_numpy(np.float32)
     if not len(values) or not np.isfinite(values).all():raise ValueError('Invalid contest outcomes')
@@ -51,11 +51,16 @@ def evaluate_contest(outcomes,candidates,field,slots,field_size,tiers,entry_fee,
     hits={key:np.zeros(n) for key in ['WinRate','Top1','Top5','Top10','CashRate']}
     cuts={'WinRate':1,'Top1':max(1,int(np.ceil(.01*field_size))),
           'Top5':max(1,int(np.ceil(.05*field_size))),'Top10':max(1,int(np.ceil(.1*field_size)))}
-    for start in range(0,len(values),batch_size):
+    from simmah_numeric_workers import ordered_scoring_map,scoring_workers
+    def score_chunk(start):
         sample=values[start:start+batch_size]
         opponent_scores=np.sort(field_scorer(sample),axis=1)
         user_scores=user_scorer(sample)
         lower, upper = score_insertion_bounds(opponent_scores, user_scores)
+        return start,len(sample),user_scores,lower,upper
+    threads=scoring_workers(workers) if len(values)>=64 and n>=256 else 1
+    for start,sample_count,user_scores,lower,upper in ordered_scoring_map(
+            score_chunk,range(0,len(values),batch_size),threads):
         for scores,left,right in zip(user_scores,lower,upper):
             better=np.rint((len(field)-right)*scale).astype(int)
             equals=np.minimum(np.rint((right-left)*scale).astype(int),represented-better)
@@ -69,7 +74,7 @@ def evaluate_contest(outcomes,candidates,field,slots,field_size,tiers,entry_fee,
             prize_sum+=prize;rank_sum+=(first+last)/2
             for key,cut in cuts.items():hits[key]+=np.clip((cut-first+1)/ties,0,1)
             hits['CashRate']+=(prize>0)
-        if progress:progress(min(1,(start+len(sample))/len(values)),f'Scoring contest: {min(start+len(sample),len(values)):,} / {len(values):,} outcomes')
+        if progress:progress(min(1,(start+sample_count)/len(values)),f'Scoring contest: {min(start+sample_count,len(values)):,} / {len(values):,} outcomes')
     result=candidates.copy()
     for key,value in hits.items():result[key]=value/len(values)
     result['Estimated Full Field Rank']=rank_sum/len(values)

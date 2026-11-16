@@ -1,0 +1,53 @@
+{
+  "classification": "SYNTHETIC_EXACT_OUTPUT_REPLAY",
+  "players": 275,
+  "outcomes": 10000,
+  "candidates": 5000,
+  "opponents": 10000,
+  "results": {
+    "1": [
+      {
+        "effective_workers": 1,
+        "summary_seconds": 1.8709654970000429,
+        "contest_seconds": 9.614576814999964,
+        "total_seconds": 11.485542312000007
+      },
+      {
+        "effective_workers": 1,
+        "summary_seconds": 1.796650389999968,
+        "contest_seconds": 9.575569854999912,
+        "total_seconds": 11.37222024499988
+      }
+    ],
+    "2": [
+      {
+        "effective_workers": 2,
+        "summary_seconds": 1.0631081770000037,
+        "contest_seconds": 5.630430028999967,
+        "total_seconds": 6.693538205999971
+      },
+      {
+        "effective_workers": 2,
+        "summary_seconds": 0.9859746920000134,
+        "contest_seconds": 5.314150798000014,
+        "total_seconds": 6.300125490000028
+      }
+    ],
+    "4": [
+      {
+        "effective_workers": 4,
+        "summary_seconds": 0.5210532209999883,
+        "contest_seconds": 3.3072688490000246,
+        "total_seconds": 3.828322070000013
+      },
+      {
+        "effective_workers": 4,
+        "summary_seconds": 0.5018345839999938,
+        "contest_seconds": 3.2882997829999567,
+        "total_seconds": 3.7901343669999505
+      }
+    ]
+  },
+  "exact_frame_parity": true,
+  "scope": "Local numeric scoring only; excludes cold simulation fitting, candidate search, field construction, selector and hosted UI. No reduction in simulations, candidates or field size."
+}
