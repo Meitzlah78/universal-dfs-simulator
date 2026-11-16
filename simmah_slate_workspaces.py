@@ -380,7 +380,7 @@ def slate_component():
     return components.declare_component('simmah_loaded_slates_v4', path=str(Path(__file__).parent/'components/slate_workspaces'))
 
 
-def render_session_tabs(st, host):
+def render_session_tabs(st, host, *, prepared_checkpoint=None):
     """Small session-only tab events, with no archive or snapshot transfer."""
     import streamlit.components.v1 as components
     state = st.session_state
@@ -413,7 +413,11 @@ def render_session_tabs(st, host):
     if selected in records and (not current or selected != current['id']):
         if current:
             from simmah_session_workspaces import checkpoint
-            saved = {**current, '_session_checkpoint': checkpoint(st)}
+            if prepared_checkpoint is not None and prepared_checkpoint[0] == current['id']:
+                captured = prepared_checkpoint[1]
+            else:
+                captured = checkpoint(st)
+            saved = {**current, '_session_checkpoint': captured}
             records[current['id']] = saved
         state['_slate_pending'] = records[selected]
         st.rerun()
@@ -426,8 +430,9 @@ def finish_workspaces(st,host,tabs_host=None):
             st.session_state['_slate_pending'] = incoming
             st.rerun()
         from simmah_workspace_persistence import schedule, render
-        schedule(st)
-        render_session_tabs(st, tabs_host if tabs_host is not None else host)
+        prepared_checkpoint = schedule(st)
+        render_session_tabs(st, tabs_host if tabs_host is not None else host,
+                            prepared_checkpoint=prepared_checkpoint)
         render(st, host)
         with host:
             from simmah_diagnostic_packages import render_nfl_package

@@ -55,8 +55,8 @@ def render_exports(st,upload,cid,pool,built,portfolio,platform,stale,location,st
     st.subheader('Export lineups')
     package=built.get('diagnostic_package')
     if package:
-        from simmah_nba_diagnostics import package_bytes
-        data=package_bytes(st,package)
+        from simmah_package_download import package_download_data
+        data=package_download_data(st,package)
         if data is not None:
             workspace_download_button(st,'DOWNLOAD CALIBRATION & SOLVER PACKAGE',data,
                 package['filename'],'application/zip',key='nba_diagnostic_download_'+location,on_click='ignore')
@@ -209,7 +209,7 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         clicked=workspace_button(st,'BUILD NBA LINEUPS',disabled=bool(error),key='nba_build')
         if error:
             st.error('NBA tournament build inputs need attention: '+error)
-            from simmah_nba_diagnostics import rotation_audit,make_setup_package,retain_package,package_reference,package_bytes
+            from simmah_nba_diagnostics import rotation_audit,make_setup_package,retain_package,package_reference
             with st.expander('Review rotation inputs and save diagnostic',expanded=True):
                 summary,detail=rotation_audit(pool)
                 st.dataframe(summary,hide_index=True,width='stretch')
@@ -224,7 +224,8 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
                         retain_package(st,package)
                         setup={**package_reference(package),'identity':setup_identity}
                         st.session_state['nba_setup_diagnostic']=setup
-                    data=package_bytes(st,setup)
+                    from simmah_package_download import package_download_data
+                    data=package_download_data(st,setup)
                     if data is not None:
                         workspace_download_button(st,'DOWNLOAD SETUP DIAGNOSTIC PACKAGE',data,
                             setup['filename'],'application/zip',key='nba_setup_diagnostic_download',on_click='ignore')
