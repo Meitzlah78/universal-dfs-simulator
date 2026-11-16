@@ -260,7 +260,7 @@ def build_candidates(pool,outcomes,roster,target=5000,salary_min=0,salary_max=50
     return result
 
 
-def summarize_candidates(frame,outcomes,slots,multipliers=None):
+def summarize_candidates(frame,outcomes,slots,multipliers=None,*,workers=None):
     """Score joint lineup distributions in chunks; never sum marginal percentiles."""
     if frame.empty:return frame
     names=list(map(str,outcomes.columns));index={name:i for i,name in enumerate(names)}
@@ -268,14 +268,18 @@ def summarize_candidates(frame,outcomes,slots,multipliers=None):
     mult=np.ones(len(slots)) if multipliers is None else np.asarray(multipliers,np.float32)
     result=frame.copy();means=[];p95=[];p99=[]
     from simmah_lineup_scores import LineupScorer
-    for start in range(0,len(frame),128):
+    from simmah_numeric_workers import ordered_scoring_map,scoring_workers
+    def score_chunk(start):
         chunk=frame.iloc[start:start+128]
         picks=np.array([[index[str(name)] for name in row] for row in chunk[slots].itertuples(index=False,name=None)])
         scorer = LineupScorer(picks, mult, values.shape[1], dtype=np.float32)
         scores=scorer(values)
         # Scalar quantile calls retain NumPy's original float32 interpolation
         # semantics; a vector of quantiles can silently promote interpolation.
-        means.extend(scores.mean(axis=0));p95.extend(np.quantile(scores,.95,axis=0));p99.extend(np.quantile(scores,.99,axis=0))
+        return scores.mean(axis=0),np.quantile(scores,.95,axis=0),np.quantile(scores,.99,axis=0)
+    threads=scoring_workers(workers) if len(frame)>=512 else 1
+    for mean,high,tail in ordered_scoring_map(score_chunk,range(0,len(frame),128),threads):
+        means.extend(mean);p95.extend(high);p99.extend(tail)
     result['SimMean']=means;result['ProjectedPoints']=means
     result['SimP95']=p95;result['SimP99']=p99
     result['Score']=means  # scenario scores across different stories aren't comparable
