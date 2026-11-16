@@ -6,6 +6,12 @@ from simmah_selector_budget import select_quality_budget,VERSION
 
 LOG=logging.getLogger(__name__)
 
+# Only these fields affect selection. Displayed exposure/ownership summaries
+# change after assignment and must not invalidate an otherwise identical solve.
+CONSTRAINT_FIELDS = ('Lock', 'Fade', 'Min Exposure %', 'Max Exposure %',
+    'Captain Min %', 'Captain Max %', 'MVP Min %', 'MVP Max %',
+    'Flex Min %', 'Flex Max %')
+
 
 def selection_key(state,site,mode):
     contest=state.get('selected_dk_contest' if site=='DraftKings' else 'selected_fd_contest') or {}
@@ -30,15 +36,15 @@ def render_status(st,portfolio):
         f"Quality loss: {100*a['actual_quality_loss']:.2f}%. "
         f"Hard automatic cap: {a['automatic_cap_pct']:g}%. Manual limits stay enforced.")
     if not a.get('diversity_optimal',False):
-        st.warning('Diversity search timed out. This portfolio passed the count, quality-budget and exposure checks; minimum concentration was not certified.')
+        st.warning('Diversity search timed out. This portfolio passed the count, quality-budget and exposure checks; minimum concentration was not certified. Using this validated portfolio for assignment and export.')
 
 
 def select_for_app(st,candidates,slots,count,*,controls,diversity,site,mode,previous=None):
     """Return a validated new portfolio or None; caller must stop on None.
 
     Existing assigned tables are never written here. Recovery copies survive
-    invalidation. A timeout preview cannot replace a previous portfolio without
-    a user action; first-time valid timeout portfolios can be used immediately.
+    invalidation. A validated diversity-timeout portfolio follows the same
+    assignment/export path as a completed solve; hard validation failures stop.
     """
     state=st.session_state;key=selection_key(state,site,mode)
     if isinstance(previous,pd.DataFrame) and not previous.empty:
@@ -47,6 +53,8 @@ def select_for_app(st,candidates,slots,count,*,controls,diversity,site,mode,prev
     try:
         if 'Top1' not in candidates:
             raise ValueError('Run CONTEST SIM to obtain Top 1% estimates before selecting an NFL portfolio.')
+        controls={name:{field:cfg[field] for field in CONSTRAINT_FIELDS if field in cfg}
+                  for name,cfg in (controls or {}).items()}
         # Table sorting is not a selection input. Canonical roster order also
         # makes the cache independent of the user's display ranking choice.
         candidates=candidates.sort_values(slots,kind='stable').reset_index(drop=True)
@@ -69,12 +77,6 @@ def select_for_app(st,candidates,slots,count,*,controls,diversity,site,mode,prev
         if timed_out:
             LOG.warning('NFL selector timeout: %s',json.dumps(dict(key=key,**portfolio.attrs),default=str))
             if isinstance(old,pd.DataFrame) and not old.empty and state.get(key+'_accepted_timeout')!=sig:
-                st.info('Your previously saved lineups are preserved. The new timeout portfolio has not replaced them.')
-                with st.expander('Validated timeout portfolio preview',expanded=False):st.dataframe(portfolio,use_container_width=True,hide_index=True)
-                if not st.button('Use validated timeout portfolio',key=key+'_accept_'+sig[:12]):
-                    if st.button('Retry portfolio selection',key=key+'_retry_'+sig[:12]):
-                        state.pop(key+'_cache',None);st.rerun()
-                    return None
                 state[key+'_previous']=old.copy(deep=True)
             state[key+'_accepted_timeout']=sig
         LOG.info('NFL selector completed: %s',json.dumps(dict(key=key,**portfolio.attrs),default=str))

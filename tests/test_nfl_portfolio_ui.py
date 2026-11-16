@@ -35,16 +35,31 @@ class UISelectionTests(unittest.TestCase):
             self.assertIsNone(result);pd.testing.assert_frame_equal(st.session_state[key+'_recovery'],old)
             self.assertIn('failed',st.session_state[key+'_status']['status'])
             self.assertTrue(any('preserved' in m for m in st.messages))
-    def test_timeout_does_not_replace_saved_without_user_action(self):
-        old=candidates().iloc[2:].copy();st=UI({'portfolio_df':old});key=selection_key(st.session_state,'DraftKings','Showdown')
-        with patch('simmah_nfl_portfolio.select_quality_budget',side_effect=lambda f,*a,**k:selected(f,True)):
-            result=select_for_app(st,candidates(),['X','Y'],2,controls={},diversity=50,site='DraftKings',mode='Showdown',previous=old)
-        self.assertIsNone(result);pd.testing.assert_frame_equal(st.session_state['portfolio_df'],old)
-        st.buttons={'Use validated timeout portfolio'}
-        result=select_for_app(st,candidates(),['X','Y'],2,controls={},diversity=50,site='DraftKings',mode='Showdown',previous=old)
-        self.assertEqual(len(result),2);pd.testing.assert_frame_equal(st.session_state[key+'_previous'],old)
-        st.buttons=set()
-        self.assertIsNotNone(select_for_app(st,candidates(),['X','Y'],2,controls={},diversity=50,site='DraftKings',mode='Showdown',previous=old))
+    def test_valid_timeout_returns_immediately_and_keeps_backup(self):
+        for site,mode in [('DraftKings','Showdown'),('DraftKings','Classic'),('FanDuel','Single Game'),('FanDuel','Full Roster')]:
+            old=candidates().iloc[2:].copy();st=UI({'saved':old})
+            key=selection_key(st.session_state,site,mode)
+            with patch('simmah_nfl_portfolio.select_quality_budget',side_effect=lambda f,*a,**k:selected(f,True)) as solver:
+                result=select_for_app(st,candidates(),['X','Y'],2,controls={},diversity=50,site=site,mode=mode,previous=old)
+                self.assertEqual(len(result),2)
+                select_for_app(st,candidates(),['X','Y'],2,controls={},diversity=50,site=site,mode=mode,previous=result)
+            self.assertEqual(solver.call_count,1)
+            pd.testing.assert_frame_equal(st.session_state[key+'_previous'],old)
+            self.assertTrue(any('assignment and export' in m for m in st.messages))
+
+    def test_display_feedback_does_not_reselect_but_constraints_do(self):
+        st=UI();controls={'A':{'Max Exposure %':80,'Exposure %':0,'Field Own %':20}}
+        with patch('simmah_nfl_portfolio.select_quality_budget',side_effect=lambda f,*a,**k:selected(f)) as solver:
+            for key,value in [('Exposure %',50),('Field Own %',30),('Mean',12),('Updated','new')]:
+                controls['A'][key]=value
+                select_for_app(st,candidates(),['X','Y'],2,controls=controls,diversity=50,site='FanDuel',mode='Single Game')
+            self.assertEqual(solver.call_count,1)
+            self.assertEqual(solver.call_args.kwargs['controls'],{'A':{'Max Exposure %':80}})
+            for key,value in [('Max Exposure %',50),('MVP Max %',20),('Flex Min %',10),('Lock',True)]:
+                controls['A'][key]=value
+                select_for_app(st,candidates(),['X','Y'],2,controls=controls,diversity=50,site='FanDuel',mode='Single Game')
+            self.assertEqual(solver.call_count,5)
+
     def test_first_portfolio_can_use_valid_timeout_fallback(self):
         st=UI()
         with patch('simmah_nfl_portfolio.select_quality_budget',side_effect=lambda f,*a,**k:selected(f,True)):
