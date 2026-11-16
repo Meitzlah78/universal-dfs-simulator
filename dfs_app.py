@@ -1,3 +1,4 @@
+from simmah_build_progress import ui_progress
 from simmah_opponent_diagnostics import numeric_column, with_roster_projections
 from simmah_session_state import safe_state_items
 from simmah_slate_workspaces import workspace_data_editor
@@ -4371,6 +4372,7 @@ def render_saved_market_calibration(platform_name, mode_name, pool):
 def build_joint_candidate_pool(pool, platform_name, mode_name, evaluation_outcomes, roster,
                               salary_min, salary_max, locks=(), selected_stacks=(), secondary_stacks=(), special_allowed=None,
                               salary_costs=None, aggressiveness=.5):
+    from simmah_build_progress import ui_progress
     from simmah_candidates import build_candidates, summarize_candidates, offense_vs_defense_allowed
     # Separate random game draws keep candidate construction out of the contest
     # evaluation sample. Neither matrix is resampled from the other.
@@ -4399,7 +4401,7 @@ def build_joint_candidate_pool(pool, platform_name, mode_name, evaluation_outcom
         require_both_teams=True, validator=validator, rng=np.random.default_rng(),
         noise=.08, scenario_diversity=float(np.clip(aggressiveness,0,1)), penalties=penalty, primary_stacks=seed_patterns,
         avoid_opposing_defense=mode_name in {"Classic", "Full Roster"},
-        progress=lambda fraction, text: progress.progress(fraction, text=text))
+        progress=ui_progress(progress))
     metadata = dict(result.attrs)
     if result.empty:
         raise ValueError("No legal candidates satisfy the roster, salary, locks and stack requirements")
@@ -4598,6 +4600,7 @@ def simulate_fd_play_by_play(players_df, rng, n=SIMULATION_COUNT, correlation_st
     if not isinstance(players_df, pd.DataFrame) or players_df.empty:
         return pd.DataFrame()
     import time
+    from simmah_build_progress import ui_progress
     _startup_started=time.perf_counter()
     progress=st.progress(0,text="Loading NFL player history (cached when available)...")
     n = max(1, int(n))
@@ -4693,7 +4696,7 @@ def simulate_fd_play_by_play(players_df, rng, n=SIMULATION_COUNT, correlation_st
         count=n, correlation_strength=correlation_strength, weather_by_team=weather_by_team,
         slate_date=_learning_day,game_starts=_learning_clocks,
         market_targets=st.session_state.get("active_game_markets", {}),
-        progress=lambda fraction,text: progress.progress(fraction,text=text))
+        progress=ui_progress(progress))
     st.caption("NFL performance learning: " + prepared["metadata"]["learning"]["status"] +
                ((" · " + prepared["metadata"]["learning"]["version"]) if prepared["metadata"]["learning"].get("version") else ""))
     _market_conflicts=[row for row in prepared['metadata'].get('market_report',[])
@@ -5723,7 +5726,7 @@ if platform == "FanDuel":
                                 _fd_salary_history = _fd_history_json.loads(_fd_salary_path.read_text())
                                 _fd_salary_counts = _fd_salary_history["salary_counts"]
                         _fd_batched_field = build_full_roster_field(fd_pool, fd_weights, fd_slots, _fd_generation_target,
-                            rng=rng, progress=lambda fraction,text: fd_field_progress.progress(fraction,text=text),
+                            rng=rng, progress=ui_progress(fd_field_progress),
                             salary_counts=_fd_salary_counts, construction_distribution=opponent_construction_distribution(
                                 "FanDuel", "Full Roster", st.session_state.get("selected_fd_contest", {}), fd_pool))
                         if _fd_salary_counts:
@@ -5738,13 +5741,13 @@ if platform == "FanDuel":
                             _fl_fd_pool["CaptainSalary"] = pd.to_numeric(_fl_fd_pool["Salary"]) * 1.5
                             _fd_single_field = build_unique_field(_fl_fd_pool, fd_flex_weights, fd_mvp_weights,
                                 _fd_generation_target, salary_cap=60000, min_salary=0, rng=rng,
-                                progress=lambda fraction,text: fd_field_progress.progress(fraction,text=text),
+                                progress=ui_progress(fd_field_progress),
                                 ensure_role_support=True).rename(columns={"Captain":"MVP", **{"Flex"+str(i):"FLEX"+str(i) for i in range(1,6)}})
                         else:
                             _fd_single_field = build_fanduel_single_field(
                                 fd_pool, fd_mvp_weights, fd_flex_weights, _fd_generation_target,
                                 fd_salary_range, rng=rng,
-                                progress=lambda fraction,text: fd_field_progress.progress(fraction,text=text),
+                                progress=ui_progress(fd_field_progress),
                             )
                         opponent_rows = _fd_single_field.to_dict("records")
                 fd_field_progress.empty()
@@ -5858,7 +5861,7 @@ if platform == "FanDuel":
                                 raise ValueError("Run a fresh SIM before evaluating FanDuel Full Roster")
                             compared = evaluate_contest(_fd_roi_sim, compared, _fd_final_field, fd_slots,
                                 _fd_spec["field_size"], _fd_spec["tiers"], _fd_spec["fee"],
-                                progress=lambda fraction,text: fd_step4_progress.progress(fraction,text=text))
+                                progress=ui_progress(fd_step4_progress))
                             if not _fd_spec["payouts_known"]:
                                 compared = compared.drop(columns=["CashRate", "Expected Prize ($)", "Expected Net ($)", "Expected ROI (%)", "Entry Fee ($)"], errors="ignore")
                                 compared["ContestScore"] = compared["Top1"]
@@ -5874,7 +5877,7 @@ if platform == "FanDuel":
                             compared = evaluate_contest(_single_outcomes, compared, opponent_df, fd_slots,
                                 _single_spec["field_size"], _single_spec["tiers"], _single_spec["fee"],
                                 multipliers=[1.5, 1, 1, 1, 1, 1],
-                                progress=lambda fraction,text: fd_step4_progress.progress(fraction,text=text))
+                                progress=ui_progress(fd_step4_progress))
                             if not _single_spec["payouts_known"]:
                                 compared = compared.drop(columns=["CashRate", "Expected Prize ($)", "Expected Net ($)", "Expected ROI (%)", "Entry Fee ($)"], errors="ignore")
                                 compared["ContestScore"] = compared["Top1"]
@@ -7632,7 +7635,7 @@ else:
                         contest_field_df = build_full_roster_field(pool, pool["Weight"].to_numpy(float), field_slot_names,
                             field_target, rng=rng, platform="DraftKings",
                             construction_distribution=opponent_construction_distribution("DraftKings", "Classic", classic_contest, pool),
-                            progress=lambda fraction,text: _classic_field_progress.progress(fraction,text=text))
+                            progress=ui_progress(_classic_field_progress))
                         _classic_field_progress.empty()
                         contest_field_df = apply_learned_field(contest_field_df, pool, field_slot_names, "DraftKings", "Classic", classic_contest, int(dk_opponent_target), rng)
                         st.caption("Opponent construction uses matching completed-contest stack/bring-back frequencies when available; otherwise the baseline requires a QB + WR/TE stack. Field popularity uses external ownership when available, otherwise estimated popularity.")
@@ -7664,7 +7667,7 @@ else:
                             _classic_slots = [slot for slot, _ in contest_slots]
                             user_lineups = evaluate_contest(sim_df, user_lineups, contest_field_df, _classic_slots,
                                 full_field_size, classic_contest["payouts"], float(classic_contest["entry"]),
-                                progress=lambda fraction,text: _classic_progress.progress(fraction,text=text))
+                                progress=ui_progress(_classic_progress))
                             st.caption(f"Contest evaluation used all {len(sim_df):,} independent evaluation outcomes. Opponents are a representative estimated field; tied prizes are split across all occupied payout places.")
                             _classic_progress.empty()
                         st.session_state["classic_contest_field_df"] = contest_field_df
