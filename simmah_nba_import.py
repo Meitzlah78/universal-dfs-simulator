@@ -267,8 +267,7 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
         from simmah_nba_live import render_live_points
         render_live_points(st,pool,day,platform)
         from simmah_nba_minutes_validation import render_minutes_snapshots
-        _advanced=st.checkbox('Show advanced reports and validation',key='nba_show_advanced')
-        render_minutes_snapshots(st,pool,platform,show_controls=_advanced)
+        render_minutes_snapshots(st,pool,platform,show_controls=True)
         st.subheader('NBA player pool')
         st.caption(f"Positive projections: {pool['Projection'].notna().sum()} / {len(pool)} · Eligible after injuries: {pool['Eligible'].sum()}. Automatic data is cached for up to 15 minutes; refresh runs on app activity.")
         from simmah_nba_ownership import field_ownership_inputs

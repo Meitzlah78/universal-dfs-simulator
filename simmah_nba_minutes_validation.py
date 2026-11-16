@@ -70,7 +70,7 @@ def render_minutes_snapshots(st,pool,platform,show_controls=True):
     if frozen and not any(x['signature']==frozen['signature'] for x in history):
         history.append(frozen)
     if not show_controls:return
-    with st.expander('Pregame minutes snapshots — validation'):
+    with st.expander('Advanced — pregame minutes validation',expanded=False):
         st.caption('Automatically records available minutes before each game starts. Saved with this browser’s slate workspace; download an archive for a separate backup. No simulation parameters are changed.')
         st.caption(f'{len(history)} saved snapshots. Missing actual players will stay unmatched, not become zeros.')
         workspace_download_button(st,'DOWNLOAD MINUTES SNAPSHOTS',json.dumps(history,indent=2).encode(),
