@@ -119,7 +119,9 @@ with _tab_contests:
     st.markdown('<div class="simmah-step"><b>1</b>Set up your slate and choose which entries to fill.</div>', unsafe_allow_html=True)
     _shared_header = st.container(key="simmah_slate_setup")
     _contest_setup = st.container()
-    _contest_history = st.container()
+    with st.expander('Advanced — optional tools', expanded=False):
+        _optional_tools = st.container()
+    _contest_history = _optional_tools
 with _tab_roster:
     st.markdown('<div class="simmah-step"><b>2</b>Review your player pool, projections and exposure limits.</div>', unsafe_allow_html=True)
 with _tab_build:
@@ -6551,7 +6553,7 @@ else:
         st.session_state["selected_dk_contest"] = active_dk_selection
 
         dk_opponent_target = get_contest_opponent_target("dk")
-        st.caption(
+        _optional_tools.caption(
             f"Simulated opponent sample: up to {dk_opponent_target:,}; "
             f"estimated full contest: {int(active_field_size):,} total entries."
         )
@@ -8231,7 +8233,7 @@ with _tab_build:
 
     # Simulated field ownership is displayed in the Player Pool table, so do not render a duplicate table here.
 
-    with _contest_setup:
+    with _optional_tools:
         with st.expander("Advanced contest settings", expanded=False):
             st.caption(
                 "Fetch contest details from DraftKings first. If the public endpoint does not expose every payout tier, "
@@ -8777,7 +8779,7 @@ with _tab_build:
         if _current_payout_contest_id and not (
             _payout_matches_selected_contest and isinstance(_saved_payouts, np.ndarray) and len(_saved_payouts)
         ):
-            st.caption("Payout table missing: cash and ROI estimates are unavailable. Open Advanced contest settings to add it.")
+            _contest_setup.caption("Payout table missing: cash and ROI estimates are unavailable. Open Optional tools → Advanced contest settings to add it.")
 
 
 
@@ -10122,137 +10124,136 @@ with _tab_build:
         # SIMMAH ROI TRACKER
         # Tracks real entry fees and winnings. History can be exported and re-imported
         # because Streamlit Cloud session storage may reset between visits.
-        with st.expander('Advanced — optional tools', expanded=False):
-            if st.checkbox('Show manual ROI tracker', value=False, key='show_manual_roi_tracker'):
-                st.caption(
-                    "Record completed contests using actual entry fees and prize winnings. "
-                    "Projected contest scores are not counted as real profit."
+        if st.checkbox('Show manual ROI tracker', value=False, key='show_manual_roi_tracker'):
+            st.caption(
+                "Record completed contests using actual entry fees and prize winnings. "
+                "Projected contest scores are not counted as real profit."
+            )
+
+            ROI_COLUMNS = [
+                "Contest Date", "Sport", "Platform / Format", "Contest Name",
+                "Entries", "Entry Fee Each ($)", "Total Fees ($)", "Winnings ($)",
+                "Net Profit ($)", "ROI (%)", "Best Rank", "Best Score", "Notes"
+            ]
+
+            if "roi_history" not in st.session_state:
+                st.session_state["roi_history"] = pd.DataFrame(columns=ROI_COLUMNS)
+
+            # Import previously downloaded history when the user chooses to load it.
+            roi_upload_col, roi_load_col = st.columns([3, 1])
+            with roi_upload_col:
+                roi_history_file = workspace_file_uploader(st,
+                    "Load saved ROI history CSV",
+                    type=["csv"],
+                    key="roi_history_file_upload",
+                    help="Use this to restore history from a previous SIMMAH session."
                 )
-
-                ROI_COLUMNS = [
-                    "Contest Date", "Sport", "Platform / Format", "Contest Name",
-                    "Entries", "Entry Fee Each ($)", "Total Fees ($)", "Winnings ($)",
-                    "Net Profit ($)", "ROI (%)", "Best Rank", "Best Score", "Notes"
-                ]
-
-                if "roi_history" not in st.session_state:
-                    st.session_state["roi_history"] = pd.DataFrame(columns=ROI_COLUMNS)
-
-                # Import previously downloaded history when the user chooses to load it.
-                roi_upload_col, roi_load_col = st.columns([3, 1])
-                with roi_upload_col:
-                    roi_history_file = workspace_file_uploader(st,
-                        "Load saved ROI history CSV",
-                        type=["csv"],
-                        key="roi_history_file_upload",
-                        help="Use this to restore history from a previous SIMMAH session."
-                    )
-                with roi_load_col:
-                    st.write("")
-                    st.write("")
-                    if workspace_button(st,"LOAD HISTORY", key="roi_load_history_button", use_container_width=True):
-                        if roi_history_file is None:
-                            st.warning("Choose a saved ROI history CSV first.")
-                        else:
-                            try:
-                                loaded_history = pd.read_csv(roi_history_file)
-                                missing_roi_columns = [c for c in ROI_COLUMNS if c not in loaded_history.columns]
-                                for column in missing_roi_columns:
-                                    loaded_history[column] = ""
-                                st.session_state["roi_history"] = loaded_history[ROI_COLUMNS].copy()
-                                st.success(f"Loaded {len(loaded_history)} contest records.")
-                                workspace_rerun(st, _loaded_slate_tabs, _pinned_slates)
-                            except Exception as exc:
-                                st.error(f"Could not load that history file: {exc}")
-
-                with st.expander("Record a completed contest", expanded=False):
-                    with st.form("roi_record_contest_form", clear_on_submit=True):
-                        roi_date = st.text_input(
-                            "Contest date (YYYY-MM-DD)",
-                            value=pd.Timestamp.now(tz="America/New_York").strftime("%Y-%m-%d")
-                        )
-                        roi_sport = st.selectbox(
-                            "Sport", ["NFL", "NBA", "WNBA", "MLB", "NHL", "MMA", "NASCAR", "Other"]
-                        )
-                        roi_format = st.selectbox(
-                            "Platform / Format",
-                            ["DraftKings Classic", "DraftKings Showdown", "FanDuel Full Roster",
-                             "FanDuel Single Game", "Other"]
-                        )
-                        roi_contest_name = st.text_input("Contest name")
-                        roi_entries = st.number_input("Number of entries", min_value=1, value=20, step=1)
-                        roi_fee_each = st.number_input(
-                            "Entry fee per lineup ($)", min_value=0.0, value=0.10, step=0.10, format="%.2f"
-                        )
-                        roi_winnings = st.number_input(
-                            "Total actual winnings ($)", min_value=0.0, value=0.0, step=0.10, format="%.2f",
-                            help="Enter the total prize money DraftKings or FanDuel actually paid for these entries."
-                        )
-                        roi_best_rank = st.text_input("Best finishing rank (optional)")
-                        roi_best_score = st.text_input("Best fantasy score (optional)")
-                        roi_notes = st.text_input("Notes (optional)")
-                        roi_submit = st.form_submit_button("SAVE CONTEST RESULT", use_container_width=True)
-
-                    if roi_submit:
+            with roi_load_col:
+                st.write("")
+                st.write("")
+                if workspace_button(st,"LOAD HISTORY", key="roi_load_history_button", use_container_width=True):
+                    if roi_history_file is None:
+                        st.warning("Choose a saved ROI history CSV first.")
+                    else:
                         try:
-                            parsed_roi_date = pd.to_datetime(roi_date, errors="raise").strftime("%Y-%m-%d")
-                            entries_value = int(roi_entries)
-                            fee_value = round(float(roi_fee_each), 2)
-                            winnings_value = round(float(roi_winnings), 2)
-                            fees_value = round(entries_value * fee_value, 2)
-                            net_value = round(winnings_value - fees_value, 2)
-                            roi_value = (net_value / fees_value * 100.0) if fees_value > 0 else 0.0
-                            new_roi_row = {
-                                "Contest Date": parsed_roi_date,
-                                "Sport": roi_sport,
-                                "Platform / Format": roi_format,
-                                "Contest Name": roi_contest_name.strip(),
-                                "Entries": entries_value,
-                                "Entry Fee Each ($)": fee_value,
-                                "Total Fees ($)": fees_value,
-                                "Winnings ($)": winnings_value,
-                                "Net Profit ($)": net_value,
-                                "ROI (%)": round(roi_value, 2),
-                                "Best Rank": roi_best_rank.strip(),
-                                "Best Score": roi_best_score.strip(),
-                                "Notes": roi_notes.strip(),
-                            }
-                            existing_roi = st.session_state["roi_history"]
-                            st.session_state["roi_history"] = pd.concat(
-                                [existing_roi, pd.DataFrame([new_roi_row], columns=ROI_COLUMNS)],
-                                ignore_index=True
-                            )
-                            st.success("Contest result saved to this session.")
-                            # Continue into contest scoring on the same run. Restarting the
-                            # Streamlit script here can trap the app in a fetch/rerun loop when
-                            # DraftKings returns contest details without a complete payout table.
+                            loaded_history = pd.read_csv(roi_history_file)
+                            missing_roi_columns = [c for c in ROI_COLUMNS if c not in loaded_history.columns]
+                            for column in missing_roi_columns:
+                                loaded_history[column] = ""
+                            st.session_state["roi_history"] = loaded_history[ROI_COLUMNS].copy()
+                            st.success(f"Loaded {len(loaded_history)} contest records.")
+                            workspace_rerun(st, _loaded_slate_tabs, _pinned_slates)
                         except Exception as exc:
-                            st.error(f"Could not save this contest result. Check the date and values: {exc}")
+                            st.error(f"Could not load that history file: {exc}")
 
-                roi_history = st.session_state["roi_history"].copy()
-                if not roi_history.empty:
-                    for numeric_col in ["Total Fees ($)", "Winnings ($)", "Net Profit ($)", "ROI (%)", "Entries"]:
-                        roi_history[numeric_col] = pd.to_numeric(roi_history[numeric_col], errors="coerce").fillna(0)
-                    total_roi_fees = float(roi_history["Total Fees ($)"].sum())
-                    total_roi_winnings = float(roi_history["Winnings ($)"].sum())
-                    total_roi_net = total_roi_winnings - total_roi_fees
-                    total_roi_pct = total_roi_net / total_roi_fees * 100.0 if total_roi_fees > 0 else 0.0
-                    roi_metrics = st.columns(4)
-                    roi_metrics[0].metric("Total Entry Fees", f"${total_roi_fees:,.2f}")
-                    roi_metrics[1].metric("Total Winnings", f"${total_roi_winnings:,.2f}")
-                    roi_metrics[2].metric("Net Profit / Loss", f"${total_roi_net:,.2f}")
-                    roi_metrics[3].metric("Overall ROI", f"{total_roi_pct:.1f}%")
-                    st.dataframe(injury_frame(st, roi_history), use_container_width=True, hide_index=True)
-                    workspace_download_button(st,
-                        "DOWNLOAD ROI HISTORY CSV",
-                        data=roi_history[ROI_COLUMNS].to_csv(index=False).encode("utf-8"),
-                        file_name="SIMMAH_ROI_History.csv",
-                        mime="text/csv",
-                        use_container_width=True,
-                        key="roi_download_history_button"
+            with st.expander("Record a completed contest", expanded=False):
+                with st.form("roi_record_contest_form", clear_on_submit=True):
+                    roi_date = st.text_input(
+                        "Contest date (YYYY-MM-DD)",
+                        value=pd.Timestamp.now(tz="America/New_York").strftime("%Y-%m-%d")
                     )
-                else:
-                    st.info("No contest results recorded yet. Enter actual fees and winnings above to start tracking ROI.")
+                    roi_sport = st.selectbox(
+                        "Sport", ["NFL", "NBA", "WNBA", "MLB", "NHL", "MMA", "NASCAR", "Other"]
+                    )
+                    roi_format = st.selectbox(
+                        "Platform / Format",
+                        ["DraftKings Classic", "DraftKings Showdown", "FanDuel Full Roster",
+                         "FanDuel Single Game", "Other"]
+                    )
+                    roi_contest_name = st.text_input("Contest name")
+                    roi_entries = st.number_input("Number of entries", min_value=1, value=20, step=1)
+                    roi_fee_each = st.number_input(
+                        "Entry fee per lineup ($)", min_value=0.0, value=0.10, step=0.10, format="%.2f"
+                    )
+                    roi_winnings = st.number_input(
+                        "Total actual winnings ($)", min_value=0.0, value=0.0, step=0.10, format="%.2f",
+                        help="Enter the total prize money DraftKings or FanDuel actually paid for these entries."
+                    )
+                    roi_best_rank = st.text_input("Best finishing rank (optional)")
+                    roi_best_score = st.text_input("Best fantasy score (optional)")
+                    roi_notes = st.text_input("Notes (optional)")
+                    roi_submit = st.form_submit_button("SAVE CONTEST RESULT", use_container_width=True)
+
+                if roi_submit:
+                    try:
+                        parsed_roi_date = pd.to_datetime(roi_date, errors="raise").strftime("%Y-%m-%d")
+                        entries_value = int(roi_entries)
+                        fee_value = round(float(roi_fee_each), 2)
+                        winnings_value = round(float(roi_winnings), 2)
+                        fees_value = round(entries_value * fee_value, 2)
+                        net_value = round(winnings_value - fees_value, 2)
+                        roi_value = (net_value / fees_value * 100.0) if fees_value > 0 else 0.0
+                        new_roi_row = {
+                            "Contest Date": parsed_roi_date,
+                            "Sport": roi_sport,
+                            "Platform / Format": roi_format,
+                            "Contest Name": roi_contest_name.strip(),
+                            "Entries": entries_value,
+                            "Entry Fee Each ($)": fee_value,
+                            "Total Fees ($)": fees_value,
+                            "Winnings ($)": winnings_value,
+                            "Net Profit ($)": net_value,
+                            "ROI (%)": round(roi_value, 2),
+                            "Best Rank": roi_best_rank.strip(),
+                            "Best Score": roi_best_score.strip(),
+                            "Notes": roi_notes.strip(),
+                        }
+                        existing_roi = st.session_state["roi_history"]
+                        st.session_state["roi_history"] = pd.concat(
+                            [existing_roi, pd.DataFrame([new_roi_row], columns=ROI_COLUMNS)],
+                            ignore_index=True
+                        )
+                        st.success("Contest result saved to this session.")
+                        # Continue into contest scoring on the same run. Restarting the
+                        # Streamlit script here can trap the app in a fetch/rerun loop when
+                        # DraftKings returns contest details without a complete payout table.
+                    except Exception as exc:
+                        st.error(f"Could not save this contest result. Check the date and values: {exc}")
+
+            roi_history = st.session_state["roi_history"].copy()
+            if not roi_history.empty:
+                for numeric_col in ["Total Fees ($)", "Winnings ($)", "Net Profit ($)", "ROI (%)", "Entries"]:
+                    roi_history[numeric_col] = pd.to_numeric(roi_history[numeric_col], errors="coerce").fillna(0)
+                total_roi_fees = float(roi_history["Total Fees ($)"].sum())
+                total_roi_winnings = float(roi_history["Winnings ($)"].sum())
+                total_roi_net = total_roi_winnings - total_roi_fees
+                total_roi_pct = total_roi_net / total_roi_fees * 100.0 if total_roi_fees > 0 else 0.0
+                roi_metrics = st.columns(4)
+                roi_metrics[0].metric("Total Entry Fees", f"${total_roi_fees:,.2f}")
+                roi_metrics[1].metric("Total Winnings", f"${total_roi_winnings:,.2f}")
+                roi_metrics[2].metric("Net Profit / Loss", f"${total_roi_net:,.2f}")
+                roi_metrics[3].metric("Overall ROI", f"{total_roi_pct:.1f}%")
+                st.dataframe(injury_frame(st, roi_history), use_container_width=True, hide_index=True)
+                workspace_download_button(st,
+                    "DOWNLOAD ROI HISTORY CSV",
+                    data=roi_history[ROI_COLUMNS].to_csv(index=False).encode("utf-8"),
+                    file_name="SIMMAH_ROI_History.csv",
+                    mime="text/csv",
+                    use_container_width=True,
+                    key="roi_download_history_button"
+                )
+            else:
+                st.info("No contest results recorded yet. Enter actual fees and winnings above to start tracking ROI.")
 
 
 

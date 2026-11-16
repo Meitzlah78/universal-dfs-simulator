@@ -11,7 +11,11 @@ def expander(node,label):
 
 class OptionalContestUITests(unittest.TestCase):
     def test_manual_roi_widgets_are_opt_in_and_history_is_kept(self):
-        node=next(n for n in ast.walk(app_tree()) if expander(n,'Advanced — optional tools'))
+        tree=app_tree()
+        node=next(n for n in ast.walk(tree) if expander(n,'Advanced — optional tools'))
+        # The shared container receives the opt-in ROI controls later in the app.
+        gate=next(n for n in ast.walk(tree) if isinstance(n,ast.If) and isinstance(n.test,ast.Call) and n.test.args and isinstance(n.test.args[0],ast.Constant) and n.test.args[0].value=='Show manual ROI tracker')
+        node.body=[gate]
         source='import streamlit as st\nst.session_state.setdefault("roi_history", [{"Contest Name":"saved"}])\n'+ast.unparse(node)
         app=AppTest.from_string(source).run()
         self.assertFalse(app.exception);self.assertFalse(app.checkbox[0].value)
