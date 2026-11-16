@@ -145,6 +145,9 @@ class PregameEngine:
         output=np.zeros((n,len(self.pool)),np.float32);reports=[]
         for local_index,(market,groups) in enumerate(self.games):
             game_index=local_index+self.game_index_offset
+            def notify(stage):
+                if self.progress:self.progress(f'NBA game {local_index+1}/{len(self.games)}: {stage}')
+            notify('preparing regulation minutes and rotations')
             size=max(len(g[0]) for g in groups);profiles=np.zeros((2,size,5));rotations=[];overtime=[]
             for team,(ids,minutes,roles) in enumerate(groups):
                 padded=np.zeros(size);padded[:len(ids)]=minutes
@@ -164,6 +167,7 @@ class PregameEngine:
                 projected=self.pool.loc[ids,'Projection'].to_numpy(float)
                 targets[team,:len(ids)]=np.where(np.isfinite(projected)&(projected>0),projected,0.)
             if game_index not in self.prepared:
+                notify('calibrating player projections and market scoring')
                 pilot=min(n,1024);fit_seed=71333+game_index*97
                 if market['implied_points'] is None:
                     fitted_profiles,fitted_rates,anchor=fit_player_means(rotation[:pilot],profiles,
@@ -179,6 +183,7 @@ class PregameEngine:
                     self.prepared[game_index]=(fitted_profiles,final['calibrated_rates'],anchor,
                         baseline['market_calibration']['baseline_pilot_means'])
             fitted_profiles,fitted_rates,anchor,initial=self.prepared[game_index]
+            notify('simulating game outcomes')
             result=simulate_game(rotation,fitted_profiles,fitted_rates,seed+game_index*97+3,
                                  overtime_rotations=ot,platform=self.platform)
             for team,(ids,_,_) in enumerate(groups):

@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import test_nba_pregame
 from simmah_nba_pregame import PregameEngine
-from simmah_nba_parallel import simulate_one_game,worker_count
+from simmah_nba_parallel import simulate_one_game,worker_count,game_pool
 
 
 class ParallelTests(unittest.TestCase):
@@ -24,6 +24,31 @@ class ParallelTests(unittest.TestCase):
             b,_,_=simulate_one_game((pool,m[index],r,4,'FanDuel',index,20,1092,prepared))
             np.testing.assert_array_equal(b,later[:,ids])
             self.assertEqual(report['teams'],m[index]['teams'])
+
+    def test_worker_pool_drops_provider_payload_without_changing_input(self):
+        p,m,r=self.fixture()
+        p.attrs.update(nba_variable_minutes=True,nba_wider_minutes=True,
+            nba_estimated_rotation_teams=['A'],raw_provider={'payload':'large'})
+        original=dict(p.attrs)
+        subset=game_pool(p,np.arange(10))
+        self.assertEqual(p.attrs,original)
+        self.assertNotIn('raw_provider',subset.attrs)
+        self.assertTrue(subset.attrs['nba_variable_minutes'])
+        self.assertTrue(subset.attrs['nba_wider_minutes'])
+        self.assertEqual(subset.attrs['nba_estimated_rotation_teams'],['A'])
+        expected,_,_=simulate_one_game((p.iloc[:10].reset_index(drop=True),m[0],r,4,'FanDuel',0,20,83,None))
+        actual,_,_=simulate_one_game((subset,m[0],r,4,'FanDuel',0,20,83,None))
+        np.testing.assert_array_equal(actual,expected)
+
+    def test_serial_progress_reports_preparation_before_results(self):
+        p,m,r=self.fixture()
+        engine=PregameEngine(p,m,r,parallel=False)
+        messages=[]
+        engine.set_progress(messages.append)
+        engine(20,83)
+        self.assertIn('preparing regulation minutes',messages[0])
+        self.assertTrue(any('calibrating player' in text for text in messages))
+        self.assertTrue(any('simulating game outcomes' in text for text in messages))
 
     def test_single_core_keeps_sequential_path(self):
         p,m,r=self.fixture();engine=PregameEngine(p,m,r)
