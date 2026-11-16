@@ -262,8 +262,6 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
             render_live_strip(st,pool,markets,source_cache.get('slate_id') if rw_details else None,
                               day,source_cache.get('time') if rw_details else None)
     with tabs[1]:
-        from simmah_nba_live import render_live_points
-        render_live_points(st,pool,day,platform)
         from simmah_nba_minutes_validation import render_minutes_snapshots
         render_minutes_snapshots(st,pool,platform,show_controls=True)
         st.subheader('NBA player pool')
