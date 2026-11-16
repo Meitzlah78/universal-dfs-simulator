@@ -284,6 +284,7 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
         from simmah_nba_player_display import display_pool
         st.caption("✅ = confirmed starter; Q/D injury tags remain visible.")
         st.dataframe(display_pool(pool), hide_index=True, width="stretch", key="nba_player_pool_table",
+                     row_height=32, height=500,
                      column_order=column_order,
                      column_config={'Name': st.column_config.TextColumn('Player', pinned=True)})
         workspace_download_button(st,'DOWNLOAD PLAYER POOL',

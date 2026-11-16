@@ -5387,7 +5387,7 @@ if platform == "FanDuel":
             hide_index=True,
             column_order=None if _fd_show_all_columns else player_columns(fd_player_display),
             row_height=32,
-            height=660,
+            height=500,
             disabled=[c for c in fd_player_display.columns if c not in {"Fade", "Lock", "Injury Status", "Min Exposure %", "Max Exposure %", "MVP Max %", "Flex Max %"}],
             column_config={
                 **player_column_config(st),
@@ -7269,7 +7269,7 @@ else:
             hide_index=True,
             column_order=None if _dk_show_all_columns else player_columns(control_display),
             row_height=32,
-            height=660,
+            height=500,
             disabled=disabled_control_columns,
             column_config={
                 **player_column_config(st),
