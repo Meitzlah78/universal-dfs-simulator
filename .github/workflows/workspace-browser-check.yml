@@ -1,0 +1,25 @@
+name: Workspace browser recovery
+on:
+  push:
+    paths:
+      - 'components/workspace_backup/**'
+      - 'tests/test_workspace_backup_component.cjs'
+      - '.github/workflows/workspace-browser-check.yml'
+  pull_request:
+    paths:
+      - 'components/workspace_backup/**'
+      - 'tests/test_workspace_backup_component.cjs'
+      - '.github/workflows/workspace-browser-check.yml'
+permissions:
+  contents: read
+jobs:
+  workspace-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Check boot retries, saves, restores, and idle polling
+        run: node tests/test_workspace_backup_component.cjs
