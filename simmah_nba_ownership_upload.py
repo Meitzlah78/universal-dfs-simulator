@@ -43,8 +43,8 @@ def apply_snapshot(pool, data, platform, day):
             raise ValueError('Ownership and Optimal% must be finite numbers from 0 to 100.')
     expected = 100 * len(rules_for(platform=platform)['slots'])
     total = float(frame['Projected Ownership %'].sum())
-    if abs(total-expected) > expected*.01:
-        raise ValueError(f'Ownership total {total:.2f}% differs from the required {expected}% by more than 1%.')
+    if total <= 0:
+        raise ValueError('Ownership total must be positive')
     keys = [player_key(r.Player, TEAMS.get(r.Team.strip(), r.Team.strip())) for r in frame.itertuples()]
     if len(set(keys)) != len(keys):
         raise ValueError('Ownership file contains duplicate player/team rows.')
@@ -75,6 +75,14 @@ def apply_snapshot(pool, data, platform, day):
             'missing_eligible_players':result.loc[missing,'Name'].astype(str).tolist(),
             'missing_ownership_policy':'share unreported residual equally',
             'unmatched_source_players':[r.Player for r,k in zip(frame.itertuples(),keys) if k not in set(pool_keys)]}
+    # Complete imports may be normalized; partial snapshots retain the bounded residual policy.
+    if not missing.any() and active_players(result).any():
+        from simmah_nba_uploaded_ownership import normalize_targets
+        _,eligible_total=normalize_targets(result[column],active_players(result),expected)
+        meta.update(normalize_field_targets=True,expected_total=expected,normalization_factor=expected/eligible_total,normalization_total=eligible_total)
+    elif abs(total-expected)>expected*.01:
+        raise ValueError('Incomplete ownership snapshot total differs from required roster total; cannot normalize safely')
+    meta['warnings']=([f'Raw ownership total {total:.2f}% exceeds {expected+50}%; check source slate.'] if total>expected+50 else [])
     result.attrs['fantasylabs_nba_ownership'] = meta
     return result, meta
 
@@ -95,6 +103,8 @@ def render_upload(st, pool, platform, day):
         st.stop()
         return pool
     st.success(f"{meta['source']} ownership loaded: {meta['matched_players']} matched players · {platform} · {day}")
+    for warning in meta.get('warnings',[]):st.warning(warning)
+    if meta.get('normalize_field_targets'):st.caption(f"Field ownership targets normalized to {meta['expected_total']}%; original source values retained.")
     if meta.get('draftdashboard_fields'):
         st.caption('DraftDashboard fields loaded: '+', '.join(meta['draftdashboard_fields'])+'. OWN must match this site/date/main slate. Ratings are not added as extra projection boosts.')
     st.caption('Source update: '+', '.join(meta['source_update'])+
