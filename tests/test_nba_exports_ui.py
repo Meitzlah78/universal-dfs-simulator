@@ -5,7 +5,7 @@ import unittest
 
 @unittest.skipUnless(importlib.util.find_spec('streamlit'),'Streamlit not installed')
 class NBAExportPlacementTests(unittest.TestCase):
-    def test_both_sites_offer_entries_and_report_in_build_and_lineups(self):
+    def test_both_sites_offer_one_entry_export_and_report_in_lineups(self):
         from streamlit.testing.v1 import AppTest
         sys.path.insert(0,str(Path(__file__).parent))
         for platform in ['FanDuel','DraftKings']:
@@ -15,17 +15,21 @@ class NBAExportPlacementTests(unittest.TestCase):
                 app.run(timeout=20).button(key='nba_build').click().run(timeout=20)
                 self.assertFalse(app.exception)
                 buttons=app.get('download_button')
-                for key in ['nba_entries_download_build','nba_entries_download',
-                            'nba_portfolio_report_build','nba_portfolio_report_lineups']:
+                for key in ['nba_entries_download','nba_portfolio_report_lineups']:
                     matching=[b for b in buttons if b.proto.id.endswith('-'+key)]
                     self.assertEqual(len(matching),1,key)
                     self.assertFalse(matching[0].proto.disabled,key)
+                for key in ['nba_entries_download_build','nba_portfolio_report_build']:
+                    self.assertFalse(any(b.proto.id.endswith('-'+key) for b in buttons),key)
+                entry_buttons=[b for b in app.tabs[3].get('download_button') if 'EDIT ENTRIES CSV' in b.proto.label]
+                self.assertEqual(len(entry_buttons),1)
+                self.assertFalse(any('EDIT ENTRIES CSV' in b.proto.label for b in app.tabs[2].get('download_button')))
                 reports=[e for e in app.expander if e.label=='Advanced — diagnostics and reports']
-                self.assertEqual(len(reports),2)
+                self.assertEqual(len(reports),1)
                 for section in reports:
                     self.assertFalse(section.proto.expanded)
                     labels=[b.proto.label for b in section.get('download_button')]
                     self.assertIn('DOWNLOAD PORTFOLIO REPORT',labels)
                     self.assertFalse(any('EDIT ENTRIES CSV' in label for label in labels))
                 if platform=='FanDuel':
-                    self.assertEqual(len([b for b in app.get('link_button') if 'OPEN FANDUEL' in b.proto.label]),2)
+                    self.assertEqual(len([b for b in app.get('link_button') if 'OPEN FANDUEL' in b.proto.label]),1)

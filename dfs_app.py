@@ -319,24 +319,6 @@ def add_field_ranking_metrics(frame, field_scores, score_column="ProjectedPoints
     return ranked
 
 
-# Quick link to DraftKings lineup upload.
-with _contest_setup:
-    with st.expander("DraftKings entry / salary links", expanded=False):
-        top_buttons = st.columns(2)
-        with top_buttons[0]:
-            st.link_button(
-                "EDIT ENTRIES",
-                "https://www.draftkings.com/entry/upload",
-                use_container_width=True,
-            )
-        with top_buttons[1]:
-            st.link_button(
-                "SALARY",
-                "https://www.draftkings.com/lineup/upload",
-                use_container_width=True,
-            )
-
-
 def is_full_game_contest_name(value):
     """Reject partial-game/live contests but allow both full-game and single-game formats."""
     name = str(value or "").strip().lower()
