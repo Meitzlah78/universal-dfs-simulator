@@ -369,17 +369,19 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
             st.caption(f"Added {recovery['added_candidates']:,} candidates to improve coverage under your exposure limits.")
         st.subheader('Candidate lineups')
         st.caption(f"{built['candidates']['unique']:,} unique candidates · {built['field']['entries']:,} modeled opponents · {built['field']['unique_rosters']:,} unique opponent rosters. Ownership and ROI are estimates.")
-        candidate_rows=built['report'].copy()
-        for j,slot in enumerate(slots):candidate_rows[slot]=saved_pool.iloc[built['candidates']['indices'][:,j]]['Player ID'].to_numpy()
-        st.dataframe(display_lineups(saved_pool,candidate_rows,status_pool=pool).sort_values(metric,ascending=False),hide_index=True,width="stretch")
-        candidate_export=candidate_rows.sort_values(metric,ascending=False).copy()
-        candidate_names=saved_pool.set_index('Player ID')['Name']
-        for slot in slots:
-            candidate_export[slot+' Name']=candidate_export[slot].map(candidate_names)
-        workspace_download_button(st,'DOWNLOAD ALL CANDIDATE LINEUPS',
-            candidate_export.to_csv(index=False).encode('utf-8-sig'),
-            'Simmah_NBA_'+platform.replace(' ','_')+'_All_Candidates.csv','text/csv',
-            key='nba_all_candidates_download',on_click='ignore')
+        load_candidates=st.checkbox('Load candidate lineups and CSV',value=False,key='nba_load_candidate_details')
+        if load_candidates:
+            candidate_rows=built['report'].copy()
+            for j,slot in enumerate(slots):candidate_rows[slot]=saved_pool.iloc[built['candidates']['indices'][:,j]]['Player ID'].to_numpy()
+            st.dataframe(display_lineups(saved_pool,candidate_rows,status_pool=pool).sort_values(metric,ascending=False),hide_index=True,width="stretch")
+            candidate_export=candidate_rows.sort_values(metric,ascending=False).copy()
+            candidate_names=saved_pool.set_index('Player ID')['Name']
+            for slot in slots:
+                candidate_export[slot+' Name']=candidate_export[slot].map(candidate_names)
+            workspace_download_button(st,'DOWNLOAD ALL CANDIDATE LINEUPS',
+                candidate_export.to_csv(index=False).encode('utf-8-sig'),
+                'Simmah_NBA_'+platform.replace(' ','_')+'_All_Candidates.csv','text/csv',
+                key='nba_all_candidates_download',on_click='ignore')
         with st.expander('Advanced — engine and ownership report',expanded=False):
             load_details=st.checkbox('Load engine and ownership details',value=False,key='nba_load_engine_details')
             if not load_details:st.caption('Load this report when needed; your selected lineups and entry export are ready above in Lineups.')
