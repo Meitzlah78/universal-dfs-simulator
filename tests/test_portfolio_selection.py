@@ -112,7 +112,10 @@ class PortfolioRepairTests(unittest.TestCase):
             calls.append(kwargs)
             if len(calls)==1:return SimpleNamespace(status=1,x=None)
             return milp(objective,**kwargs)
-        with patch('scipy.optimize.milp',side_effect=solve):
+        # Force the timeout/retry path rather than the newer LP-supported fast
+        # repair, which can solve this fixture before either MILP is called.
+        with patch('simmah_portfolio_selection._lp_supported_repair',return_value=None), \
+                patch('scipy.optimize.milp',side_effect=solve):
             chosen,cap=_repair_portfolio(incidence,np.zeros(4),np.ones(4),np.ones(4),
                 np.zeros(4,bool),2,np.linspace(1,0,600),np.ones(600,bool),50)
         self.assertEqual(len(chosen),2)
@@ -184,7 +187,7 @@ class ExposureDiversityTests(unittest.TestCase):
         import ast
         from pathlib import Path
         tree=ast.parse(Path('dfs_app.py').read_text())
-        calls=[n for n in ast.walk(tree) if isinstance(n,ast.Call) and isinstance(n.func,ast.Name) and n.func.id=='select_portfolio']
+        calls=[n for n in ast.walk(tree) if isinstance(n,ast.Call) and isinstance(n.func,ast.Name) and n.func.id=='select_nfl_portfolio']
         self.assertEqual(len(calls),3) # Shared FanDuel branch covers both FD formats.
         self.assertTrue(all(any(k.arg=='diversity' for k in n.keywords) for n in calls))
         source=Path('dfs_app.py').read_text();self.assertNotIn('_fd_single_seed.iloc',source)

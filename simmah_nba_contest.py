@@ -5,6 +5,14 @@ from simmah_nba_arrays import score_batches
 from simmah_nba_rules import rules_for
 from simmah_selector_budget import select_quality_budget,VERSION
 
+FD_TIGHTEN_MAX_ENTRIES=25
+
+
+def _tighten_concentration(pool,count):
+    # Larger portfolios retain the existing search: stress replays found that
+    # tighter bounds can delay a useful diversity incumbent at 101 entries.
+    return rules_for(pool)['platform']=='FanDuel' and int(count)<=FD_TIGHTEN_MAX_ENTRIES
+
 
 def evaluate_candidates(outcomes,candidates,field,payouts,entry_fee,*,construction_seed,
                         evaluation_seed,field_copies=None,batch_size=128,score_ticks=10):
@@ -94,8 +102,10 @@ def select_entries(pool,candidates,report,count,diversity=50,controls=None,metri
             if not np.isfinite(fee).all() or (fee<=0).any() or fee.nunique()!=1:raise ValueError('One positive common entry fee required')
             rows[quality_metric]=fee*(1+pd.to_numeric(rows[metric],errors='coerce')/100)
     budget=.05 if diversity is None or float(diversity)>0 else 0.
+    tighten=_tighten_concentration(pool,count)
     selected=select_quality_budget(rows,list(rules_for(pool)['slots']),count,
-        controls=limits,automatic_max=100.,quality_metric=quality_metric,quality_loss=budget,diversify=budget>0)
+        controls=limits,automatic_max=100.,quality_metric=quality_metric,quality_loss=budget,
+        diversify=budget>0,tighten=tighten)
     selected.attrs.update(portfolio_selection='nba-'+VERSION,ranking_metric=metric,
         budget_metric=quality_metric,selection_method='certified quality then budgeted concentration' if budget>0 else 'certified maximum quality; diversity disabled')
     validate_portfolio_limits(selected,rules_for(pool)['slots'],limits)
@@ -118,6 +128,8 @@ def selection_key(pool,candidates,report,count,diversity,metric):
         'limits':portfolio_limits(pool,count=int(count)),'count':int(count),'metric':metric,
         'budget':.05 if diversity is None or float(diversity)>0 else 0.,
         'diversify':diversity is None or float(diversity)>0},sort_keys=True,default=str).encode())
+    if _tighten_concentration(pool,count) and (diversity is None or float(diversity)>0):
+        digest.update(b'nba-fd-exact-concentration-v1')
     return digest.hexdigest()
 
 

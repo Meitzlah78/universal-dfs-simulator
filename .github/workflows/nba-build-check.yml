@@ -5,6 +5,7 @@ on:
     paths:
       - 'simmah_nba*.py'
       - 'simmah_portfolio*.py'
+      - 'simmah_selector_budget.py'
       - 'simmah_slate_workspaces.py'
       - 'simmah_export_history.py'
       - 'simmah_archive*.py'
@@ -19,6 +20,7 @@ on:
     paths:
       - 'simmah_nba*.py'
       - 'simmah_portfolio*.py'
+      - 'simmah_selector_budget.py'
       - 'simmah_slate_workspaces.py'
       - 'simmah_export_history.py'
       - 'simmah_archive*.py'
