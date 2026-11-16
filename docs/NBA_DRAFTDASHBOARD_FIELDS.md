@@ -3,8 +3,8 @@
 ## Explicit attribute meanings
 
 The NBA ownership snapshot importer accepts optional DraftDashboard fields on a
-complete matching site/date/team snapshot. Existing ownership-only imports keep
-their behavior. Partial pasted lineups are reference portfolios, not ownership
+complete matching site/date/team snapshot. Complete ownership imports retain raw
+values and normalize eligible field targets to 900% on FD or 800% on DK. Partial pasted lineups are reference portfolios, not ownership
 snapshots; their exposures must never become projected field ownership.
 
 | Input | Stored meaning |
@@ -37,8 +37,23 @@ the same typed mappings. Copied text accepts
 the actual pasted-table layout, verifies the opposite-site salary-comparison
 labels, requires explicit confirmation of the selected date (the text is undated),
 and checks player/team identity, salary and opponent against the salary slate.
-Every currently eligible player must be covered. Displayed OWN strings including
-`<1%` and `...` remain reference-only and never override validated field ownership.
+Every currently eligible player must be covered. Valid uploaded OWN takes precedence
+over provider ownership, including on the attributes upload. Original display
+strings remain available. `<1%` uses 0.5% as a labeled interval-midpoint estimate;
+`...`/blank is unreported and uses the existing selected ownership source only for
+that player, with an explicit warning and a list of estimated players. Unknown
+fallback values reject application. Tables with no exact eligible ownership
+values retain the existing source with a warning. Explicit 0% stays zero.
+
+The field receives proportional targets totaling 900% (FD) or 800% (DK); this is
+an estimate, not a new provider forecast. Reported values remain unchanged.
+Raw totals over 950% (FD) or 850% (DK) trigger warnings. Totals below half the
+required roster total, invalid values, or normalization above 100% for any player
+reject the import. Complete dedicated ownership snapshots use the same field
+normalization. Incomplete dedicated snapshots retain the existing small-residual
+policy and cannot be rescued by arbitrary scaling. Removing over 10% of the
+original eligible ownership mass disables proportional target fitting and uses
+the existing relative-popularity fallback.
 Last-three games/minutes/usage are retained separately. A changed text snapshot
 invalidates saved-build inputs. It does not bypass injury or manual exclusions.
 Copied-table/attributes uploads retain DD projected MIN as its own labeled field
@@ -65,3 +80,16 @@ are introduced. Provider ranks and ownership are visible context, not directly
 weighted again. The roster tab exposes the score after a rebuild and warns when
 the saved build is stale. Diagnostic exports include scores and the definition.
 Experimental full-game mechanics in PR #77 remain offline.
+
+
+## Provider audit evidence
+
+New NBA diagnostic bundles include `inputs/provider/rotowire.json`, also retained
+in player-pool attributes. It contains the selected RotoWire slate ID and slate
+object, site/date/scope, parsed raw JSON payloads keyed by requested endpoint,
+request start/completion timestamps in UTC, optional endpoint errors, cache fetch
+time, and refresh failure metadata. These are fetch times, not claims about the
+provider's ownership-update time. Cached data retains its original fetch times.
+The exact-slate and broader-slate minutes-only paths are distinguished; the latter
+never supplies ownership. Request headers, credentials and environment are not
+captured. Older builds explicitly lack this evidence and cannot be reconstructed.

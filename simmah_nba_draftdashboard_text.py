@@ -91,16 +91,18 @@ def apply_text(pool, text, platform, day, *, confirmed=False,file_format='txt',u
     for col in frame:
         if col.startswith('DraftDashboard '):
             values=dict(zip(keys,frame[col]));result[col]=[values.get(key) for key in pool_keys]
+    from simmah_nba_uploaded_ownership import apply_displayed_ownership
+    result,ownership_meta=apply_displayed_ownership(result,frame,keys,pool_keys,platform,day)
     result.attrs['draftdashboard_text']={'sha256':hashlib.sha256(text.encode()).hexdigest(),
         'site':platform,'date':str(day),'date_confirmation':'user confirmed current selected slate',
         'rows':len(frame),'matched':sum(key in source for key in pool_keys),
-        'ownership_applied':False,'dd_minutes_applied':use_minutes,'fields':fields}
+        'ownership_applied':ownership_meta is not None,'ownership':ownership_meta,'dd_minutes_applied':use_minutes,'fields':fields}
     return result
 
 
 def render_text_upload(st,pool,platform,day):
     from simmah_slate_workspaces import workspace_file_uploader
-    st.caption('DD player attributes: projections, projected MIN, usage and ranks. Displayed OWN stays reference-only; field ownership keeps its separately validated source.')
+    st.caption('DD player attributes: projections, projected MIN, usage and ranks. Valid uploaded OWN overrides provider ownership. Field targets normalize to the site roster total; censored or unreported values are labeled estimates.')
     upload=workspace_file_uploader(st,'DraftDashboard player attributes (.csv or .txt)',type=['csv','txt'],key='nba_dd_text_'+platform)
     if upload is None:return pool
     data=upload.getvalue();digest=hashlib.sha256(data).hexdigest()[:12]
@@ -111,5 +113,10 @@ def render_text_upload(st,pool,platform,day):
     except (ValueError,UnicodeError) as exc:
         st.error('DraftDashboard attributes not applied: '+str(exc));st.stop();return pool
     st.success(f"DD attributes loaded: {result.attrs['draftdashboard_text']['matched']} matched players · {platform} · {day}")
+    meta=result.attrs['draftdashboard_text'].get('ownership')
+    if meta is None:st.warning('No usable exact ownership values in this table; existing ownership source remains in use.')
+    if meta:
+        st.caption(f"Uploaded ownership applied · raw eligible total {meta['raw_total']:.2f}% · field targets normalized to {meta['expected_total']}%.")
+        for warning in meta['warnings']:st.warning(warning)
     if not use_minutes:st.caption('DD MIN retained as projected-minutes context. Existing simulation minutes remain in use.')
     return result

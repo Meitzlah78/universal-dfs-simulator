@@ -74,6 +74,8 @@ def make_package(pool, built, template, contest, markets, settings, *, started_a
     csv('inputs/player_pool.csv',pool)
     add('inputs/player_pool.json',_json({'columns':list(pool.columns),'dtypes':dict(zip(pool.columns,map(str,pool.dtypes))),
         'rows':pool.to_dict(orient='records'),'attrs':pool.attrs}))
+    add('inputs/provider/rotowire.json',_json(pool.attrs.get('rotowire_provider_evidence',
+        {'missing_evidence':'Raw provider data not retained by the loader for this build'})))
     add('inputs/contest.json',_json(contest))
     add('inputs/markets.json',_json(markets))
     add('inputs/rules.json',_json(rules))
@@ -191,6 +193,7 @@ def make_selection_failure_package(pool,candidates,report,contest,settings,error
     root=Path(__file__).parent
     for name in ('simmah_selector_budget.py','simmah_nba_portfolio_limits.py','simmah_nba_contest.py','simmah_exposure_limits.py'):
         files['implementation/'+name]=(root/name).read_bytes()
+    files['inputs/provider/rotowire.json']=_json(pool.attrs.get('rotowire_provider_evidence',{}))
     manifest={'schema':1,'kind':'nba_portfolio_selection_failure','sport':'NBA',
         'contest_id':str(contest['id']),'platform':rules['platform'],
         'captured_at_utc':stamp.isoformat(),'selector_version':SELECTION_VERSION,
@@ -281,6 +284,7 @@ def make_setup_package(pool,template,contest,markets,error,*,source_root=None):
     for name in ('simmah_nba_pregame.py','simmah_nba_role_priors.py','simmah_nba_projections.py','simmah_nba_diagnostics.py'):
         path=root/name
         if path.is_file():files['implementation/'+name]=path.read_bytes()
+    files['inputs/provider/rotowire.json']=_json(pool.attrs.get('rotowire_provider_evidence',{}))
     manifest={'schema':1,'kind':'nba_setup_diagnostic_package','sport':'NBA','platform':rules['platform'],
         'contest_id':str(contest['id']),'slate_date':contest.get('date'),
         'captured_at_utc':stamp.isoformat(),'captured_at_eastern':stamp.astimezone(ZoneInfo('America/New_York')).isoformat(),

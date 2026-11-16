@@ -45,7 +45,7 @@ def validated_import(pool):
     total=meta.get('raw_total')
     return (ownership_column(pool)!=COLUMN and meta.get('source') in {'FantasyLabs SimLabs','DraftDashboard'}
             and isinstance(total,(int,float)) and np.isfinite(total)
-            and abs(total-expected)<=expected*.01)
+            and (abs(total-expected)<=expected*.01 or (meta.get('normalize_field_targets') and total>0)))
 
 
 def field_ownership_inputs(pool):
@@ -58,7 +58,21 @@ def field_ownership_inputs(pool):
     raw=ownership_values(pool).to_numpy(float)
     if column!=COLUMN and pool.attrs.get('fantasylabs_nba_ownership',{}).get('missing_eligible_players'):
         source+=' with estimated residual ownership for unreported players'
+    meta=pool.attrs.get('fantasylabs_nba_ownership',{})
+    current_total=float(np.where(active,raw,0.).sum())
+    baseline=meta.get('normalization_total',meta.get('raw_total',expected))
     reason=None
+    if column!=COLUMN and meta.get('normalize_field_targets') and current_total>=baseline*.9:
+        from simmah_nba_uploaded_ownership import normalize_targets
+        try:
+            target,total=normalize_targets(raw,active,expected)
+        except ValueError as exc:
+            reason=str(exc)
+        else:
+            return {'weights':target,'mode':'projected','source':source+f'; normalized estimate {total:.2f}% to {expected}%',
+                    'raw_total':total,'expected_total':expected,'adjustment_factor':expected/total,
+                    'conditional_estimate':True,'warnings':meta.get('warnings',[]),
+                    'status':'Uploaded ownership normalized for field modeling; source values retained. Field fit still requires residual checks.'}
     if not active.any():reason='no eligible players'
     elif not np.isfinite(raw[active]).all():reason='missing dedicated ownership values'
     elif ((raw[active]<0)|(raw[active]>100)).any():reason='ownership outside 0–100%'
