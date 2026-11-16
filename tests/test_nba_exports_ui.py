@@ -20,5 +20,12 @@ class NBAExportPlacementTests(unittest.TestCase):
                     matching=[b for b in buttons if b.proto.id.endswith('-'+key)]
                     self.assertEqual(len(matching),1,key)
                     self.assertFalse(matching[0].proto.disabled,key)
+                reports=[e for e in app.expander if e.label=='Advanced — diagnostics and reports']
+                self.assertEqual(len(reports),2)
+                for section in reports:
+                    self.assertFalse(section.proto.expanded)
+                    labels=[b.proto.label for b in section.get('download_button')]
+                    self.assertIn('DOWNLOAD PORTFOLIO REPORT',labels)
+                    self.assertFalse(any('EDIT ENTRIES CSV' in label for label in labels))
                 if platform=='FanDuel':
                     self.assertEqual(len([b for b in app.get('link_button') if 'OPEN FANDUEL' in b.proto.label]),2)

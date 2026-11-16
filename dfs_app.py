@@ -6114,15 +6114,16 @@ if platform == "FanDuel":
                     }
                     if isinstance(fd_all_ranked, pd.DataFrame) and not fd_all_ranked.empty:
                         _fd_all_candidates_export = fd_all_ranked.copy()
-                        workspace_download_button(st,
-                            "DOWNLOAD ALL CANDIDATE LINEUPS",
-                            data=_fd_all_candidates_export.to_csv(index=False).encode("utf-8"),
-                            file_name="fanduel_" + lineup_mode.replace(" ", "_").lower() + "_all_candidate_lineups.csv",
-                            mime="text/csv",
-                            key="download_fd_all_candidate_lineups_" + lineup_mode.replace(" ", "_").lower(),
-                            on_click="ignore",
-                            use_container_width=True,
-                        )
+                        with st.expander('Advanced — all candidate lineups', expanded=False):
+                            workspace_download_button(st,
+                                "DOWNLOAD ALL CANDIDATE LINEUPS",
+                                data=_fd_all_candidates_export.to_csv(index=False).encode("utf-8"),
+                                file_name="fanduel_" + lineup_mode.replace(" ", "_").lower() + "_all_candidate_lineups.csv",
+                                mime="text/csv",
+                                key="download_fd_all_candidate_lineups_" + lineup_mode.replace(" ", "_").lower(),
+                                on_click="ignore",
+                                use_container_width=True,
+                            )
                     fd_display_columns = []
                     for slot in fd_slots:
                         if slot not in fd_display.columns:
@@ -6221,9 +6222,10 @@ if platform == "FanDuel":
             _fd_fit_cols = [c for c in ["Name", "Before Calibration", "Pilot Mean", "Passing Input", "Opportunity Input", "Skill Gain Input", "Calibration Status"] if c in _fd_fit_report]
             _fd_scoring_report = _fd_scoring_report.merge(_fd_fit_report[_fd_fit_cols], on="Name", how="left")
         with _fd_scoring_download_slot:
-            workspace_download_button(st,"DOWNLOAD PLAYER SCORING INPUTS", _fd_scoring_report.to_csv(index=False).encode("utf-8"),
-                "FanDuel_" + lineup_mode.replace(" ", "_") + "_Player_Scoring_Inputs.csv", "text/csv",
-                key="fd_player_scoring_inputs_" + lineup_mode.replace(" ", "_").lower(), on_click="ignore")
+            with st.expander('Advanced — player scoring inputs', expanded=False):
+                workspace_download_button(st,"DOWNLOAD PLAYER SCORING INPUTS", _fd_scoring_report.to_csv(index=False).encode("utf-8"),
+                    "FanDuel_" + lineup_mode.replace(" ", "_") + "_Player_Scoring_Inputs.csv", "text/csv",
+                    key="fd_player_scoring_inputs_" + lineup_mode.replace(" ", "_").lower(), on_click="ignore")
         workspace_stop(st, _loaded_slate_tabs, _pinned_slates)
 
 else:
@@ -9394,16 +9396,17 @@ with _tab_build:
 
             results_df = st.session_state["contest_results_df"]
             if platform == "DraftKings" and lineup_mode == "Showdown" and isinstance(results_df, pd.DataFrame) and not results_df.empty:
-                workspace_download_button(st,
-                    "DOWNLOAD ALL CANDIDATE LINEUPS",
-                    data=results_df.to_csv(index=False).encode("utf-8"),
-                    file_name="draftkings_showdown_all_candidate_lineups.csv",
-                    mime="text/csv",
-                    key="download_dk_showdown_all_candidate_lineups",
-                    on_click="ignore",
-                    use_container_width=True,
-                )
-                st.caption(f"Downloads all {len(results_df):,} scored candidates from this build, before portfolio selection.")
+                with st.expander('Advanced — all candidate lineups', expanded=False):
+                    workspace_download_button(st,
+                        "DOWNLOAD ALL CANDIDATE LINEUPS",
+                        data=results_df.to_csv(index=False).encode("utf-8"),
+                        file_name="draftkings_showdown_all_candidate_lineups.csv",
+                        mime="text/csv",
+                        key="download_dk_showdown_all_candidate_lineups",
+                        on_click="ignore",
+                        use_container_width=True,
+                    )
+                    st.caption(f"Downloads all {len(results_df):,} scored candidates from this build, before portfolio selection.")
                 _comparison_sim = st.session_state.get("simulation_df")
                 _comparison_field = st.session_state.get("contest_field_df")
                 if isinstance(_comparison_sim, pd.DataFrame) and isinstance(_comparison_field, pd.DataFrame):
