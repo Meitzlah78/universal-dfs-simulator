@@ -245,9 +245,14 @@ def select_rotowire_minutes_slate(payload,day,pool,platform='FanDuel'):
     if not matches:raise ValueError('No same-date RotoWire slate covers the uploaded games for minutes')
     return min(matches,key=lambda x:x[:3])[3]
 
-def download_rotowire(day, pool, platform='FanDuel'):
+def download_rotowire(day, pool, platform='FanDuel', *, evidence=None):
     import json
     from time import monotonic
+    from datetime import datetime, timezone
+    from threading import Lock
+    evidence = {} if evidence is None else evidence
+    evidence.update(provider='RotoWire',site=platform,date=str(day),requests={})
+    evidence_lock=Lock()
     deadline=monotonic()+11
     base = 'https://www.rotowire.com/daily/nba/api/'
     def get(endpoint):
@@ -260,13 +265,22 @@ def download_rotowire(day, pool, platform='FanDuel'):
             'Accept': 'application/json',
             'Referer': 'https://www.rotowire.com/daily/nba/optimizer.php?site='+platform,
         })
-        with urlopen(request,timeout=min(4,remaining)) as response:
-            return json.load(response)
+        fetched_at=datetime.now(timezone.utc).isoformat()
+        try:
+            with urlopen(request,timeout=min(4,remaining)) as response:
+                payload=json.load(response)
+        except Exception as exc:
+            with evidence_lock:evidence['requests'][endpoint]={'fetch_started_utc':fetched_at,'error':str(exc)}
+            raise
+        with evidence_lock:evidence['requests'][endpoint]={'fetch_started_utc':fetched_at,
+            'fetched_at_utc':datetime.now(timezone.utc).isoformat(),'payload':payload}
+        return payload
     listing=get('slate-list.php?siteID='+('1' if platform=='DraftKings' else '2'))
     try:slate=select_rotowire_slate(listing,day,pool,platform=platform)
     except ValueError:
         slate=select_rotowire_minutes_slate(listing,day,pool,platform=platform)
         sid=str(slate['slateID'])
+        evidence.update(provider_slate_id=sid,selected_slate=slate,scope='broader slate; minutes only')
         allowed={(team_key(r.Team),team_key(r.Opponent)) for r in pool.itertuples()}
         players=[p for p in get('players.php?slateID='+sid)
             if str(p.get('game',{}).get('dateTime',''))[:10]==day
@@ -278,6 +292,7 @@ def download_rotowire(day, pool, platform='FanDuel'):
             row['RotoWire Projected Own %']=None
         return {},details,sid
     sid = str(slate['slateID'])
+    evidence.update(provider_slate_id=sid,selected_slate=slate,scope='exact date, games and roster format')
     # Minutes/injuries live in players.php and do not depend on access to
     # fantasy projections or ownership. Fetch independent feeds concurrently.
     from concurrent.futures import ThreadPoolExecutor

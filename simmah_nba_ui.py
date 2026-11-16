@@ -23,9 +23,9 @@ def input_identity(pool,markets,contest,salary_min,correlation=0,excluded_player
     from simmah_nba_pregame import ROLE_COLUMNS
     columns=[c for c in ['Player ID','Position','Salary','Team','Opponent','Projection','Injury Status',
                          'Projected Minutes','Eligible',*ROLE_COLUMNS,'RotoWire Projected Own %',
-                         'FantasyLabs Projected Own %'] if c in pool]
+                         'FantasyLabs Projected Own %','DraftDashboard Projected Own %'] if c in pool]
     content={'pool':pool[columns].to_json(orient='split',double_precision=10),'markets':markets,
-             'contest':contest,'salary_min':salary_min,'portfolio_limits_version':3,'field_model_version':6,'overtime_period_limit':10}
+             'contest':contest,'salary_min':salary_min,'portfolio_limits_version':3,'field_model_version':7,'overtime_period_limit':10}
     if pool.attrs.get('fantasylabs_nba_ownership'):
         content['ownership_snapshot']=pool.attrs['fantasylabs_nba_ownership']['sha256']
     if pool.attrs.get('draftdashboard_text'):
@@ -178,6 +178,7 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
             st.caption(f"{contest['capacity']:,} contest places · ${contest['prize_pool']:,.0f} prizes · {count} reserved entries · selected payout schedule")
         st.caption(ownership['source'])
         if ownership['mode']!='projected':st.warning(ownership['status'])
+        for warning in ownership.get('warnings',[]):st.warning(warning)
     with controls:
         st.write(f'{count} portfolio entries')
         from simmah_nba_exclusions import game_options,excluded_player_indices

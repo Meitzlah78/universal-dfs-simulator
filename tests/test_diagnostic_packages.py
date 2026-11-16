@@ -35,6 +35,7 @@ class DiagnosticPackageTests(unittest.TestCase):
 
     def test_nba_roundtrip_exact_outcomes_weights_hashes_and_immutability(self):
         pool,result,factory=self.nba()
+        pool.attrs['rotowire_provider_evidence']={'provider_slate_id':'91','requests':{'rostership':{'payload':{'rst':2},'fetched_at_utc':'2026-11-13T23:50:00+00:00'}}}
         with TemporaryDirectory() as directory:
             Path(directory,'simmah_nba_example.py').write_text('version = 7\n')
             package=make_package(pool,result,b'original salary and entries',
@@ -48,6 +49,7 @@ class DiagnosticPackageTests(unittest.TestCase):
             for path,record in manifest['files'].items():
                 self.assertEqual(sha256(bundle.read(path)).hexdigest(),record['sha256'])
             self.assertEqual(bundle.read('inputs/original_entries_salary.csv'),b'original salary and entries')
+            self.assertEqual(json.loads(bundle.read('inputs/provider/rotowire.json')),pool.attrs['rotowire_provider_evidence'])
             with np.load(io.BytesIO(bundle.read('solver/arrays.npz')),allow_pickle=False) as arrays:
                 for seed in (83,1092,2100):
                     np.testing.assert_array_equal(arrays['outcomes_seed_'+str(seed)],factory(20,seed))

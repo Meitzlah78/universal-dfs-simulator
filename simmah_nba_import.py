@@ -129,10 +129,11 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
             help='Player ID and Projection columns. Uploaded values override RotoWire, including zeros that exclude a player.')
     from simmah_nba_source_cache import load_sources
     from simmah_nba_projections import download_rotowire
-    identity=(platform,day,tuple(sorted(zip(pool['Player ID'],pool['Team'],pool['Opponent']))),'rotowire-game-minutes-v9')
+    identity=(platform,day,tuple(sorted(zip(pool['Player ID'],pool['Team'],pool['Opponent']))),'rotowire-game-minutes-v10-evidence')
     def _load_rw():
-        values,details,sid=download_rotowire(day,pool,platform=platform)
-        return {'values':values,'details':details,'slate_id':sid}
+        evidence={}
+        values,details,sid=download_rotowire(day,pool,platform=platform,evidence=evidence)
+        return {'values':values,'details':details,'slate_id':sid,'evidence':evidence}
     with st.spinner('Checking NBA projection sources (up to 12 seconds)…'):
         _sources=load_sources(st.session_state,identity,
             {'nba_rotowire_cache':_load_rw},force=_force_refresh)
@@ -159,6 +160,9 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
             return
     try:
         pool = apply_rotowire_projections(pool, rw_values, rw_details, uploaded)
+        pool.attrs['rotowire_provider_evidence']={**_rw.get('evidence',{}),
+            'cache_fetched_epoch':_rw.get('time'),'refresh_error':_rw.get('error'),
+            'refresh_error_epoch':_rw.get('error_time')}
     except ValueError as exc:
         with tabs[1]:
             st.error(str(exc))
@@ -275,8 +279,10 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
         ownership_check=field_ownership_inputs(pool)
         st.caption(ownership_check['source'])
         if ownership_check['mode']!='projected':st.warning(ownership_check['status'])
+        for warning in ownership_check.get('warnings',[]):st.warning(warning)
         leading_columns = ['Name', 'Starter Confirmed', 'Injury Status', 'Position', 'Team',
                            'Opponent', 'Salary', 'Projection', 'Projection Source',
+                           'DraftDashboard Raw Own %', 'DraftDashboard Projected Own %',
                            'FantasyLabs Projected Own %', 'FantasyLabs Optimal %',
                            'RotoWire Projected Own %', 'Projected Minutes', 'Minutes Source']
         column_order = [column for column in leading_columns if column in pool.columns]
