@@ -338,6 +338,24 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
     if 'Eligible' not in export_pool:export_pool['Eligible']=True
     if len(excluded):
         export_pool.loc[export_pool['Player ID'].isin(pool.iloc[excluded]['Player ID']),'Eligible']=False
+    with tabs[3]:
+        st.subheader('My lineups')
+        st.dataframe(display_lineups(saved_pool,portfolio,status_pool=pool),hide_index=True,width="stretch")
+        exposure=portfolio[list(slots)].stack().value_counts().rename('Lineups')
+        exposure=exposure.rename_axis('Player ID').reset_index()
+        exposure['Exposure %']=100*exposure['Lineups']/len(portfolio)
+        exposure=exposure.merge(labeled_pool[['Player ID','Name','Team','Injury Status']],on='Player ID',how='left')
+        st.subheader('Player exposures')
+        st.dataframe(exposure[['Name','Team','Injury Status','Lineups','Exposure %']],hide_index=True,width='stretch',key='nba_exposure_table',
+                     column_config={'Name':st.column_config.TextColumn('Player',pinned=True)})
+        render_exports(st,upload,cid,saved_pool,built,portfolio,platform,stale,'lineups',status_pool=pool,current_pool=export_pool,salary_min=salary_min,saved_contest_id=saved.get('contest_id',''))
+        with st.expander('Portfolio ROI — estimated',expanded=False):
+            totals=portfolio_roi_totals(portfolio)
+            cols=st.columns(4)
+            for col,label,value in zip(cols,['Entries','Fees','Estimated winnings','Estimated ROI'],
+                                       [str(totals['entries']),f"${totals['fees']:.2f}",f"${totals['winnings']:.2f}",f"{totals['roi']:.1f}%"]):col.metric(label,value)
+            st.caption('Experimental model estimates; totals sum marginal lineup estimates against the modeled field.')
+
     with tabs[2]:
         if stale:st.info('Inputs or build settings changed. Previous estimates remain visible; rebuild to update them. Export checks the saved lineups against current inputs.')
         if built.get('timings_seconds'):
@@ -363,35 +381,21 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
             'Simmah_NBA_'+platform.replace(' ','_')+'_All_Candidates.csv','text/csv',
             key='nba_all_candidates_download',on_click='ignore')
         with st.expander('Advanced — engine and ownership report',expanded=False):
-            workspace_download_button(st,'DOWNLOAD OPPONENT FIELD',pd.DataFrame(built['field']['indices'],columns=slots).apply(lambda c:c.map(saved_pool['Player ID'].to_dict())).assign(Copies=built['field']['copies']).to_csv(index=False).encode(),
-                'Simmah_NBA_Opponent_Field.csv','text/csv',key='nba_field_download',on_click='ignore')
-            st.write(saved['engine_reports'])
-            st.caption(built['field']['ownership_source'])
-            report=pd.DataFrame({'Name':labeled_pool['Name'],'Estimated Field Own %':built['field']['ownership_sampled']})
-            from simmah_nba_ownership import ownership_column
-            own_column=ownership_column(saved_pool)
-            if own_column in saved_pool:
-                report[own_column]=pd.to_numeric(saved_pool[own_column],errors='coerce')
-                report['Field minus projected (pp)']=report['Estimated Field Own %']-report[own_column]
-            if 'ownership_target' in built['field']:
-                report['Adjusted field target %']=built['field']['ownership_target']
-                report['Field minus target (pp)']=report['Estimated Field Own %']-report['Adjusted field target %']
-            st.dataframe(report,hide_index=True,width="stretch",key="nba_ownership_table",
-                         column_config={'Name':st.column_config.TextColumn('Player',pinned=True)})
-    with tabs[3]:
-        render_exports(st,upload,cid,saved_pool,built,portfolio,platform,stale,'lineups',status_pool=pool,current_pool=export_pool,salary_min=salary_min,saved_contest_id=saved.get('contest_id',''))
-        st.subheader('My lineups')
-        st.dataframe(display_lineups(saved_pool,portfolio,status_pool=pool),hide_index=True,width="stretch")
-        exposure=portfolio[list(slots)].stack().value_counts().rename('Lineups')
-        exposure=exposure.rename_axis('Player ID').reset_index()
-        exposure['Exposure %']=100*exposure['Lineups']/len(portfolio)
-        exposure=exposure.merge(labeled_pool[['Player ID','Name','Team','Injury Status']],on='Player ID',how='left')
-        st.subheader('Player exposures')
-        st.dataframe(exposure[['Name','Team','Injury Status','Lineups','Exposure %']],hide_index=True,width='stretch',key='nba_exposure_table',
-                     column_config={'Name':st.column_config.TextColumn('Player',pinned=True)})
-        with st.expander('Portfolio ROI — estimated',expanded=False):
-            totals=portfolio_roi_totals(portfolio)
-            cols=st.columns(4)
-            for col,label,value in zip(cols,['Entries','Fees','Estimated winnings','Estimated ROI'],
-                                       [str(totals['entries']),f"${totals['fees']:.2f}",f"${totals['winnings']:.2f}",f"{totals['roi']:.1f}%"]):col.metric(label,value)
-            st.caption('Experimental model estimates; totals sum marginal lineup estimates against the modeled field.')
+            load_details=st.checkbox('Load engine and ownership details',value=False,key='nba_load_engine_details')
+            if not load_details:st.caption('Load this report when needed; your selected lineups and entry export are ready above in Lineups.')
+            if load_details:
+                workspace_download_button(st,'DOWNLOAD OPPONENT FIELD',pd.DataFrame(built['field']['indices'],columns=slots).apply(lambda c:c.map(saved_pool['Player ID'].to_dict())).assign(Copies=built['field']['copies']).to_csv(index=False).encode(),
+                    'Simmah_NBA_Opponent_Field.csv','text/csv',key='nba_field_download',on_click='ignore')
+                st.write(saved['engine_reports'])
+                st.caption(built['field']['ownership_source'])
+                report=pd.DataFrame({'Name':labeled_pool['Name'],'Estimated Field Own %':built['field']['ownership_sampled']})
+                from simmah_nba_ownership import ownership_column
+                own_column=ownership_column(saved_pool)
+                if own_column in saved_pool:
+                    report[own_column]=pd.to_numeric(saved_pool[own_column],errors='coerce')
+                    report['Field minus projected (pp)']=report['Estimated Field Own %']-report[own_column]
+                if 'ownership_target' in built['field']:
+                    report['Adjusted field target %']=built['field']['ownership_target']
+                    report['Field minus target (pp)']=report['Estimated Field Own %']-report['Adjusted field target %']
+                st.dataframe(report,hide_index=True,width="stretch",key="nba_ownership_table",
+                             column_config={'Name':st.column_config.TextColumn('Player',pinned=True)})
