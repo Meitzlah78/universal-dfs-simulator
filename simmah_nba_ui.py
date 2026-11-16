@@ -105,9 +105,9 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         st.markdown('**Exposure and minutes**')
         use_caps=st.checkbox('Apply automatic NBA exposure caps',value=False,key='nba_apply_caps_'+platform,
             help='Off: a player can appear in every entry. On: use the overall, projected ownership and minutes caps.')
-        variable_minutes=st.checkbox('Vary regulation minutes by trial',value=False,key='nba_variable_minutes_'+platform,
+        variable_minutes=st.checkbox('Vary regulation minutes by trial',value=True,key='nba_variable_minutes_'+platform,
             help='Experimental: players exchange minutes with teammates in each simulation. Team minutes stay at 240; projected player minutes are preserved on average.')
-        wider_minutes=variable_minutes and st.checkbox('Wider bench minutes (trial)',value=False,
+        wider_minutes=variable_minutes and st.checkbox('Wider bench minutes (trial)',value=True,
             key='nba_wider_minutes_'+platform,help='Adds an occasional larger shift for players projected below 18 minutes.')
         from simmah_nba_projections import team_key
         estimated_teams=st.multiselect('Allow estimated rotation minutes for teams',sorted({team_key(t) for t in pool['Team']}),
@@ -203,7 +203,7 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         excluded_teams=st.multiselect('Exclude teams',_teams,key=_team_key)
         excluded=excluded_player_indices(pool,excluded_games,excluded_teams)
         if len(excluded):st.caption(f'{len(excluded)} players excluded from your next build. Opponents still use the full slate.')
-        salary_aware=st.checkbox('Account for salary when choosing each player (trial)',value=False,
+        salary_aware=st.checkbox('Account for salary when choosing each player (trial)',value=True,
             key='nba_salary_aware_'+platform,
             help='Give the builder credit for salary left for later slots. Game scores, opponent lineups and exposure limits stay the same.')
         correlation=st.slider('Build correlation',0,100,0,key='nba_build_correlation',
