@@ -49,7 +49,6 @@ render_brand(st, show_logo=False)
 _app_header = st.container(key="simmah_app_header")
 _refresh_header = _app_header.container(key="sticky_projection_bar")
 _pinned_slates = _app_header.container(key="simmah_pinned_slates")
-_active_site_header = _app_header.empty()
 
 def render_cloud_storage_header(st, host):
     from simmah_workspace_cloud import configuration, probe
@@ -3152,7 +3151,6 @@ if auto_slate_file is None:
         st.caption("Next: choose your contest, review the player pool, then build.")
     workspace_stop(st, _loaded_slate_tabs, _pinned_slates)
 selected_format = detected_format
-_active_site_header.info(f"**Active slate: {selected_format}**")
 
 if selected_format in {"FanDuel NBA", "DraftKings NBA"}:
     from simmah_nba_import import render_setup as render_nba_setup
