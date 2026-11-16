@@ -126,8 +126,7 @@ def slate_record(upload):
     return {'id':sid,'name':upload.name,'title':upload.name.replace('.csv',''),'data':base64.b64encode(data).decode(),'snapshot':''}
 
 
-def begin_workspaces(st,tabs_host=None):
-    st.session_state['_slate_tabs_rendered_early'] = False
+def begin_workspaces(st):
     from simmah_workspace_persistence import begin
     begin(st)
     from simmah_saved_cleanup import render_cleanup
@@ -160,9 +159,6 @@ def begin_workspaces(st,tabs_host=None):
             records[pending['id']]=pending
         except (ValueError,TypeError,KeyError,OSError) as exc:st.warning('Saved slate could not restore: '+str(exc))
     st.session_state.setdefault('_slate_generation',uuid.uuid4().hex)
-    if tabs_host is not None and st.session_state.get('_slate_fresh_mode'):
-        render_session_tabs(st,tabs_host)
-        st.session_state['_slate_tabs_rendered_early'] = True
     return st.container()
 
 
@@ -435,9 +431,8 @@ def finish_workspaces(st,host,tabs_host=None):
             st.rerun()
         from simmah_workspace_persistence import schedule, render
         prepared_checkpoint = schedule(st)
-        if not st.session_state.get('_slate_tabs_rendered_early'):
-            render_session_tabs(st, tabs_host if tabs_host is not None else host,
-                                prepared_checkpoint=prepared_checkpoint)
+        render_session_tabs(st, tabs_host if tabs_host is not None else host,
+                            prepared_checkpoint=prepared_checkpoint)
         render(st, host)
         with host:
             from simmah_diagnostic_packages import render_nfl_package

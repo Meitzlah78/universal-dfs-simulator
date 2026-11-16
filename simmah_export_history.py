@@ -193,19 +193,13 @@ def latest_player_snapshot(state,format_label,contest_id):
 
 
 def render_history(st,context,key):
-    # Background completion is polled by workspace persistence only while busy.
-    # Export history must not keep idle sessions rerunning every second.
-    @st.fragment
+    @st.fragment(run_every=1)
     def history():
         if finish_exports(st):
             from simmah_workspace_persistence import schedule
             schedule(st)
         if st.session_state.get('_slate_export_jobs'):
             st.caption('Saving export history…')
-            if st.button('Refresh saved exports',key='export_history_refresh_'+key):
-                if finish_exports(st):
-                    from simmah_workspace_persistence import schedule
-                    schedule(st)
         _render_history(st, context, key)
     history()
 

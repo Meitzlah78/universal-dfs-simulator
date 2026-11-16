@@ -5,7 +5,7 @@ from unittest.mock import patch
 import numpy as np
 import pandas as pd
 from simmah_session_workspaces import checkpoint,restore_checkpoint
-from simmah_slate_workspaces import render_session_tabs,begin_workspaces,finish_workspaces
+from simmah_slate_workspaces import render_session_tabs
 from simmah_workspace_persistence import schedule
 
 
@@ -46,30 +46,6 @@ class SwitchSpeedTests(unittest.TestCase):
             restore_checkpoint(st,fd_saved)
             self.assertEqual(state['portfolio'].Player.tolist(),['FD player'])
             self.assertEqual(state['export_bytes'],b'FD complete CSV')
-
-    def test_tabs_render_before_slow_app_work_and_only_once(self):
-        state={'_slate_fresh_mode':True}
-        host=contextlib.nullcontext()
-        st=SimpleNamespace(session_state=state,container=lambda:contextlib.nullcontext())
-        with patch('simmah_workspace_persistence.begin'),patch('simmah_saved_cleanup.render_cleanup'),patch('simmah_slate_workspaces.render_session_tabs') as tabs:
-            begin_workspaces(st,tabs_host=host)
-            tabs.assert_called_once_with(st,host)
-            self.assertTrue(state['_slate_tabs_rendered_early'])
-            # The rest of the app may now stop or block; tabs already exist.
-            with patch('simmah_workspace_persistence.schedule'),patch('simmah_workspace_persistence.render'),patch('simmah_diagnostic_packages.render_nfl_package'):
-                finish_workspaces(st,contextlib.nullcontext(),host)
-            self.assertEqual(tabs.call_count,1)
-
-    def test_early_tab_event_saves_current_state_before_app_loading(self):
-        state={'_slate_fresh_mode':True,'_slate_active':{'id':'nba','name':'NBA.csv'},
-            '_slate_records':{'nfl':{'id':'nfl','name':'NFL.csv'}},'portfolio':['keep NBA']}
-        st=SimpleNamespace(session_state=state,container=lambda:contextlib.nullcontext(),
-            rerun=lambda:(_ for _ in ()).throw(RuntimeError('switch now')))
-        with patch('simmah_workspace_persistence.begin'),patch('simmah_saved_cleanup.render_cleanup'),patch('streamlit.components.v1.declare_component',return_value=lambda **kw:{'event':'early-nfl','selected_id':'nfl'}):
-            with self.assertRaisesRegex(RuntimeError,'switch now'):
-                begin_workspaces(st,tabs_host=contextlib.nullcontext())
-        self.assertEqual(state['_slate_pending']['id'],'nfl')
-        self.assertEqual(state['_slate_records']['nba']['_session_checkpoint']['values']['portfolio'],['keep NBA'])
 
     def test_without_current_capture_switch_still_saves_current_edits(self):
         state={'_slate_active':{'id':'dk','name':'DK.csv'},'_slate_records':{'fd':{'id':'fd'}},'build':['new edit']}

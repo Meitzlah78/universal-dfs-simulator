@@ -362,9 +362,9 @@ def schedule(st):
 
 
 def render(st, host):
-    # Browser requests completion checks only while background work is pending.
-    # An idle workspace must not rerun this fragment every second.
-    @st.fragment
+    # Fragment reruns poll disk work and acknowledgements without rerunning models
+    # or deleting the main page's widgets during a multi-part save.
+    @st.fragment(run_every=1)
     def status():
         state = st.session_state
         event = state.get(KEY) or {}

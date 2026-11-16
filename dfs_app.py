@@ -86,7 +86,7 @@ def render_cloud_storage_header(st, host):
 
 render_cloud_storage_header(st, st.sidebar)
 
-_loaded_slate_tabs = begin_workspaces(st, tabs_host=_pinned_slates)
+_loaded_slate_tabs = begin_workspaces(st)
 from simmah_nfl_portfolio import preserve_existing as preserve_nfl_portfolios
 preserve_nfl_portfolios(st.session_state)
 from simmah_injury_display import injury_frame, injury_player_pool
