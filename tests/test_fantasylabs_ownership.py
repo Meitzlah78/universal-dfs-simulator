@@ -111,6 +111,28 @@ class FantasyLabsTests(unittest.TestCase):
         other=p.copy();other['Team']=other.Team.replace({'WAS':'DAL'})
         self.assertEqual(len(apply_authorized_slate_exclusions(other)),10)
 
+    def test_matlock_exclusion_only_applies_to_authorized_dk_game(self):
+        from simmah_fantasylabs_ownership import apply_authorized_slate_exclusions
+        pool=pd.DataFrame({'Name':['Scott Matlock','Justin Herbert','Jacoby Brissett'],
+            'Team':['LAC','LAC','BAL'],'Projection':[1.,20.,18.],
+            CPT:[np.nan,15.,10.],FLEX:[np.nan,55.,45.]})
+        pool.attrs['slate_date']='2026-11-16'
+        pool.attrs['fantasylabs_ownership']={'site':'DraftKings','format':'single_game'}
+        before=pool.copy(deep=True)
+        result=apply_authorized_slate_exclusions(pool)
+        self.assertEqual(result.Name.tolist(),['Justin Herbert','Jacoby Brissett'])
+        self.assertEqual(result.attrs['authorized_slate_exclusions']['players'],['Scott Matlock'])
+        self.assertEqual(result.attrs['authorized_slate_exclusions']['scope'],'candidate and opponent pools')
+        np.testing.assert_array_equal(role_preferences(result)[0],[55.,45.])
+        np.testing.assert_array_equal(role_preferences(result)[1],[15.,10.])
+        pd.testing.assert_frame_equal(pool,before)
+        self.assertIs(apply_authorized_slate_exclusions(pool,'FanDuel'),pool)
+        self.assertIs(apply_authorized_slate_exclusions(pool,mode='full_roster'),pool)
+        later=pool.copy();later.attrs['slate_date']='2026-11-17'
+        self.assertIs(apply_authorized_slate_exclusions(later),later)
+        wrong_team=pool.copy();wrong_team.loc[0,'Team']='BAL'
+        self.assertIs(apply_authorized_slate_exclusions(wrong_team),wrong_team)
+
     def test_all_unmatched_players_and_roles_are_reported_together(self):
         p,f=self.fixture()
         f.loc[f.Player=='Player 0','Player']='Missing One'
