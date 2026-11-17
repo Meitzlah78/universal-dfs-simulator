@@ -119,24 +119,22 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
     if _force_refresh:
         from simmah_nba_confirmed import request_lineup_refresh
         request_lineup_refresh(day)
-        from simmah_nba_game_context import download_game_context_result
-        st.cache_data(ttl=60,show_spinner=False,max_entries=8)(download_game_context_result).clear()
         st.session_state['nba_lineup_refresh_requested']=True
         st.session_state['projection_updates_found']=False
         st.session_state['injury_updates_found']=False
     with tabs[1]:
         projection_file = workspace_file_uploader(st,'Optional NBA projections CSV', type=['csv'], key='nba_projection_upload_'+platform,
             help='Player ID and Projection columns. Uploaded values override RotoWire, including zeros that exclude a player.')
-    from simmah_nba_source_cache import load_sources
+    from simmah_nba_background_sources import load_background_sources,render_refresh_status
     from simmah_nba_projections import download_rotowire
     identity=(platform,day,tuple(sorted(zip(pool['Player ID'],pool['Team'],pool['Opponent']))),'rotowire-game-minutes-v10-evidence')
-    def _load_rw():
+    def _load_rw(day=day,pool=pool.copy(deep=True),platform=platform):
         evidence={}
         values,details,sid=download_rotowire(day,pool,platform=platform,evidence=evidence)
         return {'values':values,'details':details,'slate_id':sid,'evidence':evidence}
-    with st.spinner('Checking NBA projection sources (up to 12 seconds)…'):
-        _sources=load_sources(st.session_state,identity,
-            {'nba_rotowire_cache':_load_rw},force=_force_refresh)
+    _sources=load_background_sources(st.session_state,identity,
+        {'nba_rotowire_cache':_load_rw},force=_force_refresh)
+    _sources_pending=[key for key,value in _sources.items() if value.get('pending')]
     _rw=_sources['nba_rotowire_cache']
     rw_values,rw_details=_rw.get('values',{}),_rw.get('details',{})
     for _key,_label in [('nba_rotowire_cache','NBA projections / minutes / RotoWire')]:
@@ -145,7 +143,7 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
             with tabs[1]:
                 _fallback=' Last successful data retained; it may be stale.' if 'time' in _source else ''
                 st.warning(_label+' unavailable: '+_source['error']+_fallback+' Automatic retry pauses for up to 60 seconds; REFRESH retries immediately.')
-    if rw_details and not _rw.get('error') and st.session_state.pop('nba_lineup_refresh_requested',False):
+    if rw_details and not _rw.get('error') and not _rw.get('pending') and st.session_state.pop('nba_lineup_refresh_requested',False):
         from simmah_nba_lineups import acknowledge_lineup_refresh
         acknowledge_lineup_refresh(st.session_state)
     uploaded = None
@@ -215,11 +213,16 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
     if not has_game_context(pool):
         try:
             _game_pairs=tuple(sorted({tuple(sorted((team_key(r.Team),team_key(r.Opponent)))) for r in pool.itertuples()}))
-            _context_result=st.cache_data(ttl=60,show_spinner=False,max_entries=8)(download_game_context_result)(day,_game_pairs)
+            _context_identity=(day,_game_pairs)
+            _context_result=load_background_sources(st.session_state,_context_identity,
+                {'nba_game_context_source':lambda day=day,pairs=_game_pairs:download_game_context_result(day,pairs)},
+                force=_force_refresh)['nba_game_context_source']
+            if _context_result.get('pending'):_sources_pending.append('nba_game_context_source')
             if _context_result.get('error'):raise ValueError(_context_result['error'])
-            pool=apply_game_context(pool,_context_result['values'])
+            if _context_result.get('values'):pool=apply_game_context(pool,_context_result['values'])
         except (ValueError,OSError,KeyError,TypeError):
             with tabs[1]:st.caption('NBA game times / market feed unavailable; existing salary-file and projection metadata retained.')
+    render_refresh_status(st,_sources_pending)
     from simmah_nba_ownership_upload import render_upload as render_ownership_upload
     with tabs[1]:
         with st.expander('DraftDashboard / FantasyLabs inputs — NBA', expanded=True):
