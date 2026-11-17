@@ -123,8 +123,12 @@ def apply_authorized_slate_exclusions(pool,site='DraftKings',mode='single_game')
     try:day=slate_date(pool)
     except ValueError:return pool
     teams=set(pool['Team'].astype(str).str.strip().str.upper().replace({'WSH':'WAS'}))
-    if day!='2026-11-12' or teams!={'WAS','NYG'}:return pool
-    excluded=pool['Name'].map(name_key).eq('thomasfidone') & pool['Team'].astype(str).str.upper().eq('NYG')
+    if day=='2026-11-12' and teams=={'WAS','NYG'}:
+        player,team='thomasfidone','NYG'
+    elif day=='2026-11-16' and teams=={'LAC','BAL'} and site=='DraftKings':
+        player,team='scottmatlock','LAC'
+    else:return pool
+    excluded=pool['Name'].map(name_key).eq(player) & pool['Team'].astype(str).str.upper().eq(team)
     if not excluded.any():return pool
     result=pool.loc[~excluded].copy().reset_index(drop=True)
     result.attrs['authorized_slate_exclusions']={
