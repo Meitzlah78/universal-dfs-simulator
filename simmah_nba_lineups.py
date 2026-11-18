@@ -2,6 +2,7 @@
 import json
 from urllib.request import Request,urlopen
 from simmah_nba_projections import team_key, player_key
+from simmah_nba_frame import data_view
 from simmah_nba_game_strip import explicit_true
 
 
@@ -35,8 +36,9 @@ def render_live_strip(st,pool,markets,slate_id,day,fallback_time=None):
     import time
     from simmah_nba_game_strip import render_game_strip
     from simmah_nba_confirmed import current_confirmed_pool
-    pairs=tuple(sorted({(team_key(r.Team),team_key(r.Opponent)) for r in pool.itertuples()}))
-    @st.fragment(run_every='10s')
+    pairs=tuple(sorted({(team_key(r.Team),team_key(r.Opponent)) for r in data_view(pool).itertuples()}))
+    # Keep starting-five updates automatic without a redraw every ten seconds.
+    @st.fragment(run_every='60s')
     def draw():
         view,response=current_confirmed_pool(st,pool,day,pairs)
         checked=response.get('checked_at',fallback_time);source_ok=not response['stale']
@@ -55,7 +57,7 @@ def render_live_strip(st,pool,markets,slate_id,day,fallback_time=None):
 
 def lineup_snapshot(pool):
     from simmah_nba_game_strip import team_lineup
-    teams=sorted(set(pool['Team'].map(team_key)))
+    teams=sorted(set(data_view(pool)['Team'].map(team_key)))
     return tuple((team,detail['status'],tuple(sorted(n.strip().casefold() for n in detail['starters'])))
                  for team in teams for detail in [team_lineup(pool,team)])
 
