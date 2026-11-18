@@ -1,4 +1,5 @@
 """Versioned historical role learning; validation uses observed minutes, not ROI."""
+from simmah_nba_frame import data_view
 from copy import deepcopy
 import hashlib
 import json
@@ -55,7 +56,7 @@ def apply_learned_roles(pool, slate_day, root=None):
         return out
     out=pool.copy()
     matched=0
-    for idx,row in out.iterrows():
+    for idx,row in data_view(out).iterrows():
         source=str(row.get('Role Rate Source',''))
         if not source.startswith(('Position prior (','Learned historical roles ')):continue
         player=model['players_by_name'].get(name_key(row.get('Name','')))

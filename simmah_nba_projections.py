@@ -1,4 +1,5 @@
 """Public DFF NBA projections, restricted to the uploaded slate date and games."""
+from simmah_nba_frame import data_view
 from datetime import date
 from html.parser import HTMLParser
 from urllib.request import Request, urlopen
@@ -130,7 +131,7 @@ def apply_rotowire_projections(pool, values, details, uploaded=None):
     """Use one automatic NBA provider; uploads still override its points."""
     result = apply_projections(pool, values, uploaded)
     result.loc[result['Projection Source'].eq('DFF'), 'Projection Source'] = 'RotoWire'
-    for idx, row in result.iterrows():
+    for idx, row in data_view(result).iterrows():
         news = details.get(player_key(row['Name'], row['Team']), {})
         for col, value in news.items():
             if col=='Game Start' and str(row['Player ID']) in pool.attrs.get('salary_game_starts',{}):

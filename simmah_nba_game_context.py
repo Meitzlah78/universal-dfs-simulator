@@ -1,4 +1,5 @@
 """NBA schedule/market metadata independent of projection access and DFS site."""
+from simmah_nba_frame import data_view
 import json
 import math
 from datetime import date,datetime
@@ -66,7 +67,8 @@ def restore_saved_game_metadata(pool,previous,day):
     if set(previous['Player ID'].astype(str))!=set(pool['Player ID'].astype(str)):return pool
     starts=[game_start([value]) for value in previous['Game Start']]
     if not any(start is not None and start.date().isoformat()==day for start in starts):return pool
-    source=previous.set_index(previous['Player ID'].astype(str));view=pool.copy()
+    previous_values=data_view(previous)
+    source=previous_values.set_index(previous_values['Player ID'].astype(str));view=pool.copy()
     # Pandas 3 rejects implicit scalar upcasts, including all-missing float
     # columns receiving a timestamp string or a boolean fallback.
     view['Game Start']=view['Game Start'].astype(object) if 'Game Start' in view else pd.Series(None,index=view.index,dtype=object)
@@ -75,7 +77,7 @@ def restore_saved_game_metadata(pool,previous,day):
     for column in ('Expected Starter','Starter Confirmed','Lineup Status Stale'):
         view[column]=view[column].map(explicit_true).astype(bool) if column in view else False
     changed=False
-    for index,row in view.iterrows():
+    for index,row in data_view(view).iterrows():
         old=source.loc[str(row['Player ID'])]
         if (team_key(old['Team']),team_key(old['Opponent']))!=(team_key(row['Team']),team_key(row['Opponent'])):continue
         start=game_start([old['Game Start']])
@@ -97,7 +99,8 @@ def restore_saved_game_metadata(pool,previous,day):
         if 'Expected Starter' in old and explicit_true(old['Expected Starter']):
             # Restore only when the current provider has supplied no expected
             # starters for this team. Compute this from the original pool.
-            current=pool[pool['Team'].map(team_key)==team_key(row['Team'])]
+            current_values=data_view(pool)
+            current=current_values[current_values['Team'].map(team_key)==team_key(row['Team'])]
             if 'Expected Starter' not in current or not current['Expected Starter'].map(explicit_true).any():
                 view.at[index,'Expected Starter']=True
                 view.at[index,'Starter Confirmed']=False
@@ -108,7 +111,7 @@ def restore_saved_game_metadata(pool,previous,day):
 
 def apply_game_context(pool,context):
     result=pool.copy();result.attrs.update(pool.attrs)
-    for i,row in result.iterrows():
+    for i,row in data_view(result).iterrows():
         item=context.get(tuple(sorted((team_key(row['Team']),team_key(row['Opponent'])))))
         if item is None:continue
         existing=row.get('Game Start')
