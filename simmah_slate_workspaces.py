@@ -2,6 +2,7 @@
 import base64,csv,gzip,hashlib,io,json,math,uuid
 from pathlib import Path
 from datetime import date,datetime
+from time import perf_counter
 import numpy as np
 import pandas as pd
 
@@ -127,8 +128,15 @@ def slate_record(upload):
 
 
 def begin_workspaces(st):
+    # Component events are already in state at the start of this app rerun.
+    # Route them before drawing the old slate or waiting on its preparation.
+    route_started=perf_counter()
+    routed=consume_session_tab_event(st)
     from simmah_workspace_persistence import begin
+    recovery_started=perf_counter()
     begin(st)
+    if routed and '_slate_last_switch_metrics' in st.session_state:
+        st.session_state['_slate_last_switch_metrics']['backup_recovery_seconds']=perf_counter()-recovery_started
     from simmah_saved_cleanup import render_cleanup
     render_cleanup(st)
     from simmah_slate_transport import handle_browser_transfer
@@ -147,6 +155,7 @@ def begin_workspaces(st):
     pending=st.session_state.pop('_slate_pending',None)
     records=st.session_state.setdefault('_slate_records',{})
     if pending:
+        restore_started=perf_counter()
         pending=records.get(pending['id'],pending)
         try:
             if pending.get('_session_checkpoint') is not None:
@@ -157,6 +166,10 @@ def begin_workspaces(st):
             st.session_state['_slate_active']=pending
             st.session_state['_slate_upload_epoch']=st.session_state.get('_slate_upload_epoch',0)+1
             records[pending['id']]=pending
+            if routed and '_slate_last_switch_metrics' in st.session_state:
+                st.session_state['_slate_last_switch_metrics'].update(
+                    workspace_restore_seconds=perf_counter()-restore_started,
+                    routing_seconds=perf_counter()-route_started)
         except (ValueError,TypeError,KeyError,OSError) as exc:st.warning('Saved slate could not restore: '+str(exc))
     st.session_state.setdefault('_slate_generation',uuid.uuid4().hex)
     return st.container()
@@ -395,11 +408,23 @@ def render_session_tabs(st, host, *, prepared_checkpoint=None):
     with host:
         event = component(records=metadata, active=current.get('id') if current else None,
                           key='_slate_session_tabs', default=None)
+    apply_session_tab_event(st,event,prepared_checkpoint=prepared_checkpoint)
+
+
+def consume_session_tab_event(st):
+    return apply_session_tab_event(st,st.session_state.get('_slate_session_tabs'),rerun=False)
+
+
+def apply_session_tab_event(st,event,*,prepared_checkpoint=None,rerun=True):
+    state=st.session_state
+    records=state.setdefault('_slate_records',{})
+    current=state.get('_slate_active')
     if not isinstance(event, dict) or event.get('event') == state.get('_slate_session_tabs_last'):
-        return
+        return False
     state['_slate_session_tabs_last'] = event.get('event')
     closed = event.get('closed_id')
     if closed in records:
+        state.pop('_slate_last_switch_metrics',None)
         records.pop(closed)
         if (state.get('_slate_pending') or {}).get('id') == closed:
             state.pop('_slate_pending', None)
@@ -408,9 +433,11 @@ def render_session_tabs(st, host, *, prepared_checkpoint=None):
                 state['_slate_pending'] = next(reversed(records.values()))
             else:
                 state['_slate_clear_active'] = True
-        st.rerun()
+        if rerun:st.rerun()
+        return True
     selected = event.get('selected_id')
     if selected in records and (not current or selected != current['id']):
+        capture_started=perf_counter()
         if current:
             from simmah_session_workspaces import checkpoint
             if prepared_checkpoint is not None and prepared_checkpoint[0] == current['id']:
@@ -420,7 +447,13 @@ def render_session_tabs(st, host, *, prepared_checkpoint=None):
             saved = {**current, '_session_checkpoint': captured}
             records[current['id']] = saved
         state['_slate_pending'] = records[selected]
-        st.rerun()
+        state['_slate_last_switch_metrics']={
+            'capture_seconds':perf_counter()-capture_started,
+            'destination_in_memory':records[selected].get('_session_checkpoint') is not None}
+        if rerun:st.rerun()
+        return True
+
+    return False
 
 
 def finish_workspaces(st,host,tabs_host=None):

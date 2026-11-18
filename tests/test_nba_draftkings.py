@@ -39,6 +39,16 @@ class DraftKingsNBATests(unittest.TestCase):
         self.assertEqual(restored['Game Start'].tolist(),self.pool['Game Start'].tolist())
         self.assertTrue(current['Game Start'].isna().all())
         self.assertTrue(locked_players(restored,pd.Timestamp('2026-10-22T00:00:00Z')).all())
+    def test_started_clock_recovery_does_not_copy_raw_provider_payload(self):
+        class Evidence:
+            def __deepcopy__(self,memo):raise AssertionError('Clock lookup must not copy provider metadata')
+        data=template().replace(b'PHI@NYK 10/20/2026 07:00PM ET',b'In Progress')
+        expected=self.pool.loc[0,'Game Start']
+        self.pool.attrs['raw_provider_payload']=Evidence()
+        parsed=read_template(data,game_context_pool=self.pool)
+        self.assertEqual(len(parsed['players']),len(self.pool))
+        self.assertEqual(parsed['players'].loc[0,'Game Start'],expected)
+
     def test_started_game_entries_use_existing_slate_context(self):
         from simmah_nba_late_swap import entry_rows
         data=template().replace(b'PHI@NYK 10/20/2026 07:00PM ET',b'In Progress')

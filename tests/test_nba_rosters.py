@@ -15,6 +15,18 @@ class NBARosterTests(unittest.TestCase):
         with self.assertRaises(ValueError):validate_lineup(self.pool,bad,salary_cap=60000,max_from_team=4)
         self.pool.loc[0,'Projection']=0
         with self.assertRaises(ValueError):validate_lineup(self.pool,self.ids,salary_cap=60000,max_from_team=4)
+    def test_validation_does_not_copy_provider_metadata(self):
+        class RawEvidence:
+            def __deepcopy__(self,memo):raise AssertionError('Provider evidence must not be copied for roster validation')
+        self.pool.attrs['raw_provider_payload']=RawEvidence()
+        self.assertEqual(validate_lineup(self.pool,self.ids,salary_cap=60000,max_from_team=4),45000)
+        self.assertIn('raw_provider_payload',self.pool.attrs)
+
+    def test_duplicate_pool_ids_are_rejected(self):
+        self.pool.loc[1,'Player ID']=self.pool.loc[0,'Player ID']
+        with self.assertRaisesRegex(ValueError,'unique'):
+            validate_lineup(self.pool,self.ids,salary_cap=60000,max_from_team=4)
+
     def test_export_preserves_entry_and_reference_cells(self):
         rows=[['entry_id','contest_id','contest_name','entry_fee',*SLOTS,'','Instructions'],
             ['3749903854','42-99','NBA test','.05',*(['']*9),'','keep me'],

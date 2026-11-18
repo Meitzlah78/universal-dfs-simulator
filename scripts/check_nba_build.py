@@ -28,7 +28,7 @@ def main():
         names=['test_nba_build_contract.BuildContractTests.test_full_scale_build_to_export']
     else:
         names=[p.stem for p in sorted((ROOT/'tests').glob('test_nba*.py')) if p.stem not in RESEARCH_TESTS]
-        names += ['test_save_download_performance', 'test_export_history', 'test_workspace_persistence', 'test_workspace_cloud']
+        names += ['test_slate_switch_priority', 'test_workspace_switch_speed', 'test_fresh_session_tabs', 'test_close_session_tabs', 'test_workspace_reboot_app', 'test_workspace_disk_restore', 'test_workspace_tabs', 'test_slate_workspaces', 'test_save_download_performance', 'test_export_history', 'test_workspace_persistence', 'test_workspace_cloud']
     result=unittest.TextTestRunner(verbosity=2).run(unittest.defaultTestLoader.loadTestsFromNames(names))
     return 0 if result.wasSuccessful() else 1
 
