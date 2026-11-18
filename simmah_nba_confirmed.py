@@ -3,6 +3,7 @@ from html.parser import HTMLParser
 import time
 from urllib.request import Request,urlopen
 from simmah_nba_lineup_cache import LineupPageCache
+from simmah_nba_frame import data_view
 from simmah_nba_projections import team_key,player_key
 from simmah_nba_game_strip import explicit_true
 
@@ -188,7 +189,9 @@ def current_confirmed_pool(st,pool,day,pairs):
     if response.get('players'):
         st.session_state['nba_confirmed_last_good']={'scope':scope,'response':response}
     if not response and pool.attrs.get('slate_date')!=day:
-        pool=pool.copy()
+        original=pool
+        pool=data_view(pool).copy()
+        pool.attrs.update(original.attrs)
         pool['Expected Starter']=False
         pool['Starter Confirmed']=False
     view=apply_confirmed_status(pool,response.get('players',{}))
@@ -198,11 +201,12 @@ def current_confirmed_pool(st,pool,day,pairs):
 
 
 def apply_confirmed_status(pool,values):
-    view=pool.copy()
+    view=data_view(pool).copy()
+    view.attrs.update(pool.attrs)
     view['Expected Starter']=False;view['Starter Confirmed']=False
     view['Lineup Status Stale']=False
     source_teams={team_key(key[1]) for key in values}
-    for index,row in view.iterrows():
+    for index,row in data_view(view).iterrows():
         detail=values.get(player_key(row['Name'],row['Team']),{})
         missing_team=team_key(row['Team']) not in source_teams
         fallback=pool.at[index,'Expected Starter'] if missing_team and 'Expected Starter' in pool else False

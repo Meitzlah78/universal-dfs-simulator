@@ -4,6 +4,7 @@ from html import escape
 import math
 from zoneinfo import ZoneInfo
 from simmah_nba_projections import team_key
+from simmah_nba_frame import data_view
 
 
 def explicit_true(value):
@@ -11,7 +12,8 @@ def explicit_true(value):
 
 
 def team_lineup(pool,team):
-    rows=pool[pool['Team'].map(team_key)==team_key(team)]
+    values=data_view(pool)
+    rows=values[values['Team'].map(team_key)==team_key(team)]
     if 'Expected Starter' not in rows or 'Starter Confirmed' not in rows:
         return {'status':'Checking' if pool.attrs.get('lineup_status_pending') else 'Unavailable','starters':[]}
     starters=rows[rows['Expected Starter'].map(explicit_true)]
@@ -45,6 +47,10 @@ def start_time_label(values):
 
 
 def game_records(pool,markets):
+    saved_metadata=bool(pool.attrs.get('saved_game_metadata_restored'))
+    pending=bool(pool.attrs.get('lineup_status_pending'))
+    pool=data_view(pool)
+    pool.attrs['lineup_status_pending']=pending
     pairs={tuple(sorted((team_key(r.Team),team_key(r.Opponent)))) for r in pool.itertuples()}
     lines={tuple(sorted(map(team_key,m['teams']))):m for m in markets}
     records=[];start_keys={}
@@ -68,7 +74,7 @@ def game_records(pool,markets):
         start=instant.strftime('%I:%M %p ET').lstrip('0') if instant is not None else 'Time TBD'
         start_keys[separator.join(order)]=instant.timestamp() if instant is not None else float('inf')
         records.append({'label':separator.join(order),'start_time':start,'teams':teams,
-                        'saved_metadata':bool(pool.attrs.get('saved_game_metadata_restored'))})
+                        'saved_metadata':saved_metadata})
     return sorted(records,key=lambda r:(start_keys[r['label']],r['label']))
 
 

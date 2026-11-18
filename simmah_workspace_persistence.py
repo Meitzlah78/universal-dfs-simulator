@@ -19,7 +19,7 @@ def render_switch_metrics(st):
 
 def component():
     import streamlit.components.v1 as components
-    return components.declare_component('simmah_workspace_backup_v1',
+    return components.declare_component('simmah_workspace_backup_v2',
         path=str(Path(__file__).parent / 'components' / 'workspace_backup'))
 
 
@@ -371,7 +371,9 @@ def schedule(st):
 def render(st, host):
     # Fragment reruns poll disk work and acknowledgements without rerunning models
     # or deleting the main page's widgets during a multi-part save.
-    @st.fragment(run_every=1)
+    # Browser requests a poll only while a save/export is pending. Idle pages
+    # must not wake the Streamlit script every second.
+    @st.fragment
     def status():
         state = st.session_state
         event = state.get(KEY) or {}
