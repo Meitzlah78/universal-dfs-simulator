@@ -66,6 +66,24 @@ class DiagnosticPackageTests(unittest.TestCase):
         pool.loc[0,'Salary']=1;result['field']['copies'][:]=999
         with zipfile.ZipFile(io.BytesIO(raw)) as bundle:self.assertEqual(bundle.read('inputs/player_pool.csv'),frozen)
 
+    def test_nba_package_never_deepcopies_provider_evidence_per_opponent(self):
+        class Evidence(dict):
+            def __deepcopy__(self,memo):
+                raise AssertionError('Raw provider evidence copied during archive capture')
+        pool,result,_=self.nba()
+        evidence=Evidence(provider_slate_id='91',payload='x'*1000000)
+        expected=[max(Counter(pool['Team'].to_numpy()[row]).values())
+                  for row in result['field']['indices']]
+        pool.attrs['rotowire_provider_evidence']=evidence
+        with TemporaryDirectory() as root:
+            _,raw,_=make_package(pool,result,b'entries',{'id':'42'},[],{},
+                started_at=STAMP.isoformat(),source_root=root)
+        with zipfile.ZipFile(io.BytesIO(raw)) as bundle:
+            actual=pd.read_csv(bundle.open('opponent_field.csv'))['Max Team'].tolist()
+            self.assertEqual(actual,expected)
+            self.assertEqual(json.loads(bundle.read('inputs/provider/rotowire.json')),evidence)
+        self.assertIs(pool.attrs['rotowire_provider_evidence'],evidence)
+
     def test_invalid_field_count_blocks_misleading_package(self):
         pool,result,_=self.nba();result['field']['entries']+=1
         with self.assertRaisesRegex(ValueError,'count differs'):
