@@ -11,7 +11,7 @@ from scipy import sparse
 from scipy.optimize import milp,Bounds,LinearConstraint
 from simmah_exposure_limits import validate_exposure_limits
 
-VERSION='portfolio-quality-budget-v1'
+VERSION='portfolio-quality-budget-v2'
 QUALITY_LOSS=.05
 
 
@@ -95,7 +95,7 @@ def select_quality_budget(candidates,slots,count,*,controls=None,automatic_max=8
             concentration_before=best_concentration,concentration_after=float(np.square(exposure).sum()),
             quality_optimality='certified by MILP',diversity_status=status,
             diversity_optimal=optimal,diversity_requested=bool(diversify),unique_candidates=original_m,
-            formulation='tightened exact epigraph' if tighten else 'original epigraph',
+            formulation='tightened exact epigraph' if tighten else 'linked exposure epigraph',
             quality_solve_seconds=first_seconds,concentration_solve_seconds=second_seconds,
             total_seconds=perf_counter()-started,retained_candidates=retained,
             quality_mip_gap=getattr(first,'mip_gap',None),
@@ -131,9 +131,12 @@ def select_quality_budget(candidates,slots,count,*,controls=None,automatic_max=8
             min_counts[player]=min(feasible);max_counts[player]=max(feasible)
     tangents=[];tl=[]
     if not tighten:
-        # Preserve the live formulation's block ordering for a fair benchmark.
+        # Link each player's exposure once instead of repeating every roster
+        # incidence in every tangent. The integer exposure and exact square
+        # objective are unchanged; large portfolios avoid count*m*slots entries.
         for k in range(count):
-            tangents.append(sparse.hstack([-(2*k+1)*work_overall,sparse.eye(p)],format='csc'))
+            tangents.append(sparse.hstack([sparse.csr_matrix((p,retained)),
+                sparse.eye(p),-(2*k+1)*sparse.eye(p)],format='csc'))
             tl.extend([-k*(k+1)]*p)
     else:
         for player in range(p):
@@ -150,13 +153,19 @@ def select_quality_budget(candidates,slots,count,*,controls=None,automatic_max=8
         # Certified quality optimum is a known feasible concentration incumbent.
         base.append(sparse.csr_matrix(np.r_[-1e-6*work_scaled,np.ones(p)][None,:]))
         l2.append(-np.inf);u2.append(best_concentration-1e-6*scaled_opt+1e-8)
+    if not tighten:
+        base=[sparse.hstack([row,sparse.csr_matrix((row.shape[0],p))]) for row in base]
+        base.append(sparse.hstack([work_overall,sparse.csr_matrix((p,p)),-sparse.eye(p)]))
+        l2.extend(np.zeros(p));u2.extend(np.zeros(p))
     a2=sparse.vstack([*base,*tangents],format='csc')
     l2=np.r_[l2,tl];u2=np.r_[u2,np.full(len(tl),np.inf)]
     objective=np.r_[-1e-6*work_scaled,np.ones(p)]
     second_started=perf_counter()
-    second=milp(objective,integrality=np.r_[np.ones(retained),np.zeros(p)],
-        bounds=Bounds(np.r_[np.zeros(retained),min_counts**2],
-                      np.r_[np.ones(retained),max_counts**2]),
+    auxiliary=p if not tighten else 0
+    if auxiliary:objective=np.r_[objective,np.zeros(p)]
+    second=milp(objective,integrality=np.r_[np.ones(retained),np.zeros(p+auxiliary)],
+        bounds=Bounds(np.r_[np.zeros(retained),min_counts**2,np.zeros(auxiliary)],
+                      np.r_[np.ones(retained),max_counts**2,np.full(auxiliary,count)]),
         constraints=LinearConstraint(a2,l2,u2),options=opts)
     second_seconds=perf_counter()-second_started
     second_status='optimal concentration' if second.status==0 else 'time-limited feasible concentration'

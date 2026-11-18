@@ -50,6 +50,26 @@ class BudgetTests(unittest.TestCase):
         with patch('simmah_selector_budget.milp',side_effect=solve):s=select_quality_budget(fixture(),['X','Y'],3)
         self.assertEqual(s.attrs['actual_quality_loss'],0)
         self.assertFalse(s.attrs['diversity_optimal'])
+    def test_large_portfolio_links_exposure_without_repeating_rosters(self):
+        rng=np.random.default_rng(4);slots=list('abcdefghi')
+        rows=pd.DataFrame([rng.choice(220,9,replace=False).astype(str)
+                           for _ in range(5000)],columns=slots)
+        rows['q']=np.linspace(1.,.5,len(rows));calls=[]
+        def solve(*args,**kwargs):
+            calls.append(kwargs)
+            if len(calls)==1:
+                x=np.zeros(len(rows));x[:100]=1
+                return SimpleNamespace(status=0,x=x)
+            matrix=kwargs['constraints'].A
+            self.assertLess(matrix.nnz,150000)
+            self.assertEqual(matrix.shape[1],5000+2*220)
+            return SimpleNamespace(status=1,x=None)
+        with patch('simmah_selector_budget.milp',side_effect=solve):
+            selected=select_quality_budget(rows,slots,100,automatic_max=100,quality_metric='q')
+        self.assertEqual(len(selected),100)
+        self.assertEqual(selected.attrs['actual_quality_loss'],0.)
+        self.assertFalse(selected.attrs['diversity_optimal'])
+
     def test_future_results_do_not_affect_selection(self):
         c=fixture();a=select_quality_budget(c,['X','Y'],3)
         c['Actual']=np.arange(len(c))*999;c['Prize']=10000-c.Actual
