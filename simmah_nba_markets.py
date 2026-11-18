@@ -1,4 +1,5 @@
 """NBA market extraction and experimental event-level scoring calibration."""
+from simmah_nba_frame import data_view
 from dataclasses import replace
 import numpy as np
 from simmah_nba_engine import simulate_game
@@ -15,6 +16,7 @@ def implied_scores(total, home_spread):
 def extract_markets(pool):
     """Require consistent two-sided RotoWire lines for uploaded matchups."""
     if not {'Game Total','Team Implied Points'}<=set(pool.columns):return []
+    pool=data_view(pool)
     pairs={tuple(sorted((team_key(r.Team),team_key(r.Opponent)))) for r in pool.itertuples()}
     output=[]
     for pair in sorted(pairs):

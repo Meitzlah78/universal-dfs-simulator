@@ -1,4 +1,5 @@
 """Explicit historical position priors for players without individual NBA history."""
+from simmah_nba_frame import data_view
 from datetime import date
 import numpy as np
 import pandas as pd
@@ -60,7 +61,7 @@ def apply_position_priors(pool,model,slate_day):
         else:result[c]=pd.to_numeric(result[c],errors='coerce').to_numpy(dtype=float,na_value=np.nan)
     previous_sources=result.get('Role Rate Source')
     result['Role Rate Source']='Missing'
-    for i,row in result.iterrows():
+    for i,row in data_view(result).iterrows():
         existing=np.asarray([row[c] for c in ROLE_COLUMNS],float)
         # All-zero event history cannot support a positive player projection.
         # Use the existing sourced position prior instead of excluding players.
