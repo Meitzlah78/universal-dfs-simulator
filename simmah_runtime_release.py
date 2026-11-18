@@ -5,8 +5,12 @@ from pathlib import Path
 import sys
 import threading
 
-_lock=threading.RLock()
-_active_release=None
+# sys survives importlib.reload and watched-module eviction. A single dict
+# operation installs one process-wide lock even during concurrent first use.
+_lock=vars(sys).setdefault('_simmah_runtime_release_lock',
+                          globals().get('_lock') or threading.RLock())
+RUNTIME_LOCK_VERSION=1
+_active_release=globals().get('_active_release')
 # Reload dependency order, including modules that bind functions with `from`.
 _NBA_MODULES=(
     'simmah_workspace_backup','simmah_workspace_cloud','simmah_session_workspaces','simmah_export_history',
@@ -42,8 +46,8 @@ def activate_nba_release(release):
 
 
 NFL_PROJECTION_RELEASE = 'final-context-fit-v2'
-_active_role_ownership_release = None
-_active_role_ownership_fingerprint = None
+_active_role_ownership_release = globals().get('_active_role_ownership_release')
+_active_role_ownership_fingerprint = globals().get('_active_role_ownership_fingerprint')
 
 def activate_role_ownership_release(release):
     """Refresh the NFL role fit helpers once, without changing saved inputs."""

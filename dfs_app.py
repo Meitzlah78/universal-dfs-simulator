@@ -24,14 +24,23 @@ st.set_page_config(
 )
 
 import importlib
-import simmah_runtime_release as runtime_release
-if (getattr(runtime_release, '_active_release', None) != 'app-idle-work-20261118-r4'
-        or not hasattr(runtime_release, 'activate_role_ownership_release')
-        or not hasattr(runtime_release, '_active_role_ownership_fingerprint')
-        or getattr(runtime_release, 'NFL_PROJECTION_RELEASE', None) != 'final-context-fit-v2'):
-    runtime_release = importlib.reload(runtime_release)
-runtime_release.activate_nba_release('app-idle-work-20261118-r4')
-runtime_release.activate_role_ownership_release('role-marginals-v5')
+import sys
+import threading
+_existing_release = sys.modules.get('simmah_runtime_release')
+_release_lock = vars(sys).setdefault(
+    '_simmah_runtime_release_lock',
+    getattr(_existing_release, '_lock', None) or threading.RLock())
+# Own the same process lock before import/reload and through both activations.
+with _release_lock:
+    import simmah_runtime_release as runtime_release
+    if (getattr(runtime_release, 'RUNTIME_LOCK_VERSION', 0) != 1
+            or getattr(runtime_release, '_active_release', None) != 'app-idle-work-20261118-r4'
+            or not hasattr(runtime_release, 'activate_role_ownership_release')
+            or not hasattr(runtime_release, '_active_role_ownership_fingerprint')
+            or getattr(runtime_release, 'NFL_PROJECTION_RELEASE', None) != 'final-context-fit-v2'):
+        runtime_release = importlib.reload(runtime_release)
+    runtime_release.activate_nba_release('app-idle-work-20261118-r4')
+    runtime_release.activate_role_ownership_release('role-marginals-v5')
 
 if st.query_params.get('simmah_qa') == 'storage':
     import importlib
