@@ -12,6 +12,17 @@ class SharedConfirmationTests(unittest.TestCase):
             sides.append(f'<ul class="lineup__list is-{side}"><li class="lineup__status is-confirmed">Confirmed</li>{names}</ul>')
         return f'<main data-gamedate="{day}"><div class="lineup is-nba" data-lnum="1"><div class="lineup__abbr">OKC</div><div class="lineup__abbr">SAS</div>'+''.join(sides)+'</div></main>'
 
+    def test_labels_do_not_copy_provider_payloads(self):
+        import pandas as pd
+        class Evidence:
+            def __deepcopy__(self,memo):raise AssertionError('Display must not copy raw provider evidence')
+        pool=pd.DataFrame([{'Player ID':str(i),'Name':'Player '+str(i),'Team':'NY','Injury Status':'Active','Expected Starter':True,'Starter Confirmed':True} for i in range(5)])
+        status=pool.copy();pool.attrs['raw_provider']=Evidence();status.attrs['raw_provider']=Evidence()
+        labels=player_labels(pool,status)
+        self.assertEqual(len(labels),5)
+        self.assertTrue(all(name.endswith('✅') for name in labels.values()))
+        self.assertFalse(any('✅' in str(v) for v in pool.to_numpy(copy=False)[:,pool.columns.get_loc('Name')]))
+
     def test_two_sites_share_confirmation_and_keep_saved_inputs(self):
         values=parse_confirmed_page(self.page(),'2026-10-20',[('SA','OKC')])
         for site in ('DK','FD'):

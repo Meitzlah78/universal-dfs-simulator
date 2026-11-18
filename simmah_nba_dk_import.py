@@ -48,7 +48,7 @@ def read_draftkings(data, *, game_context_pool=None):
             game_context_pool=pd.concat(contexts,ignore_index=True).drop_duplicates()
     start=next((i for i,r in enumerate(rows) if {'Name','ID','Salary','Game Info','TeamAbbrev','Roster Position'}<=set(r)),None)
     if start is None:raise ValueError('DraftKings NBA salary table is missing')
-    header=rows[start];players=[];days=set()
+    header=rows[start];players=[];days=set();context_rows=None
     def cell(r,k):
         index=header.index(k)
         return r[index].strip() if index<len(r) else ''
@@ -66,9 +66,15 @@ def read_draftkings(data, *, game_context_pool=None):
             if team not in {away,home}:raise ValueError('NBA salary team differs from game')
             stamp=datetime.strptime(match[3]+' '+match[4],'%m/%d/%Y %I:%M%p').replace(tzinfo=ZoneInfo('America/New_York'))
         elif game.casefold() in {'in progress','final'} and game_context_pool is not None:
-            prior=game_context_pool.loc[game_context_pool['Player ID'].astype(str).eq(pid)]
+            if context_rows is None:
+                # Avoid copying provider attrs for every started player's filter.
+                columns=list(game_context_pool.columns);context_rows={}
+                for values in game_context_pool.to_numpy(copy=False):
+                    old_row=dict(zip(columns,values))
+                    context_rows.setdefault(str(old_row['Player ID']),[]).append(old_row)
+            prior=context_rows.get(pid,[])
             if len(prior)!=1:raise MissingDKGameContext('Original slate game details are needed for started DK players')
-            old=prior.iloc[0]
+            old=prior[0]
             if team_key(old['Team'])!=team or int(old['Salary'])!=int(salary):
                 raise ValueError('Started DK player differs from the current salary slate')
             saved_clocks=game_context_pool.attrs.get('salary_game_starts',{})

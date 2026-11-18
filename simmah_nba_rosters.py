@@ -18,7 +18,13 @@ def validate_lineup(pool, player_ids, *, salary_cap, max_from_team, salary_min=0
         raise ValueError(f'NBA lineup requires {size} distinct players')
     if not isinstance(max_from_team,int) or not 1<=max_from_team<=9:
         raise ValueError('Confirmed NBA team limit is required')
-    lookup=pool.set_index('Player ID').to_dict('index')
+    # DataFrame column boxing copies attrs (including raw provider payloads).
+    # Validate the same row values without duplicating metadata per column.
+    columns=list(pool.columns);id_column=columns.index('Player ID');lookup={}
+    for values in pool.to_numpy(copy=False):
+        pid=values[id_column]
+        if pid in lookup:raise ValueError('NBA player IDs must be unique')
+        lookup[pid]={column:value for column,value in zip(columns,values) if column!='Player ID'}
     if any(pid not in lookup for pid in player_ids):
         raise ValueError('NBA lineup contains an unknown or cross-slate player ID')
     chosen=[lookup[pid] for pid in player_ids]

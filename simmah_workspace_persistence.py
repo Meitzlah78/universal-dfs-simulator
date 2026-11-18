@@ -11,6 +11,12 @@ _POOL = ThreadPoolExecutor(max_workers=2, thread_name_prefix='workspace-backup')
 KEY = '_slate_backup_browser'
 
 
+def render_switch_metrics(st):
+    timing=st.session_state.get('_slate_last_switch_metrics',{})
+    if 'routing_seconds' in timing:
+        st.caption(f"Last slate switch: {timing['routing_seconds']:.2f}s · save current {timing.get('capture_seconds',0):.2f}s · recover destination {timing.get('backup_recovery_seconds',0):.2f}s · restore controls {timing.get('workspace_restore_seconds',0):.2f}s")
+
+
 def component():
     import streamlit.components.v1 as components
     return components.declare_component('simmah_workspace_backup_v1',
@@ -209,6 +215,7 @@ def begin(st):
         if state.get('_slate_backup_owner') and state.get('_slate_show_storage_details', False):
             with st.expander('Cloud storage connection', expanded=not bool(config)):
                 st.caption('Storage check version: cloud-status-4')
+                render_switch_metrics(st)
                 timing = state.get('_slate_cloud_restore_metrics')
                 if timing:
                     st.caption(f"Last cloud restore: {timing['bytes']/(1024*1024):.0f} MB · download {timing['download_seconds']:.1f}s · verification and decoding {timing['verify_decode_seconds']:.1f}s")
@@ -380,6 +387,7 @@ def render(st, host):
         if state.get('_slate_backup_owner') and state.get('_slate_show_storage_details', False):
             with st.expander('Cloud storage connection', expanded=not bool(config)):
                 st.caption('Storage check version: cloud-status-4')
+                render_switch_metrics(st)
                 timing = state.get('_slate_cloud_restore_metrics')
                 if timing:
                     st.caption(f"Last cloud restore: {timing['bytes']/(1024*1024):.0f} MB · download {timing['download_seconds']:.1f}s · verification and decoding {timing['verify_decode_seconds']:.1f}s")
