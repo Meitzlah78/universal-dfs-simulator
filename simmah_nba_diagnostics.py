@@ -38,7 +38,7 @@ def _rosters(pool, indices, slots):
     if ids.ndim!=2 or ids.shape[1]!=len(slots) or ids.dtype.kind not in 'iu':
         raise ValueError('Diagnostic roster indices must match site slots')
     if (ids<0).any() or (ids>=len(pool)).any():raise ValueError('Diagnostic player index outside frozen pool')
-    return pd.DataFrame(pool['Player ID'].astype(str).to_numpy()[ids],columns=slots)
+    return pd.DataFrame(data_view(pool)['Player ID'].astype(str).to_numpy()[ids],columns=slots)
 
 
 def make_package(pool, built, template, contest, markets, settings, *, started_at,
@@ -51,7 +51,8 @@ def make_package(pool, built, template, contest, markets, settings, *, started_a
     stamp=captured_at or datetime.now(timezone.utc)
     if stamp.tzinfo is None:raise ValueError('Timezone-aware capture time required')
     stamp=stamp.astimezone(timezone.utc)
-    rules=rules_for(pool);slots=rules['slots'];field=built['field']
+    source=data_view(pool)
+    rules=rules_for(source);slots=rules['slots'];field=built['field']
     frame=_rosters(pool,field['indices'],slots)
     copies=np.asarray(field['copies'])
     if copies.shape!=(len(frame),) or not np.isfinite(copies).all() or (copies<1).any() or (copies!=np.floor(copies)).any():
@@ -62,15 +63,16 @@ def make_package(pool, built, template, contest, markets, settings, *, started_a
     for row,count in zip(frame.itertuples(index=False,name=None),copies):physical[tuple(sorted(row))]+=int(count)
     frame['Copies']=copies.astype(np.int64)
     indices=np.asarray(field['indices'])
-    salary=pool['Salary'].to_numpy()[indices].sum(axis=1)
+    salary=source['Salary'].to_numpy()[indices].sum(axis=1)
     frame['Salary']=salary;frame['Salary Left']=rules['salary_cap']-salary
-    frame['Max Team']=[max(Counter(pool.iloc[row]['Team']).values()) for row in indices]
-    games=[tuple(sorted((str(r.Team),str(r.Opponent)))) for r in pool.itertuples()]
+    teams=source['Team'].to_numpy(copy=False)
+    frame['Max Team']=[max(Counter(teams[row]).values()) for row in indices]
+    games=[tuple(sorted((str(r.Team),str(r.Opponent)))) for r in source.itertuples()]
     frame['Max Game']=[max(Counter(games[i] for i in row).values()) for row in indices]
     diagnostic=built.get('diagnostics',{})
     files={}
     def add(name,raw):files[name]=raw
-    def csv(name,data):add(name,data.to_csv(index=False).encode('utf-8-sig'))
+    def csv(name,data):add(name,data_view(data).to_csv(index=False).encode('utf-8-sig'))
     add('inputs/original_entries_salary.csv',bytes(template))
     csv('inputs/player_pool.csv',pool)
     add('inputs/player_pool.json',_json({'columns':list(pool.columns),'dtypes':dict(zip(pool.columns,map(str,pool.dtypes))),

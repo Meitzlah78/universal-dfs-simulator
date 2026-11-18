@@ -268,12 +268,14 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
                     payout_vector(contest),selected['entry_fee'],count,diversity=diversity,
                     salary_min=salary_min,correlation=correlation,ownership_mode=ownership['mode'],progress=progress,
                     excluded_indices=excluded,capture_diagnostics=True,salary_aware=salary_aware)
+                progress('Validating entry export')
                 reports=engine.last_report
                 # A completed portfolio must serialize and pass site legality
                 # before replacing the last successful build or showing success.
                 export_portfolio(upload.getvalue(),cid,pool,built)
                 from simmah_nba_diagnostics import make_package,retain_package,package_reference
                 try:
+                    progress('Saving build diagnostic archive')
                     package=make_package(pool,built,upload.getvalue(),dict(contest,id=str(cid),date=day),markets,
                         {'input_identity':identity,'rank_metric_at_build':'Top 1%'},started_at=build_started_at,
                         engine_metadata={'rates':vars(engine.rates),'max_overtimes':engine.max_overtimes,
