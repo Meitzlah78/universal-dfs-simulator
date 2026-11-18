@@ -74,7 +74,7 @@ def make_package(pool, built, template, contest, markets, settings, *, started_a
     add('inputs/original_entries_salary.csv',bytes(template))
     csv('inputs/player_pool.csv',pool)
     add('inputs/player_pool.json',_json({'columns':list(pool.columns),'dtypes':dict(zip(pool.columns,map(str,pool.dtypes))),
-        'rows':pool.to_dict(orient='records'),'attrs':pool.attrs}))
+        'rows':data_view(pool).to_dict(orient='records'),'attrs':pool.attrs}))
     add('inputs/provider/rotowire.json',_json(pool.attrs.get('rotowire_provider_evidence',
         {'missing_evidence':'Raw provider data not retained by the loader for this build'})))
     add('inputs/contest.json',_json(contest))
@@ -185,7 +185,7 @@ def make_selection_failure_package(pool,candidates,report,contest,settings,error
     files={
         'inputs/player_pool.csv':pool.to_csv(index=False).encode('utf-8-sig'),
         'inputs/player_pool.json':_json({'columns':list(pool.columns),
-            'rows':pool.to_dict(orient='records'),'attrs':pool.attrs}),
+            'rows':data_view(pool).to_dict(orient='records'),'attrs':pool.attrs}),
         'inputs/contest.json':_json(contest),
         'inputs/settings.json':_json(settings),
         'inputs/hard_limits.json':_json(portfolio_limits(pool,count=int(settings['portfolio_count']))),
@@ -275,7 +275,7 @@ def make_setup_package(pool,template,contest,markets,error,*,source_root=None):
     stamp=datetime.now(timezone.utc);rules=rules_for(pool)
     files={'inputs/original_entries_salary.csv':bytes(template),
         'inputs/player_pool.csv':pool.to_csv(index=False).encode('utf-8-sig'),
-        'inputs/player_pool.json':_json({'rows':pool.to_dict('records'),'attrs':pool.attrs}),
+        'inputs/player_pool.json':_json({'rows':data_view(pool).to_dict('records'),'attrs':pool.attrs}),
         'inputs/contest.json':_json(contest),'inputs/markets.json':_json(markets),
         'inputs/rules.json':_json(rules),
         'rotation_summary.csv':summary.to_csv(index=False).encode('utf-8-sig'),

@@ -193,15 +193,22 @@ def latest_player_snapshot(state,format_label,contest_id):
 
 
 def render_history(st,context,key):
-    @st.fragment(run_every=1)
-    def history():
-        if finish_exports(st):
-            from simmah_workspace_persistence import schedule
-            schedule(st)
-        if st.session_state.get('_slate_export_jobs'):
-            st.caption('Saving export history…')
-        _render_history(st, context, key)
-    history()
+    # Called inside the download fragment: an export click arms this one-shot
+    # component, and each completed-job event refreshes the view once.
+    if finish_exports(st):
+        from simmah_workspace_persistence import schedule
+        schedule(st)
+        st.rerun(scope='app')
+    pending=any(job['format']==context.get('format') and
+                str(job['contest_id'])==str(context.get('contest_id',''))
+                for job in st.session_state.get('_slate_export_jobs',[]))
+    if pending:
+        import streamlit.components.v1 as components
+        poll=components.declare_component('simmah_pending_export_v1',
+            path=str(Path(__file__).parent/'components'/'pending_job_poll'))
+        poll(pending=True,key='export_history_poll_'+key,default=None)
+        st.caption('Saving export history…')
+    _render_history(st, context, key)
 
 
 def _render_history(st,context,key):

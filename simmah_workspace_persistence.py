@@ -383,6 +383,9 @@ def render(st, host):
         from simmah_export_history import finish_exports
         if finish_exports(st):
             schedule(st)
+            # Refresh history/download areas once when an export completes.
+            # This is an event, not a permanent timer on every download.
+            st.rerun(scope='app')
         advance(state)
         component()(**args_for(state), key=KEY, default=None)
         config = state.get('_slate_cloud_config')

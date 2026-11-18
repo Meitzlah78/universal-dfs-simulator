@@ -3,11 +3,15 @@ on:
   push:
     paths:
       - 'components/workspace_backup/**'
+      - 'components/pending_job_poll/**'
+      - 'tests/test_pending_job_poll.cjs'
       - 'tests/test_workspace_backup_component.cjs'
       - '.github/workflows/workspace-browser-check.yml'
   pull_request:
     paths:
       - 'components/workspace_backup/**'
+      - 'components/pending_job_poll/**'
+      - 'tests/test_pending_job_poll.cjs'
       - 'tests/test_workspace_backup_component.cjs'
       - '.github/workflows/workspace-browser-check.yml'
 permissions:
@@ -22,4 +26,6 @@ jobs:
         with:
           node-version: '20'
       - name: Check boot retries, saves, restores, and idle polling
-        run: node tests/test_workspace_backup_component.cjs
+        run: |
+          node tests/test_workspace_backup_component.cjs
+          node tests/test_pending_job_poll.cjs
