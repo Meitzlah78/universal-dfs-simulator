@@ -18,6 +18,25 @@ class Evidence(dict):
 
 
 class PreparationMetadataTests(unittest.TestCase):
+    def test_release_refreshes_preparation_helpers_in_dependency_order(self):
+        import simmah_runtime_release as release
+        names=['simmah_nba_frame','simmah_nba_learning','simmah_nba_role_priors',
+               'simmah_nba_game_context','simmah_nba_projections','simmah_nba_import']
+        modules={name:object() for name in names}
+        saved=release._active_release
+        try:
+            release._active_release=None
+            with patch.dict(release.sys.modules,{**modules,'simmah_nba_parallel':None}), \
+                 patch.object(release.importlib,'reload') as reload:
+                release.activate_nba_release('preparation-test')
+                calls=[call.args[0] for call in reload.call_args_list]
+                self.assertEqual([m for m in calls if m in modules.values()],list(modules.values()))
+                before=reload.call_count
+                release.activate_nba_release('preparation-test')
+                self.assertEqual(reload.call_count,before)
+        finally:
+            release._active_release=saved
+
     def pool(self):
         pool = pd.DataFrame([{'Player ID':str(i), 'Name':'Player '+str(i),
             'Position':'PG', 'Team':'NY' if i<5 else 'BOS',
