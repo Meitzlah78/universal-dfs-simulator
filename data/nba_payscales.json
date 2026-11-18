@@ -1289,6 +1289,131 @@
         }
       ],
       "source": "User-supplied Nov 7, 2026 FanDuel Prizes screenshot"
+    },
+    "fd-piggy-bank-shot-10000-173160": {
+      "name": "$10K Wed NBA Piggy Bank Shot (Guaranteed Overlay!)",
+      "platform": "FanDuel",
+      "capacity": 173160,
+      "entry_fee": 0.05,
+      "prize_pool": 10000,
+      "payout_tiers": [
+        {
+          "first": 1,
+          "last": 1,
+          "prize": 300
+        },
+        {
+          "first": 2,
+          "last": 2,
+          "prize": 200
+        },
+        {
+          "first": 3,
+          "last": 3,
+          "prize": 150
+        },
+        {
+          "first": 4,
+          "last": 4,
+          "prize": 100
+        },
+        {
+          "first": 5,
+          "last": 5,
+          "prize": 60
+        },
+        {
+          "first": 6,
+          "last": 6,
+          "prize": 50
+        },
+        {
+          "first": 7,
+          "last": 8,
+          "prize": 40
+        },
+        {
+          "first": 9,
+          "last": 10,
+          "prize": 30
+        },
+        {
+          "first": 11,
+          "last": 12,
+          "prize": 20
+        },
+        {
+          "first": 13,
+          "last": 15,
+          "prize": 15
+        },
+        {
+          "first": 16,
+          "last": 20,
+          "prize": 10
+        },
+        {
+          "first": 21,
+          "last": 30,
+          "prize": 7.5
+        },
+        {
+          "first": 31,
+          "last": 50,
+          "prize": 5
+        },
+        {
+          "first": 51,
+          "last": 75,
+          "prize": 3
+        },
+        {
+          "first": 76,
+          "last": 100,
+          "prize": 2
+        },
+        {
+          "first": 101,
+          "last": 150,
+          "prize": 1
+        },
+        {
+          "first": 151,
+          "last": 300,
+          "prize": 0.75
+        },
+        {
+          "first": 301,
+          "last": 500,
+          "prize": 0.5
+        },
+        {
+          "first": 501,
+          "last": 1500,
+          "prize": 0.3
+        },
+        {
+          "first": 1501,
+          "last": 3000,
+          "prize": 0.2
+        },
+        {
+          "first": 3001,
+          "last": 5000,
+          "prize": 0.15
+        },
+        {
+          "first": 5001,
+          "last": 25000,
+          "prize": 0.12
+        },
+        {
+          "first": 25001,
+          "last": 75025,
+          "prize": 0.1
+        }
+      ],
+      "source": "User-supplied November 18 contest details, explicit full-capacity confirmation and payout screenshot. Contest ID verified from uploaded FanDuel entries template; entry ID is not used as contest ID."
     }
   }
 }
