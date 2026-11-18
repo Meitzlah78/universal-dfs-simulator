@@ -4,6 +4,7 @@ Keys include every physical simulation input. Salaries, ownership and user
 exclusions do not change basketball outcomes and are deliberately excluded.
 Cached draws retain distinct construction, field and evaluation seeds.
 """
+from simmah_nba_frame import data_view
 from collections import OrderedDict
 from copy import deepcopy
 from hashlib import sha256
@@ -21,7 +22,7 @@ def simulation_identity(engine):
     from simmah_nba_pregame import ROLE_COLUMNS
     columns=['Player ID','Team','Opponent','Projection','Injury Status','Projected Minutes',*ROLE_COLUMNS]
     if 'Rotation Only' in engine.pool:columns.append('Rotation Only')
-    inputs=engine.pool[columns]
+    inputs=data_view(engine.pool)[columns]
     implementation=sha256()
     for name in ('simmah_nba_engine.py','simmah_nba_pregame.py','simmah_nba_markets.py',
                  'simmah_nba_projection_anchor.py','simmah_nba_rotation_schedule.py','simmah_nba_scoring.py','simmah_nba_parallel.py',

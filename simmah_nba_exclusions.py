@@ -1,14 +1,17 @@
 """User build exclusions leave full-slate simulations and opponents intact."""
+from simmah_nba_frame import data_view
 import numpy as np
 from simmah_nba_projections import team_key
 
 
 def game_options(pool):
+    pool=data_view(pool)
     pairs={tuple(sorted((team_key(r.Team),team_key(r.Opponent)))) for r in pool.itertuples()}
     return {' vs '.join(pair):pair for pair in sorted(pairs)}
 
 
 def excluded_player_indices(pool,games=(),teams=()):
+    pool=data_view(pool)
     options=game_options(pool);known={team_key(team) for team in pool['Team']}
     selected_teams={team_key(team) for team in teams}
     if not set(games)<=set(options) or not selected_teams<=known:

@@ -123,7 +123,9 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
     with tabs[1]:model_details=st.expander('Advanced — model status',expanded=False)
     selected=contests[cid];count=selected['owned_entries'];error=None;contest=None;engine=None;day=None
     from simmah_nba_ownership import field_ownership_inputs
-    ownership=field_ownership_inputs(pool)
+    from simmah_nba_prepared_arrays import prepare_player_arrays
+    prepared=prepare_player_arrays(pool,st.session_state.setdefault('nba_prepared_player_arrays',{}))
+    ownership=field_ownership_inputs(pool,prepared=prepared)
     try:
         day=slate.get('date') or pool.attrs.get('slate_date') or slate_date(upload.name)
         contest=saved_contest(cid,day,selected['entry_fee'],name=selected['name'],platform=platform)
@@ -160,7 +162,8 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         learning=learning_status(day)
         with model_details:st.caption('Historical role update check: '+str(learning['status'])+((' · '+str(learning['as_of'])) if learning.get('as_of') else ''))
         slate['players']=pool
-        engine=CachedNBAOutcomes(PregameEngine(pool,markets,EventRates(**model['rates']),platform=platform))
+        prepared=prepare_player_arrays(pool,st.session_state['nba_prepared_player_arrays'])
+        engine=CachedNBAOutcomes(PregameEngine(pool,markets,EventRates(**model['rates']),platform=platform,prepared=prepared))
         if engine.rotation_reconciliation:
             with tabs[0]:st.warning('Simulation rotation budget adjusted to 240 minutes for: '+
                 ', '.join(f"{row['team']} ({row['provider_total']:g} provider minutes)" for row in engine.rotation_reconciliation)+
