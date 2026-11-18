@@ -48,6 +48,8 @@ class FanDuelPendingSummaryTest(unittest.TestCase):
         source=Path('dfs_app.py').read_text()
         start=source.index('    player_sim = st.session_state.get(fd_sim_key, {})',source.index('# Restore FanDuel'))
         end=source.index('    # Remove stale saved builds',start)
+        # Match the complete source line even when its enclosing UI is indented.
+        start=source.rfind('\n',0,start)+1
         block=textwrap.dedent(source[start:end])
         for mode in ['Full Roster','Single Game']:
             key=mode.replace(' ','_').lower()

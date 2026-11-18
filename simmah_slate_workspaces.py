@@ -302,13 +302,15 @@ def workspace_download_button(st,*args,**kwargs):
         kwargs.pop('kwargs',None)
         if callable(original):
             clicked=st.download_button(*args,**kwargs)
+            render_history(st,checkpoint,str(key or filename))
         else:
             # An audit click updates only this control; it must not rerun models.
             @st.fragment
             def download():
-                return st.download_button(*args,**kwargs)
+                clicked=st.download_button(*args,**kwargs)
+                render_history(st,checkpoint,str(key or filename))
+                return clicked
             clicked=download()
-        render_history(st,checkpoint,str(key or filename))
         return clicked
     kwargs.setdefault('on_click', 'ignore')
     return st.download_button(*args,**kwargs)

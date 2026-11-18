@@ -1,0 +1,10 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const source=fs.readFileSync('components/pending_job_poll/index.html','utf8').split('<script>')[1].split('</script>')[0];
+const handlers={},messages=[],timers=new Map();let seq=0;
+vm.runInNewContext(source,{window:{parent:{postMessage:m=>messages.push(m)},addEventListener:(n,f)=>handlers[n]=f},crypto:{randomUUID:()=>String(++seq)},setTimeout:fn=>{const id=++seq;timers.set(id,fn);return id},clearTimeout:id=>timers.delete(id)});
+const render=pending=>handlers.message({data:{type:'streamlit:render',args:{pending}}});
+render(false);assert.equal(timers.size,0);
+render(true);assert.equal(timers.size,1);render(true);assert.equal(timers.size,1);
+const fn=[...timers.values()][0];timers.clear();fn();assert.equal(timers.size,0,'no self-rescheduling');assert.equal(messages.filter(m=>m.type==='streamlit:setComponentValue').length,1);
+render(false);assert.equal(timers.size,0);render(true);assert.equal(timers.size,1,'new export re-arms polling');handlers.beforeunload();assert.equal(timers.size,0);
+console.log('Pending export polling: idle, single event, completion, restart and unload passed');

@@ -11,6 +11,7 @@ from scipy.optimize import Bounds, LinearConstraint, milp
 from simmah_nba_import import read_template
 from simmah_nba_rosters import ELIGIBILITY, SLOT_COLUMNS, validate_lineup
 from simmah_nba_rules import rules_for
+from simmah_nba_frame import data_view
 
 
 
@@ -35,7 +36,7 @@ def locked_players(pool, now=None):
         raise ValueError('Late swap requires a timezone-aware clock')
     starts = {}
     salary_clocks=pool.attrs.get('salary_game_starts',{})
-    for team, players in pool.groupby('Team'):
+    for team, players in data_view(pool).groupby('Team'):
         times = []
         values=[salary_clocks.get(str(row['Player ID']),row.get('Game Start')) for _,row in players.iterrows()]
         for value in values:
@@ -50,7 +51,7 @@ def locked_players(pool, now=None):
         if not times or len(set(times)) != 1:
             raise ValueError(f'Confirmed game start time missing or conflicting for {team}; refresh projections before late swap')
         starts[team] = times[0]
-    return pool['Team'].map(lambda team: starts[team] <= now).to_numpy(bool)
+    return data_view(pool)['Team'].map(lambda team: starts[team] <= now).to_numpy(bool)
 
 
 def entry_rows(template, contest_id, pool):

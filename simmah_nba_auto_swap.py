@@ -1,6 +1,7 @@
 """Opt-in, browser-active NBA late-swap preparation; never submits entries."""
 import hashlib
 import pandas as pd
+from simmah_nba_frame import data_view
 
 
 def refresh_pool(pool, fetch_rw=None):
@@ -14,7 +15,7 @@ def refresh_pool(pool, fetch_rw=None):
     from simmah_nba_late_swap import locked_players
     locked=locked_players(pool)
     result=pool.copy();result.attrs.update(pool.attrs)
-    for number,(idx,row) in enumerate(result.iterrows()):
+    for number,(idx,row) in enumerate(data_view(result).iterrows()):
         if locked[number]:continue  # Never refresh a started game's pregame inputs.
         key=player_key(row['Name'],row['Team']);news=details.get(key)
         if news is None:
@@ -42,7 +43,7 @@ def refresh_pool(pool, fetch_rw=None):
 def input_signature(pool, locked):
     """Only open-game changes require a new solve; tipoffs also invalidate it."""
     cols=[c for c in ('Player ID','Projection','Injury Status','Projected Minutes','Game Start','RotoWire Projected Own %','FantasyLabs Projected Own %','DraftDashboard Projected Own %','Eligible') if c in pool]
-    payload=pool.loc[~locked,cols].sort_values('Player ID').to_json()
+    payload=data_view(pool).loc[~locked,cols].sort_values('Player ID').to_json()
     return hashlib.sha256((payload+str(list(map(bool,locked)))).encode()).hexdigest()
 
 
@@ -54,6 +55,9 @@ def render_auto_swap(st,pool,data,contest_id,salary_min,diversity,markets,contes
     from simmah_slate_workspaces import workspace_download_button
     from simmah_nba_ui import display_lineups
     rules=rules_for(pool);platform=rules['platform']
+    if locked_players(pool).all():
+        st.info('All games have started. Automatic late swap is finished.')
+        return
     st.caption('Checks every 60 seconds while this slate is open. Automatically prepares swaps using the selected method. Download and upload the CSV yourself. After submitting, upload your latest filled entries here so later checks use the correct locked slots.')
     config=hashlib.sha256(data+str((contest_id,salary_min,diversity,simulation,pregame_locked,markets,
         saved_build.get('identity') if saved_build else None)).encode()+
@@ -63,6 +67,9 @@ def render_auto_swap(st,pool,data,contest_id,salary_min,diversity,markets,contes
         state=st.session_state.get(key,{})
         if state.get('config')!=config:state={'config':config}
         try:
+            if locked_players(pool).all():
+                # Re-render once to remove the scheduled monitor; no provider IO.
+                st.rerun(scope='app')
             fresh=refresh_pool(pool)
             locks=locked_players(fresh)
             if locks.all():

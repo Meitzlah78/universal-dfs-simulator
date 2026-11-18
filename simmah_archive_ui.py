@@ -237,7 +237,7 @@ def render_archive(st):
                     detail='Historical targets verified' if job['state']=='verified_convergence' else 'Target gates not met'
                 except (ValueError,KeyError,TypeError):pass
                 display.append({'Calibration':job['state'].replace('_',' '),'Maximum target error':residual,'Details':detail})
-            st.dataframe(display,hide_index=True,use_container_width=True)
+            st.dataframe(display,hide_index=True,width='stretch')
             for job in jobs:
                 result = archive.root/'jobs'/job['id']/'result.zip'
                 if result.exists():
@@ -251,7 +251,11 @@ def render_archive(st):
         if any(j['state'] in ('queued','running','paused_for_build') for j in jobs):
             @st.fragment(run_every='5s')
             def running_status():
-                for j in archive.jobs():
+                current_jobs=archive.jobs()
+                if not any(j['state'] in ('queued','running','paused_for_build') for j in current_jobs):
+                    # Remove the status timer and show completed reports once.
+                    st.rerun(scope='app')
+                for j in current_jobs:
                     st.caption('Calibration: '+j['state'])
             running_status()
         if st.button('Prepare complete archive backup',key=PREFIX+'prepare_backup'):

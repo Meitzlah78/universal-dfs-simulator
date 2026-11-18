@@ -1,0 +1,13 @@
+<!doctype html><html><body><script>
+const send=(type,extra={})=>window.parent.postMessage({isStreamlitMessage:true,type,...extra},'*');
+let timer;
+window.addEventListener('message',event=>{
+ if(event.data?.type!=='streamlit:render')return;
+ clearTimeout(timer);timer=null;
+ if(event.data.args.pending)timer=setTimeout(()=>{
+  timer=null;send('streamlit:setComponentValue',{value:crypto.randomUUID(),dataType:'json'});
+ },1000);
+});
+window.addEventListener('beforeunload',()=>clearTimeout(timer));
+send('streamlit:componentReady',{apiVersion:1});send('streamlit:setFrameHeight',{height:0});
+</script></body></html>

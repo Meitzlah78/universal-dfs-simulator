@@ -10,9 +10,9 @@ _active_release=None
 # Reload dependency order, including modules that bind functions with `from`.
 _NBA_MODULES=(
     'simmah_workspace_backup','simmah_workspace_cloud','simmah_session_workspaces','simmah_export_history',
-    'simmah_workspace_persistence','simmah_slate_workspaces',
+    'simmah_workspace_persistence','simmah_archive_ui','simmah_slate_workspaces',
     'simmah_nba_frame','simmah_nba_prepared_arrays','simmah_nba_learning','simmah_nba_role_priors','simmah_nba_game_context',
-    'simmah_nba_game_strip','simmah_nba_official_lineups','simmah_nba_confirmed','simmah_nba_lineups',
+    'simmah_nba_game_strip','simmah_nba_player_display','simmah_nba_official_lineups','simmah_nba_confirmed','simmah_nba_lineups',
     'simmah_nba_projections','simmah_nba_ownership_upload','simmah_nba_ownership',
     'simmah_nba_portfolio_limits','simmah_nba_exclusions','simmah_nba_dk_import','simmah_nba_import',
     'simmah_nba_rosters','simmah_nba_candidates','simmah_nba_field','simmah_nba_markets','simmah_nba_minutes','simmah_nba_pregame','simmah_nba_simulation_cache',

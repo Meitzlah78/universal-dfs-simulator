@@ -2,6 +2,7 @@
 from simmah_nba_game_strip import explicit_true, team_lineup
 from simmah_nba_projections import team_key
 import pandas as pd
+from simmah_nba_frame import data_view
 
 
 def _label_view(pool):
@@ -40,7 +41,7 @@ def player_labels(pool,status_pool=None):
 
 
 def display_pool(pool,status_pool=None):
-    view=pool.copy()
+    view=data_view(pool).copy()
     view['Name']=view['Player ID'].astype(str).map(player_labels(pool,status_pool))
     return view
 
