@@ -1,4 +1,5 @@
 """Validate external NBA ownership before using marginal field targets."""
+from simmah_nba_frame import data_view
 import numpy as np
 import pandas as pd
 from simmah_nba_rules import rules_for
@@ -13,20 +14,17 @@ def ownership_column(pool):
     return IMPORTED_COLUMN if IMPORTED_COLUMN in pool else COLUMN
 
 
-def active_players(pool):
-    projection=pd.to_numeric(pool['Projection'],errors='coerce').to_numpy(float)
-    active=np.isfinite(projection)&(projection>0)&~pool['Injury Status'].astype(str).str.upper().isin(['O','OUT','IR','SUSPENDED']).to_numpy()
-    if 'Eligible' in pool:active &= pool['Eligible'].astype(str).str.casefold().isin(['true','1']).to_numpy()
-    if 'Projected Minutes' in pool:
-        minutes=pd.to_numeric(pool['Projected Minutes'],errors='coerce').to_numpy(float)
-        active &= np.isfinite(minutes)&(minutes>0)&(minutes<=48)
-    return active
+def active_players(pool,prepared=None):
+    from simmah_nba_prepared_arrays import prepare_player_arrays
+    reuse={prepared['identity']:prepared} if prepared is not None else None
+    arrays=prepare_player_arrays(pool,reuse)
+    return arrays['active'].copy()
 
 
 def ownership_values(pool):
     """Preserve reported values; estimate only the small unreported residual."""
     column=ownership_column(pool)
-    raw=pd.to_numeric(pool.get(column,pd.Series(np.nan,index=pool.index)),errors='coerce')
+    raw=pd.to_numeric(data_view(pool).get(column,pd.Series(np.nan,index=pool.index)),errors='coerce')
     meta=pool.attrs.get('fantasylabs_nba_ownership',{})
     if column!=COLUMN and meta.get('missing_ownership_policy')=='share unreported residual equally':
         missing=active_players(pool)&raw.isna().to_numpy()
@@ -48,9 +46,9 @@ def validated_import(pool):
             and (abs(total-expected)<=expected*.01 or (meta.get('normalize_field_targets') and total>0)))
 
 
-def field_ownership_inputs(pool):
+def field_ownership_inputs(pool,prepared=None):
     expected=100*len(rules_for(pool)['slots'])
-    active=active_players(pool)
+    active=active_players(pool,prepared)
     column=ownership_column(pool)
     source='FantasyLabs imported slate ownership' if column!=COLUMN else 'RotoWire dedicated slate ownership'
     if column=='DraftDashboard Projected Own %':

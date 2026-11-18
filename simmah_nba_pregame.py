@@ -1,4 +1,5 @@
 """Experimental pregame adapter from complete provider rotations and historical roles."""
+from simmah_nba_frame import data_view
 import numpy as np
 from simmah_nba_projections import team_key
 from simmah_nba_rotation_schedule import build_rotation
@@ -25,7 +26,7 @@ def validate_game_reports(reports):
 
 class PregameEngine:
     def __init__(self,pool,markets,rates,max_overtimes=10,platform='FanDuel',require_markets=False,
-                 parallel=True,game_index_offset=0):
+                 parallel=True,game_index_offset=0,prepared=None):
         if not isinstance(max_overtimes,int) or not 1<=max_overtimes<=10:raise ValueError("Explicit bounded overtime count required")
         self.platform=platform
         self.parallel=parallel;self.game_index_offset=game_index_offset;self.progress=None
@@ -36,8 +37,12 @@ class PregameEngine:
         if self.pool['Player ID'].duplicated().any():raise ValueError('Duplicate player IDs')
         required={'Projected Minutes',*ROLE_COLUMNS}
         if not required<=set(pool.columns):raise ValueError('Missing NBA projected minutes or historical role rates')
+        from simmah_nba_prepared_arrays import prepare_player_arrays
+        # Never trust a caller's cached arrays after the source pool changes.
+        reuse={prepared['identity']:prepared} if prepared is not None else None
+        arrays=prepare_player_arrays(self.pool,reuse)
         markets=[dict(m) for m in markets]
-        uploaded={tuple(sorted((team_key(r.Team),team_key(r.Opponent)))) for r in self.pool.itertuples()}
+        uploaded={tuple(sorted((team_key(r.Team),team_key(r.Opponent)))) for r in data_view(self.pool).itertuples()}
         supplied={tuple(sorted(map(team_key,m['teams']))) for m in markets}
         if not supplied<=uploaded:raise ValueError('Market does not match uploaded game')
         priced={tuple(sorted(map(team_key,m['teams']))) for m in markets if m.get('implied_points') is not None}
@@ -54,18 +59,20 @@ class PregameEngine:
             if len(pair)!=2 or pair[0]==pair[1] or covered&set(pair):raise ValueError('Duplicate NBA market teams')
             groups=[]
             for team,opp in (pair,pair[::-1]):
-                group=self.pool[self.pool['Team'].map(team_key)==team]
+                values=data_view(self.pool)
+                group=values[values['Team'].map(team_key)==team]
                 if group.empty or set(group['Opponent'].map(team_key))!={opp}:
                     raise ValueError('Market does not match uploaded game')
-                injured=group['Injury Status'].astype(str).str.upper().isin(['OUT','O','IR','SUSPENDED'])
-                projection=np.asarray(group['Projection'],float)
+                group_ids=group.index.to_numpy()
+                injured=arrays['injured'][group_ids]
+                projection=arrays['projection'][group_ids]
                 # Explicit provider zero-minute reserves cannot enter a rotation.
                 # Unknown minutes remain in validation below and still block.
-                rotation_minutes=np.asarray(group['Projected Minutes'],float)
-                rotation_only=group['Rotation Only'].eq(True) if 'Rotation Only' in group else np.zeros(len(group),bool)
+                rotation_minutes=arrays['minutes'][group_ids]
+                rotation_only=arrays['rotation_only'][group_ids]
                 active=group[((np.isfinite(projection)&(projection>0))|rotation_only)&~injured&(rotation_minutes!=0)]
-                minutes=np.asarray(active['Projected Minutes'],float)
-                roles=active[ROLE_COLUMNS].to_numpy(float)
+                minutes=arrays['minutes'][active.index.to_numpy()]
+                roles=arrays['roles'][active.index.to_numpy()]
                 if len(active)<5 or not np.isfinite(minutes).all() or (minutes<=0).any() or (minutes>48).any():
                     invalid=~np.isfinite(minutes)|(minutes<=0)|(minutes>48)
                     labels=active.get('Name',active['Player ID']).astype(str)
@@ -79,7 +86,7 @@ class PregameEngine:
                     # case the remaining known rotation absorbs those shares.
                     # Unknown healthy minutes and unexplained shortfalls block.
                     total=float(minutes.sum())
-                    inactive_mask=injured.to_numpy() & (rotation_minutes>0)
+                    inactive_mask=injured & (rotation_minutes>0)
                     inactive_minutes=float(rotation_minutes[inactive_mask].sum())
                     # Salary files can include unmatched, unprojected reserves.
                     # An unknown on one of those rows is not an observed minute,
@@ -164,7 +171,7 @@ class PregameEngine:
                 [seed+game_index*97+team+10000 for team in (0,1)],self.max_overtimes)
             targets=np.zeros((2,size))
             for team,(ids,_,_) in enumerate(groups):
-                projected=self.pool.loc[ids,'Projection'].to_numpy(float)
+                projected=data_view(self.pool).loc[ids,'Projection'].to_numpy(float)
                 targets[team,:len(ids)]=np.where(np.isfinite(projected)&(projected>0),projected,0.)
             if game_index not in self.prepared:
                 notify('calibrating player projections and market scoring')

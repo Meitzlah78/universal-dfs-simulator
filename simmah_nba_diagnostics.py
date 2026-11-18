@@ -1,4 +1,5 @@
 """Frozen, self-describing NBA calibration/solver evidence. No network or pickle."""
+from simmah_nba_frame import data_view
 from collections import Counter
 from datetime import datetime, timezone
 from hashlib import sha256
@@ -242,7 +243,7 @@ def package_bytes(st, reference):
 
 def rotation_audit(pool):
     """Explain the exact pregame rotation filter, including excluded minutes."""
-    rows=pool.copy()
+    rows=data_view(pool).copy()
     projection=pd.to_numeric(rows['Projection'],errors='coerce')
     minutes=pd.to_numeric(rows.get('Projected Minutes',pd.Series(np.nan,index=rows.index)),errors='coerce')
     injured=rows['Injury Status'].astype(str).str.upper().isin(['OUT','O','IR','SUSPENDED'])
