@@ -208,6 +208,8 @@ def export_swaps(template, contest_id, pool, result, *, now=None):
     replacements={entry[0]:lineup for entry,lineup in zip(entries,result['lineups'])}
     for row in rows[1:]:
         if len(row)>=4+size and row[cid_col]==str(contest_id) and row[0] in replacements:row[4:4+size]=replacements[row[0]]
+    from simmah_nba_rosters import isolate_contest_entries
+    isolate_contest_entries(rows,contest_id,size,cid_col)
     output=io.StringIO(newline='');csv.writer(output,lineterminator='\r\n').writerows(rows)
     return output.getvalue().encode()
 

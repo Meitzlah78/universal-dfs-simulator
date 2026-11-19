@@ -55,12 +55,27 @@ def validate_lineup(pool, player_ids, *, salary_cap, max_from_team, salary_min=0
     return salary
 
 
-def export_entries(template, lineups, contest_id, pool, *, salary_cap, max_from_team, salary_min=0):
-    """Replace only the selected contest's roster cells, preserving other bytes' values.
+def isolate_contest_entries(rows, contest_id, size, cid_column):
+    """Keep only selected entry cells; preserve independent reference columns.
 
-    Lineups contain the original composite FanDuel IDs, never player names or
-    reformatted floats. CSV serialization may change quoting; all non-roster cell
-    values and the embedded player table are preserved.
+    Salary/reference data can share a physical CSV row with a foreign entry.
+    Compact selected entries in the left block rather than deleting rows.
+    """
+    width=4+size
+    positions=[i for i,row in enumerate(rows[1:],1)
+               if len(row)>=width and row[0].isdigit() and row[cid_column]]
+    selected=[rows[i][:width] for i in positions if rows[i][cid_column]==str(contest_id)]
+    if not selected:raise ValueError('Selected NBA contest has no export entries')
+    for offset,i in enumerate(positions):
+        rows[i][:width]=selected[offset] if offset<len(selected) else ['']*width
+    return rows
+
+
+def export_entries(template, lineups, contest_id, pool, *, salary_cap, max_from_team, salary_min=0):
+    """Export only the selected contest, preserving its IDs and reference table.
+
+    Unselected entries are omitted from the entry block, including blank free
+    entries. Shared salary/reference columns remain intact on every CSV row.
     """
     slate=read_template(template,game_context_pool=pool)
     rows=list(csv.reader(io.StringIO(template.decode('utf-8-sig'))))
@@ -79,6 +94,7 @@ def export_entries(template, lineups, contest_id, pool, *, salary_cap, max_from_
         if canonical in seen:raise ValueError('Duplicate NBA portfolio lineup')
         seen.add(canonical)
         rows[i][4:4+size]=ids
+    isolate_contest_entries(rows,contest_id,size,cid_col)
     output=io.StringIO(newline='')
     csv.writer(output,lineterminator='\r\n').writerows(rows)
     return output.getvalue().encode('utf-8')
