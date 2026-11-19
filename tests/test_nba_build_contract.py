@@ -79,7 +79,9 @@ class BuildContractTests(unittest.TestCase):
             self.assertFalse((ids==0).any())
         output=export_portfolio(raw,'42-99',pool,result)
         before=list(csv.reader(io.StringIO(raw.decode())));after=list(csv.reader(io.StringIO(output.decode())))
-        self.assertEqual(before[21:],after[21:])
+        self.assertEqual(after[21][:13],['']*13)
+        self.assertEqual(before[21][13:],after[21][13:])
+        self.assertEqual(before[22:],after[22:])
         for a,b in zip(before[1:21],after[1:21]):
             self.assertEqual(a[:4],b[:4]);self.assertEqual(a[13:],b[13:])
             validate_lineup(pool,b[4:13],salary_cap=60000,max_from_team=4,salary_min=58000)
