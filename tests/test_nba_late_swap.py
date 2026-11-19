@@ -54,7 +54,9 @@ class LateSwapTests(unittest.TestCase):
         rows=list(csv.reader(io.StringIO(export_swaps(self.template,'42-99',self.pool,result,now=self.now).decode())))
         self.assertEqual(rows[1][4:13],lineup)
         self.assertEqual(rows[1][:4],self.rows[1][:4]);self.assertEqual(rows[1][13:],self.rows[1][13:])
-        self.assertEqual(rows[2:],self.rows[2:])
+        self.assertEqual(rows[2][:13],['']*13)
+        self.assertEqual(rows[2][13:],self.rows[2][13:])
+        self.assertEqual(rows[3:],self.rows[3:])
         with self.assertRaises(ValueError):export_swaps(self.template,'42-99',self.pool,result,now=self.now+pd.Timedelta(hours=3))
 
     def test_clock_missing_conflicting_and_exact_tip(self):
