@@ -171,8 +171,12 @@ def select_quality_budget(candidates,slots,count,*,controls=None,automatic_max=8
     second_status='optimal concentration' if second.status==0 else 'time-limited feasible concentration'
     if second.x is not None:
         trial=kept[np.flatnonzero(second.x[:retained]>.5)];check(trial)
-        if float(scaled[trial].sum())<floor-1e-7:raise RuntimeError('Solver violated frozen quality-loss budget')
-        concentration=float(np.square(np.asarray(overall[:,trial].sum(axis=1)).ravel()).sum())
-        if concentration<=best_concentration:chosen=trial
+        # MILP feasibility tolerances are in scaled units. Independently
+        # validate the actual quality used by finish before accepting diversity.
+        if float(quality[trial].sum())<optimum*(1-quality_loss)-1e-9:
+            second_status='diversity incumbent below quality floor; retained certified quality optimum'
+        else:
+            concentration=float(np.square(np.asarray(overall[:,trial].sum(axis=1)).ravel()).sum())
+            if concentration<=best_concentration:chosen=trial
     else:second_status='diversity search unfinished; retained certified quality optimum'
-    return finish(chosen,second_status,bool(second.status==0))
+    return finish(chosen,second_status,bool(second.status==0 and 'below quality floor' not in second_status))
