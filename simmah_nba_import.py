@@ -287,10 +287,34 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
         column_order += [column for column in pool.columns if column not in leading_columns]
         from simmah_nba_player_display import display_pool
         st.caption("✅ = confirmed starter; Q/D injury tags remain visible.")
-        st.dataframe(display_pool(pool), hide_index=True, width="stretch", key="nba_player_pool_table",
-                     row_height=32, height=500,
-                     column_order=column_order,
-                     column_config={'Name': st.column_config.TextColumn('Player', pinned=True)})
+        from simmah_slate_workspaces import workspace_data_editor
+        status_key='nba_pool_status_'+platform+'_'+str(day)
+        status_overrides=st.session_state.get(status_key,{})
+        pool=pool.copy()
+        for index,row in pool.iterrows():
+            status=status_overrides.get(str(row['Player ID']))
+            if status is not None:
+                pool.at[index,'Injury Status']=status
+                if status=='Out':
+                    pool.at[index,'Eligible']=False
+                    pool.at[index,'Projected Minutes']=0.0
+        edited=workspace_data_editor(st,pool,hide_index=True,width="stretch",
+                     key='nba_player_pool_status_editor_'+platform+'_'+str(day),
+                     row_height=32,height=500,column_order=column_order,
+                     disabled=[c for c in pool if c!='Injury Status'],
+                     column_config={'Name':st.column_config.TextColumn('Player',pinned=True),
+                         'Injury Status':st.column_config.SelectboxColumn('Injury Status',
+                             options=sorted(set(pool['Injury Status'].dropna().astype(str))|{'Active','Questionable','Doubtful','Out'}),required=True)})
+        if isinstance(edited,pd.DataFrame):
+            changed=edited['Injury Status'].astype(str).ne(pool['Injury Status'].astype(str))
+            if changed.any():
+                status_overrides=dict(status_overrides)
+                for index in edited.index[changed]:
+                    status_overrides[str(pool.at[index,'Player ID'])]=str(edited.at[index,'Injury Status'])
+                st.session_state[status_key]=status_overrides
+                st.rerun()
+        slate['players']=pool
+        st.caption('Injury Status is editable. Manual Out removes a player from simulations and lineups for this site and slate; it is not an official injury designation.')
         workspace_download_button(st,'DOWNLOAD PLAYER POOL',
             pool[column_order].to_csv(index=False).encode('utf-8-sig'),
             'Simmah_NBA_'+platform+'_Player_Pool.csv','text/csv',
