@@ -127,8 +127,18 @@ def apply_authorized_slate_exclusions(pool,site='DraftKings',mode='single_game')
         player,team='thomasfidone','NYG'
     elif day=='2026-11-16' and teams=={'LAC','BAL'} and site=='DraftKings':
         player,team='scottmatlock','LAC'
+    elif day=='2026-11-19' and teams=={'IND','HOU'}:
+        excluded_pairs={('marlinklein','HOU')}
+        if site=='DraftKings':excluded_pairs.update({('pharaohbrown','IND'),('djgiddens','IND')})
+        excluded=pd.Series([(name_key(n),str(t).upper()) in excluded_pairs
+            for n,t in zip(pool['Name'],pool['Team'])],index=pool.index)
+        return _record_slate_exclusions(pool,excluded,day,site,mode)
     else:return pool
     excluded=pool['Name'].map(name_key).eq(player) & pool['Team'].astype(str).str.upper().eq(team)
+    return _record_slate_exclusions(pool,excluded,day,site,mode)
+
+
+def _record_slate_exclusions(pool,excluded,day,site,mode):
     if not excluded.any():return pool
     result=pool.loc[~excluded].copy().reset_index(drop=True)
     result.attrs['authorized_slate_exclusions']={
