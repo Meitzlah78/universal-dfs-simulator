@@ -130,7 +130,7 @@ def apply_authorized_slate_exclusions(pool,site='DraftKings',mode='single_game')
     elif day=='2026-11-19' and teams=={'IND','HOU'}:
         excluded_pairs={('marlinklein','HOU')}
         if site=='FanDuel':excluded_pairs.add(('dareogunbowale','HOU'))
-        if site=='DraftKings':excluded_pairs.update({('pharaohbrown','IND'),('djgiddens','IND')})
+        if site=='DraftKings':excluded_pairs.update({('pharaohbrown','IND'),('djgiddens','IND'),('dareogunbowale','HOU')})
         excluded=pd.Series([(name_key(n),str(t).upper()) in excluded_pairs
             for n,t in zip(pool['Name'],pool['Team'])],index=pool.index)
         return _record_slate_exclusions(pool,excluded,day,site,mode)
