@@ -1,6 +1,5 @@
-"""Bounded process workers for independent games; no Streamlit in workers."""
-from concurrent.futures import ProcessPoolExecutor,as_completed
-from multiprocessing import get_context
+"""Bounded thread workers for independent games; no app re-import on startup."""
+from concurrent.futures import ThreadPoolExecutor,as_completed
 from pathlib import Path
 from threading import Lock
 import math
@@ -33,7 +32,7 @@ def _pool():
     global _executor
     with _executor_lock:
         if _executor is None:
-            _executor=ProcessPoolExecutor(max_workers=worker_count(),mp_context=get_context('spawn'))
+            _executor=ThreadPoolExecutor(max_workers=worker_count(),thread_name_prefix='nba-game')
         return _executor
 
 
