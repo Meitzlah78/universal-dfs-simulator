@@ -114,6 +114,17 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
             key='nba_estimated_rotation_teams_'+platform+'_'+str(slate.get('date','')),
             help='Only for a known rotation totaling 210 to under 228 minutes. Spread the shortfall across available rotation players, capped at 48. Original player projections stay visible.')
     pool=pool.copy()
+    with advanced:
+        manual_out=st.multiselect('Manually mark players Out for this slate',
+            options=pool['Name'].astype(str).tolist(),
+            key='nba_manual_out_'+platform+'_'+str(slate.get('date','')),
+            help='Your manual simulation exclusion, not an official injury report. Removes selected players from simulation and lineup eligibility.')
+    if manual_out:
+        manual_mask=pool['Name'].astype(str).isin(manual_out)
+        pool.loc[manual_mask,'Injury Status']='Out'
+        pool.loc[manual_mask,'Eligible']=False
+        pool.loc[manual_mask,'Projected Minutes']=0.0
+        pool.loc[manual_mask,'Manual Status Override']=True
     pool.attrs['nba_estimated_rotation_teams']=estimated_teams
     pool.attrs['nba_uncapped']=not use_caps
     pool.attrs['nba_variable_minutes']=variable_minutes
