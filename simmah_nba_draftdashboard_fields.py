@@ -1,11 +1,11 @@
-"""Typed DD attributes; projected MIN semantics explicitly confirmed by the user."""
+"""Typed DD attributes; MIN semantics unverified; minutes are reference-only."""
 import numpy as np
 import pandas as pd
 
 # Canonical columns stay distinct from ratings and historical summaries.
 FIELDS={
  'Projection':(('Projected Points','PRO','Projection'),0,None,'projected fantasy points'),
- 'Projected Minutes':(('Projected Minutes','MIN'),0,48,'projected minutes (user-confirmed DD MIN)'),
+ 'DraftDashboard Reference Minutes':(('Projected Minutes','MIN'),0,48,'DD minutes reference; forward-looking semantics unverified'),
  'DraftDashboard Usage %':(('Usage Rate %','USE'),0,100,'usage while on the floor'),
  'DraftDashboard DashRank':(('DashRank','DashRank Score'),0,100,'provider rating, not FP or ownership'),
  'DraftDashboard Opponent Defensive Rank':(('Opponent Defensive Rank','Opponent Rank'),1,30,'opponent team defensive rank'),
@@ -41,8 +41,6 @@ def apply_fields(pool,frame,keys,pool_keys):
   result.loc[matched,destination]=mapped[matched]
   if destination=='Projection':
    result.loc[matched,'Projection Source']='DraftDashboard uploaded projection'
-  elif destination=='Projected Minutes':
-   result.loc[matched,'Minutes Source']='DraftDashboard projected MIN (user confirmed)'
   applied[destination]={'source_column':columns[0],'meaning':meaning}
  if applied:result.attrs['draftdashboard_fields']={'version':1,'fields':applied,'ratings_applied_as_projection_boost':False,'captured_utc':sorted(set(frame.get('Captured UTC',[]))),'source_update_et':sorted(set(frame.get('Source Update ET',[])))}
  return result,applied
