@@ -7502,6 +7502,11 @@ else:
                 _classic_build_button = _classic_sim_button
                 _classic_contest_button = _classic_sim_button
                 classic_run_all = _classic_sim_button
+            saved_classic_timings = st.session_state.get("dk_classic_build_timings")
+            if saved_classic_timings and not _classic_sim_button:
+                st.caption("NFL Classic timings · " + " · ".join(
+                    f"{stage} {seconds:.2f}s" for stage, seconds in saved_classic_timings.items()
+                ))
             classic_workflow_status = None
             classic_build_timings = {}
             if _classic_sim_button or _classic_build_button:
@@ -7519,7 +7524,6 @@ else:
                     st.session_state["simulation_df"] = classic_simulation_df
                     st.session_state["simulations_ready"] = True
 
-                    classic_timing_caption = st.empty()
                     classic_candidate_started = perf_counter()
                     # Build ranking statistics from this click's simulation results, not stale values.
                     player_sim = {}
@@ -7953,6 +7957,8 @@ else:
 
             # Re-render the player table, which appears before the SIM button.
             if classic_run_all:
+                classic_build_timings["Server pipeline through UI assembly"] = perf_counter() - classic_build_started
+                st.session_state["dk_classic_build_timings"] = classic_build_timings
                 workspace_rerun(st, _loaded_slate_tabs, _pinned_slates)
             workspace_stop(st, _loaded_slate_tabs, _pinned_slates)
 
@@ -10233,12 +10239,6 @@ with _tab_build:
 
 
 
-
-if "classic_build_timings" in globals() and classic_build_timings:
-    classic_build_timings["Server pipeline through UI assembly"] = perf_counter() - classic_build_started
-    classic_timing_caption.caption("NFL Classic timings · " + " · ".join(
-        f"{stage} {seconds:.2f}s" for stage, seconds in classic_build_timings.items()
-    ))
 
 finish_workspaces(st, _loaded_slate_tabs, _pinned_slates)
 
