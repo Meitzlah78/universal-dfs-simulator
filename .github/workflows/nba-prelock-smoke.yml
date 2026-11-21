@@ -16,11 +16,11 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install pandas pyarrow boto3
-      - name: Verify lobby access, player pools, RotoWire and S3
+      - name: Verify NBA schedule, RotoWire and S3
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: ${{ secrets.AWS_REGION || vars.AWS_REGION }}
+          AWS_REGION: ${{ secrets.AWS_DEFAULT_REGION || secrets.AWS_REGION || vars.AWS_REGION }}
           INPUT_ARCHIVE_BUCKET: ${{ secrets.INPUT_ARCHIVE_BUCKET || vars.INPUT_ARCHIVE_BUCKET }}
           INPUT_ARCHIVE_PREFIX: ${{ secrets.INPUT_ARCHIVE_PREFIX || vars.INPUT_ARCHIVE_PREFIX }}
         run: |
@@ -57,90 +57,120 @@ jobs:
                   raise ValueError('Missing tip-off timezone')
               return parsed.astimezone(timezone.utc)
 
-          def row(player, name, position, salary, team, away, home, start):
-              team, away, home = (value.upper() for value in (team, away, home))
-              if team not in (away, home) or not player or not name or int(salary) <= 0:
-                  raise ValueError('Incomplete player or fixture mapping')
-              return {'Player ID': str(player), 'Name': name, 'Position': position, 'Salary': int(salary),
-                      'Team': team, 'Opponent': home if team == away else away, 'Game Start': tip(start).isoformat()}
+          from simmah_nba_projections import player_key, team_key
 
-          def dk_pool():
-              listing = get('DK lobby', 'https://www.draftkings.com/lobby/getcontests?sport=NBA')
-              contests = listing['Contests'] if 'Contests' in listing else listing['contests']
-              classic = [c for c in contests if c.get('gameType') == 'Classic' or str(c.get('gameTypeId')) == '1']
-              slate = str(max(classic, key=lambda c: float(c.get('po') or 0))['dg'])
-              if not slate.isdigit():
-                  raise ValueError('Invalid draft group ID')
-              payload = get('DK draftables', f'https://api.draftkings.com/draftgroups/v1/draftgroups/{slate}/draftables')
-              games = {str(g['competitionId']): g for g in payload.get('competitions', [])}
-              rows = []
-              for p in payload['draftables']:
-                  if int(p.get('salary') or 0) <= 0:
+          RW = 'https://www.rotowire.com/daily/nba/api/'
+          ET = ZoneInfo('America/New_York')
+
+          def nba_schedule(day):
+              data = get('ESPN NBA schedule', 'https://site.api.espn.com/apis/site/v2/sports/basketball/nba/'
+                         'scoreboard?dates=' + day.replace('-', ''))
+              games = {}
+              for event in data['events']:
+                  game = event['competitions'][0]
+                  start = tip(game['date'])
+                  if start.astimezone(ET).date().isoformat() != day:
                       continue
-                  game = p.get('competition') or {}
-                  if not game and p.get('competitions'):
-                      game = p['competitions'][0]
-                  key = str(game.get('competitionId') or p.get('competitionId'))
-                  game = {**games.get(key, {}), **game}
-                  away, home = game['name'].split(' @ ', 1)
-                  rows.append(row(p['playerId'], p['displayName'], p['position'], p['salary'],
-                                  p['teamAbbreviation'], away, home, game['startTime']))
-              return slate, rows
+                  teams = tuple(sorted(team_key(t['team']['abbreviation']) for t in game['competitors']))
+                  if teams in games:
+                      raise ValueError('Ambiguous team matchup in schedule')
+                  games[teams] = (start, str(event['id']))
+              if not games:
+                  raise ValueError('No verified schedule games for ' + day)
+              return games
 
-          def fd_pool():
-              listing = get('FD fixture lists', 'https://api.fanduel.com/fixture-lists?sport=NBA')
-              candidates = [s for s in listing['fixture_lists'] if str(s.get('sport')).upper() == 'NBA'
-                            and str(s.get('salary_cap')) == '60000' and len(s.get('fixtures', [])) > 1]
-              slate = str(min(candidates, key=lambda s: tip(s['start_date']))['id'])
-              if not slate or not all(c.isdigit() or c == '-' for c in slate):
-                  raise ValueError('Invalid fixture list ID')
-              payload = get('FD players', f'https://api.fanduel.com/fixture-lists/{slate}/players')
-              source = payload['fixtures']
-              games = source if isinstance(source, dict) else {str(g['id']): g for g in source}
-              rows = []
-              for p in payload['players']:
-                  if int(p.get('salary') or 0) <= 0:
+          def provider_pool(day, platform, schedule):
+              site, contest = ('1', 'Classic') if platform == 'DraftKings' else ('2', 'Full Roster')
+              listing = get(platform + ' RotoWire slate list', RW + 'slate-list.php?siteID=' + site)
+              choices = []
+              for slate in listing['slates']:
+                  if slate.get('startDateOnly') != day or slate.get('contestType') != contest:
                       continue
-                  game = games[str(p['fixture_id'])]
-                  rows.append(row(p['id'], f"{p['first_name']} {p['last_name']}", p['position'], p['salary'],
-                                  p['team'], game['away_team'], game['home_team'], game['start_date']))
-              return slate, rows
+                  games = [listing['games'][str(g)] for g in slate['games']]
+                  pairs = {tuple(sorted((team_key(g['homeTeamCode']), team_key(g['visitTeamCode'])))) for g in games}
+                  if pairs and pairs <= schedule.keys():
+                      choices.append((len(pairs), str(slate.get('defaultSlate')).lower() in ('true','1'),
+                                      str(slate['slateID']), pairs))
+              if not choices:
+                  raise ValueError('No date-matched RotoWire slate aligned to the NBA schedule')
+              _, _, sid, selected_pairs = max(choices, key=lambda c: c[:3])
+              if not sid.isdigit():
+                  raise ValueError('Invalid RotoWire slate ID')
+              rows, keys = [], set()
+              for p in get(platform + ' RotoWire players', RW + 'players.php?slateID=' + sid):
+                  team = team_key(p['team']['abbr'])
+                  opp = team_key(p['opponent']['team'])
+                  pair = tuple(sorted((team, opp)))
+                  name = (p['firstName'] + ' ' + p['lastName']).strip()
+                  key = player_key(name, team)
+                  if pair not in selected_pairs or not key[0] or key in keys:
+                      raise ValueError('Invalid or duplicate RotoWire player or matchup')
+                  keys.add(key)
+                  start, event = schedule[pair]
+                  rows.append({'Name': name, 'Team': team, 'Opponent': opp,
+                               'RotoWire Player Slate ID': str(p['slateID']), 'nba_event_id': event,
+                               'scheduled_tipoff_utc': start.isoformat(), 'bootstrap_injury_tag': p.get('injuryStatus')})
+              if not rows or {tuple(sorted((r['Team'], r['Opponent']))) for r in rows} != selected_pairs:
+                  raise ValueError('Incomplete player pool coverage for the selected slate')
+              return sid, rows
 
-          summary, frames = {}, []
-          for platform, fetch in [('DraftKings', dk_pool), ('FanDuel', fd_pool)]:
+          def status(raw):
+              if raw is None or not str(raw).strip():
+                  return None
+              code = str(raw).strip().upper()
+              return {'O':'OUT', 'IR':'OUT', 'SUSPENDED':'OUT', 'D':'DOUBTFUL', 'Q':'QUESTIONABLE',
+                      'P':'PROBABLE', 'A':'ACTIVE'}.get(code, code if code in
+                      {'OUT','DOUBTFUL','QUESTIONABLE','PROBABLE','GTD','ACTIVE'} else None)
+
+          day = os.getenv('SMOKE_DAY') or datetime.now(ET).date().isoformat()
+          schedule = nba_schedule(day)
+          summary, frames = {'date_et': day, 'scheduled_games': len(schedule),
+                             'dk_enrichment_status': 'not_configured', 'fd_enrichment_status': 'not_configured'}, []
+          for platform in ('DraftKings', 'FanDuel'):
               report = summary[platform] = {}
               try:
-                  slate, rows = fetch()
-                  pool = pd.DataFrame(rows).drop_duplicates('Player ID')
-                  pairs = sorted({tuple(sorted((r.Team, r.Opponent))) for r in pool.itertuples()})
-                  if len(pairs) < 2 or len(pool) < 10:
-                      raise ValueError('Missing Classic slate player or fixture coverage')
-                  report.update(slate_id=slate, players=len(pool), games=len(pairs))
-                  start = min(tip(value) for value in pool['Game Start'])
-                  day = start.astimezone(ZoneInfo('America/New_York')).date().isoformat()
-                  values, details, rw_slate = download_rotowire(day, pool, platform, evidence={})
-                  report['rotowire_completed_at_utc'] = utc_now()
-                  report['coverage'] = {'projections': len(values),
-                                        'minutes': sum(v.get('Projected Minutes') is not None for v in details.values()),
-                                        'ownership': sum(v.get('RotoWire Projected Own %') is not None for v in details.values())}
-                  report['minutes_only'] = not values and report['coverage']['minutes'] > 0
-                  lineups = download_lineup_status(rw_slate, day, pairs)
-                  report['lineups_completed_at_utc'] = utc_now()
-                  report['lineup_entries'] = len(lineups)
-                  from simmah_nba_projections import player_key
-                  for item in rows:
-                      key = player_key(item['Name'], item['Team'])
+                  bootstrap_sid, rows = provider_pool(day, platform, schedule)
+                  pool = pd.DataFrame(rows)
+                  pairs = sorted({(r.Team, r.Opponent) for r in pool.itertuples()})
+                  report.update(bootstrap_slate_id=bootstrap_sid, player_rows=len(pool), games=len(pairs)//2)
+                  evidence = {}
+                  values, details, sid = {}, {}, bootstrap_sid
+                  try:
+                      values, details, sid = download_rotowire(day, pool, platform, evidence=evidence)
+                      report['rotowire_completed_at_utc'] = utc_now()
+                  except Exception as error:
+                      report['projection_error'] = f'{type(error).__name__}: {error}'
+                  lineup = {}
+                  try:
+                      lineup = download_lineup_status(sid, day, pairs)['players']
+                      report['lineups_completed_at_utc'] = utc_now()
+                  except Exception as error:
+                      report['lineup_error'] = f'{type(error).__name__}: {error}'
+                  raw_payload = evidence.get('requests', {}).get('players.php?slateID=' + sid, {}).get('payload', [])
+                  raw_tags = {player_key(p['firstName'] + ' ' + p['lastName'], p['team']['abbr']): p.get('injuryStatus')
+                              for p in raw_payload}
+                  report.update(rotowire_slate_id=sid, fallback_mode=evidence.get('scope'),
+                                projections=len(values), minutes=sum(x.get('Projected Minutes') is not None
+                                for x in details.values()), ownership=sum(x.get('RotoWire Projected Own %') is not None
+                                for x in details.values()), lineup_rows=len(lineup))
+                  for r in rows:
+                      key = player_key(r['Name'], r['Team'])
+                      raw = raw_tags.get(key)
                       detail = details.get(key, {})
-                      frames.append({**item, 'platform': platform, 'slate_id': slate,
-                                     'projection': values.get(key), 'raw_injury_tag': detail.get('RotoWire Injury'),
-                                     'minutes': detail.get('Projected Minutes'),
-                                     'ownership': detail.get('RotoWire Projected Own %'),
-                                     'rotowire_completed_at_utc': report['rotowire_completed_at_utc'],
-                                     'lineups_completed_at_utc': report['lineups_completed_at_utc']})
-              except (ValueError, KeyError, TypeError, OSError, IndexError, AttributeError) as error:
+                      proj_at = report.get('rotowire_completed_at_utc')
+                      lineup_at = report.get('lineups_completed_at_utc')
+                      frames.append({**r, 'platform': platform, 'rotowire_slate_id': sid,
+                                     'projection': values.get(key), 'minutes': detail.get('Projected Minutes'),
+                                     'ownership': detail.get('RotoWire Projected Own %'), 'raw_injury_tag': raw,
+                                     'normalized_status': status(raw), 'expected_starter': lineup.get(key, {}).get('Expected Starter'),
+                                     'starter_confirmed': lineup.get(key, {}).get('Starter Confirmed'),
+                                     'rotowire_completed_at_utc': proj_at, 'lineups_completed_at_utc': lineup_at,
+                                     'rotowire_prelock': bool(proj_at and tip(proj_at) < tip(r['scheduled_tipoff_utc'])),
+                                     'lineups_prelock': bool(lineup_at and tip(lineup_at) < tip(r['scheduled_tipoff_utc']))})
+              except Exception as error:
                   report['error'] = f'{type(error).__name__}: {error}'
               print(platform, json.dumps(report), flush=True)
-
+          print('Smoke manifest', json.dumps(summary), flush=True)
           required = ('AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_REGION', 'INPUT_ARCHIVE_BUCKET')
           missing = [name for name in required if not os.environ.get(name)]
           if missing:
@@ -148,7 +178,7 @@ jobs:
               raise SystemExit(1)
           root = os.environ.get('INPUT_ARCHIVE_PREFIX', '').strip('/')
           key = '/'.join(value for value in (root, 'prelock_snapshots', '_smoke_test',
-                          os.environ['GITHUB_RUN_ID'], os.environ['GITHUB_RUN_ATTEMPT']) if value)
+                          day, os.environ['GITHUB_RUN_ID'], os.environ['GITHUB_RUN_ATTEMPT']) if value)
           client = boto3.client('s3', region_name=os.environ['AWS_REGION'])
           bucket = os.environ['INPUT_ARCHIVE_BUCKET']
           if frames:
@@ -160,5 +190,6 @@ jobs:
           response = client.put_object(Bucket=bucket, Key=key+'/manifest.json',
                                        Body=json.dumps(summary).encode(), ContentType='application/json')
           print('S3 manifest PutObject', response['ResponseMetadata']['HTTPStatusCode'])
-          raise SystemExit(1 if any('error' in summary[name] for name in ('DraftKings', 'FanDuel')) else 0)
+          raise SystemExit(0 if frames and all(summary[name].get('minutes') and summary[name].get('lineup_rows')
+                                                    for name in ('DraftKings', 'FanDuel')) else 1)
           PY
