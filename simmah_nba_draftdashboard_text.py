@@ -53,6 +53,7 @@ def parse_text(text, platform):
 
 
 def apply_text(pool, text, platform, day, *, confirmed=False,file_format='txt',use_minutes=False):
+    use_minutes=False  # DD MIN is reference-only, including restored legacy options.
     if not confirmed:raise ValueError('Confirm this undated DD text belongs to the selected slate date')
     from simmah_nba_rules import rules_for
     if rules_for(pool)['platform']!=platform:raise ValueError('DD site differs from salary slate')
@@ -82,7 +83,7 @@ def apply_text(pool, text, platform, day, *, confirmed=False,file_format='txt',u
         if float(p['Salary'])!=row['Salary'] or player_key('',p['Opponent'])[1]!=player_key('',row['Opponent'])[1]:
             raise ValueError('DD salary/opponent differs from current slate: '+str(p['Name']))
     result,fields=apply_fields(pool,frame,keys,pool_keys)
-    result['DraftDashboard Projected Minutes']=pd.to_numeric(pd.Series(
+    result['DraftDashboard Reference Minutes']=pd.to_numeric(pd.Series(
         [source.get(key,{}).get('MIN',float('nan')) for key in pool_keys],index=pool.index),errors='raise')
     if not use_minutes:
         for col in ('Projected Minutes','Minutes Source'):
@@ -102,7 +103,7 @@ def apply_text(pool, text, platform, day, *, confirmed=False,file_format='txt',u
 
 def render_text_upload(st,pool,platform,day):
     from simmah_slate_workspaces import workspace_file_uploader
-    st.caption('DD player attributes: projections, projected MIN, usage and ranks. Valid uploaded OWN overrides provider ownership. Field targets normalize to the site roster total; censored or unreported values are labeled estimates.')
+    st.caption('DD player attributes: point projections, reference MIN, usage and ranks. Valid uploaded OWN overrides provider ownership. Field targets normalize to the site roster total; censored or unreported values are labeled estimates.')
     upload=workspace_file_uploader(st,'DraftDashboard player attributes (.csv or .txt)',type=['csv','txt'],key='nba_dd_text_'+platform)
     if upload is None:return pool
     data=upload.getvalue();digest=hashlib.sha256(data).hexdigest()[:12]
@@ -114,8 +115,8 @@ def render_text_upload(st,pool,platform,day):
         value=previous.get('confirmed',False),key='nba_dd_confirm_'+identity)
     config[identity]={'confirmed':confirmed,'filename':upload.name,'sha256':hashlib.sha256(data).hexdigest()}
     if not confirmed:return pool
-    use_minutes=st.checkbox('Use DD projected MIN for simulations',value=False,key='nba_dd_minutes_'+platform+'_'+str(day)+'_'+digest,
-        help='Default keeps existing simulation minutes and retains DD MIN as labeled context. Enabling replaces minutes; existing rotation-budget checks still apply.')
+    use_minutes=False
+    st.caption('DD MIN is reference-only: its forward-looking meaning is unverified. Existing simulation minutes remain in use.')
     try:result=apply_text(pool,data.decode('utf-8-sig'),platform,day,confirmed=True,file_format='csv' if upload.name.lower().endswith('.csv') else 'txt',use_minutes=use_minutes)
     except (ValueError,UnicodeError) as exc:
         st.error('DraftDashboard attributes not applied: '+str(exc));st.stop();return pool
@@ -126,5 +127,5 @@ def render_text_upload(st,pool,platform,day):
     if meta:
         st.caption(f"Uploaded ownership applied · raw eligible total {meta['raw_total']:.2f}% · field targets normalized to {meta['expected_total']}%.")
         for warning in meta['warnings']:st.warning(warning)
-    if not use_minutes:st.caption('DD MIN retained as projected-minutes context. Existing simulation minutes remain in use.')
+    if not use_minutes:st.caption('DD MIN retained as unverified reference context. Existing simulation minutes remain in use.')
     return result
