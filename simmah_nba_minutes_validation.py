@@ -25,7 +25,10 @@ def freeze_minutes(pool, platform, now=None):
     keep=starts.notna() & (starts>now) & minutes.notna() & np.isfinite(minutes) & minutes.between(0,48)
     columns=[c for c in ['Player ID','Name','Team','Opponent','Injury Status','Starter Confirmed',
         'Projected Minutes','Minutes Source','Projection','Projection Source',
-        'RotoWire Projected Own %','RotoWire RST % (unverified)'] if c in pool]
+        'RotoWire Projected Own %','RotoWire RST % (unverified)',
+        'FantasyLabs Projected Own %','DraftDashboard Projected Own %',
+        'DraftDashboard Reference Minutes','Eligible','Minutes Source'] if c in pool]
+    columns=list(dict.fromkeys(columns))
     frame=pool.loc[keep,columns].copy()
     if frame.empty:return None
     frame['GameStart']=starts[keep].map(lambda x:x.isoformat())
@@ -65,10 +68,8 @@ def grade_minutes(snapshot,actuals):
 
 
 def render_minutes_snapshots(st,pool,platform,show_controls=True):
-    frozen=freeze_minutes(pool,platform)
+    record_pregame_snapshot(st,pool,platform,'Applied inputs')
     history=st.session_state.setdefault('nba_minutes_snapshots',[])
-    if frozen and not any(x['signature']==frozen['signature'] for x in history):
-        history.append(frozen)
     if not show_controls:return
     with st.expander('Advanced — pregame minutes validation',expanded=False):
         st.caption('Automatically records available minutes before each game starts. Saved with this browser’s slate workspace; download an archive for a separate backup. No simulation parameters are changed.')
@@ -76,3 +77,22 @@ def render_minutes_snapshots(st,pool,platform,show_controls=True):
         workspace_download_button(st,'DOWNLOAD MINUTES SNAPSHOTS',json.dumps(history,indent=2).encode(),
             'Simmah_NBA_Minutes_Snapshots.json','application/json',key='nba_minutes_snapshot_download',on_click='ignore')
 
+
+
+def record_pregame_snapshot(st,pool,platform,layer):
+    """Capture observed unstarted inputs independently of diagnostics visibility.
+
+    This records available inputs only; it does not manufacture native forecasts.
+    Captured time is observation time, not the provider's publication time.
+    """
+    frozen=freeze_minutes(pool,platform)
+    if frozen is None:return
+    frozen['provenance']='Saved Pregame'
+    frozen['layer']=layer
+    frozen['source_metadata']={k:pool.attrs[k] for k in (
+        'slate_date','rotowire_provider_evidence','draftdashboard_text',
+        'fantasylabs_nba_ownership','saved_minutes_restored') if k in pool.attrs}
+    frozen['signature']=sha256((frozen['signature']+layer+json.dumps(
+        frozen['source_metadata'],sort_keys=True,default=str)).encode()).hexdigest()
+    history=st.session_state.setdefault('nba_minutes_snapshots',[])
+    if not any(x['signature']==frozen['signature'] for x in history):history.append(frozen)
