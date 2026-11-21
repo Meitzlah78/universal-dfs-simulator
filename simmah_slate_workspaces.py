@@ -232,7 +232,6 @@ def workspace_file_uploader(st,label,*args,**kwargs):
     key=str(kwargs.get('key',label));saved=st.session_state.setdefault('_slate_restored_uploads',{})
     seen=st.session_state.setdefault('_slate_widget_seen',{})
     if value is not None:saved[key]=value
-    elif seen.get(key):saved.pop(key,None)
     seen[key]=value is not None
     if value is None and key in saved:
         st.caption('Restored file: '+saved[key].name)
