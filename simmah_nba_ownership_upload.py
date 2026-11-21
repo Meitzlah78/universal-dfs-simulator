@@ -90,7 +90,7 @@ def apply_snapshot(pool, data, platform, day):
 def render_upload(st, pool, platform, day):
     from simmah_slate_workspaces import workspace_file_uploader
     st.subheader('NBA ownership')
-    st.caption('Imported ownership overrides RotoWire ownership. DD PRO and projected MIN also apply when explicitly supplied. DashRank, defensive ranks and usage stay separate context; FPPG is historical. Ownership-only files leave points/minutes unchanged. Optimal% is comparison-only.')
+    st.caption('Imported ownership overrides RotoWire ownership. DD PRO applies when supplied; DD MIN is unverified reference context and never replaces simulation minutes. DashRank, defensive ranks and usage stay separate context; FPPG is historical. Ownership-only files leave points/minutes unchanged. Optimal% is comparison-only.')
     upload = workspace_file_uploader(st, 'NBA ownership CSV (DraftDashboard or FantasyLabs)', type=['csv'],
         key='nba_ownership_upload_'+platform,
         help='Use the matching DraftKings or FanDuel NBA snapshot for this slate date.')
