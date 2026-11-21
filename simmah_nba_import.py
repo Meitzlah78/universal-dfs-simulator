@@ -223,12 +223,15 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
         except (ValueError,OSError,KeyError,TypeError):
             with tabs[1]:st.caption('NBA game times / market feed unavailable; existing salary-file and projection metadata retained.')
     render_refresh_status(st,_sources_pending)
+    from simmah_nba_minutes_validation import record_pregame_snapshot
+    record_pregame_snapshot(st,pool,platform,'Before DD/ownership overrides')
     from simmah_nba_ownership_upload import render_upload as render_ownership_upload
     with tabs[1]:
         with st.expander('DraftDashboard / FantasyLabs inputs — NBA', expanded=True):
             pool = render_ownership_upload(st, pool, platform, day)
             from simmah_nba_draftdashboard_text import render_text_upload
             pool = render_text_upload(st, pool, platform, day)
+    record_pregame_snapshot(st,pool,platform,'Applied inputs')
     markets = extract_markets(pool)
     slate['markets'] = markets
     slate['players'] = pool
