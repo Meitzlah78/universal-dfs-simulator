@@ -12,6 +12,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from zoneinfo import ZoneInfo
+from time import perf_counter
 
 # Lower defaults keep the simulator responsive while retaining useful variation.
 SIMULATION_COUNT = 10000
@@ -7502,7 +7503,9 @@ else:
                 _classic_contest_button = _classic_sim_button
                 classic_run_all = _classic_sim_button
             classic_workflow_status = None
+            classic_build_timings = {}
             if _classic_sim_button or _classic_build_button:
+                classic_build_started = perf_counter()
                 classic_workflow_status = st.empty()
                 classic_workflow_status.info(
                     f"Step 1 of 4: Running {SIMULATION_COUNT:,} player simulations for DraftKings Classic..."
@@ -7516,6 +7519,8 @@ else:
                     st.session_state["simulation_df"] = classic_simulation_df
                     st.session_state["simulations_ready"] = True
 
+                    classic_timing_caption = st.empty()
+                    classic_candidate_started = perf_counter()
                     # Build ranking statistics from this click's simulation results, not stale values.
                     player_sim = {}
                     missing_names = [
@@ -7559,6 +7564,7 @@ else:
                         locks=classic_locked_players, selected_stacks=dk_classic_stack_rules,
                         secondary_stacks=dk_secondary_stack_rules, aggressiveness=aggressiveness)
                     st.session_state["classic_lineups"] = classic_results
+                    classic_build_timings["Candidate generation and rankings"] = perf_counter() - classic_candidate_started
                     st.session_state["classic_pool_signature"] = slate_signature
                 except Exception as exc:
                     st.error(f"DraftKings Classic candidate build stopped: {exc}")
@@ -7576,6 +7582,7 @@ else:
                     if dk_opponent_target <= 0:
                         st.warning("Total contest entries must be greater than your own entries.")
                     with st.spinner(f"Testing your lineups against {dk_opponent_target:,} simulated contest entries..."):
+                        classic_field_started = perf_counter()
                         rng = np.random.default_rng()
                         sim_df = st.session_state["simulation_df"]
                         mean_scores = sim_df.mean(axis=0).to_dict()
@@ -7610,6 +7617,8 @@ else:
                         _classic_field_progress.empty()
                         contest_field_df = apply_learned_field(contest_field_df, pool, field_slot_names, "DraftKings", "Classic", classic_contest, int(dk_opponent_target), rng)
                         st.caption("Opponent construction uses matching completed-contest stack/bring-back frequencies when available; otherwise the baseline requires a QB + WR/TE stack. Field popularity uses external ownership when available, otherwise estimated popularity.")
+                        classic_build_timings["Opponent field"] = perf_counter() - classic_field_started
+                        classic_scoring_started = perf_counter()
                         user_lineups = st.session_state["classic_lineups"].copy()
                         opponent_scores = contest_field_df["ProjectedPoints"].to_numpy(dtype=float) if not contest_field_df.empty else np.array([])
                         if len(opponent_scores):
@@ -7639,6 +7648,7 @@ else:
                             user_lineups = evaluate_contest(sim_df, user_lineups, contest_field_df, _classic_slots,
                                 full_field_size, classic_contest["payouts"], float(classic_contest["entry"]),
                                 progress=ui_progress(_classic_progress))
+                            classic_build_timings["Contest scoring"] = perf_counter() - classic_scoring_started
                             st.caption(f"Contest evaluation used all {len(sim_df):,} independent evaluation outcomes. Opponents are a representative estimated field; tied prizes are split across all occupied payout places.")
                             _classic_progress.empty()
                         st.session_state["classic_contest_field_df"] = contest_field_df
@@ -7797,9 +7807,12 @@ else:
                     classic_portfolio_source = classic_portfolio_source.loc[
                         classic_portfolio_source[_classic_slots].isin(set(classic_pool["Name"].astype(str))).all(axis=1)].copy()
                     with st.spinner("Selecting a cap-compliant NFL portfolio (up to 30 seconds)..."):
+                        classic_selection_started = perf_counter()
                         classic_export_portfolio = select_nfl_portfolio(st, classic_portfolio_source, _classic_slots,
                             _classic_assignment_count, controls=control_map, diversity=portfolio_diversity,
                             site="DraftKings", mode="Classic", previous=st.session_state.get("classic_contest_entries_df"))
+                    if build_clicked:
+                        classic_build_timings["Portfolio selection"] = perf_counter() - classic_selection_started
                     if classic_export_portfolio is None:
                         workspace_stop(st, _loaded_slate_tabs, _pinned_slates)
                     with _tab_lineups:
@@ -7839,11 +7852,14 @@ else:
 
                     if not _classic_multi_contest and st.session_state.get("classic_field_context") == classic_contest_name and isinstance(_classic_portfolio_field, pd.DataFrame) and not _classic_portfolio_field.empty and isinstance(_classic_portfolio_outcomes, pd.DataFrame):
                         with st.spinner("Evaluating the selected portfolio together..."):
+                            classic_joint_started = perf_counter()
                             classic_export_portfolio = evaluate_full_roster_portfolio_cached(
                                 _classic_portfolio_outcomes, classic_export_portfolio, _classic_portfolio_field,
                                 [slot for slot,_ in roster_slots], int(classic_contest["field"]),
                                 classic_contest["payouts"], float(classic_contest["entry"]))
                         st.session_state["classic_contest_entries_df"] = classic_export_portfolio
+                        if build_clicked:
+                            classic_build_timings["Assigned portfolio scoring"] = perf_counter() - classic_joint_started
                         st.caption(f"{_classic_assignment_count} assigned contest entries are evaluated jointly, including repeated lineups when needed to fill the entry template. Additional displayed candidates are alternatives, not extra owned entries. The opponent field remains an estimate.")
                         st.write("### Assigned contest portfolio")
                         st.dataframe(injury_frame(st, classic_export_portfolio), use_container_width=True, hide_index=True)
@@ -10217,6 +10233,12 @@ with _tab_build:
 
 
 
+
+if "classic_build_timings" in globals() and classic_build_timings:
+    classic_build_timings["Server pipeline through UI assembly"] = perf_counter() - classic_build_started
+    classic_timing_caption.caption("NFL Classic timings · " + " · ".join(
+        f"{stage} {seconds:.2f}s" for stage, seconds in classic_build_timings.items()
+    ))
 
 finish_workspaces(st, _loaded_slate_tabs, _pinned_slates)
 
