@@ -106,12 +106,20 @@ def render_text_upload(st,pool,platform,day):
     upload=workspace_file_uploader(st,'DraftDashboard player attributes (.csv or .txt)',type=['csv','txt'],key='nba_dd_text_'+platform)
     if upload is None:return pool
     data=upload.getvalue();digest=hashlib.sha256(data).hexdigest()[:12]
-    if not st.checkbox(f'This DD player table is for {platform}, {day}',key='nba_dd_confirm_'+platform+'_'+str(day)+'_'+digest):return pool
+    # Applied confirmation is ordinary slate data, independent of widget cleanup.
+    config=st.session_state.setdefault('nba_dd_applied_config',{})
+    identity=platform+'_'+str(day)+'_'+digest
+    previous=config.get(identity,{})
+    confirmed=st.checkbox(f'This DD player table is for {platform}, {day}',
+        value=previous.get('confirmed',False),key='nba_dd_confirm_'+identity)
+    config[identity]={'confirmed':confirmed,'filename':upload.name,'sha256':hashlib.sha256(data).hexdigest()}
+    if not confirmed:return pool
     use_minutes=st.checkbox('Use DD projected MIN for simulations',value=False,key='nba_dd_minutes_'+platform+'_'+str(day)+'_'+digest,
         help='Default keeps existing simulation minutes and retains DD MIN as labeled context. Enabling replaces minutes; existing rotation-budget checks still apply.')
     try:result=apply_text(pool,data.decode('utf-8-sig'),platform,day,confirmed=True,file_format='csv' if upload.name.lower().endswith('.csv') else 'txt',use_minutes=use_minutes)
     except (ValueError,UnicodeError) as exc:
         st.error('DraftDashboard attributes not applied: '+str(exc));st.stop();return pool
+    st.caption('Applied DD file: '+upload.name+' · SHA256 '+hashlib.sha256(data).hexdigest()[:12])
     st.success(f"DD attributes loaded: {result.attrs['draftdashboard_text']['matched']} matched players · {platform} · {day}")
     meta=result.attrs['draftdashboard_text'].get('ownership')
     if meta is None:st.warning('No usable exact ownership values in this table; existing ownership source remains in use.')
