@@ -212,18 +212,6 @@ def begin(st):
         state['_slate_backup_error'] = 'Recovery needs attention: '+str(exc)
     if not state.get('_slate_backup_booted') or state.get('_slate_backup_restore'):
         component()(**args_for(state), key=KEY, default=None)
-        timing = state.get('_slate_nfl_build_telemetry')
-        current = state.get('_slate_active') or {}
-        if timing and current.get('id') == timing['slate_id'] and 'workspace_finish_seconds' in timing:
-            with st.expander('NFL workspace timing details'):
-                st.json(timing)
-                ref = state.get('_slate_backup_refs', {}).get(current['id'], {})
-                if ref.get('revision') == timing.get('backup_revision') and 'archive_bytes' in ref:
-                    st.json({key: ref[key] for key in ('pack_seconds', 'archive_bytes', 'cloud_ok',
-                             'cloud_put_seconds', 'cloud_readback_seconds', 'cloud_uploaded_bytes',
-                             'cloud_reused_bytes') if key in ref})
-                elif not state.get('_slate_cloud_config'):
-                    st.caption('S3 is unconfigured in this deployment.')
         config = state.get('_slate_cloud_config')
         if state.get('_slate_backup_owner') and state.get('_slate_show_storage_details', False):
             with st.expander('Cloud storage connection', expanded=not bool(config)):
@@ -418,6 +406,18 @@ def render(st, host):
             st.rerun(scope='app')
         advance(state)
         component()(**args_for(state), key=KEY, default=None)
+        timing = state.get('_slate_nfl_build_telemetry')
+        current = state.get('_slate_active') or {}
+        if timing and current.get('id') == timing['slate_id'] and 'workspace_finish_seconds' in timing:
+            with st.expander('NFL workspace timing details'):
+                st.json(timing)
+                ref = state.get('_slate_backup_refs', {}).get(current['id'], {})
+                if ref.get('revision') == timing.get('backup_revision') and 'archive_bytes' in ref:
+                    st.json({key: ref[key] for key in ('pack_seconds', 'archive_bytes', 'cloud_ok',
+                             'cloud_put_seconds', 'cloud_readback_seconds', 'cloud_uploaded_bytes',
+                             'cloud_reused_bytes') if key in ref})
+                elif not state.get('_slate_cloud_config'):
+                    st.caption('S3 is unconfigured in this deployment.')
         config = state.get('_slate_cloud_config')
         if state.get('_slate_backup_owner') and state.get('_slate_show_storage_details', False):
             with st.expander('Cloud storage connection', expanded=not bool(config)):
