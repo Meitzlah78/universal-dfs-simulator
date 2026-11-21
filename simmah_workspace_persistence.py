@@ -4,6 +4,7 @@ import os
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from time import perf_counter
 
 from simmah_workspace_backup import pack, unpack, unpack_file, digest, write_backup, load_backup, path_for, stage_backup, unstage_backup, MAX_BYTES, RECOVERY_CHUNK_BYTES
 
@@ -211,6 +212,18 @@ def begin(st):
         state['_slate_backup_error'] = 'Recovery needs attention: '+str(exc)
     if not state.get('_slate_backup_booted') or state.get('_slate_backup_restore'):
         component()(**args_for(state), key=KEY, default=None)
+        timing = state.get('_slate_nfl_build_telemetry')
+        current = state.get('_slate_active') or {}
+        if timing and current.get('id') == timing['slate_id'] and 'workspace_finish_seconds' in timing:
+            with st.expander('NFL workspace timing details'):
+                st.json(timing)
+                ref = state.get('_slate_backup_refs', {}).get(current['id'], {})
+                if ref.get('revision') == timing.get('backup_revision') and 'archive_bytes' in ref:
+                    st.json({key: ref[key] for key in ('pack_seconds', 'archive_bytes', 'cloud_ok',
+                             'cloud_put_seconds', 'cloud_readback_seconds', 'cloud_uploaded_bytes',
+                             'cloud_reused_bytes') if key in ref})
+                elif not state.get('_slate_cloud_config'):
+                    st.caption('S3 is unconfigured in this deployment.')
         config = state.get('_slate_cloud_config')
         if state.get('_slate_backup_owner') and state.get('_slate_show_storage_details', False):
             with st.expander('Cloud storage connection', expanded=not bool(config)):
@@ -258,7 +271,9 @@ def begin(st):
 
 
 def save_job(owner, payload, previous, revision, config=None):
+    started = perf_counter()
     raw = pack(payload)
+    pack_seconds = perf_counter() - started
     if previous and digest(raw) == previous['digest']:
         reference = {**previous, 'revision':revision}
     else:
@@ -272,7 +287,7 @@ def save_job(owner, payload, previous, revision, config=None):
             reference['cloud_error'] = 'Cloud backup failed; using browser recovery. Test the storage connection.'
     if not reference.get('cloud_ok'):
         stage_backup(owner, reference)
-    return reference
+    return {**reference, 'pack_seconds': pack_seconds, 'archive_bytes': len(raw)}
 
 
 def promote_job(owner, reference, revision, config):
@@ -333,8 +348,11 @@ def schedule(st):
     current = state.get('_slate_active')
     if current:
         try:
+            mark = perf_counter()
             view = checkpoint(st, copy=False)
             signature = fingerprint(view)
+            fingerprint_seconds = perf_counter() - mark
+            copy_seconds = 0.0
             signatures = state.setdefault('_slate_backup_signatures', {})
             if current['id'] not in signatures and current.get('_session_checkpoint') is not None:
                 signatures[current['id']] = fingerprint(current['_session_checkpoint'])
@@ -342,8 +360,17 @@ def schedule(st):
                         and current['id'] in state.get('_slate_backup_refs', {})):
                     state.setdefault('_slate_backup_captured', {})[current['id']] = current['_session_checkpoint']
             if signatures.get(current['id']) != signature:
+                mark = perf_counter()
                 current['_session_checkpoint'] = checkpoint(st)
+                copy_seconds = perf_counter() - mark
                 signatures[current['id']] = signature
+            timing = state.get('_slate_nfl_build_telemetry')
+            if timing and timing['slate_id'] == current['id'] and 'fingerprint_seconds' not in timing:
+                timing.update(fingerprint_seconds=fingerprint_seconds, copy_seconds=copy_seconds)
+                timing['frames'] = {key: {'shape': frame.shape, 'shallow_bytes': int(frame.memory_usage().sum())}
+                                    for key in ('simulation_df', 'classic_lineups', 'classic_contest_comparison_df',
+                                                'classic_contest_field_df')
+                                    if (frame := view['values'].get(key)) is not None}
         except Exception as exc:
             state['_slate_backup_error'] = 'Changes are not saved: '+str(exc)
             return
@@ -361,6 +388,9 @@ def schedule(st):
         state['_slate_backup_revision'] = revision
         clean = {k:v for k,v in row.items() if not k.startswith('_') and k != 'snapshot'}
         state.setdefault('_slate_backup_queue', {})[sid] = (dict(record=clean, checkpoint=cp),revision)
+        timing = state.get('_slate_nfl_build_telemetry')
+        if timing and timing['slate_id'] == sid and 'backup_revision' not in timing:
+            timing['backup_revision'] = revision
     advance(state)
     # Reuse this run's detached capture if the tab event selects another slate.
     # The caller must not substitute a checkpoint from an earlier run.

@@ -530,13 +530,25 @@ def finish_workspaces(st,host,tabs_host=None):
             st.rerun()
 
 
-def workspace_stop(st,host,tabs_host=None):
+def workspace_stop(st,host,tabs_host=None,*,build_script_started=None):
     finish_workspaces(st,host,tabs_host)
+    if build_script_started is not None:
+        timing = st.session_state.get('_slate_nfl_build_telemetry')
+        active = st.session_state.get('_slate_active') or {}
+        if timing and timing['slate_id'] == active.get('id'):
+            timing.setdefault('rerun_seconds', perf_counter() - build_script_started)
+            with tabs_host if tabs_host is not None else host:
+                st.caption(f"NFL post-build server rerun: {timing['rerun_seconds']:.2f}s")
     st.stop()
 
 
-def workspace_rerun(st,host,tabs_host=None):
+def workspace_rerun(st,host,tabs_host=None,*,build_telemetry=None):
+    if build_telemetry is not None:
+        st.session_state['_slate_nfl_build_telemetry'] = build_telemetry
+    started = perf_counter()
     finish_workspaces(st,host,tabs_host)
+    if build_telemetry is not None:
+        build_telemetry['workspace_finish_seconds'] = perf_counter() - started
     st.rerun()
 
 

@@ -39,12 +39,15 @@ def save(config, owner, raw, reference):
                             {info.header_offset for info in bundle.infolist()})
     parts = []
     uploaded = reused = 0
+    put_seconds = 0.0
     for start, end in zip(boundaries, boundaries[1:]):
         part = memoryview(raw)[start:end]
         hashed = digest(part)
         key = 'workspaces/parts/'+hashed
         if not available(backup, owner, key, hashed):
+            mark = time.perf_counter()
             backup.put(owner, key, bytes(part))
+            put_seconds += time.perf_counter() - mark
             uploaded += len(part)
         else:
             reused += len(part)
@@ -52,12 +55,16 @@ def save(config, owner, raw, reference):
     index = json.dumps(dict(schema=1, digest=reference['digest'], bytes=len(raw), parts=parts),
                        separators=(',', ':')).encode()
     key = 'workspaces/index/'+digest(index)+'.json'
+    mark = time.perf_counter()
     backup.put(owner, key, index)
+    put_seconds += time.perf_counter() - mark
+    mark = time.perf_counter()
     # A read-back proves this identity can both write and read this exact index.
     if backup.get(owner, key) != index:
         raise ValueError('Cloud workspace read-back failed')
     return dict(reference, cloud_ok=True, cloud_key=key, cloud_digest=digest(index),
-                cloud_uploaded_bytes=uploaded+len(index), cloud_reused_bytes=reused)
+                cloud_uploaded_bytes=uploaded+len(index), cloud_reused_bytes=reused,
+                cloud_put_seconds=put_seconds, cloud_readback_seconds=time.perf_counter()-mark)
 
 
 def restore(config, owner, reference, progress=None):

@@ -1,3 +1,7 @@
+from time import perf_counter
+
+script_started = perf_counter()
+
 from simmah_build_progress import ui_progress
 from simmah_opponent_diagnostics import numeric_column, with_roster_projections
 from simmah_session_state import safe_state_items
@@ -12,7 +16,6 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from zoneinfo import ZoneInfo
-from time import perf_counter
 
 # Lower defaults keep the simulator responsive while retaining useful variation.
 SIMULATION_COUNT = 10000
@@ -7511,6 +7514,7 @@ else:
             classic_build_timings = {}
             if _classic_sim_button or _classic_build_button:
                 classic_build_started = perf_counter()
+                classic_build_timings["Script before build handler"] = classic_build_started - script_started
                 classic_workflow_status = st.empty()
                 classic_workflow_status.info(
                     f"Step 1 of 4: Running {SIMULATION_COUNT:,} player simulations for DraftKings Classic..."
@@ -7660,11 +7664,13 @@ else:
                         st.session_state["classic_contest_comparison_df"] = user_lineups
                         st.session_state["classic_field_context"] = classic_contest_name
                         from simmah_diagnostic_packages import capture_nfl_build
-                        capture_nfl_build(st, selected_format, pool, contest_field_df,
+                        classic_diagnostics_started = perf_counter()
+                        classic_diagnostics = capture_nfl_build(st, selected_format, pool, contest_field_df,
                             st.session_state.get('classic_lineups'), user_lineups, simulation_cache_root(),
                             extras={'evaluation_outcomes':sim_df,'contest_rules':classic_contest,
                                 'roster_slots':contest_slots,'salary_min':MIN_LINEUP_SALARY,
                                 'salary_max':MAX_LINEUP_SALARY})
+                        classic_build_timings["Diagnostics capture"] = perf_counter() - classic_diagnostics_started
                     if not contest_field_df.empty:
                         st.success(f"Compared your {len(user_lineups)} lineups against {len(contest_field_df):,} simulated opponent lineups.")
                         st.write("### Your Lineups vs. Contest Field")
@@ -7854,6 +7860,7 @@ else:
                             workspace_download_button(st,"DOWNLOAD CLASSIC PLAYER INPUTS", classic_pool.to_csv(index=False).encode("utf-8"),
                                 "DraftKings_Classic_Player_Inputs.csv", "text/csv", key="classic_player_diagnostics", on_click="ignore")
 
+                    classic_ui_started = perf_counter()
                     if not _classic_multi_contest and st.session_state.get("classic_field_context") == classic_contest_name and isinstance(_classic_portfolio_field, pd.DataFrame) and not _classic_portfolio_field.empty and isinstance(_classic_portfolio_outcomes, pd.DataFrame):
                         with st.spinner("Evaluating the selected portfolio together..."):
                             classic_joint_started = perf_counter()
@@ -7861,6 +7868,7 @@ else:
                                 _classic_portfolio_outcomes, classic_export_portfolio, _classic_portfolio_field,
                                 [slot for slot,_ in roster_slots], int(classic_contest["field"]),
                                 classic_contest["payouts"], float(classic_contest["entry"]))
+                        classic_ui_started = perf_counter()
                         st.session_state["classic_contest_entries_df"] = classic_export_portfolio
                         if build_clicked:
                             classic_build_timings["Assigned portfolio scoring"] = perf_counter() - classic_joint_started
@@ -7958,9 +7966,13 @@ else:
             # Re-render the player table, which appears before the SIM button.
             if classic_run_all:
                 classic_build_timings["Server pipeline through UI assembly"] = perf_counter() - classic_build_started
+                if "classic_ui_started" in locals():
+                    classic_build_timings["Post-scoring UI and export assembly"] = perf_counter() - classic_ui_started
                 st.session_state["dk_classic_build_timings"] = classic_build_timings
-                workspace_rerun(st, _loaded_slate_tabs, _pinned_slates)
-            workspace_stop(st, _loaded_slate_tabs, _pinned_slates)
+                active = st.session_state.get("_slate_active") or {}
+                telemetry = {"slate_id": active.get("id"), "diagnostics": locals().get("classic_diagnostics")}
+                workspace_rerun(st, _loaded_slate_tabs, _pinned_slates, build_telemetry=telemetry)
+            workspace_stop(st, _loaded_slate_tabs, _pinned_slates, build_script_started=script_started)
 
 
 # ============================================

@@ -178,6 +178,12 @@ def capture_nfl_build(st, format_label, pool, field, candidates, results, cache_
         st.session_state.pop('diagnostic_package_error',None)
         st.session_state.pop('diagnostic_package_error_version',None)
         st.session_state.pop('diagnostic_package_previous_error',None)
+        files = package[2]['files']
+        return {
+            'zip_bytes': len(package[1]),
+            'evaluation_npz': 'solver/evaluation_outcomes.npz' in files,
+            'prepared_outcomes_npz': 'solver/cache/prepared/outcomes.npz' in files,
+        }
     except Exception as exc:
         st.session_state['diagnostic_package_error_version']=CAPTURE_VERSION
         st.session_state['diagnostic_package_error']='Calibration/solver package capture failed ['+CAPTURE_VERSION+']: '+str(exc)
