@@ -261,59 +261,79 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
         from simmah_nba_cash import render_cash_check
         render_cash_check(st,pool,engine,ownership,salary_min,excluded,day)
     identity=input_identity(pool,markets,contest,salary_min,correlation,pool.iloc[excluded]['Player ID'],salary_aware)
+    identity=hashlib.sha256((identity+str(diversity)+metric).encode()).hexdigest()
     saved=st.session_state.get('nba_build_result')
-    if clicked:
-        st.session_state.pop('nba_selection_failure_package',None)
-        build_started_clock=perf_counter()
-        build_started_at=datetime.now(timezone.utc).isoformat()
-        with tabs[2]:
-            message=st.empty();bar=st.progress(0)
-            stages={'Simulating candidate scenarios':.05,'Building independent opponent support':.35,
-                    'Scoring independent evaluation scenarios':.65,'Selecting portfolio':.95}
-            def progress(text):
-                message.write(text)
-                if text in stages:bar.progress(stages[text])
+    from simmah_nba_background import peek, start, release, compute_nba
+    from uuid import uuid4
+    # Ordinary slate data survives workspace snapshots; never share jobs by slate alone.
+    workspace_id=st.session_state.setdefault('nba_build_workspace_id',uuid4().hex)
+    job_key=(workspace_id,hashlib.sha256(upload.getvalue()).hexdigest(),str(cid))
+    job=peek(job_key)
+    if job and job['status']=='ready':
+        replacement=job['result']
+        try:
+            if replacement['identity']!=identity:
+                raise ValueError('Inputs changed during the build. Replacement was not promoted; previous portfolio remains active.')
+            validation_pool=pool.copy(deep=True)
+            if len(excluded):validation_pool.loc[validation_pool['Player ID'].isin(pool.iloc[excluded]['Player ID']),'Eligible']=False
+            export_portfolio(upload.getvalue(),cid,validation_pool,replacement['result'],salary_min=salary_min)
+            built=replacement['result']
+            from simmah_nba_diagnostics import make_package,retain_package,package_reference
             try:
-                built=run_pipeline(pool,engine,ownership['weights'],
-                    ownership['source'],
-                    payout_vector(contest),selected['entry_fee'],count,diversity=diversity,
-                    salary_min=salary_min,correlation=correlation,ownership_mode=ownership['mode'],progress=progress,
-                    excluded_indices=excluded,capture_diagnostics=True,salary_aware=salary_aware)
-                progress('Validating entry export')
-                reports=engine.last_report
-                # A completed portfolio must serialize and pass site legality
-                # before replacing the last successful build or showing success.
-                export_portfolio(upload.getvalue(),cid,pool,built)
-                from simmah_nba_diagnostics import make_package,retain_package,package_reference
-                try:
-                    progress('Saving build diagnostic archive')
-                    package=make_package(pool,built,upload.getvalue(),dict(contest,id=str(cid),date=day),markets,
-                        {'input_identity':identity,'rank_metric_at_build':'Top 1%'},started_at=build_started_at,
-                        engine_metadata={'rates':vars(engine.rates),'max_overtimes':engine.max_overtimes,
-                            'rotation_reconciliation':engine.rotation_reconciliation,
-                            'simulation_identity':engine.identity})
-                    built['diagnostic_package']=package_reference(package)
-                    retain_package(st,package)
-                    # Exact outcome arrays now live in the compressed package.
-                    built.pop('diagnostics',None)
-                except Exception as exc:
-                    st.warning('Lineups built, but diagnostic package capture failed: '+str(exc))
-                built['build_total_seconds']=perf_counter()-build_started_clock
-                saved={'identity':identity,'result':built,'engine_reports':reports,'pool':pool.copy(),'contest_id':cid,
-                       'rotation_reconciliation':engine.rotation_reconciliation}
-                st.session_state['nba_build_result']=saved
-                bar.progress(1.);message.success('NBA build complete')
+                package=make_package(replacement['pool'],built,upload.getvalue(),dict(contest,id=str(cid),date=day),markets,
+                    {'input_identity':identity,'rank_metric_at_build':'Top 1%'},started_at=replacement['started_at'],
+                    engine_metadata=replacement['engine_metadata'])
+                built['diagnostic_package']=package_reference(package)
+                retain_package(st,package)
+                built.pop('diagnostics',None)
             except Exception as exc:
-                st.error(f'NBA build stopped: {exc}')
-                if isinstance(exc,NBASelectionFailure):
-                    try:
-                        from simmah_nba_diagnostics import make_selection_failure_package,retain_package
-                        failed=make_selection_failure_package(pool,exc.candidates,exc.report,
-                            dict(contest,id=str(cid)),exc.settings,str(exc))
-                        st.session_state['nba_selection_failure_package']=failed
-                        retain_package(st,failed)
-                    except Exception as capture_error:
-                        st.warning('Could not preserve the failed portfolio: '+str(capture_error))
+                with tabs[2]:st.warning('Lineups validated, but diagnostic archive failed: '+str(exc))
+            saved=replacement
+            st.session_state['nba_build_result']=saved
+            with tabs[2]:st.success('Replacement validated and promoted. NBA build complete.')
+        except (ValueError,KeyError,IndexError) as exc:
+            with tabs[2]:st.error('Previous portfolio preserved. '+str(exc))
+        finally:
+            release(job_key,job['id'])
+            job=None
+    elif job and job['status']=='failed':
+        with tabs[2]:st.error('Replacement build failed; previous portfolio preserved. '+job['error'])
+        failure=job.get('failure')
+        if isinstance(failure,NBASelectionFailure):
+            try:
+                from simmah_nba_diagnostics import make_selection_failure_package,retain_package
+                failed=make_selection_failure_package(pool,failure.candidates,failure.report,
+                    dict(contest,id=str(cid)),failure.settings,str(failure))
+                st.session_state['nba_selection_failure_package']=failed
+                retain_package(st,failed)
+            except Exception as exc:
+                with tabs[2]:st.warning('Could not preserve failed-build diagnostics: '+str(exc))
+        release(job_key,job['id']);job=None
+    if clicked:
+        if not hasattr(st,'fragment'):
+            with tabs[2]:st.error('Background builds require Streamlit fragment support. Update Streamlit before building.')
+        else:
+            try:
+                job=start(job_key,{'pool':pool,'markets':markets,'rates':vars(engine.rates),
+                    'platform':platform,'weights':ownership['weights'],'source':ownership['source'],
+                    'payouts':payout_vector(contest),'entry_fee':selected['entry_fee'],'count':count,
+                    'entries':upload.getvalue(),'cid':cid,'identity':identity,
+                    'started_at':datetime.now(timezone.utc).isoformat(),
+                    'kwargs':dict(diversity=diversity,salary_min=salary_min,correlation=correlation,
+                        ownership_mode=ownership['mode'],excluded_indices=excluded,
+                        capture_diagnostics=True,salary_aware=salary_aware)},compute_nba)
+            except (ValueError,RuntimeError) as exc:
+                with tabs[2]:st.error(str(exc))
+    if job and job['status']=='running':
+        with tabs[2]:
+            @st.fragment(run_every=2)
+            def replacement_status():
+                from time import time
+                current=peek(job_key)
+                if current and current['status']!='running':st.rerun()
+                if current:
+                    st.info(f"Replacement running: {current['stage']} · {time()-current['started']:.0f}s. Last completed portfolio remains in Lineups.")
+            replacement_status()
     failed=st.session_state.get('nba_selection_failure_package')
     if failed and failed[2]['contest_id']==str(cid):
         with tabs[2]:
@@ -417,3 +437,4 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
                     report['Field minus target (pp)']=report['Estimated Field Own %']-report['Adjusted field target %']
                 st.dataframe(report,hide_index=True,width="stretch",key="nba_ownership_table",
                              column_config={'Name':st.column_config.TextColumn('Player',pinned=True)})
+
