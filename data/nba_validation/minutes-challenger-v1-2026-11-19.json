@@ -1,0 +1,99 @@
+{
+  "provenance": "Retrospective Replay",
+  "live_enabled": false,
+  "split": "2026-11-14",
+  "training_player_games": 1126,
+  "holdout_games": 40,
+  "holdout_dates": [
+    "2026-11-14",
+    "2026-11-15",
+    "2026-11-16",
+    "2026-11-17",
+    "2026-11-18",
+    "2026-11-19"
+  ],
+  "baseline": {
+    "n": 979,
+    "mae": 5.616496424923391,
+    "rmse": 7.839274491230639,
+    "bias_prediction_minus_actual": -0.09841675178753828
+  },
+  "challenger": {
+    "n": 979,
+    "mae": 5.651537265894414,
+    "rmse": 7.580923674454112,
+    "bias_prediction_minus_actual": 0.15401912653262567
+  },
+  "features": [
+    "last_minutes",
+    "ewm_minutes",
+    "trend",
+    "prior_start_share",
+    "days_since_observed_game",
+    "prior_minute_sd",
+    "prior_dnp_share"
+  ],
+  "ridge_alpha": 10,
+  "subgroups": {
+    "actual_starter": {
+      "baseline": {
+        "n": 391,
+        "mae": 4.8204177323103155,
+        "rmse": 6.460151148071148,
+        "bias_prediction_minus_actual": -1.4118073316283035
+      },
+      "challenger": {
+        "n": 391,
+        "mae": 4.911420638852918,
+        "rmse": 6.473476711435342,
+        "bias_prediction_minus_actual": -1.9113804384053357
+      }
+    },
+    "actual_bench": {
+      "baseline": {
+        "n": 588,
+        "mae": 6.145861678004534,
+        "rmse": 8.635264932445024,
+        "bias_prediction_minus_actual": 0.7749433106575964
+      },
+      "challenger": {
+        "n": 588,
+        "mae": 6.143689648842076,
+        "rmse": 8.235306239859096,
+        "bias_prediction_minus_actual": 1.5274395855304879
+      }
+    },
+    "verified_dnp": {
+      "baseline": {
+        "n": 115,
+        "mae": 8.789855072463766,
+        "rmse": 12.961622840781422,
+        "bias_prediction_minus_actual": 8.789855072463766
+      },
+      "challenger": {
+        "n": 115,
+        "mae": 10.201555683369447,
+        "rmse": 13.000548437402838,
+        "bias_prediction_minus_actual": 10.201555683369447
+      }
+    }
+  },
+  "limitations": [
+    "No current-game injury, lineup or betting snapshots. Prior starter flags only.",
+    "Days since last observed player game is not verified team rest; archive gaps can inflate it.",
+    "Observed box rosters define evaluation matching; not a complete pregame player universe.",
+    "Rounded full-game box minutes include overtime. Predictions bounded at 48.",
+    "Small one-window holdout; no provider-edge, lineup or ROI claim. No holdout tuning.",
+    "Earlier same-sample descriptive analysis means this is not a fully untouched external validation set."
+  ],
+  "source_coverage": {
+    "archived_games": 134,
+    "player_games": 3507,
+    "issues": [],
+    "source_sha256": "b71e64a8670600500907e052535045c54b85c9be7a8b68a8e93163a6e2b9d669"
+  },
+  "warmup_skips": {
+    "fewer than three prior observed player-team games": 1363,
+    "no positive historical minutes": 39
+  }
+}
