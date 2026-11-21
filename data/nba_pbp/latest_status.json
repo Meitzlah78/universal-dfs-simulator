@@ -1,9 +1,9 @@
 {
-  "checked_at": "2026-11-20T11:29:53.268950-05:00",
-  "through_date": "2026-11-19",
-  "lookback_days": 50,
-  "downloaded": 3,
-  "already_archived": 277,
+  "checked_at": "2026-11-21T10:46:24.510979-05:00",
+  "through_date": "2026-11-20",
+  "lookback_days": 51,
+  "downloaded": 8,
+  "already_archived": 280,
   "failures": [
     {
       "date": "2026-10-05",
@@ -68,6 +68,11 @@
     {
       "date": "2026-11-19",
       "event_id": "401910021",
+      "reason": "NBA play-by-play final score does not match the official box score"
+    },
+    {
+      "date": "2026-11-20",
+      "event_id": "401909307",
       "reason": "NBA play-by-play final score does not match the official box score"
     }
   ]
