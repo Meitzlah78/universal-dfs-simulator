@@ -65,6 +65,12 @@ def render_panel(st,active,format_name):
     except (OSError,ValueError,KeyError,TypeError) as exc:
         st.error('Saved payscales could not load: '+str(exc));return active
     profiles.update(st.session_state.get('saved_payscales',{}))
+    # The live manual save used the display name as its key before the catalog deploy.
+    canonical_dime = 'DraftKings:6000-nfl-dime-package-197897017'
+    manual_dime = 'DraftKings:NFL $6K Dime Package [Just $0.10!]'
+    if canonical_dime in profiles and manual_dime in profiles:
+        if profiles[canonical_dime]['payouts'] == profiles[manual_dime]['payouts']:
+            del profiles[manual_dime]
     profiles={pid:dict(p, name=payscale_name(p['name'])) for pid,p in profiles.items()}
     choices={pid:p for pid,p in profiles.items() if p['site']==site}
     st.write('### Saved payscales')
@@ -73,6 +79,8 @@ def render_panel(st,active,format_name):
     contest_id=str(active.get('id') or 'unselected')
     choice_key=key+'_choice_'+contest_id
     options=['']+list(choices)
+    if canonical_dime in choices and manual_dime not in choices and st.session_state.get(choice_key)==manual_dime:
+        st.session_state[choice_key]=canonical_dime
     exact=[]
     for pid,profile in choices.items():
         if profile['name']!=payscale_name(active.get('name','')):continue
