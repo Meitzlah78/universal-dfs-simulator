@@ -15,6 +15,13 @@ _POOL = ThreadPoolExecutor(max_workers=1, thread_name_prefix="export-audit")
 
 HISTORY='simmah_export_history_v1'
 
+# These build tables remain in the workspace and original build diagnostics.
+# The export audit only needs the assigned entries and their click-time inputs.
+_DK_SHOWDOWN_BUILD_TABLES = frozenset({
+    'simulation_df', 'candidates_df', 'contest_field_df',
+    'contest_field_sample_df', 'contest_results_df',
+})
+
 
 def make_checkpoint(data,filename,context,state, metadata=None):
     from simmah_slate_workspaces import snapshot,encode
@@ -116,6 +123,12 @@ def queue_export(st, data, filename, context, original_callback=None,
         view = checkpoint(st, copy=False)
         view['values'] = {k:v for k,v in view['values'].items()
                           if k != HISTORY and not str(k).startswith('export_history_')}
+        if context.get('format') == 'DraftKings Showdown':
+            omitted = sorted(_DK_SHOWDOWN_BUILD_TABLES.intersection(view['values']))
+            if omitted:
+                context = {**context, 'omitted_build_tables': omitted}
+                for key in omitted:
+                    del view['values'][key]
         frozen, frozen_context = deepcopy((view, context))
         frozen_state = frozen['values']
         frozen_state['_slate_restored_uploads'] = frozen.get('uploads', {})
@@ -194,11 +207,12 @@ def latest_player_snapshot(state,format_label,contest_id):
 
 def render_history(st,context,key):
     # Called inside the download fragment: an export click arms this one-shot
-    # component, and each completed-job event refreshes the view once.
+    # component. DK Showdown can refresh its history within this fragment.
     if finish_exports(st):
         from simmah_workspace_persistence import schedule
         schedule(st)
-        st.rerun(scope='app')
+        if context.get('format') != 'DraftKings Showdown':
+            st.rerun(scope='app')
     pending=any(job['format']==context.get('format') and
                 str(job['contest_id'])==str(context.get('contest_id',''))
                 for job in st.session_state.get('_slate_export_jobs',[]))
