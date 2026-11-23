@@ -32,11 +32,32 @@ def digest(raw):
 
 def pack(payload):
     """No pickle, no 16 MiB omissions, and identical payloads have identical bytes."""
-    files = {}
+    out = io.BytesIO()
+    files = set()
+    expanded_size = 0
+
+    def write_member(bundle, name, raw):
+        method = zipfile.ZIP_DEFLATED
+        if len(raw) >= 1024 * 1024:
+            step = max(1, (len(raw) - 16384) // 7)
+            sample = b''.join(raw[i:i+16384] for i in range(0, len(raw)-16383, step))
+            if len(zlib.compress(sample, 1)) >= len(sample) * .90:
+                method = zipfile.ZIP_STORED
+        info = zipfile.ZipInfo(name, date_time=(1980,1,1,0,0,0))
+        info.compress_type = method
+        bundle.writestr(info, raw, compresslevel=1)
+
     def file(raw, suffix):
+        nonlocal expanded_size
         name = digest(raw) + suffix
-        files.setdefault(name, raw)
+        if name not in files:
+            expanded_size += len(raw)
+            if expanded_size > MAX_EXPANDED:
+                raise ValueError('Workspace expands beyond the supported limit')
+            write_member(bundle, name, raw)
+            files.add(name)
         return name
+
     def enc(value):
         if value is pd.NA: return {'t':'na'}
         if value is pd.NaT: return {'t':'nat'}
@@ -71,23 +92,12 @@ def pack(payload):
             if isinstance(value,set): items.sort(key=lambda v:json.dumps(v,sort_keys=True,separators=(',',':')))
             return dict(t=type(value).__name__,v=items)
         raise TypeError('Unsupported workspace value: '+type(value).__name__)
-    tree=enc(payload)
-    manifest=json.dumps(dict(schema=1,payload=tree),separators=(',',':'),allow_nan=False).encode()
-    if len(manifest) + sum(map(len, files.values())) > MAX_EXPANDED:
-        raise ValueError('Workspace expands beyond the supported limit')
-    out=io.BytesIO()
-    with zipfile.ZipFile(out,'w',compression=zipfile.ZIP_DEFLATED,compresslevel=1) as bundle:
-        for name,raw in [('manifest.json',manifest),*sorted(files.items())]:
-            # Random simulation matrices and existing ZIPs barely compress. Sample
-            # across the attachment before spending CPU deflating the entire file.
-            method = zipfile.ZIP_DEFLATED
-            if len(raw) >= 1024 * 1024:
-                step = max(1, (len(raw) - 16384) // 7)
-                sample = b''.join(raw[i:i+16384] for i in range(0, len(raw)-16383, step))
-                if len(zlib.compress(sample, 1)) >= len(sample) * .90:
-                    method = zipfile.ZIP_STORED
-            info=zipfile.ZipInfo(name,date_time=(1980,1,1,0,0,0));info.compress_type=method
-            bundle.writestr(info,raw,compresslevel=1)
+    with zipfile.ZipFile(out, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=1) as bundle:
+        tree = enc(payload)
+        manifest = json.dumps(dict(schema=1,payload=tree),separators=(',',':'),allow_nan=False).encode()
+        if expanded_size + len(manifest) > MAX_EXPANDED:
+            raise ValueError('Workspace expands beyond the supported limit')
+        write_member(bundle, 'manifest.json', manifest)
     raw=out.getvalue()
     if len(raw)>MAX_BYTES: raise ValueError(f'Workspace exceeds the {MAX_BYTES // (1024 * 1024)} MiB backup limit')
     return raw
