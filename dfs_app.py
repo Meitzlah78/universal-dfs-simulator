@@ -9881,12 +9881,6 @@ with _tab_build:
                 else:
                     st.info("Run CONTEST SIM and build your final portfolio first.")
 
-    # Player Pool appears above the SIM handler, so refresh it after a completed
-    # Showdown simulation/build to show the newly generated player attributes.
-    if build_clicked:
-        workspace_rerun(st, _loaded_slate_tabs, _pinned_slates)
-
-
     # ============================================
     # POST-GAME LEARNING
     # ============================================
