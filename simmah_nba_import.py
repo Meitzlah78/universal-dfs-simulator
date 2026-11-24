@@ -154,8 +154,8 @@ def render_setup(st, uploaded_file, tabs, controls, game_header=None):
             with tabs[1]:st.warning(str(exc))
             st.session_state.get('_slate_restored_uploads',{}).pop('nba_projection_upload_'+platform,None)
         except ValueError as exc:
-            with tabs[1]:st.error(str(exc))
-            return
+            with tabs[1]:
+                st.warning(f'Optional projection CSV ignored: {exc}. The roster uses the available projections. Upload SimLabs or DraftDashboard files in the section below.')
     try:
         pool = apply_rotowire_projections(pool, rw_values, rw_details, uploaded)
         pool.attrs['rotowire_provider_evidence']={**_rw.get('evidence',{}),
