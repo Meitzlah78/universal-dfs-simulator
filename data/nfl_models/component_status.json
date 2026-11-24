@@ -5,146 +5,165 @@
     "completion_rate": {
       "accepted": false,
       "baseline": 0.64,
-      "baseline_loss": 0.6460161774935361,
-      "candidate_loss": 0.6457272023470555,
-      "familywise_95pct_upper_loss_change": 0.0033715646053534263,
-      "fitted": 0.6585677749360613,
+      "baseline_loss": 0.6476292796151616,
+      "candidate_loss": 0.6475413778042464,
+      "familywise_95pct_upper_loss_change": 0.005501171875608232,
+      "fitted": 0.6578042631217053,
       "game_loss_changes": {
-        "2026_10_BUF_NYJ": 0.005381611153123966,
-        "2026_10_CAR_NO": -0.0005650417793704454,
-        "2026_10_HOU_CLE": 0.0046662243341771825,
-        "2026_10_JAX_TEN": -0.007923576092215834,
-        "2026_10_KC_ATL": 0.005293349142994175,
-        "2026_10_LAC_BAL": -0.003505694328406306,
-        "2026_10_LA_ARI": -0.0047297708366227376,
-        "2026_10_MIA_IND": 0.00833089454821534,
-        "2026_10_MIN_GB": -0.0018832653358349383,
-        "2026_10_NE_DET": 0.001446983648917155,
-        "2026_10_PIT_CIN": -0.0032513676214626086,
-        "2026_10_SEA_LV": -0.002005535346869314,
-        "2026_10_SF_DAL": -0.001414563626869647,
-        "2026_10_WAS_NYG": -0.0038858999105039205
+        "2026_11_ARI_KC": 0.00047517828113574634,
+        "2026_11_BAL_CAR": -0.004592361952209356,
+        "2026_11_CIN_WAS": -0.0038840593702557102,
+        "2026_11_IND_HOU": 0.002956459751323526,
+        "2026_11_JAX_NYG": 0.010710464345660142,
+        "2026_11_LV_DEN": 0.009407791573811664,
+        "2026_11_MIA_BUF": 0.00958409315195663,
+        "2026_11_MIN_SF": -0.007049577481716196,
+        "2026_11_NO_CHI": 0.0010954986486828577,
+        "2026_11_NYJ_LAC": -0.008829627232068482,
+        "2026_11_PIT_PHI": 0.0014199739178609727,
+        "2026_11_TB_DET": -0.0013857828215051438,
+        "2026_11_TEN_DAL": -0.011050774354575132
       },
-      "games": 14,
+      "games": 13,
       "reason": "improvement not established",
-      "relative_gain": 0.00044731874610594877,
-      "selection_count": 906,
-      "training_count": 7720,
-      "validation_count": 886
+      "relative_gain": 0.0001357285930115783,
+      "selection_count": 886,
+      "training_count": 8626,
+      "validation_count": 853
     },
     "defensive_return_td_rate": {
       "accepted": false,
       "reason": "missing or insufficient observed events",
-      "selection_count": 49,
-      "training_count": 301,
-      "validation_count": 35
+      "selection_count": 35,
+      "training_count": 350,
+      "validation_count": 23
     },
     "extra_point_rate": {
       "accepted": false,
       "baseline": 0.9468,
-      "fitted": 0.9444648318042813,
-      "reason": "rejected on selection games"
+      "baseline_loss": 0.12848867009339104,
+      "candidate_loss": 0.12724126596988386,
+      "familywise_95pct_upper_loss_change": 0.0036015358865413094,
+      "fitted": 0.9491316526610644,
+      "game_loss_changes": {
+        "2026_11_ARI_KC": -0.0024596391260192432,
+        "2026_11_BAL_CAR": -0.0024596391260192293,
+        "2026_11_CIN_WAS": -0.00245963912601925,
+        "2026_11_IND_HOU": -0.00245963912601925,
+        "2026_11_JAX_NYG": -0.0024596391260192432,
+        "2026_11_LV_DEN": -0.0024596391260192432,
+        "2026_11_MIA_BUF": -0.0024596391260192432,
+        "2026_11_MIN_SF": -0.0024596391260192363,
+        "2026_11_NO_CHI": 0.01329941590663819,
+        "2026_11_NYJ_LAC": -0.0024596391260192363,
+        "2026_11_PIT_PHI": -0.0024596391260192432,
+        "2026_11_TB_DET": -0.0024596391260192293,
+        "2026_11_TEN_DAL": -0.0024596391260192432
+      },
+      "games": 13,
+      "reason": "improvement not established",
+      "relative_gain": 0.009708281069455107,
+      "selection_count": 73,
+      "training_count": 614,
+      "validation_count": 63
     },
     "field_goal_logit_offset": {
       "accepted": false,
       "baseline": 0.0,
-      "fitted": -0.39941371774808343,
-      "reason": "rejected on selection games"
+      "baseline_loss": 0.3343043123404757,
+      "candidate_loss": 0.3303441693285836,
+      "familywise_95pct_upper_loss_change": 0.03546466122351489,
+      "fitted": -0.3462058562725274,
+      "game_loss_changes": {
+        "2026_11_ARI_KC": 0.03654808171276647,
+        "2026_11_BAL_CAR": 0.019104791991925836,
+        "2026_11_CIN_WAS": 0.03523430792009111,
+        "2026_11_IND_HOU": -0.10628167092572016,
+        "2026_11_JAX_NYG": -0.00353056936958851,
+        "2026_11_LV_DEN": 0.020440800879617305,
+        "2026_11_MIA_BUF": 0.011673325537224444,
+        "2026_11_MIN_SF": -0.11983576156455344,
+        "2026_11_NO_CHI": -0.011703782629289394,
+        "2026_11_NYJ_LAC": 0.05428981575706593,
+        "2026_11_PIT_PHI": 0.05070525731949968,
+        "2026_11_TB_DET": -0.07922584498464746,
+        "2026_11_TEN_DAL": 0.04109938920101058
+      },
+      "games": 13,
+      "reason": "improvement not established",
+      "relative_gain": 0.011845922609155207,
+      "selection_count": 52,
+      "training_count": 566,
+      "validation_count": 58
     },
     "fumble_loss_rate": {
       "accepted": false,
       "baseline": 0.0064,
-      "baseline_loss": 0.046905634736695546,
-      "candidate_loss": 0.04684585194395812,
-      "familywise_95pct_upper_loss_change": 0.0020496287066590247,
-      "fitted": 0.009563694001835321,
-      "game_loss_changes": {
-        "2026_10_BUF_NYJ": -0.0012115568622419054,
-        "2026_10_CAR_NO": -0.0007415782451781691,
-        "2026_10_HOU_CLE": 0.003189152006627155,
-        "2026_10_JAX_TEN": 0.003189152006627155,
-        "2026_10_KC_ATL": -0.001028193992705713,
-        "2026_10_LAC_BAL": -0.0009421257070050329,
-        "2026_10_LA_ARI": 0.0031891520066271517,
-        "2026_10_MIA_IND": -0.001259916300361319,
-        "2026_10_MIN_GB": -0.005158584404423391,
-        "2026_10_NE_DET": 0.0031891520066271483,
-        "2026_10_PIT_CIN": 0.0031891520066271543,
-        "2026_10_SEA_LV": -0.005245539992038528,
-        "2026_10_SF_DAL": -0.0004914408655178962,
-        "2026_10_WAS_NYG": -0.0007037827619877923
-      },
-      "games": 14,
-      "reason": "improvement not established",
-      "relative_gain": 0.0012745332852442488,
-      "selection_count": 1458,
-      "training_count": 11887,
-      "validation_count": 1374
+      "fitted": 0.009939754555596874,
+      "reason": "rejected on selection games"
     },
     "interception_rate": {
       "accepted": false,
       "baseline": 0.021,
-      "baseline_loss": 0.12349470253417871,
-      "candidate_loss": 0.12341686242937333,
-      "familywise_95pct_upper_loss_change": 0.00011811125321430676,
-      "fitted": 0.02129444166249374,
+      "baseline_loss": 0.08022160436915399,
+      "candidate_loss": 0.08054267192834705,
+      "familywise_95pct_upper_loss_change": 0.0009500994657415702,
+      "fitted": 0.022093935657437506,
       "game_loss_changes": {
-        "2026_10_BUF_NYJ": -0.00015805038326152654,
-        "2026_10_CAR_NO": 8.19651322324505e-05,
-        "2026_10_HOU_CLE": -6.392665169528688e-05,
-        "2026_10_JAX_TEN": -8.890812154585537e-05,
-        "2026_10_KC_ATL": 0.0001184380782143779,
-        "2026_10_LAC_BAL": 8.528085459445778e-05,
-        "2026_10_LA_ARI": -0.000669045982758909,
-        "2026_10_MIA_IND": -0.00021644988034694168,
-        "2026_10_MIN_GB": -0.0001733454896410136,
-        "2026_10_NE_DET": -0.0004104196385234793,
-        "2026_10_PIT_CIN": 0.00030080280812394555,
-        "2026_10_SEA_LV": 0.0003008028081239282,
-        "2026_10_SF_DAL": 0.00012074649251703207,
-        "2026_10_WAS_NYG": -0.0003176514933086183
+        "2026_11_ARI_KC": 0.0011180258381538466,
+        "2026_11_BAL_CAR": -0.00043119070936131765,
+        "2026_11_CIN_WAS": 0.00111802583815385,
+        "2026_11_IND_HOU": -0.0007355011026231595,
+        "2026_11_JAX_NYG": -8.892193723578079e-05,
+        "2026_11_LV_DEN": -0.00032360622689495133,
+        "2026_11_MIA_BUF": -0.0008528129343179092,
+        "2026_11_MIN_SF": 0.0003766150618430414,
+        "2026_11_NO_CHI": -0.0004788589108232766,
+        "2026_11_NYJ_LAC": 0.0011180258381538466,
+        "2026_11_PIT_PHI": 0.00111802583815385,
+        "2026_11_TB_DET": 0.0011180258381538466,
+        "2026_11_TEN_DAL": 0.0011180258381538431
       },
-      "games": 14,
+      "games": 13,
       "reason": "improvement not established",
-      "relative_gain": 0.0006303112862986592,
-      "selection_count": 933,
-      "training_count": 7888,
-      "validation_count": 909
+      "relative_gain": -0.004002258016626127,
+      "selection_count": 909,
+      "training_count": 8821,
+      "validation_count": 867
     },
     "pass_rate": {
       "accepted": false,
       "baseline": 0.58,
-      "baseline_loss": 0.6834543281210582,
-      "candidate_loss": 0.6832762925775487,
-      "familywise_95pct_upper_loss_change": 0.003670806226770903,
-      "fitted": 0.5671834625322998,
+      "baseline_loss": 0.6897644115587191,
+      "candidate_loss": 0.6884539747006568,
+      "familywise_95pct_upper_loss_change": 0.002435203548214999,
+      "fitted": 0.5654937774196437,
       "game_loss_changes": {
-        "2026_10_BUF_NYJ": -0.004206333840342191,
-        "2026_10_CAR_NO": -0.000529699893085156,
-        "2026_10_HOU_CLE": 0.0060998866588706235,
-        "2026_10_JAX_TEN": 0.0003691998093900972,
-        "2026_10_KC_ATL": 0.0026935934430288855,
-        "2026_10_LAC_BAL": -0.003856970433589235,
-        "2026_10_LA_ARI": 0.006357468153679546,
-        "2026_10_MIA_IND": -0.0049264502501799035,
-        "2026_10_MIN_GB": -0.0026092439809001222,
-        "2026_10_NE_DET": -0.002219329464434816,
-        "2026_10_PIT_CIN": 0.009244157319647117,
-        "2026_10_SEA_LV": -0.00727465593443366,
-        "2026_10_SF_DAL": -0.0008719033505735219,
-        "2026_10_WAS_NYG": -0.0007622158462110562
+        "2026_11_ARI_KC": -0.0020332034884096295,
+        "2026_11_BAL_CAR": -0.0017232777497623308,
+        "2026_11_CIN_WAS": 0.00629254731769735,
+        "2026_11_IND_HOU": 0.003639409421401729,
+        "2026_11_JAX_NYG": -0.001407275035846589,
+        "2026_11_LV_DEN": -0.005019137688134889,
+        "2026_11_MIA_BUF": 0.005002743280398292,
+        "2026_11_MIN_SF": 0.0009176020736725299,
+        "2026_11_NO_CHI": -0.004313371422745349,
+        "2026_11_NYJ_LAC": -0.01191393120386508,
+        "2026_11_PIT_PHI": 0.0007029980327937224,
+        "2026_11_TB_DET": -0.002867411269263931,
+        "2026_11_TEN_DAL": -0.004313371422745571
       },
-      "games": 14,
+      "games": 13,
       "reason": "improvement not established",
-      "relative_gain": 0.0002604936953124293,
-      "selection_count": 1107,
-      "training_count": 9962,
-      "validation_count": 1043
+      "relative_gain": 0.001899832516874831,
+      "selection_count": 1043,
+      "training_count": 11069,
+      "validation_count": 814
     },
     "receiving_shape": {
       "accepted": false,
       "baseline": 1.5,
-      "fitted": 1.7489148407876423,
+      "fitted": 1.7323179718057358,
       "reason": "rejected on selection games"
     },
     "rushing_distribution": {
@@ -162,82 +181,80 @@
     "sack_rate": {
       "accepted": false,
       "baseline": 0.065,
-      "baseline_loss": 0.28242479093350265,
-      "candidate_loss": 0.2824068106258191,
-      "familywise_95pct_upper_loss_change": 1.614789082574517e-05,
-      "fitted": 0.06506969661473586,
+      "baseline_loss": 0.2666681435394384,
+      "candidate_loss": 0.26639020736616553,
+      "familywise_95pct_upper_loss_change": 0.00041631697044222177,
+      "fitted": 0.06693531505128741,
       "game_loss_changes": {
-        "2026_10_BUF_NYJ": -1.0994624110138851e-05,
-        "2026_10_CAR_NO": -2.231953710252199e-05,
-        "2026_10_HOU_CLE": 5.494867250432911e-06,
-        "2026_10_JAX_TEN": 4.397859183735697e-05,
-        "2026_10_KC_ATL": 1.86311602154432e-05,
-        "2026_10_LAC_BAL": 9.045996996970285e-06,
-        "2026_10_LA_ARI": -8.278049311671865e-05,
-        "2026_10_MIA_IND": -3.1656092502607702e-06,
-        "2026_10_MIN_GB": -0.00010303966162389377,
-        "2026_10_NE_DET": -4.5210318683319706e-05,
-        "2026_10_PIT_CIN": 1.5763803696999812e-05,
-        "2026_10_SEA_LV": -0.00011301960429188629,
-        "2026_10_SF_DAL": -6.365441903077862e-06,
-        "2026_10_WAS_NYG": 4.225656251424792e-05
+        "2026_11_ARI_KC": 0.00037408527151738813,
+        "2026_11_BAL_CAR": -0.00010934900566805794,
+        "2026_11_CIN_WAS": -0.00031367797308590184,
+        "2026_11_IND_HOU": 0.0004748090729649046,
+        "2026_11_JAX_NYG": 0.0006759369177600505,
+        "2026_11_LV_DEN": -0.0003442635981465436,
+        "2026_11_MIA_BUF": 0.00020227239251777163,
+        "2026_11_MIN_SF": 0.0011994608667120765,
+        "2026_11_NO_CHI": -0.0013703484717512704,
+        "2026_11_NYJ_LAC": -0.0024153473522424695,
+        "2026_11_PIT_PHI": -0.0013703484717511594,
+        "2026_11_TB_DET": -0.0003442635981465436,
+        "2026_11_TEN_DAL": -0.0002721363032276991
       },
-      "games": 14,
+      "games": 13,
       "reason": "improvement not established",
-      "relative_gain": 6.366405592146165e-05,
-      "selection_count": 1017,
-      "training_count": 8437,
-      "validation_count": 985
+      "relative_gain": 0.0010422548774813674,
+      "selection_count": 985,
+      "training_count": 9454,
+      "validation_count": 935
     },
     "two_point_pass_share": {
       "accepted": false,
       "reason": "missing or insufficient observed events",
-      "selection_count": 6,
-      "training_count": 58,
-      "validation_count": 5
+      "selection_count": 5,
+      "training_count": 64,
+      "validation_count": 3
     },
     "two_point_pass_success": {
       "accepted": false,
       "reason": "missing or insufficient observed events",
-      "selection_count": 3,
-      "training_count": 48,
-      "validation_count": 4
+      "selection_count": 4,
+      "training_count": 51,
+      "validation_count": 2
     },
     "two_point_rate": {
       "accepted": false,
       "baseline": 0.097,
-      "baseline_loss": 0.19481907585144706,
-      "candidate_loss": 0.19361754560517938,
-      "familywise_95pct_upper_loss_change": 0.0005831443588474389,
-      "fitted": 0.09508426966292136,
+      "baseline_loss": 0.19785181243644095,
+      "candidate_loss": 0.1964660374086019,
+      "familywise_95pct_upper_loss_change": 0.0010853492149439016,
+      "fitted": 0.09473007712082263,
       "game_loss_changes": {
-        "2026_10_BUF_NYJ": -0.0021192702977726047,
-        "2026_10_CAR_NO": -0.0021192702977726047,
-        "2026_10_HOU_CLE": -0.0021192702977726047,
-        "2026_10_JAX_TEN": -0.0021192702977726047,
-        "2026_10_KC_ATL": -0.0021192702977726047,
-        "2026_10_LAC_BAL": -0.0021192702977726047,
-        "2026_10_LA_ARI": -0.0021192702977726047,
-        "2026_10_MIA_IND": 0.0015585132543549096,
-        "2026_10_MIN_GB": -0.0021192702977726047,
-        "2026_10_NE_DET": -0.0021192702977726047,
-        "2026_10_PIT_CIN": 0.0010331156040509493,
-        "2026_10_SEA_LV": -0.0021192702977726047,
-        "2026_10_SF_DAL": 0.0038989209693450766,
-        "2026_10_WAS_NYG": -0.0021192702977726047
+        "2026_11_ARI_KC": -0.0025106031381246924,
+        "2026_11_BAL_CAR": 0.0007631503171842691,
+        "2026_11_CIN_WAS": -0.0025106031381246924,
+        "2026_11_IND_HOU": -0.0025106031381246924,
+        "2026_11_JAX_NYG": 0.006219406076032441,
+        "2026_11_LV_DEN": -0.0025106031381246924,
+        "2026_11_MIA_BUF": -0.0025106031381246924,
+        "2026_11_MIN_SF": -0.0025106031381246924,
+        "2026_11_NO_CHI": -0.0025106031381246924,
+        "2026_11_NYJ_LAC": -0.0025106031381246924,
+        "2026_11_PIT_PHI": -0.0025106031381246924,
+        "2026_11_TB_DET": -0.0025106031381246924,
+        "2026_11_TEN_DAL": 0.00010839962612246845
       },
-      "games": 14,
+      "games": 13,
       "reason": "improvement not established",
-      "relative_gain": 0.006167415798563185,
-      "selection_count": 66,
-      "training_count": 612,
-      "validation_count": 78
+      "relative_gain": 0.0070041058041064525,
+      "selection_count": 78,
+      "training_count": 678,
+      "validation_count": 66
     },
     "two_point_run_success": {
       "accepted": false,
       "reason": "missing or insufficient observed events",
-      "selection_count": 3,
-      "training_count": 10,
+      "selection_count": 1,
+      "training_count": 13,
       "validation_count": 1
     }
   },
@@ -259,66 +276,71 @@
     "player_roles": "requires longer per-player histories and independent opportunity validation"
   },
   "schema": 1,
-  "selection_games": 15,
-  "selection_through": "2026-11-09",
+  "selection_games": 14,
+  "selection_through": "2026-11-16",
   "sources": [
     {
       "path": "2026_week_01.csv.gz",
       "rows": 2756,
-      "sha256": "758f3eefad67956640c8b4ab7154b99c6e632a8c34a07a086555b8939b7036b1"
+      "sha256": "ff602c3aab601b01ea6bf6f924c346a45175558fddb68700a2836bb4774851c6"
     },
     {
       "path": "2026_week_02.csv.gz",
       "rows": 2733,
-      "sha256": "204455eb439f4a8934f0d0a011f42fb5bdc6418619f658208b47bf81b8835a8f"
+      "sha256": "0faf03f86c3ab821411275e8a45956d8e973062287b1f6af7e516cb5c674a971"
     },
     {
       "path": "2026_week_03.csv.gz",
       "rows": 2822,
-      "sha256": "a410c1c31018846dd637e015368052d410629578262079cdb7aa91a13fdb80ae"
+      "sha256": "93d2dd52a6c0ea4966c7c5548f330ebbfe2c50afee863f125dce4efc66cdcef0"
     },
     {
       "path": "2026_week_04.csv.gz",
       "rows": 2844,
-      "sha256": "a377d263a92d0e54a3b4d6dbf28097f276a8d7bf8bc96c4e137f7e2d9f054980"
+      "sha256": "49e12f7dc1d06cf93ef66d9f94382a0ecd2d4edf36dd86e16b997d4b6f32f925"
     },
     {
       "path": "2026_week_05.csv.gz",
       "rows": 2687,
-      "sha256": "efde6961b707c2414443491bd451a58f30c4b8ed4027e43484206d8651071ecd"
+      "sha256": "5edba3137cc6348d38956721d3a27edbe43b4496eef18b63cf9ee24b5c441489"
     },
     {
       "path": "2026_week_06.csv.gz",
       "rows": 2538,
-      "sha256": "c55ddc7d0d0af9c1ba52f88cc00838df9c6fc9d9d266d2725649a0e5f97eb8f6"
+      "sha256": "84c33496f34e8e9afdf053ae7f56bb1cee83290dd90201e88cdf3ca1aea9990f"
     },
     {
       "path": "2026_week_07.csv.gz",
       "rows": 2358,
-      "sha256": "b7a3fd266048cfc1a4e23c55f03abf6451ff274cad27f34372ad2809e1497cd2"
+      "sha256": "e3d2adc5462f5c689c7b7ed4ee1e8f8164c00332dee63137749572ed873e8da3"
     },
     {
       "path": "2026_week_08.csv.gz",
       "rows": 2453,
-      "sha256": "78bba9746779ad9ba1aa98f984a508d9349bc2606dc00140caef488d49f22002"
+      "sha256": "431d4b6d42d72f91d659d05ce9b5c73a8629b2c4d948aeca232bed6dc07d6743"
     },
     {
       "path": "2026_week_09.csv.gz",
       "rows": 2631,
-      "sha256": "9377a3557a33374344a49e69493564a42c0d06e088b947f4c0adef981ca2ab17"
+      "sha256": "4d1c063a7a461a682f20a3956e184ade7ca90a81421559c7026b202ae7ffe116"
     },
     {
       "path": "2026_week_10.csv.gz",
       "rows": 2424,
-      "sha256": "423d7d2af3b02662c42052cec9244c8f3176b9c6e4d0757046c78df8f0c5d872"
+      "sha256": "924daed1ab55af01e9ab4a1e8859a6bb9cb580dd2dab3d91f93e1a642c8660c1"
+    },
+    {
+      "path": "2026_week_11.csv.gz",
+      "rows": 2221,
+      "sha256": "da6d5ea09786df604b91edc9705fe29b2472710f32c81c753cbc8f72b8fdc51d"
     }
   ],
-  "status": "already evaluated; waiting for new independent week",
-  "training_games": 121,
-  "training_through": "2026-11-02",
-  "validation_from": "2026-11-12",
-  "validation_games": 14,
+  "status": "no component passed",
+  "training_games": 136,
+  "training_through": "2026-11-09",
+  "validation_from": "2026-11-19",
+  "validation_games": 13,
   "validation_kind": "independent conditional-event components",
-  "validation_through": "2026-11-16",
-  "version": "c81c82e2a65df296"
+  "validation_through": "2026-11-23",
+  "version": "372ec1e8d9dae67a"
 }
