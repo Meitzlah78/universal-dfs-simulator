@@ -270,7 +270,16 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
             message=st.empty();bar=st.progress(0)
             stages={'Simulating candidate scenarios':.05,'Building independent opponent support':.35,
                     'Scoring independent evaluation scenarios':.65,'Selecting portfolio':.95}
+            from simmah_memory_metrics import process_memory
+            def log_build_stage(stage):
+                memory=process_memory(include_uss=False)
+                rss=memory['rss_mib']
+                rss_label=f'{rss:.1f} MiB' if rss is not None else 'unavailable'
+                elapsed=perf_counter()-build_started_clock
+                print(f'[NBA build] {platform} | {stage} | elapsed={elapsed:.1f}s | RSS={rss_label}',flush=True)
             def progress(text):
+                if text in stages or text in ('Validating entry export','Saving build diagnostic archive'):
+                    log_build_stage(text)
                 message.write(text)
                 if text in stages:bar.progress(stages[text])
             try:
@@ -302,6 +311,7 @@ def render_workspace(st,slate,upload,tabs,controls,markets):
                 saved={'identity':identity,'result':built,'engine_reports':reports,'pool':pool.copy(),'contest_id':cid,
                        'rotation_reconciliation':engine.rotation_reconciliation}
                 st.session_state['nba_build_result']=saved
+                log_build_stage('Complete')
                 bar.progress(1.);message.success('NBA build complete')
             except Exception as exc:
                 st.error(f'NBA build stopped: {exc}')
