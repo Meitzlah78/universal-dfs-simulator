@@ -52,7 +52,8 @@ def make_package(pool, built, template, contest, markets, settings, *, started_a
     if stamp.tzinfo is None:raise ValueError('Timezone-aware capture time required')
     stamp=stamp.astimezone(timezone.utc)
     source=data_view(pool)
-    rules=rules_for(source);slots=rules['slots'];field=built['field']
+    # The lightweight data view drops the platform stored in pool.attrs.
+    rules=rules_for(pool);slots=rules['slots'];field=built['field']
     frame=_rosters(pool,field['indices'],slots)
     copies=np.asarray(field['copies'])
     if copies.shape!=(len(frame),) or not np.isfinite(copies).all() or (copies<1).any() or (copies!=np.floor(copies)).any():
