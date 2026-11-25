@@ -430,6 +430,19 @@ def render(st, host):
                     st.download_button('Download last recovery backup', path.read_bytes(), on_click='ignore',
                         file_name='simmah-workspace-'+sid+'.zip', mime='application/zip',
                         key='_slate_backup_download_'+sid)
+        if config and state.get('_slate_backup_owner'):
+            with st.expander('Recover Cloud Backups (read-only)'):
+                st.caption('Lists saved indexes for this browser workspace only. No backups are changed.')
+                if st.button('List cloud backups', key='_slate_cloud_inventory'):
+                    from simmah_workspace_cloud import recovery_inventory
+                    try:
+                        rows = recovery_inventory(config, state['_slate_backup_owner'])
+                        if rows:
+                            st.dataframe(rows)
+                        else:
+                            st.info('No backup indexes found for this workspace identity.')
+                    except Exception:
+                        st.error('Cloud inventory failed. Check S3 list permissions and configuration.')
         if not state.get('_slate_records') or state.get('_slate_backup_error'):
             with st.expander('Restore a recovery backup'):
                 uploaded = st.file_uploader('Simmah workspace backup', type=['zip'], key='_slate_backup_import')
