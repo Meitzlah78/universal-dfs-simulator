@@ -25,12 +25,12 @@ st.set_page_config(
 
 import importlib
 import simmah_runtime_release as runtime_release
-if (getattr(runtime_release, '_active_release', None) != 'nba-contest-export-20261118-r6'
+if (getattr(runtime_release, '_active_release', None) != 'audited-export-20261125-r1'
         or not hasattr(runtime_release, 'activate_role_ownership_release')
         or not hasattr(runtime_release, '_active_role_ownership_fingerprint')
         or getattr(runtime_release, 'NFL_PROJECTION_RELEASE', None) != 'final-context-fit-v2'):
     runtime_release = importlib.reload(runtime_release)
-runtime_release.activate_nba_release('nba-contest-export-20261118-r6')
+runtime_release.activate_nba_release('audited-export-20261125-r1')
 runtime_release.activate_role_ownership_release('role-marginals-v5')
 
 if st.query_params.get('simmah_qa') == 'storage':
