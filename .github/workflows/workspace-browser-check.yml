@@ -4,6 +4,13 @@ on:
     paths:
       - 'components/workspace_backup/**'
       - 'components/pending_job_poll/**'
+      - 'components/audited_download/**'
+      - 'simmah_export_history.py'
+      - 'simmah_slate_workspaces.py'
+      - 'dfs_app.py'
+      - 'requirements.txt'
+      - 'tests/check_audited_download.py'
+      - 'tests/test_export_history.py'
       - 'tests/test_pending_job_poll.cjs'
       - 'tests/test_workspace_backup_component.cjs'
       - '.github/workflows/workspace-browser-check.yml'
@@ -11,6 +18,13 @@ on:
     paths:
       - 'components/workspace_backup/**'
       - 'components/pending_job_poll/**'
+      - 'components/audited_download/**'
+      - 'simmah_export_history.py'
+      - 'simmah_slate_workspaces.py'
+      - 'dfs_app.py'
+      - 'requirements.txt'
+      - 'tests/check_audited_download.py'
+      - 'tests/test_export_history.py'
       - 'tests/test_pending_job_poll.cjs'
       - 'tests/test_workspace_backup_component.cjs'
       - '.github/workflows/workspace-browser-check.yml'
@@ -19,7 +33,7 @@ permissions:
 jobs:
   workspace-browser:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -29,3 +43,14 @@ jobs:
         run: |
           node tests/test_workspace_backup_component.cjs
           node tests/test_pending_job_poll.cjs
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install browser test dependencies
+        run: |
+          python -m pip install -r requirements.txt playwright
+          python -m playwright install --with-deps chromium
+      - name: Verify one-click delivery and exact audit archive
+        run: |
+          python -m unittest discover -s tests -p test_export_history.py
+          python tests/check_audited_download.py

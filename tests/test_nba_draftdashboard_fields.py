@@ -10,9 +10,9 @@ class DraftDashboardFieldsTests(unittest.TestCase):
  def test_projected_fields_ratings_and_historical_fields_never_cross(self):
   p,f=self.fixture();f=f.drop(columns=['Projected Ownership %']);f['OWN']=[48.03]+[(800-48.03)/9]*9
   f['PRO']=47.89;f['MIN']=34;f['USE']='25%';f['DashRank']=100;f['Opponent Rank']=30;f['Position Rank']=30;f['FPPG']=41.8;f['PPM']=1.28;f['HIT']='56%';f['VAL']='5.3x'
-  r,m=self.apply(p,f);self.assertAlmostEqual(r.loc[0,'Projection'],47.89);self.assertEqual(r.loc[0,'Projected Minutes'],34);self.assertAlmostEqual(r.loc[0,'DraftDashboard Projected Own %'],48.03)
+  r,m=self.apply(p,f);self.assertAlmostEqual(r.loc[0,'Projection'],47.89);self.assertEqual(r.loc[0,'Projected Minutes'],p.loc[0,'Projected Minutes']);self.assertEqual(r.loc[0,'DraftDashboard Reference Minutes'],34);self.assertAlmostEqual(r.loc[0,'DraftDashboard Projected Own %'],48.03)
   self.assertEqual(r.loc[0,'DraftDashboard Historical FPPG'],41.8);self.assertEqual(r.loc[0,'DraftDashboard DashRank'],100);self.assertEqual(r.loc[0,'DraftDashboard Position Defensive Rank'],30)
-  self.assertEqual(r.loc[0,'DraftDashboard Usage %'],25);self.assertEqual(m['ownership_scope'],'main slate');self.assertIn('user-confirmed',m['draftdashboard_fields']['Projected Minutes']['meaning']);self.assertEqual(p.loc[0,'Projection'],30)
+  self.assertEqual(r.loc[0,'DraftDashboard Usage %'],25);self.assertEqual(m['ownership_scope'],'main slate');self.assertIn('unverified',m['draftdashboard_fields']['DraftDashboard Reference Minutes']['meaning']);self.assertEqual(p.loc[0,'Projection'],30)
  def test_ratings_or_fppg_do_not_replace_projections(self):
   p,f=self.fixture();f['FPPG']=100;f['DashRank']=100;r,m=self.apply(p,f)
   pd.testing.assert_series_equal(r.Projection,p.Projection);pd.testing.assert_series_equal(r['Projected Minutes'],p['Projected Minutes']);self.assertFalse(r.attrs['draftdashboard_fields']['ratings_applied_as_projection_boost'])
@@ -24,7 +24,10 @@ class DraftDashboardFieldsTests(unittest.TestCase):
   p,f=self.fixture();f['PRO']=47;f['Projected Points']=48
   with self.assertRaises(ValueError):self.apply(p,f)
  def test_projection_zero_is_explicit_not_missing_fallback(self):
-  p,f=self.fixture();f['PRO']=0;f['MIN']=0;r,m=self.apply(p,f);self.assertTrue(r.Projection.eq(0).all());self.assertTrue(r['Projected Minutes'].eq(0).all())
+  p,f=self.fixture();f['PRO']=0;f['MIN']=0;r,m=self.apply(p,f)
+  self.assertTrue(r.Projection.eq(0).all())
+  self.assertTrue(r['DraftDashboard Reference Minutes'].eq(0).all())
+  pd.testing.assert_series_equal(r['Projected Minutes'],p['Projected Minutes'])
 
 class SimmahPlayerScoreTests(unittest.TestCase):
  def fixture(self):

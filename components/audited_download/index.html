@@ -1,0 +1,73 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+body { margin: 0; }
+button {
+  box-sizing: border-box;
+  min-height: 38px;
+  max-width: 100%;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, currentColor 22%, transparent);
+  font: inherit;
+  font-weight: 600;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+button:hover:not(:disabled) { border-color: var(--primary, #ff4b4b); }
+button:disabled { opacity: .5; cursor: default; }
+button.primary { background: var(--primary, #ff4b4b); color: white; border-color: transparent; }
+</style>
+</head>
+<body>
+<button type="button" disabled></button>
+<script>
+const send = (type, extra = {}) =>
+  window.parent.postMessage({isStreamlitMessage: true, type, ...extra}, "*");
+const button = document.querySelector("button");
+let request;
+
+window.addEventListener("message", event => {
+  if (event.source !== window.parent || event.data?.type !== "streamlit:render") return;
+  const {args, disabled, theme} = event.data;
+  request = args;
+  button.textContent = args.label;
+  button.title = args.help || "";
+  button.classList.toggle("primary", args.primary);
+  button.style.width = args.width;
+  button.disabled = disabled || args.disabled;
+  if (theme) {
+    document.body.style.fontFamily = theme.font;
+    document.body.style.color = theme.textColor;
+    document.body.style.setProperty("--primary", theme.primaryColor);
+  }
+});
+
+button.addEventListener("click", () => {
+  if (button.disabled || !request) return;
+  const url = URL.createObjectURL(new Blob([request.payload], {type: request.mime}));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = request.filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+  // The request has started from a local Blob. The audit may now rerun Streamlit.
+  send("streamlit:setComponentValue", {
+    value: {digest: request.digest, request_id: crypto.randomUUID()},
+    dataType: "json",
+  });
+});
+
+new ResizeObserver(() => send("streamlit:setFrameHeight", {
+  height: document.body.getBoundingClientRect().height,
+})).observe(document.body);
+send("streamlit:componentReady", {apiVersion: 1});
+</script>
+</body>
+</html>

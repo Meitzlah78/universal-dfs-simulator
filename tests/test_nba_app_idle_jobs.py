@@ -66,16 +66,28 @@ class IdleTests(unittest.TestCase):
             with self.assertRaises(Rerun):render_history(app,{'format':'DK','contest_id':'1'},'x')
         self.assertEqual(calls,[{'scope':'app'}]);save.assert_called_once_with(app)
 
-    def test_download_and_history_share_same_fragment_and_first_click_event(self):
-        tree=ast.parse(Path('simmah_slate_workspaces.py').read_text())
-        fn=next(n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name=='workspace_download_button')
-        env={};exec(compile(ast.Module(body=[fn],type_ignores=[]),'wrapper','exec'),env)
-        app=SimpleNamespace(session_state={},fragment=lambda fn:fn)
-        app.download_button=lambda *args,**kw:kw['on_click'](*kw['args']) or True
-        def queued(*args):app.session_state['export_pending']=True
-        with patch('simmah_export_history.queue_export',side_effect=queued),patch('simmah_export_history.render_history',side_effect=lambda *args:self.assertTrue(app.session_state['export_pending'])) as history:
-            self.assertTrue(env[fn.name](app,'Export',b'csv','entries.csv',export_checkpoint={'format':'DK'},on_click='ignore'))
-        history.assert_called_once()
+    def test_download_and_history_share_same_fragment(self):
+        from simmah_slate_workspaces import workspace_download_button
+
+        active = []
+        seen = []
+
+        def fragment(fn):
+            def run():
+                active.append(fn)
+                try:
+                    return fn()
+                finally:
+                    active.pop()
+            return run
+
+        app = SimpleNamespace(session_state={}, fragment=fragment)
+        with patch('simmah_export_history.audited_download', side_effect=lambda *a, **k: seen.append(active[-1])), patch(
+            'simmah_export_history.render_history', side_effect=lambda *a: seen.append(active[-1])
+        ):
+            workspace_download_button(app, 'Export', b'csv', 'entries.csv', export_checkpoint={'format': 'DK'})
+        self.assertEqual(len(seen), 2)
+        self.assertIs(seen[0], seen[1])
 
     def test_calibration_completion_stops_timer_and_new_job_rearms(self):
         tree=ast.parse(Path('simmah_archive_ui.py').read_text())

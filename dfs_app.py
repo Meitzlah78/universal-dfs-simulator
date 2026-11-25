@@ -25,12 +25,12 @@ st.set_page_config(
 
 import importlib
 import simmah_runtime_release as runtime_release
-if (getattr(runtime_release, '_active_release', None) != 'nba-contest-export-20261118-r6'
+if (getattr(runtime_release, '_active_release', None) != 'audited-export-20261125-r1'
         or not hasattr(runtime_release, 'activate_role_ownership_release')
         or not hasattr(runtime_release, '_active_role_ownership_fingerprint')
         or getattr(runtime_release, 'NFL_PROJECTION_RELEASE', None) != 'final-context-fit-v2'):
     runtime_release = importlib.reload(runtime_release)
-runtime_release.activate_nba_release('nba-contest-export-20261118-r6')
+runtime_release.activate_nba_release('audited-export-20261125-r1')
 runtime_release.activate_role_ownership_release('role-marginals-v5')
 
 if st.query_params.get('simmah_qa') == 'storage':
@@ -2971,14 +2971,12 @@ def save_export_checkpoint(snapshot, metadata, export_data, export_name):
         payload = export_data.encode("utf-8") if isinstance(export_data, str) else bytes(export_data)
         path.with_name(path.stem + "_lineups.csv").write_bytes(payload)
         st.session_state["last_export_snapshot_path"] = str(path)
-        st.toast("Export snapshot saved with the exact lineup CSV.")
     except Exception as exc:
         st.error(f"Lineup download is available, but saving its snapshot failed: {exc}")
 
 
-@st.fragment
 def lineup_export_download(*args, portfolio=None, slots=None, **kwargs):
-    """Keep export checkpoint callbacks inside a small fragment, not a full app rerun."""
+    """Validate the roster and bind its simulation snapshot to the export."""
     import copy
     from simmah_nfl_injuries import out_players
     if not isinstance(portfolio, pd.DataFrame) or portfolio.empty or not slots or not set(slots).issubset(portfolio.columns):

@@ -292,25 +292,21 @@ def workspace_download_button(st,*args,**kwargs):
             del st.session_state[str(key)]
     checkpoint=kwargs.pop('export_checkpoint',None)
     if checkpoint is not None:
-        from simmah_export_history import queue_export,render_history
-        data=kwargs.get('data',args[1] if len(args)>1 else None)
-        filename=kwargs.get('file_name',args[2] if len(args)>2 else 'export.csv')
-        original=kwargs.get('on_click');callback_args=kwargs.get('args',());callback_kwargs=kwargs.get('kwargs',{})
-        kwargs['on_click']=queue_export
-        kwargs['args']=(st,data,filename,checkpoint,original,callback_args,callback_kwargs)
-        kwargs.pop('kwargs',None)
-        if callable(original):
-            clicked=st.download_button(*args,**kwargs)
-            render_history(st,checkpoint,str(key or filename))
-        else:
-            # An audit click updates only this control; it must not rerun models.
-            @st.fragment
-            def download():
-                clicked=st.download_button(*args,**kwargs)
-                render_history(st,checkpoint,str(key or filename))
-                return clicked
-            clicked=download()
-        return clicked
+        from simmah_export_history import audited_download, render_history
+
+        options = dict(zip(('label', 'data', 'file_name', 'mime'), args))
+        options.update(kwargs)
+        options.setdefault('file_name', 'export.csv')
+        if options.get('key') is None:
+            options['key'] = options['file_name']
+
+        @st.fragment
+        def download():
+            audited_download(st, checkpoint, **options)
+            render_history(st, checkpoint, str(options['key']))
+
+        download()
+        return False
     kwargs.setdefault('on_click', 'ignore')
     return st.download_button(*args,**kwargs)
 
