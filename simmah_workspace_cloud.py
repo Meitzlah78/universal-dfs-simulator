@@ -159,3 +159,22 @@ def probe(config, owner):
     if backup.get(owner, key) != raw:
         raise ValueError('Storage read-back failed')
     return True
+
+
+def recovery_inventory(config, owner):
+    """Read-only inventory for the current workspace capability; no bucket-wide discovery."""
+    import re
+    if not isinstance(owner, str) or not re.fullmatch(r'[a-f0-9]{32}', owner):
+        raise ValueError('Invalid workspace identity')
+    backup = S3Backup(config)
+    prefix = f'{backup.prefix}/{owner}/workspaces/index/'
+    rows = []
+    for page in backup.client.get_paginator('list_objects_v2').paginate(
+            Bucket=backup.bucket, Prefix=prefix):
+        for item in page.get('Contents', []):
+            key = item['Key']
+            if not key.startswith(prefix) or not re.fullmatch(r'[a-f0-9]{64}\.json', key[len(prefix):]):
+                continue
+            rows.append(dict(index=key[len(prefix):], saved_at=item['LastModified'].isoformat(),
+                             index_bytes=item['Size']))
+    return sorted(rows, key=lambda row: row['saved_at'], reverse=True)
