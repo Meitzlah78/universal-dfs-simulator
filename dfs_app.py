@@ -2971,14 +2971,12 @@ def save_export_checkpoint(snapshot, metadata, export_data, export_name):
         payload = export_data.encode("utf-8") if isinstance(export_data, str) else bytes(export_data)
         path.with_name(path.stem + "_lineups.csv").write_bytes(payload)
         st.session_state["last_export_snapshot_path"] = str(path)
-        st.toast("Export snapshot saved with the exact lineup CSV.")
     except Exception as exc:
         st.error(f"Lineup download is available, but saving its snapshot failed: {exc}")
 
 
-@st.fragment
 def lineup_export_download(*args, portfolio=None, slots=None, **kwargs):
-    """Keep export checkpoint callbacks inside a small fragment, not a full app rerun."""
+    """Validate the roster and bind its simulation snapshot to the export."""
     import copy
     from simmah_nfl_injuries import out_players
     if not isinstance(portfolio, pd.DataFrame) or portfolio.empty or not slots or not set(slots).issubset(portfolio.columns):

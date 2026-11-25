@@ -1,4 +1,5 @@
 import importlib.util
+import json
 from pathlib import Path
 import sys
 import unittest
@@ -15,15 +16,19 @@ class NBAExportPlacementTests(unittest.TestCase):
                 app.run(timeout=20).button(key='nba_build').click().run(timeout=20)
                 self.assertFalse(app.exception)
                 buttons=app.get('download_button')
-                for key in ['nba_entries_download','nba_portfolio_report_lineups']:
-                    matching=[b for b in buttons if b.proto.id.endswith('-'+key)]
-                    self.assertEqual(len(matching),1,key)
-                    self.assertFalse(matching[0].proto.disabled,key)
-                for key in ['nba_entries_download_build','nba_portfolio_report_build']:
-                    self.assertFalse(any(b.proto.id.endswith('-'+key) for b in buttons),key)
-                entry_buttons=[b for b in app.tabs[3].get('download_button') if 'EDIT ENTRIES CSV' in b.proto.label]
-                self.assertEqual(len(entry_buttons),1)
-                self.assertFalse(any('EDIT ENTRIES CSV' in b.proto.label for b in app.tabs[2].get('download_button')))
+                components = app.get('component_instance')
+                entries = [x for x in components if x.proto.id.endswith('_nba_entries_download')]
+                self.assertEqual(len(entries), 1)
+                self.assertFalse(json.loads(entries[0].proto.json_args)['disabled'])
+                self.assertFalse(any(x.proto.id.endswith('_nba_entries_download_build') for x in components))
+                self.assertEqual(sum(b.proto.id.endswith('-nba_portfolio_report_lineups') for b in buttons), 1)
+                self.assertFalse(any(b.proto.id.endswith('-nba_portfolio_report_build') for b in buttons))
+                for tab_index, count in ((2, 0), (3, 1)):
+                    tab_components = app.tabs[tab_index].get('component_instance')
+                    self.assertEqual(sum(
+                        'EDIT ENTRIES CSV' in json.loads(x.proto.json_args).get('label', '')
+                        for x in tab_components
+                    ), count)
                 reports=[e for e in app.expander if e.label=='Advanced — diagnostics and reports']
                 self.assertEqual(len(reports),1)
                 for section in reports:
