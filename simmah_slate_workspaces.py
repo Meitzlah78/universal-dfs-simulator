@@ -296,20 +296,13 @@ def workspace_download_button(st,*args,**kwargs):
         data=kwargs.get('data',args[1] if len(args)>1 else None)
         filename=kwargs.get('file_name',args[2] if len(args)>2 else 'export.csv')
         original=kwargs.get('on_click');callback_args=kwargs.get('args',());callback_kwargs=kwargs.get('kwargs',{})
-        # Prepare audit independently of the native download click. Keep one
-        # checkpoint per exact payload and slate, rather than rerunning on click.
-        import hashlib
-        payload=data.encode('utf-8') if isinstance(data,str) else bytes(data)
-        sid=(st.session_state.get('_slate_active') or {}).get('id')
-        identity=(sid,checkpoint.get('format'),str(checkpoint.get('contest_id','')),
-                  checkpoint.get('kind'),filename,hashlib.sha256(payload).hexdigest())
-        prepared=st.session_state.setdefault('_slate_prepared_exports',set())
-        if identity not in prepared:
-            queue_export(st,data,filename,checkpoint)
-            prepared.add(identity)
+        # Native delivery must not race a callback-triggered rerun.
+        # Streamlit reports the click on a subsequent rerun only when a
+        # rerun is requested; retain explicit audit semantics rather than
+        # recording a prepared file as a downloaded entry.
+        kwargs['on_click']='ignore'
         kwargs.pop('args',None)
         kwargs.pop('kwargs',None)
-        kwargs['on_click']='ignore'
         clicked=st.download_button(*args,**kwargs)
         render_history(st,checkpoint,str(key or filename))
         return clicked
