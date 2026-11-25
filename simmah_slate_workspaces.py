@@ -296,20 +296,22 @@ def workspace_download_button(st,*args,**kwargs):
         data=kwargs.get('data',args[1] if len(args)>1 else None)
         filename=kwargs.get('file_name',args[2] if len(args)>2 else 'export.csv')
         original=kwargs.get('on_click');callback_args=kwargs.get('args',());callback_kwargs=kwargs.get('kwargs',{})
-        kwargs['on_click']=queue_export
-        kwargs['args']=(st,data,filename,checkpoint,original,callback_args,callback_kwargs)
+        # Prepare audit independently of the native download click. Keep one
+        # checkpoint per exact payload and slate, rather than rerunning on click.
+        import hashlib
+        payload=data.encode('utf-8') if isinstance(data,str) else bytes(data)
+        sid=(st.session_state.get('_slate_active') or {}).get('id')
+        identity=(sid,checkpoint.get('format'),str(checkpoint.get('contest_id','')),
+                  checkpoint.get('kind'),filename,hashlib.sha256(payload).hexdigest())
+        prepared=st.session_state.setdefault('_slate_prepared_exports',set())
+        if identity not in prepared:
+            queue_export(st,data,filename,checkpoint)
+            prepared.add(identity)
+        kwargs.pop('args',None)
         kwargs.pop('kwargs',None)
-        if callable(original):
-            clicked=st.download_button(*args,**kwargs)
-            render_history(st,checkpoint,str(key or filename))
-        else:
-            # An audit click updates only this control; it must not rerun models.
-            @st.fragment
-            def download():
-                clicked=st.download_button(*args,**kwargs)
-                render_history(st,checkpoint,str(key or filename))
-                return clicked
-            clicked=download()
+        kwargs['on_click']='ignore'
+        clicked=st.download_button(*args,**kwargs)
+        render_history(st,checkpoint,str(key or filename))
         return clicked
     kwargs.setdefault('on_click', 'ignore')
     return st.download_button(*args,**kwargs)
