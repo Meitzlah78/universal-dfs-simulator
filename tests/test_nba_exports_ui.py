@@ -1,4 +1,5 @@
 import importlib.util
+import json
 from pathlib import Path
 import sys
 import unittest
@@ -15,10 +16,14 @@ class NBAExportPlacementTests(unittest.TestCase):
                 app.run(timeout=20).button(key='nba_build').click().run(timeout=20)
                 self.assertFalse(app.exception)
                 buttons=app.get('download_button')
-                for key in ['nba_entries_download_build','nba_entries_download',
-                            'nba_portfolio_report_build','nba_portfolio_report_lineups']:
-                    matching=[b for b in buttons if b.proto.id.endswith('-'+key)]
-                    self.assertEqual(len(matching),1,key)
-                    self.assertFalse(matching[0].proto.disabled,key)
+                components = app.get('component_instance')
+                for key in ('nba_entries_download_build', 'nba_entries_download'):
+                    matching = [x for x in components if x.proto.id.endswith('_' + key)]
+                    self.assertEqual(len(matching), 1, key)
+                    self.assertFalse(json.loads(matching[0].proto.json_args)['disabled'], key)
+                for key in ('nba_portfolio_report_build', 'nba_portfolio_report_lineups'):
+                    matching = [b for b in buttons if b.proto.id.endswith('-' + key)]
+                    self.assertEqual(len(matching), 1, key)
+                    self.assertFalse(matching[0].proto.disabled, key)
                 if platform=='FanDuel':
                     self.assertEqual(len([b for b in app.get('link_button') if 'OPEN FANDUEL' in b.proto.label]),2)

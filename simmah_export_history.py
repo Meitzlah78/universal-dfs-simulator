@@ -23,7 +23,7 @@ def make_checkpoint(data,filename,context,state, metadata=None):
     meta={k:v for k,v in context.items() if k not in {'player_pool','build','portfolio','late_swap','original_entries'}}
     parent=latest_record(state,context.get('format'),context.get('contest_id',''))
     meta['parent_export_id']=parent.get('export_id') if parent else None
-    meta['capture_scope']='Exact downloaded CSV plus available serializable state; see workspace omitted list. Not proof of site submission or original build-time feed provenance.'
+    meta['capture_scope']='Exact requested CSV plus available serializable state; see workspace omitted list. This records a browser download request and does not verify file delivery, site submission, or original build-time feed provenance.'
     meta.update(export_id=export_id,exported_utc=datetime.now(timezone.utc).isoformat(),
                 export_filename=filename,export_sha256=hashlib.sha256(payload).hexdigest(),
                 submission_verified=False,kind=context.get('kind','entries'))
@@ -95,6 +95,36 @@ def _archive_job(data, filename, context, state, metadata):
     return record, error
 
 
+def audited_download(st, context, *, label, data, file_name, key, mime='text/csv',
+                     on_click=None, args=(), kwargs=None, disabled=False, type='secondary',
+                     use_container_width=None, width=None, help=None):
+    """Start browser delivery before notifying Streamlit of the export request."""
+    from streamlit.components.v1 import declare_component
+
+    component = declare_component(
+        'simmah_audited_download',
+        path=str(Path(__file__).parent / 'components' / 'audited_download'),
+    )
+    payload = data.encode('utf-8') if isinstance(data, str) else bytes(data)
+    digest = hashlib.sha256(payload).hexdigest()
+    scope = (st.session_state.get('_slate_active') or {}).get('id', '')
+    identity = (scope, context.get('format'), context.get('contest_id'), file_name, digest)
+    scope_digest = hashlib.sha256(repr(identity).encode('utf-8')).hexdigest()
+    component_key = f'_slate_export_download_{scope_digest}_{key}'
+
+    def requested():
+        event = st.session_state.get(component_key)
+        if not disabled and isinstance(event, dict) and event.get('digest') == digest:
+            queue_export(st, payload, file_name, context, on_click, args, kwargs)
+
+    css_width = '100%' if use_container_width or width == 'stretch' else 'auto'
+    if isinstance(width, int):
+        css_width = f'{width}px'
+    component(label=label, payload=payload, filename=file_name, mime=mime, digest=digest,
+              key=component_key, on_change=requested, disabled=disabled, help=help,
+              primary=type == 'primary', width=css_width)
+
+
 def queue_export(st, data, filename, context, original_callback=None,
                  callback_args=(), callback_kwargs=None):
     """Freeze click-time values; archive encoding/compression runs off the UI thread."""
@@ -124,7 +154,6 @@ def queue_export(st, data, filename, context, original_callback=None,
                          kind=context.get('kind','entries'), metadata=metadata,
                          context={k:v for k,v in context.items() if k in {'format','contest_id','kind'}},
                          future=future))
-        st.toast('Download ready · Saving export history…')
     except Exception as exc:
         st.error('Export download is available, but its audit archive FAILED: '+str(exc))
     if callable(original_callback):
@@ -193,15 +222,23 @@ def latest_player_snapshot(state,format_label,contest_id):
 
 
 def render_history(st,context,key):
-    @st.fragment(run_every=1)
-    def history():
-        if finish_exports(st):
-            from simmah_workspace_persistence import schedule
-            schedule(st)
-        if st.session_state.get('_slate_export_jobs'):
-            st.caption('Saving export history…')
-        _render_history(st, context, key)
-    history()
+    # Called inside the download fragment: an export click arms this one-shot
+    # component. DK Showdown can refresh its history within this fragment.
+    if finish_exports(st):
+        from simmah_workspace_persistence import schedule
+        schedule(st)
+        if context.get('format') != 'DraftKings Showdown':
+            st.rerun(scope='app')
+    pending=any(job['format']==context.get('format') and
+                str(job['contest_id'])==str(context.get('contest_id',''))
+                for job in st.session_state.get('_slate_export_jobs',[]))
+    if pending:
+        import streamlit.components.v1 as components
+        poll=components.declare_component('simmah_pending_export_v1',
+            path=str(Path(__file__).parent/'components'/'pending_job_poll'))
+        poll(pending=True,key='export_history_poll_'+key,default=None)
+        st.caption('Saving export history…')
+    _render_history(st, context, key)
 
 
 def _render_history(st,context,key):

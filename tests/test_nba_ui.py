@@ -1,4 +1,5 @@
 import importlib.util
+import json
 from pathlib import Path
 import unittest
 
@@ -64,9 +65,10 @@ class NBAWorkspaceTests(unittest.TestCase):
         at.number_input(key='nba_min_salary').set_value(500).run(timeout=20)
         self.assertFalse(at.exception)
         self.assertEqual(at.session_state['test_build_calls'],1)
-        exports=[x for x in at.get('download_button') if x.proto.id.endswith('-nba_entries_download')]
+        exports=[json.loads(x.proto.json_args) for x in at.get('component_instance')
+                 if x.proto.id.endswith('_nba_entries_download')]
         self.assertEqual(len(exports),1)
-        self.assertFalse(exports[0].proto.disabled)
+        self.assertFalse(exports[0]['disabled'])
 
     def test_dk_legal_stale_export_and_current_out_and_salary_guards(self):
         from streamlit.testing.v1 import AppTest
@@ -76,7 +78,8 @@ class NBAWorkspaceTests(unittest.TestCase):
         self.assertFalse(at.exception)
         saved=at.session_state['nba_build_result']
         def export_disabled():
-            return next(x for x in at.get('download_button') if x.proto.id.endswith('-nba_entries_download')).proto.disabled
+            return next(json.loads(x.proto.json_args)['disabled'] for x in at.get('component_instance')
+                        if x.proto.id.endswith('_nba_entries_download'))
         at.slider(key='nba_build_correlation').set_value(50).run(timeout=20)
         self.assertFalse(at.exception)
         self.assertFalse(export_disabled())
@@ -125,6 +128,7 @@ class NBAWorkspaceTests(unittest.TestCase):
         at.slider(key='nba_exposure_diversity').set_value(100).run(timeout=20)
         self.assertFalse(at.exception)
         self.assertEqual(at.session_state['test_build_calls'],1)
-        self.assertTrue(any('EXPORT TO DRAFTKINGS' in button.proto.label for button in at.get('download_button')))
+        self.assertTrue(any('EXPORT TO DRAFTKINGS' in json.loads(x.proto.json_args).get('label', '')
+                            for x in at.get('component_instance')))
 
 

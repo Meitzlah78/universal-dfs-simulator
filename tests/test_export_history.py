@@ -58,24 +58,33 @@ class ExportHistoryTests(unittest.TestCase):
         self.assertEqual((Path(self.temp.name)/(record['export_id']+'.zip')).read_bytes(),original)
 
     def test_download_wrapper_binds_capture_and_preserves_callback(self):
-        import ast
-        from unittest.mock import patch
-        tree=ast.parse(Path('simmah_slate_workspaces.py').read_text())
-        fn=next(n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name=='workspace_download_button')
-        env={};exec(compile(ast.Module(body=[fn],type_ignores=[]),'wrapper','exec'),env)
-        bound={}
-        def download(*args,**kwargs):bound.update(kwargs);return False
-        self.st.download_button=download
-        calls=[]
-        with patch('simmah_export_history.render_history'):
-            env[fn.name](self.st,'EXPORT',b'exact','entries.csv',export_checkpoint=self.context,
-                on_click=lambda x:calls.append(x),args=(4,))
-        self.assertNotIn('export_checkpoint',bound)
-        bound['on_click'](*bound['args'])
+        from simmah_slate_workspaces import workspace_download_button
+        self.st.fragment = lambda fn: fn
+        calls = []
+        with patch('simmah_export_history.render_history'), patch(
+            'streamlit.components.v1.declare_component'
+        ) as declare:
+            workspace_download_button(
+                self.st, 'EXPORT', b'exact', 'entries.csv', export_checkpoint=self.context,
+                on_click=calls.append, args=(4,),
+            )
+        bound = declare.return_value.call_args.kwargs
+        self.assertEqual(bound['payload'], b'exact')
+        self.assertNotIn(HISTORY, self.st.session_state)
+        self.st.session_state[bound['key']] = {'digest': 'different file'}
+        bound['on_change']()
+        self.assertNotIn('_slate_export_jobs', self.st.session_state)
+        self.st.session_state[bound['key']] = {'digest': bound['digest'], 'request_id': '1'}
+        bound['on_change']()
         from simmah_export_history import finish_exports
         self.st.session_state['_slate_export_jobs'][0]['future'].result(timeout=30)
         finish_exports(self.st)
-        self.assertEqual(calls,[4]);self.assertEqual(len(self.st.session_state[HISTORY]),1)
+        self.assertEqual(calls, [4])
+        record, = self.st.session_state[HISTORY]
+        self.assertEqual(record['export_sha256'], hashlib.sha256(b'exact').hexdigest())
+        with zipfile.ZipFile(io.BytesIO(record['archive'])) as archive:
+            self.assertEqual(archive.read('export.csv'), b'exact')
+            self.assertIn('A,12.0', archive.read('player_pool.csv').decode())
 
     def test_existing_callback_preserved(self):
         called=[];capture_export(self.st,b'csv','entries.csv',self.context,lambda x:called.append(x),(3,),{})

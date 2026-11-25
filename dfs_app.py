@@ -23,9 +23,9 @@ st.set_page_config(
 
 import importlib
 import simmah_runtime_release as runtime_release
-if getattr(runtime_release, '_active_release', None) != 'nba-official-lineups-20261028-r1':
+if getattr(runtime_release, '_active_release', None) != 'audited-export-live-20261125-r1':
     runtime_release = importlib.reload(runtime_release)
-runtime_release.activate_nba_release('nba-official-lineups-20261028-r1')
+runtime_release.activate_nba_release('audited-export-live-20261125-r1')
 
 if st.query_params.get('simmah_qa') == 'storage':
     import importlib
@@ -2919,14 +2919,12 @@ def save_export_checkpoint(snapshot, metadata, export_data, export_name):
         payload = export_data.encode("utf-8") if isinstance(export_data, str) else bytes(export_data)
         path.with_name(path.stem + "_lineups.csv").write_bytes(payload)
         st.session_state["last_export_snapshot_path"] = str(path)
-        st.toast("Export snapshot saved with the exact lineup CSV.")
     except Exception as exc:
         st.error(f"Lineup download is available, but saving its snapshot failed: {exc}")
 
 
-@st.fragment
 def lineup_export_download(*args, **kwargs):
-    """Keep export checkpoint callbacks inside a small fragment, not a full app rerun."""
+    """Bind the simulation snapshot to the exact export bytes."""
     import copy
     data = kwargs.get("data", args[1] if len(args) > 1 else None)
     name = kwargs.get("file_name", args[2] if len(args) > 2 else "lineups.csv")

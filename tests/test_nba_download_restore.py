@@ -74,6 +74,7 @@ assert {'export_history_backup_'+key,'export_history_csv_'+key} <= st.session_st
 '''
         app=AppTest.from_string(source).run(timeout=20)
         self.assertFalse(app.exception)
-        self.assertEqual(len(app.get('download_button')),3)
+        self.assertEqual(len(app.get('download_button')),2)
+        self.assertEqual(len(app.get('component_instance')),1)
         app.run(timeout=20)
         self.assertFalse(app.exception)
