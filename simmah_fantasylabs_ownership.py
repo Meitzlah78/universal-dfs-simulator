@@ -198,8 +198,10 @@ def role_preferences(pool):
 
 def full_preferences(pool):
     own=pd.to_numeric(pool['Projected Ownership'],errors='coerce').to_numpy(float)
-    if not (np.isfinite(own)&(own>=0)&(own<=100)).all():
-        raise ValueError('Imported ownership is missing for an eligible opponent player; no fallback or zero fill was used')
+    valid = np.isfinite(own) & (own >= 0) & (own <= 100)
+    if not valid.all():
+        missing = pool.loc[~valid, 'Name'].astype(str).tolist()
+        raise ValueError('Imported ownership missing or invalid for eligible players: ' + ', '.join(missing) + '. No fallback or zero fill was used.')
     return own
 
 
@@ -270,6 +272,8 @@ def render_snapshot(st,pool,site='DraftKings',mode='single_game'):
                 if not confirmed:
                     st.warning('Ownership upload is not applied until the salary-slate date is confirmed.');st.stop()
             result,meta=apply_snapshot(current,upload.getvalue(),site,mode,confirmed_undated=confirmed)
+            if mode == 'full_roster':
+                full_preferences(result)
         except (ValueError,KeyError,pd.errors.ParserError) as exc:
             st.error(str(exc));st.stop()
         totals=' · '.join(k+' '+f'{v:.2f}%' for k,v in meta['raw_totals'].items())
