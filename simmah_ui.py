@@ -73,7 +73,7 @@ def player_column_config(st):
 
 def render_diversity_controls(st, platform, mode, simulation_count):
     """Portfolio exposure choice is independent of construction-scenario choice."""
-    value = st.slider("Lineup diversity",0,100,50,step=5,
+    value = st.slider("Lineup diversity",0,100,75 if (platform, mode) in (("DraftKings", "Showdown"), ("FanDuel", "Single Game")) else 50,step=5,
         key=f"portfolio_exposure_diversity_{platform}_{mode}_v1",
         help=("Higher NFL settings lower the hard overall player cap. Selection first maximizes total Top 1% quality under all limits, then reduces concentration within a fixed 5% quality-loss budget. Infeasible limits are reported rather than relaxed. For one entry, choose diversity 0 (100% cap). Changing this reselects existing candidates; it does not reduce simulation counts." if mode in ("Classic", "Showdown", "Full Roster", "Single Game") else "Higher settings penalize cumulative player exposure and roster overlap. Manual limits stay enforced."))
     cap=100-.4*value
