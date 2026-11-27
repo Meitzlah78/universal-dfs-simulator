@@ -5715,7 +5715,7 @@ if platform == "FanDuel":
                         else:
                             _fd_single_field = build_fanduel_single_field(
                                 fd_pool, fd_mvp_weights, fd_flex_weights, _fd_generation_target,
-                                fd_salary_range, rng=rng,
+                                (0, 60000), rng=rng,
                                 progress=ui_progress(fd_field_progress),
                             )
                         opponent_rows = _fd_single_field.to_dict("records")
