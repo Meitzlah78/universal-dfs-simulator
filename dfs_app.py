@@ -2716,7 +2716,7 @@ def show_detected_slate_games(source_df):
     import hashlib
     # Include the dated source game strings so lines cannot leak to a later slate.
     game_columns = [c for c in source_df if str(c).strip().casefold() in {"game info", "gameinfo", "game"}]
-    identity = sorted(set(source_df[game_columns].astype(str).agg("|".join, axis=1)))
+    identity = sorted({"|".join("" if pd.isna(value) else str(value) for value in row) for row in source_df[game_columns].itertuples(index=False, name=None)})
     slate_key = hashlib.sha256(repr((platform, lineup_mode, pd.Timestamp.now(tz="America/New_York").date().isoformat(), identity)).encode()).hexdigest()[:16]
     base = pd.DataFrame({"Game": games, "Game total": [None] * len(games),
                          "Home spread": [None] * len(games)})
