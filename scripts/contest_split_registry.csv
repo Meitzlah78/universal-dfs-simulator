@@ -1,0 +1,9 @@
+sport,platform,format,date_utc,contest_id,split,reason
+NFL,DK,Classic,20261122,197897017,TUNING,Previously inspected; permanent exclusion from independent holdout
+NFL,DK,Classic,20261126,198122486,TUNING,Previously inspected; permanent exclusion from independent holdout
+NFL,DK,Showdown,20261125,198150100,TUNING,Previously inspected; permanent exclusion from independent holdout
+NFL,FD,Full_Roster,20261101,135859-281259493,TUNING,Previously inspected; permanent exclusion from independent holdout
+NFL,FD,Full_Roster,20261126,137123-281695208,TUNING,Previously inspected; permanent exclusion from independent holdout
+NFL,FD,Single_Game,20261125,137104-281693120,TUNING,Previously inspected; permanent exclusion from independent holdout
+NFL,FD,Single_Game,20261127,137180-281715765,TUNING,Previously inspected; permanent exclusion from independent holdout
+NFL,DK,Showdown,20261127,198174401,TUNING,Previously inspected; permanent exclusion from independent holdout
